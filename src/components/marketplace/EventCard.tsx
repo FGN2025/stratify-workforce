@@ -2,17 +2,10 @@ import { NavLink } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GameIcon, getGameLabel } from '@/components/dashboard/GameIcon';
+import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import type { WorkOrder, GameTitle, Tenant } from '@/types/tenant';
 import { Users, Monitor, Calendar, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// Cover images for different game types
-const gameCoverImages: Record<GameTitle, string> = {
-  ATS: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=800&h=400&fit=crop',
-  Farming_Sim: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&h=400&fit=crop',
-  Construction_Sim: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=400&fit=crop',
-  Mechanic_Sim: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&h=400&fit=crop',
-};
 
 interface EventCardProps {
   workOrder: WorkOrder;
@@ -32,6 +25,7 @@ export function EventCard({
   variant = 'default' 
 }: EventCardProps) {
   const criteria = workOrder.success_criteria as Record<string, number>;
+  const { gameCoverImages } = useGameCoverImages();
   const coverImage = gameCoverImages[workOrder.game_title];
 
   if (variant === 'compact') {

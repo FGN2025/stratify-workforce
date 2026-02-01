@@ -3,7 +3,9 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { AdminHero } from '@/components/admin/AdminHero';
 import { AdminStatsGrid } from '@/components/admin/AdminStatsGrid';
 import { UserManagementTable } from '@/components/admin/UserManagementTable';
+import { MediaLibrary } from '@/components/admin/MediaLibrary';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
@@ -175,19 +177,36 @@ export default function Admin() {
           isLoading={isLoading}
         />
 
-        {/* User Management */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <UserManagementTable
-              users={users}
-              isLoading={isLoading}
-              onRoleChange={handleRoleChange}
-            />
-          </CardContent>
-        </Card>
+        {/* Tabbed Content */}
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="media">Media Library</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <UserManagementTable
+                  users={users}
+                  isLoading={isLoading}
+                  onRoleChange={handleRoleChange}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="media">
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <MediaLibrary />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );

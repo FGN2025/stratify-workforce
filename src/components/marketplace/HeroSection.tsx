@@ -1,16 +1,18 @@
 import { Button } from '@/components/ui/button';
 import { useTenant } from '@/contexts/TenantContext';
+import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 import { ArrowRight, Play } from 'lucide-react';
 
 export function HeroSection() {
   const { tenant } = useTenant();
+  const heroImageUrl = useSiteMediaUrl('home_hero_image');
 
   return (
     <section className="relative overflow-hidden rounded-2xl mb-8">
       {/* Background with overlay */}
       <div className="absolute inset-0">
         <img 
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1600&h=600&fit=crop"
+          src={heroImageUrl}
           alt="Industrial training"
           className="w-full h-full object-cover"
         />
