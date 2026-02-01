@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Json } from '@/integrations/supabase/types';
@@ -20,12 +20,7 @@ export function useAuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
-    fetchLogs();
-  }, [user]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -63,7 +58,54 @@ export function useAuditLogs() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Fetch username for a single actor
+  const fetchActorUsername = useCallback(async (actorId: string | null): Promise<string> => {
+    if (!actorId) return 'System';
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', actorId)
+      .single();
+    
+    return data?.username || 'Unknown';
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchLogs();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('audit-logs-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'system_audit_logs',
+        },
+        async (payload) => {
+          const newLog = payload.new as AuditLog;
+          const actorUsername = await fetchActorUsername(newLog.actor_id);
+          
+          const enrichedLog: AuditLog = {
+            ...newLog,
+            actor_username: actorUsername,
+          };
+
+          // Add new log to the top of the list
+          setLogs((prev) => [enrichedLog, ...prev.slice(0, 99)]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchLogs, fetchActorUsername]);
 
   const logAction = async (
     action: string,
@@ -81,7 +123,7 @@ export function useAuditLogs() {
         resource_id: resourceId || null,
         details: details || null,
       }]);
-      await fetchLogs();
+      // No need to refetch - realtime will handle it
     } catch (error) {
       console.error('Error logging action:', error);
     }
