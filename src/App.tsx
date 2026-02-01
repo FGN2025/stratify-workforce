@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import WorkOrders from "./pages/WorkOrders";
 import Leaderboard from "./pages/Leaderboard";
+import Students from "./pages/Students";
+import Settings from "./pages/Settings";
 import AgentWidget from "./pages/AgentWidget";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/work-orders" element={<WorkOrders />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/students" element={<Students />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/agent-widget" element={<AgentWidget />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
