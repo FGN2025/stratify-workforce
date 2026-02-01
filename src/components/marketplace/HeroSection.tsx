@@ -25,7 +25,7 @@ export function HeroSection() {
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
           <span className="block text-foreground">WELCOME TO THE</span>
           <span className="block text-primary mt-1">WORLD OF</span>
-          <span className="block text-foreground">INDUSTRIAL TRAINING</span>
+          <span className="block text-foreground">SIMULATION SKILLS</span>
         </h1>
         
         <p className="text-muted-foreground text-lg mt-6 max-w-lg">
