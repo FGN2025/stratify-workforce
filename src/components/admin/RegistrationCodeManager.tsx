@@ -25,6 +25,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -70,6 +80,10 @@ export function RegistrationCodeManager() {
   // Selection state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
+  
+  // Confirmation dialog state for bulk actions
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmDialogAction, setConfirmDialogAction] = useState<'activate' | 'deactivate' | 'delete' | null>(null);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -341,135 +355,116 @@ export function RegistrationCodeManager() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // Bulk actions
-  const bulkDeactivate = async () => {
+  // Open confirmation dialog for bulk actions
+  const openBulkConfirmDialog = (action: 'activate' | 'deactivate' | 'delete') => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Deactivate ${selectedIds.size} selected code(s)?`)) return;
+    setConfirmDialogAction(action);
+    setConfirmDialogOpen(true);
+  };
 
+  // Execute the confirmed bulk action
+  const executeBulkAction = async () => {
+    if (!confirmDialogAction || selectedIds.size === 0) return;
+    
+    setConfirmDialogOpen(false);
     setIsBulkActionLoading(true);
+    
     try {
       const idsArray = Array.from(selectedIds);
-      const { error } = await supabase
-        .from('registration_codes')
-        .update({ is_active: false })
-        .in('id', idsArray);
-
-      if (error) throw error;
-
-      // Log audit
-      await logAction({
-        resourceType: 'registration_code',
-        action: 'bulk_deactivate',
-        details: {
-          count: idsArray.length,
-          code_ids: idsArray,
-        },
-      });
-
-      toast({
-        title: 'Codes Deactivated',
-        description: `${idsArray.length} code(s) have been deactivated.`,
-      });
-
+      
+      if (confirmDialogAction === 'activate') {
+        const { error } = await supabase
+          .from('registration_codes')
+          .update({ is_active: true })
+          .in('id', idsArray);
+        if (error) throw error;
+        
+        await logAction({
+          resourceType: 'registration_code',
+          action: 'bulk_activate',
+          details: { count: idsArray.length, code_ids: idsArray },
+        });
+        
+        toast({
+          title: 'Codes Activated',
+          description: `${idsArray.length} code(s) have been activated.`,
+        });
+      } else if (confirmDialogAction === 'deactivate') {
+        const { error } = await supabase
+          .from('registration_codes')
+          .update({ is_active: false })
+          .in('id', idsArray);
+        if (error) throw error;
+        
+        await logAction({
+          resourceType: 'registration_code',
+          action: 'bulk_deactivate',
+          details: { count: idsArray.length, code_ids: idsArray },
+        });
+        
+        toast({
+          title: 'Codes Deactivated',
+          description: `${idsArray.length} code(s) have been deactivated.`,
+        });
+      } else if (confirmDialogAction === 'delete') {
+        const codesToDelete = codes.filter((c) => idsArray.includes(c.id));
+        
+        const { error } = await supabase
+          .from('registration_codes')
+          .delete()
+          .in('id', idsArray);
+        if (error) throw error;
+        
+        await logAction({
+          resourceType: 'registration_code',
+          action: 'bulk_delete',
+          details: { count: idsArray.length, codes: codesToDelete.map((c) => c.code) },
+        });
+        
+        toast({
+          title: 'Codes Deleted',
+          description: `${idsArray.length} code(s) have been permanently deleted.`,
+        });
+      }
+      
       clearSelection();
       fetchCodes();
     } catch (error) {
-      console.error('Error bulk deactivating:', error);
+      console.error(`Error performing bulk ${confirmDialogAction}:`, error);
       toast({
         title: 'Error',
-        description: 'Failed to deactivate codes.',
+        description: `Failed to ${confirmDialogAction} codes.`,
         variant: 'destructive',
       });
     } finally {
       setIsBulkActionLoading(false);
+      setConfirmDialogAction(null);
     }
   };
 
-  const bulkActivate = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`Activate ${selectedIds.size} selected code(s)?`)) return;
-
-    setIsBulkActionLoading(true);
-    try {
-      const idsArray = Array.from(selectedIds);
-      const { error } = await supabase
-        .from('registration_codes')
-        .update({ is_active: true })
-        .in('id', idsArray);
-
-      if (error) throw error;
-
-      // Log audit
-      await logAction({
-        resourceType: 'registration_code',
-        action: 'bulk_activate',
-        details: {
-          count: idsArray.length,
-          code_ids: idsArray,
-        },
-      });
-
-      toast({
-        title: 'Codes Activated',
-        description: `${idsArray.length} code(s) have been activated.`,
-      });
-
-      clearSelection();
-      fetchCodes();
-    } catch (error) {
-      console.error('Error bulk activating:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to activate codes.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsBulkActionLoading(false);
-    }
-  };
-
-  const bulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to permanently delete ${selectedIds.size} code(s)? This cannot be undone.`)) return;
-
-    setIsBulkActionLoading(true);
-    try {
-      const idsArray = Array.from(selectedIds);
-      const codesToDelete = codes.filter((c) => idsArray.includes(c.id));
-
-      const { error } = await supabase
-        .from('registration_codes')
-        .delete()
-        .in('id', idsArray);
-
-      if (error) throw error;
-
-      // Log audit
-      await logAction({
-        resourceType: 'registration_code',
-        action: 'bulk_delete',
-        details: {
-          count: idsArray.length,
-          codes: codesToDelete.map((c) => c.code),
-        },
-      });
-
-      toast({
-        title: 'Codes Deleted',
-        description: `${idsArray.length} code(s) have been permanently deleted.`,
-      });
-
-      clearSelection();
-      fetchCodes();
-    } catch (error) {
-      console.error('Error bulk deleting:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete codes.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsBulkActionLoading(false);
+  const getConfirmDialogContent = () => {
+    const count = selectedIds.size;
+    switch (confirmDialogAction) {
+      case 'activate':
+        return {
+          title: 'Activate Codes',
+          description: `Are you sure you want to activate ${count} selected code(s)? They will become usable for registration.`,
+          actionLabel: 'Activate',
+        };
+      case 'deactivate':
+        return {
+          title: 'Deactivate Codes',
+          description: `Are you sure you want to deactivate ${count} selected code(s)? They will no longer be usable for registration.`,
+          actionLabel: 'Deactivate',
+        };
+      case 'delete':
+        return {
+          title: 'Delete Codes',
+          description: `Are you sure you want to permanently delete ${count} selected code(s)? This action cannot be undone.`,
+          actionLabel: 'Delete',
+        };
+      default:
+        return { title: '', description: '', actionLabel: '' };
     }
   };
 
@@ -640,7 +635,7 @@ export function RegistrationCodeManager() {
             <Button
               variant="outline"
               size="sm"
-              onClick={bulkActivate}
+              onClick={() => openBulkConfirmDialog('activate')}
               disabled={isBulkActionLoading}
             >
               <Power className="h-4 w-4 mr-1" />
@@ -649,7 +644,7 @@ export function RegistrationCodeManager() {
             <Button
               variant="outline"
               size="sm"
-              onClick={bulkDeactivate}
+              onClick={() => openBulkConfirmDialog('deactivate')}
               disabled={isBulkActionLoading}
             >
               <PowerOff className="h-4 w-4 mr-1" />
@@ -658,7 +653,7 @@ export function RegistrationCodeManager() {
             <Button
               variant="destructive"
               size="sm"
-              onClick={bulkDelete}
+              onClick={() => openBulkConfirmDialog('delete')}
               disabled={isBulkActionLoading}
             >
               {isBulkActionLoading ? (
@@ -806,6 +801,27 @@ export function RegistrationCodeManager() {
         onOpenChange={setIsEditDialogOpen}
         onSaved={fetchCodes}
       />
+
+      {/* Bulk action confirmation dialog */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{getConfirmDialogContent().title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {getConfirmDialogContent().description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeBulkAction}
+              className={confirmDialogAction === 'delete' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              {getConfirmDialogContent().actionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
