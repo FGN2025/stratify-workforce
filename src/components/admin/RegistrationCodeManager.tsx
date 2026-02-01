@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, Copy, Loader2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Copy, Loader2, Pencil, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { RegistrationCodeEditDialog } from './RegistrationCodeEditDialog';
 
@@ -53,6 +53,8 @@ interface Tenant {
   name: string;
 }
 
+type StatusFilter = 'all' | 'active' | 'inactive' | 'expired' | 'exhausted';
+
 export function RegistrationCodeManager() {
   const [codes, setCodes] = useState<RegistrationCode[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -61,6 +63,11 @@ export function RegistrationCodeManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCode, setEditingCode] = useState<RegistrationCode | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [tenantFilter, setTenantFilter] = useState<string>('all');
 
   // Form state
   const [newCode, setNewCode] = useState('');
@@ -238,16 +245,45 @@ export function RegistrationCodeManager() {
     });
   };
 
-  const getCodeStatus = (code: RegistrationCode) => {
-    if (!code.is_active) return { label: 'Inactive', variant: 'secondary' as const };
+  const getCodeStatus = (code: RegistrationCode): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; key: StatusFilter } => {
+    if (!code.is_active) return { label: 'Inactive', variant: 'secondary', key: 'inactive' };
     if (code.expires_at && new Date(code.expires_at) < new Date()) {
-      return { label: 'Expired', variant: 'destructive' as const };
+      return { label: 'Expired', variant: 'destructive', key: 'expired' };
     }
     if (code.max_uses !== null && code.current_uses >= code.max_uses) {
-      return { label: 'Exhausted', variant: 'outline' as const };
+      return { label: 'Exhausted', variant: 'outline', key: 'exhausted' };
     }
-    return { label: 'Active', variant: 'default' as const };
+    return { label: 'Active', variant: 'default', key: 'active' };
   };
+
+  // Filtered codes based on search and filters
+  const filteredCodes = useMemo(() => {
+    return codes.filter((code) => {
+      // Search filter
+      const matchesSearch = searchQuery === '' || 
+        code.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (code.description?.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      // Status filter
+      const status = getCodeStatus(code);
+      const matchesStatus = statusFilter === 'all' || status.key === statusFilter;
+
+      // Tenant filter
+      const matchesTenant = tenantFilter === 'all' || 
+        (tenantFilter === 'global' && !code.tenant_id) ||
+        code.tenant_id === tenantFilter;
+
+      return matchesSearch && matchesStatus && matchesTenant;
+    });
+  }, [codes, searchQuery, statusFilter, tenantFilter]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setTenantFilter('all');
+  };
+
+  const hasActiveFilters = searchQuery !== '' || statusFilter !== 'all' || tenantFilter !== 'all';
 
   return (
     <div className="space-y-6">
@@ -355,6 +391,57 @@ export function RegistrationCodeManager() {
         </Dialog>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search codes or descriptions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="expired">Expired</SelectItem>
+            <SelectItem value="exhausted">Exhausted</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={tenantFilter} onValueChange={setTenantFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Tenant" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tenants</SelectItem>
+            <SelectItem value="global">Global (No Tenant)</SelectItem>
+            {tenants.map((tenant) => (
+              <SelectItem key={tenant.id} value={tenant.id}>
+                {tenant.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="icon" onClick={clearFilters} title="Clear filters">
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Results summary */}
+      {hasActiveFilters && (
+        <p className="text-sm text-muted-foreground">
+          Showing {filteredCodes.length} of {codes.length} codes
+        </p>
+      )}
+
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -362,6 +449,13 @@ export function RegistrationCodeManager() {
       ) : codes.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           No registration codes yet. Create one to get started.
+        </div>
+      ) : filteredCodes.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No codes match your filters.{' '}
+          <button onClick={clearFilters} className="text-primary hover:underline">
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="rounded-md border">
@@ -378,7 +472,7 @@ export function RegistrationCodeManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {codes.map((code) => {
+              {filteredCodes.map((code) => {
                 const status = getCodeStatus(code);
                 return (
                   <TableRow key={code.id}>
