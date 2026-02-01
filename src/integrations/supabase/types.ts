@@ -1096,7 +1096,7 @@ export type Database = {
         | "time"
         | "score"
         | "streak"
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "super_admin"
       community_category_type:
         | "geography"
         | "broadband_provider"
@@ -1259,7 +1259,7 @@ export const Constants = {
         "score",
         "streak",
       ],
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "super_admin"],
       community_category_type: [
         "geography",
         "broadband_provider",
