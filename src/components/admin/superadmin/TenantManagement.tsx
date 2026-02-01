@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
   TableBody, 
@@ -13,13 +12,6 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,87 +22,33 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Users, CheckCircle, Loader2, Trash } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
-
-type Tenant = Database['public']['Tables']['tenants']['Row'];
-type CategoryType = Database['public']['Enums']['community_category_type'];
-
-interface TenantFormData {
-  name: string;
-  slug: string;
-  description: string;
-  category_type: CategoryType | null;
-  brand_color: string;
-}
-
-const defaultFormData: TenantFormData = {
-  name: '',
-  slug: '',
-  description: '',
-  category_type: null,
-  brand_color: '#3B82F6',
-};
+import { Plus, Pencil, Trash2, Users, CheckCircle, Loader2, Trash, TreeDeciduous, List } from 'lucide-react';
+import { useTenantHierarchy } from '@/hooks/useTenantHierarchy';
+import { TenantHierarchyTree } from './TenantHierarchyTree';
+import { TenantFormDialog, type TenantFormData } from './TenantFormDialog';
+import type { Tenant } from '@/types/tenant';
+import { CATEGORY_LABELS } from '@/types/tenant';
 
 export function TenantManagement() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { tenants, buildTree, isLoading, refetch } = useTenantHierarchy();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
-  const [formData, setFormData] = useState<TenantFormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
 
-  useEffect(() => {
-    fetchTenants();
-  }, []);
-
-  const fetchTenants = async () => {
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to load tenants', variant: 'destructive' });
-    } else {
-      setTenants(data || []);
-      setSelectedIds(new Set()); // Clear selection on refresh
-    }
-    setIsLoading(false);
-  };
+  const treeData = buildTree();
 
   const handleOpenDialog = (tenant?: Tenant) => {
-    if (tenant) {
-      setEditingTenant(tenant);
-      setFormData({
-        name: tenant.name,
-        slug: tenant.slug,
-        description: tenant.description || '',
-        category_type: tenant.category_type,
-        brand_color: tenant.brand_color,
-      });
-    } else {
-      setEditingTenant(null);
-      setFormData(defaultFormData);
-    }
+    setEditingTenant(tenant || null);
     setIsDialogOpen(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (formData: TenantFormData) => {
     if (!formData.name || !formData.slug) {
       toast({ title: 'Error', description: 'Name and slug are required', variant: 'destructive' });
       return;
@@ -127,6 +65,8 @@ export function TenantManagement() {
             description: formData.description || null,
             category_type: formData.category_type,
             brand_color: formData.brand_color,
+            parent_tenant_id: formData.parent_tenant_id,
+            hierarchy_level: formData.hierarchy_level,
           })
           .eq('id', editingTenant.id);
 
@@ -141,6 +81,8 @@ export function TenantManagement() {
             description: formData.description || null,
             category_type: formData.category_type,
             brand_color: formData.brand_color,
+            parent_tenant_id: formData.parent_tenant_id,
+            hierarchy_level: formData.hierarchy_level,
           });
 
         if (error) throw error;
@@ -148,7 +90,7 @@ export function TenantManagement() {
       }
 
       setIsDialogOpen(false);
-      fetchTenants();
+      refetch();
     } catch (error) {
       console.error('Error saving tenant:', error);
       toast({ title: 'Error', description: 'Failed to save tenant', variant: 'destructive' });
@@ -168,7 +110,7 @@ export function TenantManagement() {
       const { error } = await supabase.from('tenants').delete().eq('id', deletingTenant.id);
       if (error) throw error;
       toast({ title: 'Deleted', description: `${deletingTenant.name} has been deleted` });
-      fetchTenants();
+      refetch();
     } catch (error) {
       console.error('Error deleting tenant:', error);
       toast({ title: 'Error', description: 'Failed to delete tenant', variant: 'destructive' });
@@ -211,7 +153,8 @@ export function TenantManagement() {
         title: 'Deleted',
         description: `${selectedIds.size} tenant(s) have been deleted`,
       });
-      fetchTenants();
+      setSelectedIds(new Set());
+      refetch();
     } catch (error) {
       console.error('Error bulk deleting tenants:', error);
       toast({ title: 'Error', description: 'Failed to delete tenants', variant: 'destructive' });
@@ -235,7 +178,7 @@ export function TenantManagement() {
         <div>
           <h3 className="text-lg font-semibold">Tenant/Community Management</h3>
           <p className="text-sm text-muted-foreground">
-            Create, edit, and delete communities across the platform
+            Create, edit, and manage hierarchical organizations
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -248,173 +191,141 @@ export function TenantManagement() {
               Delete Selected ({selectedIds.size})
             </Button>
           )}
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Tenant
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Create Tenant'}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Community name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Slug</Label>
-                <Input
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                  placeholder="community-slug"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select
-                  value={formData.category_type || undefined}
-                  onValueChange={(v) => setFormData({ ...formData, category_type: v as CategoryType })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="geography">Geography</SelectItem>
-                    <SelectItem value="broadband_provider">Broadband Provider</SelectItem>
-                    <SelectItem value="trade_skill">Trade Skill</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Community description..."
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Brand Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={formData.brand_color}
-                    onChange={(e) => setFormData({ ...formData, brand_color: e.target.value })}
-                    className="w-16 h-10 p-1"
-                  />
-                  <Input
-                    value={formData.brand_color}
-                    onChange={(e) => setFormData({ ...formData, brand_color: e.target.value })}
-                    placeholder="#3B82F6"
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-                <Button onClick={handleSave} disabled={isSaving} className="w-full">
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingTenant ? 'Update Tenant' : 'Create Tenant'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Tenant
+          </Button>
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12">
-              <Checkbox
-                checked={tenants.length > 0 && selectedIds.size === tenants.length}
-                onCheckedChange={toggleSelectAll}
-                aria-label="Select all"
-              />
-            </TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Slug</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Members</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {tenants.map((tenant) => (
-            <TableRow key={tenant.id} data-state={selectedIds.has(tenant.id) ? 'selected' : undefined}>
-              <TableCell>
-                <Checkbox
-                  checked={selectedIds.has(tenant.id)}
-                  onCheckedChange={() => toggleSelect(tenant.id)}
-                  aria-label={`Select ${tenant.name}`}
-                />
-              </TableCell>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: tenant.brand_color }}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'list' | 'tree')}>
+        <TabsList>
+          <TabsTrigger value="list">
+            <List className="mr-2 h-4 w-4" />
+            List View
+          </TabsTrigger>
+          <TabsTrigger value="tree">
+            <TreeDeciduous className="mr-2 h-4 w-4" />
+            Tree View
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tree" className="mt-4">
+          <TenantHierarchyTree
+            tenants={treeData}
+            onSelect={(tenant) => handleOpenDialog(tenant)}
+            selectedId={editingTenant?.id}
+          />
+        </TabsContent>
+
+        <TabsContent value="list" className="mt-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={tenants.length > 0 && selectedIds.size === tenants.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
                   />
-                  {tenant.name}
-                </div>
-              </TableCell>
-              <TableCell className="text-muted-foreground">{tenant.slug}</TableCell>
-              <TableCell>
-                {tenant.category_type && (
-                  <Badge variant="outline" className="capitalize">
-                    {tenant.category_type.replace('_', ' ')}
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  {tenant.member_count}
-                </div>
-              </TableCell>
-              <TableCell>
-                {tenant.is_verified ? (
-                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                    <CheckCircle className="mr-1 h-3 w-3" />
-                    Verified
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Unverified</Badge>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(tenant)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(tenant)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-          {tenants.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                No tenants found. Create your first one!
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                </TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Parent</TableHead>
+                <TableHead>Level</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Members</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tenants.map((tenant) => {
+                const parent = tenants.find(t => t.id === tenant.parent_tenant_id);
+                return (
+                  <TableRow key={tenant.id} data-state={selectedIds.has(tenant.id) ? 'selected' : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(tenant.id)}
+                        onCheckedChange={() => toggleSelect(tenant.id)}
+                        aria-label={`Select ${tenant.name}`}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: tenant.brand_color }}
+                        />
+                        {tenant.name}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {parent?.name || '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{tenant.hierarchy_level}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {tenant.category_type && (
+                        <Badge variant="outline" className="capitalize">
+                          {CATEGORY_LABELS[tenant.category_type] || tenant.category_type}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        {tenant.member_count}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {tenant.is_verified ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Unverified</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(tenant)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(tenant)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {tenants.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    No tenants found. Create your first one!
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TabsContent>
+      </Tabs>
+
+      <TenantFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        tenant={editingTenant}
+        tenants={tenants}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
 
       <AlertDialog open={!!deletingTenant} onOpenChange={() => setDeletingTenant(null)}>
         <AlertDialogContent>
@@ -423,6 +334,11 @@ export function TenantManagement() {
             <AlertDialogDescription>
               Are you sure you want to delete "{deletingTenant?.name}"? 
               This action cannot be undone and will remove all associated data.
+              {deletingTenant && tenants.some(t => t.parent_tenant_id === deletingTenant.id) && (
+                <span className="block mt-2 text-amber-500">
+                  Warning: This tenant has child organizations that will become orphaned.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

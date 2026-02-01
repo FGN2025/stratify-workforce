@@ -7,6 +7,10 @@ interface TenantContextType {
   tenants: Tenant[];
   isLoading: boolean;
   setTenantBySlug: (slug: string) => void;
+  setTenantById: (id: string) => void;
+  getParentTenant: () => Tenant | null;
+  getChildTenants: () => Tenant[];
+  getAncestors: () => Tenant[];
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
@@ -61,6 +65,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('tenants')
         .select('*')
+        .order('hierarchy_level', { ascending: true })
         .order('name');
       
       if (error) {
@@ -102,8 +107,53 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
   }, [tenants, injectTenantTheme]);
 
+  const setTenantById = useCallback((id: string) => {
+    const newTenant = tenants.find(t => t.id === id);
+    if (newTenant) {
+      setTenant(newTenant);
+      injectTenantTheme(newTenant.brand_color);
+    }
+  }, [tenants, injectTenantTheme]);
+
+  const getParentTenant = useCallback((): Tenant | null => {
+    if (!tenant?.parent_tenant_id) return null;
+    return tenants.find(t => t.id === tenant.parent_tenant_id) || null;
+  }, [tenant, tenants]);
+
+  const getChildTenants = useCallback((): Tenant[] => {
+    if (!tenant) return [];
+    return tenants.filter(t => t.parent_tenant_id === tenant.id);
+  }, [tenant, tenants]);
+
+  const getAncestors = useCallback((): Tenant[] => {
+    if (!tenant) return [];
+    const ancestors: Tenant[] = [];
+    let current = tenant;
+    
+    while (current.parent_tenant_id) {
+      const parent = tenants.find(t => t.id === current.parent_tenant_id);
+      if (parent) {
+        ancestors.push(parent);
+        current = parent;
+      } else {
+        break;
+      }
+    }
+    
+    return ancestors;
+  }, [tenant, tenants]);
+
   return (
-    <TenantContext.Provider value={{ tenant, tenants, isLoading, setTenantBySlug }}>
+    <TenantContext.Provider value={{ 
+      tenant, 
+      tenants, 
+      isLoading, 
+      setTenantBySlug,
+      setTenantById,
+      getParentTenant,
+      getChildTenants,
+      getAncestors,
+    }}>
       {children}
     </TenantContext.Provider>
   );
