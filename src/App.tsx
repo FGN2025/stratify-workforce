@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import WorkOrders from "./pages/WorkOrders";
@@ -12,6 +14,7 @@ import Students from "./pages/Students";
 import Settings from "./pages/Settings";
 import Communities from "./pages/Communities";
 import CommunityProfile from "./pages/CommunityProfile";
+import Auth from "./pages/Auth";
 import AgentWidget from "./pages/AgentWidget";
 import NotFound from "./pages/NotFound";
 
@@ -19,27 +22,44 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TenantProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/work-orders" element={<WorkOrders />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/students" element={<Students />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/communities" element={<Communities />} />
-            <Route path="/community/:slug" element={<CommunityProfile />} />
-            <Route path="/agent-widget" element={<AgentWidget />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </TenantProvider>
+    <AuthProvider>
+      <TenantProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/communities" element={<Communities />} />
+              <Route path="/community/:slug" element={<CommunityProfile />} />
+              
+              {/* Protected routes */}
+              <Route path="/profile" element={
+                <ProtectedRoute><Profile /></ProtectedRoute>
+              } />
+              <Route path="/work-orders" element={
+                <ProtectedRoute><WorkOrders /></ProtectedRoute>
+              } />
+              <Route path="/leaderboard" element={
+                <ProtectedRoute><Leaderboard /></ProtectedRoute>
+              } />
+              <Route path="/students" element={
+                <ProtectedRoute><Students /></ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute><Settings /></ProtectedRoute>
+              } />
+              <Route path="/agent-widget" element={<AgentWidget />} />
+              
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </TenantProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
