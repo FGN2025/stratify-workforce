@@ -1,6 +1,16 @@
+import { useState, useMemo } from 'react';
 import { useAuditLogs, type AuditLog } from '@/hooks/useAuditLogs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Json } from '@/integrations/supabase/types';
 import { 
   Table, 
@@ -11,8 +21,8 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RefreshCw, Activity, User, Shield, Trash, Settings, Loader2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { RefreshCw, Activity, User, Shield, Trash, Settings, Loader2, Filter, X } from 'lucide-react';
+import { formatDistanceToNow, isAfter, isBefore, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 const actionIcons: Record<string, React.ReactNode> = {
   role_change: <Shield className="h-4 w-4 text-amber-400" />,
@@ -42,6 +52,66 @@ const actionColors: Record<string, string> = {
 
 export function SystemAuditLogs() {
   const { logs, isLoading, refetch } = useAuditLogs();
+  
+  // Filter states
+  const [actionFilter, setActionFilter] = useState<string>('all');
+  const [resourceFilter, setResourceFilter] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  // Extract unique actions and resource types from logs
+  const uniqueActions = useMemo(() => {
+    const actions = [...new Set(logs.map(log => log.action))];
+    return actions.sort();
+  }, [logs]);
+
+  const uniqueResourceTypes = useMemo(() => {
+    const types = [...new Set(logs.map(log => log.resource_type))];
+    return types.sort();
+  }, [logs]);
+
+  // Apply filters
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      // Action filter
+      if (actionFilter !== 'all' && log.action !== actionFilter) {
+        return false;
+      }
+
+      // Resource type filter
+      if (resourceFilter !== 'all' && log.resource_type !== resourceFilter) {
+        return false;
+      }
+
+      // Date range filter
+      const logDate = parseISO(log.created_at);
+      
+      if (startDate) {
+        const start = startOfDay(parseISO(startDate));
+        if (isBefore(logDate, start)) {
+          return false;
+        }
+      }
+
+      if (endDate) {
+        const end = endOfDay(parseISO(endDate));
+        if (isAfter(logDate, end)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [logs, actionFilter, resourceFilter, startDate, endDate]);
+
+  const hasActiveFilters = actionFilter !== 'all' || resourceFilter !== 'all' || startDate || endDate;
+
+  const clearFilters = () => {
+    setActionFilter('all');
+    setResourceFilter('all');
+    setStartDate('');
+    setEndDate('');
+  };
 
   const formatDetails = (log: AuditLog) => {
     if (!log.details) return null;
@@ -107,6 +177,83 @@ export function SystemAuditLogs() {
         </Button>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-4 p-4 rounded-lg border bg-muted/30">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Filter className="h-4 w-4" />
+          Filters
+        </div>
+        
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Action</Label>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All actions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All actions</SelectItem>
+                {uniqueActions.map(action => (
+                  <SelectItem key={action} value={action}>
+                    {action.replace('_', ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Resource Type</Label>
+            <Select value={resourceFilter} onValueChange={setResourceFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All resources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All resources</SelectItem>
+                {uniqueResourceTypes.map(type => (
+                  <SelectItem key={type} value={type}>
+                    {type.replace('_', ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">From Date</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-9"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">To Date</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-9"
+            />
+          </div>
+        </div>
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+            <X className="mr-1 h-4 w-4" />
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {/* Results count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredLogs.length} of {logs.length} logs
+        {hasActiveFilters && ' (filtered)'}
+      </div>
+
       <ScrollArea className="h-[500px] rounded-lg border">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
@@ -119,7 +266,7 @@ export function SystemAuditLogs() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {logs.map((log) => (
+            {filteredLogs.map((log) => (
               <TableRow key={log.id}>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
@@ -147,10 +294,12 @@ export function SystemAuditLogs() {
                 <TableCell>{formatDetails(log)}</TableCell>
               </TableRow>
             ))}
-            {logs.length === 0 && (
+            {filteredLogs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No audit logs yet. Actions will be recorded here.
+                  {hasActiveFilters 
+                    ? 'No logs match the current filters.'
+                    : 'No audit logs yet. Actions will be recorded here.'}
                 </TableCell>
               </TableRow>
             )}
