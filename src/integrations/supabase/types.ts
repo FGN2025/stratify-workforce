@@ -771,6 +771,51 @@ export type Database = {
           },
         ]
       }
+      user_addresses: {
+        Row: {
+          city: string
+          created_at: string
+          discord_id: string | null
+          full_name: string
+          id: string
+          is_validated: boolean
+          smarty_response: Json | null
+          state: string
+          street_address: string
+          updated_at: string
+          user_id: string
+          zip_code: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          discord_id?: string | null
+          full_name: string
+          id?: string
+          is_validated?: boolean
+          smarty_response?: Json | null
+          state: string
+          street_address: string
+          updated_at?: string
+          user_id: string
+          zip_code: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          discord_id?: string | null
+          full_name?: string
+          id?: string
+          is_validated?: boolean
+          smarty_response?: Json | null
+          state?: string
+          street_address?: string
+          updated_at?: string
+          user_id?: string
+          zip_code?: string
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge_id: string
