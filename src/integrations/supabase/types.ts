@@ -472,6 +472,53 @@ export type Database = {
           },
         ]
       }
+      registration_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          current_uses: number
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          tenant_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          current_uses?: number
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          tenant_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          current_uses?: number
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_codes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_media: {
         Row: {
           alt_text: string | null
@@ -779,9 +826,11 @@ export type Database = {
           full_name: string
           id: string
           is_validated: boolean
+          override_code_id: string | null
           smarty_response: Json | null
           state: string
           street_address: string
+          tenant_id: string | null
           updated_at: string
           user_id: string
           zip_code: string
@@ -793,9 +842,11 @@ export type Database = {
           full_name: string
           id?: string
           is_validated?: boolean
+          override_code_id?: string | null
           smarty_response?: Json | null
           state: string
           street_address: string
+          tenant_id?: string | null
           updated_at?: string
           user_id: string
           zip_code: string
@@ -807,14 +858,31 @@ export type Database = {
           full_name?: string
           id?: string
           is_validated?: boolean
+          override_code_id?: string | null
           smarty_response?: Json | null
           state?: string
           street_address?: string
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string
           zip_code?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_addresses_override_code_id_fkey"
+            columns: ["override_code_id"]
+            isOneToOne: false
+            referencedRelation: "registration_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_addresses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_badges: {
         Row: {
@@ -1203,6 +1271,7 @@ export type Database = {
         Args: { p_tenant_id: string; p_user_id: string }
         Returns: boolean
       }
+      redeem_registration_code: { Args: { p_code: string }; Returns: string }
     }
     Enums: {
       achievement_category: "mastery" | "streak" | "social" | "special"

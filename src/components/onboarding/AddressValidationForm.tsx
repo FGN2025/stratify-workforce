@@ -4,13 +4,15 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAddressValidation, AddressInput, ValidatedAddress } from '@/hooks/useAddressValidation';
-import { Check, AlertTriangle, Loader2, MapPin } from 'lucide-react';
+import { ValidatedCode } from '@/hooks/useRegistrationCode';
+import { Check, AlertTriangle, Loader2, MapPin, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AddressValidationFormProps {
   onAddressValidated: (address: ValidatedAddress | AddressInput, isValidated: boolean, smartyResponse?: Record<string, unknown>) => void;
   onBack: () => void;
   isSubmitting?: boolean;
+  overrideCode?: ValidatedCode | null;
 }
 
 const US_STATES = [
@@ -21,7 +23,7 @@ const US_STATES = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
 ];
 
-export function AddressValidationForm({ onAddressValidated, onBack, isSubmitting }: AddressValidationFormProps) {
+export function AddressValidationForm({ onAddressValidated, onBack, isSubmitting, overrideCode }: AddressValidationFormProps) {
   const [formData, setFormData] = useState<AddressInput>({
     street: '',
     city: '',
@@ -32,6 +34,8 @@ export function AddressValidationForm({ onAddressValidated, onBack, isSubmitting
   const [showValidation, setShowValidation] = useState(false);
   
   const { validateAddress, isValidating, validationResult, resetValidation } = useAddressValidation();
+  
+  const hasOverrideCode = !!overrideCode;
 
   const handleChange = (field: keyof AddressInput, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -67,8 +71,19 @@ export function AddressValidationForm({ onAddressValidated, onBack, isSubmitting
   const handleValidate = async () => {
     if (!validateForm()) return;
     
+    // If override code is present, skip Smarty validation
+    if (hasOverrideCode) {
+      onAddressValidated(formData, true);
+      return;
+    }
+    
     await validateAddress(formData);
     setShowValidation(true);
+  };
+  
+  const handleSkipValidation = () => {
+    if (!validateForm()) return;
+    onAddressValidated(formData, true);
   };
 
   const handleAcceptValidated = () => {
@@ -87,6 +102,22 @@ export function AddressValidationForm({ onAddressValidated, onBack, isSubmitting
 
   return (
     <div className="space-y-6">
+      {/* Override Code Banner */}
+      {hasOverrideCode && (
+        <Alert className="border-primary/50 bg-primary/10">
+          <Key className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm">
+            <span className="font-medium">Code override active</span>
+            {overrideCode.tenantName && (
+              <span className="text-muted-foreground"> — {overrideCode.tenantName}</span>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Address verification will be bypassed.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="street">Street Address</Label>
@@ -248,7 +279,7 @@ export function AddressValidationForm({ onAddressValidated, onBack, isSubmitting
           </Button>
           <Button
             onClick={handleValidate}
-            disabled={isValidating}
+            disabled={isValidating || isSubmitting}
             className="flex-1"
           >
             {isValidating ? (
@@ -256,6 +287,13 @@ export function AddressValidationForm({ onAddressValidated, onBack, isSubmitting
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Verifying...
               </>
+            ) : isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : hasOverrideCode ? (
+              'Complete Registration'
             ) : (
               'Verify Address'
             )}
