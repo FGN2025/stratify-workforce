@@ -42,7 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, Copy, Loader2, Pencil, Search, X, Power, PowerOff } from 'lucide-react';
+import { Plus, Trash2, Copy, Loader2, Pencil, Search, X, Power, PowerOff, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { RegistrationCodeEditDialog } from './RegistrationCodeEditDialog';
 
@@ -468,6 +468,57 @@ export function RegistrationCodeManager() {
     }
   };
 
+  // Export codes to CSV
+  const exportToCSV = () => {
+    const dataToExport = filteredCodes.length > 0 ? filteredCodes : codes;
+    
+    if (dataToExport.length === 0) {
+      toast({
+        title: 'No Data',
+        description: 'There are no codes to export.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const headers = ['Code', 'Description', 'Tenant', 'Current Uses', 'Max Uses', 'Status', 'Active', 'Expires At', 'Created At'];
+    
+    const rows = dataToExport.map((code) => {
+      const status = getCodeStatus(code);
+      return [
+        code.code,
+        code.description || '',
+        code.tenants?.name || 'Global',
+        code.current_uses.toString(),
+        code.max_uses?.toString() || 'Unlimited',
+        status.label,
+        code.is_active ? 'Yes' : 'No',
+        code.expires_at ? format(new Date(code.expires_at), 'yyyy-MM-dd') : '',
+        format(new Date(code.created_at), 'yyyy-MM-dd HH:mm'),
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `registration-codes-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: 'Export Complete',
+      description: `Exported ${dataToExport.length} registration code(s) to CSV.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -478,11 +529,17 @@ export function RegistrationCodeManager() {
           </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Code
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Code
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -572,6 +629,7 @@ export function RegistrationCodeManager() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
