@@ -5,7 +5,44 @@ export interface Tenant {
   brand_color: string;
   logo_url: string | null;
   created_at: string;
+  // Hierarchy fields
+  parent_tenant_id: string | null;
+  hierarchy_level: number;
+  category_type: CategoryType | null;
+  description: string | null;
+  member_count: number;
+  is_verified: boolean;
+  cover_image_url: string | null;
+  location: string | null;
+  website_url: string | null;
+  owner_id: string | null;
+  game_titles: GameTitle[] | null;
+  // For tree display
+  children?: Tenant[];
+  parent?: Tenant;
 }
+
+export type CategoryType = 
+  | 'geography' 
+  | 'broadband_provider' 
+  | 'trade_skill'
+  | 'school'
+  | 'employer'
+  | 'training_center'
+  | 'government'
+  | 'nonprofit';
+
+export type MembershipRole = 
+  | 'member' 
+  | 'moderator' 
+  | 'admin'
+  | 'student'
+  | 'employee'
+  | 'apprentice'
+  | 'instructor'
+  | 'manager'
+  | 'subscriber'
+  | 'owner';
 
 export interface Profile {
   id: string;
@@ -60,3 +97,28 @@ export interface ActiveStudent {
   live_rpm: number;
   status: 'active' | 'idle' | 'completed';
 }
+
+// Category display helpers
+export const CATEGORY_LABELS: Record<CategoryType, string> = {
+  geography: 'Geography',
+  broadband_provider: 'Broadband Provider',
+  trade_skill: 'Trade Skill',
+  school: 'School',
+  employer: 'Employer',
+  training_center: 'Training Center',
+  government: 'Government',
+  nonprofit: 'Nonprofit',
+};
+
+export const MEMBERSHIP_ROLE_LABELS: Record<MembershipRole, string> = {
+  member: 'Member',
+  moderator: 'Moderator',
+  admin: 'Admin',
+  student: 'Student',
+  employee: 'Employee',
+  apprentice: 'Apprentice',
+  instructor: 'Instructor',
+  manager: 'Manager',
+  subscriber: 'Subscriber',
+  owner: 'Owner',
+};

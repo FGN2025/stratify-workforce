@@ -48,15 +48,8 @@ const Index = () => {
       }
 
       if (tenantsRes.data) {
-        const typedTenants: Tenant[] = tenantsRes.data.map(t => ({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-          brand_color: t.brand_color,
-          logo_url: t.logo_url,
-          created_at: t.created_at,
-        }));
-        setCommunities(typedTenants);
+        // Cast directly - Supabase returns matching shape
+        setCommunities(tenantsRes.data as unknown as Tenant[]);
       }
 
       setIsLoading(false);

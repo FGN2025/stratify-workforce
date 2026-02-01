@@ -40,14 +40,8 @@ const CommunityProfile = () => {
         .single();
 
       if (tenantData) {
-        setCommunity({
-          id: tenantData.id,
-          name: tenantData.name,
-          slug: tenantData.slug,
-          brand_color: tenantData.brand_color,
-          logo_url: tenantData.logo_url,
-          created_at: tenantData.created_at,
-        });
+        // Cast directly - Supabase returns matching shape
+        setCommunity(tenantData as unknown as Tenant);
 
         // Fetch work orders for this tenant
         const { data: woData } = await supabase

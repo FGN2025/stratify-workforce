@@ -675,6 +675,7 @@ export type Database = {
           created_at: string
           description: string | null
           game_titles: Database["public"]["Enums"]["game_title"][] | null
+          hierarchy_level: number
           id: string
           is_verified: boolean
           location: string | null
@@ -682,6 +683,7 @@ export type Database = {
           member_count: number
           name: string
           owner_id: string | null
+          parent_tenant_id: string | null
           slug: string
           website_url: string | null
         }
@@ -694,6 +696,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
+          hierarchy_level?: number
           id?: string
           is_verified?: boolean
           location?: string | null
@@ -701,6 +704,7 @@ export type Database = {
           member_count?: number
           name: string
           owner_id?: string | null
+          parent_tenant_id?: string | null
           slug: string
           website_url?: string | null
         }
@@ -713,6 +717,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
+          hierarchy_level?: number
           id?: string
           is_verified?: boolean
           location?: string | null
@@ -720,10 +725,19 @@ export type Database = {
           member_count?: number
           name?: string
           owner_id?: string | null
+          parent_tenant_id?: string | null
           slug?: string
           website_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_parent_tenant_id_fkey"
+            columns: ["parent_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_achievements: {
         Row: {
@@ -1105,10 +1119,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_child_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
       get_course_progress: {
         Args: { p_course_id: string; p_user_id: string }
         Returns: number
       }
+      get_parent_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
       get_user_level: { Args: { p_user_id: string }; Returns: number }
       get_user_total_xp: { Args: { p_user_id: string }; Returns: number }
       has_role: {
@@ -1116,6 +1132,18 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_tenant_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["community_membership_role"]
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      is_tenant_admin: {
+        Args: { p_tenant_id: string; p_user_id: string }
         Returns: boolean
       }
     }
@@ -1134,7 +1162,22 @@ export type Database = {
         | "geography"
         | "broadband_provider"
         | "trade_skill"
-      community_membership_role: "member" | "moderator" | "admin"
+        | "school"
+        | "employer"
+        | "training_center"
+        | "government"
+        | "nonprofit"
+      community_membership_role:
+        | "member"
+        | "moderator"
+        | "admin"
+        | "student"
+        | "employee"
+        | "apprentice"
+        | "instructor"
+        | "manager"
+        | "subscriber"
+        | "owner"
       completion_status: "in_progress" | "completed" | "failed"
       credential_type:
         | "course_completion"
@@ -1297,8 +1340,24 @@ export const Constants = {
         "geography",
         "broadband_provider",
         "trade_skill",
+        "school",
+        "employer",
+        "training_center",
+        "government",
+        "nonprofit",
       ],
-      community_membership_role: ["member", "moderator", "admin"],
+      community_membership_role: [
+        "member",
+        "moderator",
+        "admin",
+        "student",
+        "employee",
+        "apprentice",
+        "instructor",
+        "manager",
+        "subscriber",
+        "owner",
+      ],
       completion_status: ["in_progress", "completed", "failed"],
       credential_type: [
         "course_completion",
