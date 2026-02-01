@@ -42,7 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, Copy, Loader2, Pencil, Search, X, Power, PowerOff, Download } from 'lucide-react';
+import { Plus, Trash2, Copy, Loader2, Pencil, Search, X, Power, PowerOff, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { RegistrationCodeEditDialog } from './RegistrationCodeEditDialog';
 
@@ -89,6 +89,10 @@ export function RegistrationCodeManager() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [tenantFilter, setTenantFilter] = useState<string>('all');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Form state
   const [newCode, setNewCode] = useState('');
@@ -315,27 +319,43 @@ export function RegistrationCodeManager() {
     setSearchQuery('');
     setStatusFilter('all');
     setTenantFilter('all');
+    setCurrentPage(1);
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredCodes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCodes = filteredCodes.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, tenantFilter]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
   const hasActiveFilters = searchQuery !== '' || statusFilter !== 'all' || tenantFilter !== 'all';
 
-  // Selection helpers
-  const allFilteredSelected = filteredCodes.length > 0 && filteredCodes.every((c) => selectedIds.has(c.id));
-  const someFilteredSelected = filteredCodes.some((c) => selectedIds.has(c.id));
+  // Selection helpers - works on current page only
+  const allPageSelected = paginatedCodes.length > 0 && paginatedCodes.every((c) => selectedIds.has(c.id));
+  const somePageSelected = paginatedCodes.some((c) => selectedIds.has(c.id));
 
   const toggleSelectAll = () => {
-    if (allFilteredSelected) {
-      // Deselect all filtered codes
+    if (allPageSelected) {
+      // Deselect all codes on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        filteredCodes.forEach((c) => next.delete(c.id));
+        paginatedCodes.forEach((c) => next.delete(c.id));
         return next;
       });
     } else {
-      // Select all filtered codes
+      // Select all codes on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        filteredCodes.forEach((c) => next.add(c.id));
+        paginatedCodes.forEach((c) => next.add(c.id));
         return next;
       });
     }
@@ -750,10 +770,10 @@ export function RegistrationCodeManager() {
               <TableRow>
                 <TableHead className="w-[40px]">
                   <Checkbox
-                    checked={allFilteredSelected}
+                    checked={allPageSelected}
                     onCheckedChange={toggleSelectAll}
-                    aria-label="Select all"
-                    className={someFilteredSelected && !allFilteredSelected ? 'data-[state=checked]:bg-primary/50' : ''}
+                    aria-label="Select all on page"
+                    className={somePageSelected && !allPageSelected ? 'data-[state=checked]:bg-primary/50' : ''}
                   />
                 </TableHead>
                 <TableHead>Code</TableHead>
@@ -766,7 +786,7 @@ export function RegistrationCodeManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCodes.map((code) => {
+              {paginatedCodes.map((code) => {
                 const status = getCodeStatus(code);
                 const isSelected = selectedIds.has(code.id);
                 return (
@@ -849,6 +869,79 @@ export function RegistrationCodeManager() {
               })}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>
+                  Showing {startIndex + 1}–{Math.min(endIndex, filteredCodes.length)} of {filteredCodes.length}
+                </span>
+                <Select
+                  value={String(itemsPerPage)}
+                  onValueChange={(value) => {
+                    setItemsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>per page</span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <span className="px-3 text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
