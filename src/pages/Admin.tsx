@@ -6,6 +6,7 @@ import { UserManagementTable } from '@/components/admin/UserManagementTable';
 import { MediaLibrary } from '@/components/admin/MediaLibrary';
 import { WorkOrdersManager } from '@/components/admin/WorkOrdersManager';
 import { SimGamesManager } from '@/components/admin/SimGamesManager';
+import { RegistrationCodeManager } from '@/components/admin/RegistrationCodeManager';
 import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -189,6 +190,7 @@ export default function Admin() {
             <TabsTrigger value="work-orders">Work Orders</TabsTrigger>
             <TabsTrigger value="games">SIM Games</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
+            <TabsTrigger value="codes">Registration Codes</TabsTrigger>
             {isSuperAdmin && (
               <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
                 Super Admin
@@ -231,6 +233,14 @@ export default function Admin() {
             <Card className="border-border/50">
               <CardContent className="pt-6">
                 <MediaLibrary />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="codes">
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <RegistrationCodeManager />
               </CardContent>
             </Card>
           </TabsContent>

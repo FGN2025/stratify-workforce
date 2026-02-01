@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AddressValidationForm } from './AddressValidationForm';
+import { OverrideCodeInput } from './OverrideCodeInput';
 import { useOnboardingStatus, SaveAddressInput } from '@/hooks/useOnboardingStatus';
+import { useRegistrationCode, ValidatedCode } from '@/hooks/useRegistrationCode';
 import { AddressInput, ValidatedAddress } from '@/hooks/useAddressValidation';
 import { toast } from '@/hooks/use-toast';
-import { User, MapPin, Check, Loader2, MessageCircle } from 'lucide-react';
+import { User, MapPin, Check, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcademyOnboardingDialogProps {
@@ -35,9 +37,16 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
   const [currentStep, setCurrentStep] = useState<Step>('personal');
   const [fullName, setFullName] = useState('');
   const [discordId, setDiscordId] = useState('');
+  const [overrideCode, setOverrideCode] = useState('');
+  const [validatedOverrideCode, setValidatedOverrideCode] = useState<ValidatedCode | null>(null);
   const [nameError, setNameError] = useState('');
   
   const { saveAddress, isSaving } = useOnboardingStatus();
+  const { redeemCode } = useRegistrationCode();
+  
+  const handleValidCode = useCallback((code: ValidatedCode | null) => {
+    setValidatedOverrideCode(code);
+  }, []);
 
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep);
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
@@ -60,6 +69,19 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
       // Both ValidatedAddress and AddressInput have zipCode
       const zipCode = address.zipCode;
       
+      // If we have a valid override code, redeem it and mark as validated
+      let overrideCodeId: string | undefined;
+      let tenantId: string | undefined;
+      
+      if (validatedOverrideCode) {
+        const redeemedId = await redeemCode(overrideCode);
+        if (redeemedId) {
+          overrideCodeId = redeemedId;
+          tenantId = validatedOverrideCode.tenantId ?? undefined;
+          isValidated = true; // Override marks as validated
+        }
+      }
+      
       const saveData: SaveAddressInput = {
         fullName: fullName.trim(),
         streetAddress: address.street,
@@ -69,6 +91,8 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
         discordId: discordId.trim() || undefined,
         isValidated,
         smartyResponse,
+        overrideCodeId,
+        tenantId,
       };
 
       await saveAddress(saveData);
@@ -94,6 +118,8 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
     setCurrentStep('personal');
     setFullName('');
     setDiscordId('');
+    setOverrideCode('');
+    setValidatedOverrideCode(null);
   };
 
   const handleClose = () => {
@@ -190,6 +216,12 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
                 </p>
               </div>
 
+              <OverrideCodeInput
+                value={overrideCode}
+                onChange={setOverrideCode}
+                onValidCode={handleValidCode}
+              />
+
               <Button onClick={handlePersonalSubmit} className="w-full">
                 Continue
               </Button>
@@ -201,6 +233,7 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
               onAddressValidated={handleAddressValidated}
               onBack={() => setCurrentStep('personal')}
               isSubmitting={isSaving}
+              overrideCode={validatedOverrideCode}
             />
           )}
 

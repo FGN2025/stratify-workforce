@@ -27,6 +27,8 @@ export interface SaveAddressInput {
   discordId?: string;
   isValidated: boolean;
   smartyResponse?: unknown;
+  overrideCodeId?: string;
+  tenantId?: string;
 }
 
 export function useOnboardingStatus() {
@@ -68,6 +70,8 @@ export function useOnboardingStatus() {
         discord_id: input.discordId ?? null,
         is_validated: input.isValidated,
         smarty_response: (input.smartyResponse ?? {}) as Json,
+        override_code_id: input.overrideCodeId ?? null,
+        tenant_id: input.tenantId ?? null,
       };
 
       // Check if user already has an address (update) or needs to create one

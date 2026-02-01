@@ -1,0 +1,444 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
+import { Plus, Trash2, Copy, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+
+interface RegistrationCode {
+  id: string;
+  code: string;
+  tenant_id: string | null;
+  created_by: string;
+  description: string | null;
+  max_uses: number | null;
+  current_uses: number;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+  tenants?: { name: string } | null;
+}
+
+interface Tenant {
+  id: string;
+  name: string;
+}
+
+export function RegistrationCodeManager() {
+  const [codes, setCodes] = useState<RegistrationCode[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form state
+  const [newCode, setNewCode] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedTenant, setSelectedTenant] = useState<string>('');
+  const [maxUses, setMaxUses] = useState<string>('');
+  const [expiresAt, setExpiresAt] = useState<string>('');
+
+  useEffect(() => {
+    fetchCodes();
+    fetchTenants();
+  }, []);
+
+  const fetchCodes = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('registration_codes')
+        .select(`
+          *,
+          tenants (name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCodes(data || []);
+    } catch (error) {
+      console.error('Error fetching codes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load registration codes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchTenants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setTenants(data || []);
+    } catch (error) {
+      console.error('Error fetching tenants:', error);
+    }
+  };
+
+  const generateCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewCode(result);
+  };
+
+  const handleCreate = async () => {
+    if (!newCode.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a code.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase.from('registration_codes').insert({
+        code: newCode.trim().toUpperCase(),
+        description: description.trim() || null,
+        tenant_id: selectedTenant || null,
+        max_uses: maxUses ? parseInt(maxUses) : null,
+        expires_at: expiresAt || null,
+        created_by: user.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Code Created',
+        description: `Registration code ${newCode} created successfully.`,
+      });
+
+      // Reset form
+      setNewCode('');
+      setDescription('');
+      setSelectedTenant('');
+      setMaxUses('');
+      setExpiresAt('');
+      setIsDialogOpen(false);
+      fetchCodes();
+    } catch (error: unknown) {
+      console.error('Error creating code:', error);
+      const message = error instanceof Error && error.message.includes('unique')
+        ? 'This code already exists.'
+        : 'Failed to create registration code.';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleActive = async (code: RegistrationCode) => {
+    try {
+      const { error } = await supabase
+        .from('registration_codes')
+        .update({ is_active: !code.is_active })
+        .eq('id', code.id);
+
+      if (error) throw error;
+
+      setCodes(prev =>
+        prev.map(c => (c.id === code.id ? { ...c, is_active: !c.is_active } : c))
+      );
+
+      toast({
+        title: code.is_active ? 'Code Deactivated' : 'Code Activated',
+        description: `Code ${code.code} has been ${code.is_active ? 'deactivated' : 'activated'}.`,
+      });
+    } catch (error) {
+      console.error('Error toggling code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update code status.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteCode = async (code: RegistrationCode) => {
+    if (!confirm(`Are you sure you want to delete code ${code.code}?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('registration_codes')
+        .delete()
+        .eq('id', code.id);
+
+      if (error) throw error;
+
+      setCodes(prev => prev.filter(c => c.id !== code.id));
+
+      toast({
+        title: 'Code Deleted',
+        description: `Code ${code.code} has been deleted.`,
+      });
+    } catch (error) {
+      console.error('Error deleting code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete code.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({
+      title: 'Copied',
+      description: 'Code copied to clipboard.',
+    });
+  };
+
+  const getCodeStatus = (code: RegistrationCode) => {
+    if (!code.is_active) return { label: 'Inactive', variant: 'secondary' as const };
+    if (code.expires_at && new Date(code.expires_at) < new Date()) {
+      return { label: 'Expired', variant: 'destructive' as const };
+    }
+    if (code.max_uses !== null && code.current_uses >= code.max_uses) {
+      return { label: 'Exhausted', variant: 'outline' as const };
+    }
+    return { label: 'Active', variant: 'default' as const };
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Registration Codes</h3>
+          <p className="text-sm text-muted-foreground">
+            Create codes that allow users to bypass address verification during registration.
+          </p>
+        </div>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Code
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Registration Code</DialogTitle>
+              <DialogDescription>
+                Create a new code that allows users to skip address verification.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Code</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="code"
+                    placeholder="ACADEMY2025"
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+                    className="font-mono"
+                  />
+                  <Button type="button" variant="outline" onClick={generateCode}>
+                    Generate
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (optional)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Internal notes about this code..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tenant">Associate with Tenant (optional)</Label>
+                <Select value={selectedTenant} onValueChange={setSelectedTenant}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a tenant..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No tenant (global code)</SelectItem>
+                    {tenants.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.id}>
+                        {tenant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="maxUses">Max Uses (optional)</Label>
+                  <Input
+                    id="maxUses"
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited"
+                    value={maxUses}
+                    onChange={(e) => setMaxUses(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expiresAt">Expires At (optional)</Label>
+                  <Input
+                    id="expiresAt"
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleCreate}
+                disabled={isSubmitting || !newCode.trim()}
+                className="w-full"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Create Code
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : codes.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No registration codes yet. Create one to get started.
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Code</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>Usage</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Expires</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {codes.map((code) => {
+                const status = getCodeStatus(code);
+                return (
+                  <TableRow key={code.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <code className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                          {code.code}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => copyCode(code.code)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      {code.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {code.description}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {code.tenants?.name || (
+                        <span className="text-muted-foreground">Global</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {code.current_uses}
+                      {code.max_uses !== null && ` / ${code.max_uses}`}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={status.variant}>{status.label}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {code.expires_at
+                        ? format(new Date(code.expires_at), 'MMM d, yyyy')
+                        : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={code.is_active}
+                        onCheckedChange={() => toggleActive(code)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => deleteCode(code)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
