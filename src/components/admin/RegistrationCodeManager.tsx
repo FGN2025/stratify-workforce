@@ -30,8 +30,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, Copy, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Copy, Loader2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
+import { RegistrationCodeEditDialog } from './RegistrationCodeEditDialog';
 
 interface RegistrationCode {
   id: string;
@@ -58,6 +59,8 @@ export function RegistrationCodeManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingCode, setEditingCode] = useState<RegistrationCode | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Form state
   const [newCode, setNewCode] = useState('');
@@ -423,14 +426,27 @@ export function RegistrationCodeManager() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => deleteCode(code)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setEditingCode(code);
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => deleteCode(code)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -439,6 +455,14 @@ export function RegistrationCodeManager() {
           </Table>
         </div>
       )}
+
+      <RegistrationCodeEditDialog
+        code={editingCode}
+        tenants={tenants}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSaved={fetchCodes}
+      />
     </div>
   );
 }
