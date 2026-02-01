@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Table, 
   TableBody, 
@@ -38,7 +39,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Users, CheckCircle, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, CheckCircle, Loader2, Trash } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Tenant = Database['public']['Tables']['tenants']['Row'];
@@ -68,6 +69,9 @@ export function TenantManagement() {
   const [formData, setFormData] = useState<TenantFormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   useEffect(() => {
     fetchTenants();
@@ -84,6 +88,7 @@ export function TenantManagement() {
       toast({ title: 'Error', description: 'Failed to load tenants', variant: 'destructive' });
     } else {
       setTenants(data || []);
+      setSelectedIds(new Set()); // Clear selection on refresh
     }
     setIsLoading(false);
   };
@@ -172,6 +177,50 @@ export function TenantManagement() {
     }
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.size === tenants.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(tenants.map((t) => t.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .delete()
+        .in('id', Array.from(selectedIds));
+
+      if (error) throw error;
+
+      toast({
+        title: 'Deleted',
+        description: `${selectedIds.size} tenant(s) have been deleted`,
+      });
+      fetchTenants();
+    } catch (error) {
+      console.error('Error bulk deleting tenants:', error);
+      toast({ title: 'Error', description: 'Failed to delete tenants', variant: 'destructive' });
+    } finally {
+      setIsBulkDeleting(false);
+      setShowBulkDeleteDialog(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -189,20 +238,30 @@ export function TenantManagement() {
             Create, edit, and delete communities across the platform
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Tenant
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowBulkDeleteDialog(true)}
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Delete Selected ({selectedIds.size})
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Create Tenant'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Tenant
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Create Tenant'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -259,18 +318,26 @@ export function TenantManagement() {
                   />
                 </div>
               </div>
-              <Button onClick={handleSave} disabled={isSaving} className="w-full">
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingTenant ? 'Update Tenant' : 'Create Tenant'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+                <Button onClick={handleSave} disabled={isSaving} className="w-full">
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingTenant ? 'Update Tenant' : 'Create Tenant'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12">
+              <Checkbox
+                checked={tenants.length > 0 && selectedIds.size === tenants.length}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Select all"
+              />
+            </TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Slug</TableHead>
             <TableHead>Category</TableHead>
@@ -281,7 +348,14 @@ export function TenantManagement() {
         </TableHeader>
         <TableBody>
           {tenants.map((tenant) => (
-            <TableRow key={tenant.id}>
+            <TableRow key={tenant.id} data-state={selectedIds.has(tenant.id) ? 'selected' : undefined}>
+              <TableCell>
+                <Checkbox
+                  checked={selectedIds.has(tenant.id)}
+                  onCheckedChange={() => toggleSelect(tenant.id)}
+                  aria-label={`Select ${tenant.name}`}
+                />
+              </TableCell>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   <div
@@ -334,7 +408,7 @@ export function TenantManagement() {
           ))}
           {tenants.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                 No tenants found. Create your first one!
               </TableCell>
             </TableRow>
@@ -358,6 +432,29 @@ export function TenantManagement() {
               className="bg-destructive hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} Tenant(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedIds.size} selected tenant(s)?
+              This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              disabled={isBulkDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete {selectedIds.size} Tenant(s)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
