@@ -7,6 +7,7 @@ type AppRole = Database['public']['Enums']['app_role'];
 
 interface UseUserRoleReturn {
   role: AppRole | null;
+  isSuperAdmin: boolean;
   isAdmin: boolean;
   isModerator: boolean;
   isLoading: boolean;
@@ -46,8 +47,9 @@ export function useUserRole(): UseUserRoleReturn {
 
   return {
     role,
-    isAdmin: role === 'admin',
-    isModerator: role === 'moderator',
+    isSuperAdmin: role === 'super_admin',
+    isAdmin: role === 'admin' || role === 'super_admin',
+    isModerator: role === 'moderator' || role === 'super_admin',
     isLoading,
   };
 }
