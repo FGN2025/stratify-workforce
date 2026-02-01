@@ -6,10 +6,12 @@ import { UserManagementTable } from '@/components/admin/UserManagementTable';
 import { MediaLibrary } from '@/components/admin/MediaLibrary';
 import { WorkOrdersManager } from '@/components/admin/WorkOrdersManager';
 import { SimGamesManager } from '@/components/admin/SimGamesManager';
+import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useUserRole } from '@/hooks/useUserRole';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -24,6 +26,7 @@ interface UserWithRole {
 }
 
 export default function Admin() {
+  const { isSuperAdmin } = useUserRole();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -186,6 +189,11 @@ export default function Admin() {
             <TabsTrigger value="work-orders">Work Orders</TabsTrigger>
             <TabsTrigger value="games">SIM Games</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
+                Super Admin
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="users">
@@ -226,6 +234,12 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {isSuperAdmin && (
+            <TabsContent value="super-admin">
+              <SuperAdminPanel />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>
