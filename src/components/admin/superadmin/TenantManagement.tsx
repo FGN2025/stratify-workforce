@@ -203,7 +203,7 @@ export function TenantManagement() {
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select
-                  value={formData.category_type || ''}
+                  value={formData.category_type || undefined}
                   onValueChange={(v) => setFormData({ ...formData, category_type: v as CategoryType })}
                 >
                   <SelectTrigger>
