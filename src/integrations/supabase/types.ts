@@ -238,6 +238,7 @@ export type Database = {
           id: string
           member_count: number
           name: string
+          work_order_count: number
         }
         Insert: {
           accent_color?: string
@@ -248,6 +249,7 @@ export type Database = {
           id?: string
           member_count?: number
           name: string
+          work_order_count?: number
         }
         Update: {
           accent_color?: string
@@ -258,6 +260,7 @@ export type Database = {
           id?: string
           member_count?: number
           name?: string
+          work_order_count?: number
         }
         Relationships: []
       }
