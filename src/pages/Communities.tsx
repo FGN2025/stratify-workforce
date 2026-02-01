@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { PageHero } from '@/components/marketplace/PageHero';
 import { CommunityCard } from '@/components/marketplace/CommunityCard';
 import { supabase } from '@/integrations/supabase/client';
+import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Filter, Users } from 'lucide-react';
+import { Search, Filter, Users, Plus } from 'lucide-react';
 import type { Tenant } from '@/types/tenant';
 
 const Communities = () => {
   const [communities, setCommunities] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const heroImageUrl = useSiteMediaUrl('communities_hero');
 
   useEffect(() => {
     async function fetchCommunities() {
@@ -49,7 +52,7 @@ const Communities = () => {
     return (
       <AppLayout>
         <div className="space-y-6">
-          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <Skeleton key={i} className="h-48 rounded-xl" />
@@ -63,20 +66,23 @@ const Communities = () => {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Users className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold">Communities</h1>
-              <p className="text-muted-foreground text-sm">
-                Discover training organizations and join their programs
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Hero Section */}
+        <PageHero
+          title="Training Communities"
+          subtitle="Discover training organizations and join their simulation programs to level up your skills"
+          backgroundImage={heroImageUrl}
+          primaryAction={{
+            label: 'Create Community',
+            icon: <Plus className="h-4 w-4" />,
+          }}
+          stats={[
+            { value: communities.length.toString(), label: 'Communities', highlight: true },
+            { value: '2,500+', label: 'Active Members' },
+            { value: '180+', label: 'Work Orders' },
+          ]}
+        />
 
-        {/* Search */}
+        {/* Search & Filter */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -1,4 +1,5 @@
 import { ShieldCheck, Users, ClipboardList, Activity } from 'lucide-react';
+import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 
 interface AdminStats {
   totalUsers: number;
@@ -12,11 +13,19 @@ interface AdminHeroProps {
 }
 
 export function AdminHero({ stats, isLoading }: AdminHeroProps) {
+  const heroImageUrl = useSiteMediaUrl('admin_hero');
+
   return (
-    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-border/50">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px]" />
+    <div className="relative overflow-hidden rounded-2xl">
+      {/* Background image with overlay */}
+      <div className="absolute inset-0">
+        <img 
+          src={heroImageUrl}
+          alt="Admin Dashboard"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
       </div>
       
       {/* Glow effect */}
@@ -37,7 +46,7 @@ export function AdminHero({ stats, isLoading }: AdminHeroProps) {
           Admin Dashboard
         </h1>
         <p className="text-muted-foreground text-lg max-w-xl mb-8">
-          Manage users, work orders, and communities across the entire platform.
+          Manage users, work orders, media assets, and communities across the entire platform.
         </p>
         
         {/* Stats grid */}
