@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import AgentWidget from "./pages/AgentWidget";
 import Admin from "./pages/Admin";
 import Learn from "./pages/Learn";
+import WorkOrderDetail from "./pages/WorkOrderDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,9 @@ const App = () => (
               } />
               <Route path="/work-orders" element={
                 <ProtectedRoute><WorkOrders /></ProtectedRoute>
+              } />
+              <Route path="/work-orders/:id" element={
+                <ProtectedRoute><WorkOrderDetail /></ProtectedRoute>
               } />
               <Route path="/leaderboard" element={
                 <ProtectedRoute><Leaderboard /></ProtectedRoute>
