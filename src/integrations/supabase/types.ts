@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          accent_color: string
+          category: string
+          created_at: string
+          description: string | null
+          game_title: Database["public"]["Enums"]["game_title"] | null
+          icon_name: string
+          id: string
+          name: string
+          requirement_type: string
+          requirement_value: number
+        }
+        Insert: {
+          accent_color?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          icon_name: string
+          id?: string
+          name: string
+          requirement_type: string
+          requirement_value?: number
+        }
+        Update: {
+          accent_color?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          icon_name?: string
+          id?: string
+          name?: string
+          requirement_type?: string
+          requirement_value?: number
+        }
+        Relationships: []
+      }
       channel_posts: {
         Row: {
           channel_game: Database["public"]["Enums"]["game_title"]
@@ -139,6 +178,45 @@ export type Database = {
           },
         ]
       }
+      site_media: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          location_key: string
+          media_type: string
+          metadata: Json | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_key: string
+          media_type: string
+          metadata?: Json | null
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_key?: string
+          media_type?: string
+          metadata?: Json | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       telemetry_sessions: {
         Row: {
           completed_at: string | null
@@ -204,6 +282,80 @@ export type Database = {
           logo_url?: string | null
           name?: string
           slug?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          game_title: Database["public"]["Enums"]["game_title"] | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_game_stats: {
+        Row: {
+          best_score: number | null
+          created_at: string
+          game_title: Database["public"]["Enums"]["game_title"]
+          id: string
+          last_played_at: string | null
+          total_play_time_minutes: number
+          total_score: number
+          total_sessions: number
+          updated_at: string
+          user_id: string
+          work_orders_completed: number
+        }
+        Insert: {
+          best_score?: number | null
+          created_at?: string
+          game_title: Database["public"]["Enums"]["game_title"]
+          id?: string
+          last_played_at?: string | null
+          total_play_time_minutes?: number
+          total_score?: number
+          total_sessions?: number
+          updated_at?: string
+          user_id: string
+          work_orders_completed?: number
+        }
+        Update: {
+          best_score?: number | null
+          created_at?: string
+          game_title?: Database["public"]["Enums"]["game_title"]
+          id?: string
+          last_played_at?: string | null
+          total_play_time_minutes?: number
+          total_score?: number
+          total_sessions?: number
+          updated_at?: string
+          user_id?: string
+          work_orders_completed?: number
         }
         Relationships: []
       }
