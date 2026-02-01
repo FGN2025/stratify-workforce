@@ -1,465 +1,335 @@
 
+# Channel-Based Work Orders with XP Rewards
 
-# Learning Management System & Skill Passport Plan
+## Overview
 
-## Executive Summary
-
-This plan introduces a comprehensive Learning Management System (LMS) that transforms the platform from a simple work order tracker into a full-featured educational environment. The system will enable curriculum design, lesson sequencing, achievement tracking, point-based progression, and a verifiable **Skill Passport** that serves as a portable, tamper-evident record of a learner's competencies.
+This plan enhances the Work Orders feature to be channel-subscription aware, allowing users to see work orders from game channels they've subscribed to. Channel admins will be able to create and manage work orders with customizable point awards.
 
 ---
 
 ## Current State Analysis
 
-### Existing Foundation
-
-| Component | Current State | Gap |
-|-----------|---------------|-----|
-| **Profiles** | Basic skills (5 metrics), employability score | No progression tracking, no XP/points |
-| **Work Orders** | Standalone training scenarios | No grouping into courses/syllabus |
-| **Badges** | Badge definitions + user_badges linking | No automatic awarding, no display |
-| **Telemetry Sessions** | Raw session data captured | No lesson completion tracking |
-| **User Game Stats** | Aggregate stats per game | Not tied to curriculum progress |
-
-### What's Missing for a Full LMS
-
-1. **Curriculum Structure**: Courses, modules, lessons hierarchy
-2. **Learning Paths**: Sequenced progression through content
-3. **Lesson Content**: Rich content beyond work orders (videos, quizzes, reading)
-4. **Progress Tracking**: Per-lesson and per-course completion state
-5. **Point System**: XP, credits, or tokens for gamification
-6. **Achievement Engine**: Automatic badge/achievement awarding
-7. **Skill Passport**: Portable, verifiable credential wallet
-8. **KPI Dashboard**: Performance metrics for learners and instructors
+| Component | Status | Gap |
+|-----------|--------|-----|
+| `work_orders` table | Has game_title, tenant_id | No XP/points field, no channel link |
+| `game_channels` table | Exists with 4 game channels | Not linked to work orders |
+| `channel_subscriptions` table | Exists but empty | Users can subscribe to game channels |
+| `user_points` table | Full XP ledger system | Missing "work_order" as source_type |
+| Work Orders page | Shows all work orders | No subscription filtering |
 
 ---
 
-## Architecture Overview
+## Database Changes
+
+### 1. Extend `work_orders` Table
+
+Add new columns to support point rewards and channel association:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `xp_reward` | integer | Base XP awarded on completion (default: 50) |
+| `channel_id` | uuid | Optional link to game_channels table |
+| `difficulty` | text | beginner, intermediate, advanced |
+| `estimated_time_minutes` | integer | Expected completion time |
+| `max_attempts` | integer | Max tries allowed (null = unlimited) |
+
+### 2. Add "work_order" to source_type Enum
+
+Update the `source_type` enum to include work orders as a valid point source:
+
+```sql
+ALTER TYPE source_type ADD VALUE 'work_order';
+```
+
+### 3. Create `user_work_order_completions` Table
+
+Track individual work order attempts and completions:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `user_id` | uuid | FK to profiles |
+| `work_order_id` | uuid | FK to work_orders |
+| `status` | text | in_progress, completed, failed |
+| `score` | numeric | Achievement score |
+| `xp_awarded` | integer | Points given |
+| `attempt_number` | integer | Which attempt this is |
+| `started_at` | timestamp | When started |
+| `completed_at` | timestamp | When finished |
+| `metadata` | jsonb | Additional telemetry data |
+
+---
+
+## Architecture
 
 ```text
 +-------------------+     +-------------------+     +-------------------+
-|    CURRICULUM     |     |     LEARNING      |     |   SKILL PASSPORT  |
-|    MANAGEMENT     |---->|     ENGINE        |---->|   (Credential     |
-| (Courses/Lessons) |     | (Progress/Points) |     |    Wallet)        |
+|   game_channels   |     |   work_orders     |     |  user_work_order  |
+|   (ATS, etc.)     |<----|   (channel_id)    |---->|   _completions    |
 +-------------------+     +-------------------+     +-------------------+
         |                         |                         |
         v                         v                         v
 +-------------------+     +-------------------+     +-------------------+
-|   work_orders     |     |  user_progress    |     |  skill_passport   |
-|   lessons         |     |  user_points      |     |  credentials      |
-|   courses         |     |  achievements     |     |  verifications    |
-|   modules         |     |  user_badges      |     |  (blockchain-     |
-+-------------------+     +-------------------+     |   style hashes)   |
-                                                    +-------------------+
+|    channel_       |     |   xp_reward,      |     |   status, score,  |
+|  subscriptions    |     |   difficulty      |     |   xp_awarded      |
+|  (user → game)    |     |                   |     |                   |
++-------------------+     +-------------------+     +-------------------+
 ```
 
 ---
 
-## Database Schema
+## Feature Implementation
 
-### New Tables
+### 1. Subscription-Based Work Order Filtering
 
-#### 1. `courses`
-Top-level curriculum containers (e.g., "CDL Preparation Program")
+Update the Work Orders page to show:
+- **My Channels**: Work orders from subscribed game channels (prioritized)
+- **All Channels**: Browse work orders from all channels
+- **Trending**: Popular work orders across all channels
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| tenant_id | uuid | Optional organization scope |
-| title | text | Course name |
-| description | text | Full description |
-| cover_image_url | text | Course thumbnail |
-| difficulty_level | text | beginner, intermediate, advanced |
-| estimated_hours | integer | Total expected hours |
-| xp_reward | integer | Points awarded on completion |
-| is_published | boolean | Visibility flag |
-| created_at | timestamp | Creation date |
+**Filter Tabs:**
+| Tab | Description |
+|-----|-------------|
+| For You | Work orders from subscribed channels |
+| All | All active work orders |
+| Trucking | ATS game channel only |
+| Farming | Farming_Sim channel only |
+| Construction | Construction_Sim channel only |
+| Mechanic | Mechanic_Sim channel only |
 
-#### 2. `modules`
-Course subdivisions (e.g., "Vehicle Safety Fundamentals")
+### 2. Work Order Card Enhancements
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| course_id | uuid | Parent course FK |
-| title | text | Module name |
-| description | text | Module overview |
-| order_index | integer | Sequence within course |
-| xp_reward | integer | Points for module completion |
+Add to `EventCard.tsx`:
+- XP reward badge showing potential points
+- Difficulty indicator (beginner/intermediate/advanced stars)
+- Estimated completion time
+- User's completion status (if attempted)
+- Progress indicator for in-progress work orders
 
-#### 3. `lessons`
-Individual learning units
+### 3. Channel Subscription Flow
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| module_id | uuid | Parent module FK |
-| title | text | Lesson name |
-| lesson_type | text | video, reading, quiz, simulation, work_order |
-| content | jsonb | Lesson content (varies by type) |
-| work_order_id | uuid | Link to work order (if simulation type) |
-| duration_minutes | integer | Estimated time |
-| xp_reward | integer | Points for lesson completion |
-| order_index | integer | Sequence within module |
-| passing_score | integer | Minimum score to pass (if applicable) |
+Add subscription buttons to:
+- Game channel pages
+- Work Orders page filter section
+- First-time user onboarding
 
-#### 4. `user_course_enrollments`
-Tracks which users are enrolled in which courses
+**Quick Subscribe Component:**
+Shows game channel cards with subscribe/unsubscribe toggle
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_id | uuid | Learner FK |
-| course_id | uuid | Course FK |
-| enrolled_at | timestamp | Enrollment date |
-| completed_at | timestamp | Completion date (null if in progress) |
-| current_module_id | uuid | Current position |
-| current_lesson_id | uuid | Current position |
+### 4. Work Order Detail Page
 
-#### 5. `user_lesson_progress`
-Individual lesson completion tracking
+Create `/work-orders/:id` with:
+- Full work order description
+- Success criteria breakdown
+- XP reward + difficulty + time
+- "Start Work Order" button
+- Previous attempts history
+- Leaderboard for this work order
+- Related work orders from same channel
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_id | uuid | Learner FK |
-| lesson_id | uuid | Lesson FK |
-| status | text | not_started, in_progress, completed, failed |
-| score | numeric | Achievement score (if applicable) |
-| attempts | integer | Number of tries |
-| started_at | timestamp | First attempt |
-| completed_at | timestamp | Success timestamp |
-| xp_earned | integer | Points awarded |
+### 5. Admin Work Order Management
 
-#### 6. `user_points`
-Central point/XP ledger
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_id | uuid | Learner FK |
-| points_type | text | xp, credits, tokens |
-| amount | integer | Point value (positive or negative) |
-| source_type | text | lesson, achievement, bonus, redemption |
-| source_id | uuid | Reference to source entity |
-| description | text | Human-readable reason |
-| created_at | timestamp | Transaction time |
-
-#### 7. `achievements`
-Unlockable milestones beyond badges
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| name | text | Achievement title |
-| description | text | How to earn it |
-| icon_name | text | Lucide icon identifier |
-| category | text | mastery, streak, social, special |
-| trigger_type | text | points, lessons, courses, time, score |
-| trigger_value | jsonb | Condition parameters |
-| xp_reward | integer | Points awarded |
-| rarity | text | common, rare, epic, legendary |
-
-#### 8. `user_achievements`
-Earned achievements
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_id | uuid | Learner FK |
-| achievement_id | uuid | Achievement FK |
-| earned_at | timestamp | When unlocked |
-| metadata | jsonb | Context (e.g., which lesson triggered it) |
-
-#### 9. `skill_passport`
-Core credential wallet per user
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_id | uuid | Owner FK |
-| passport_hash | text | Unique verification hash |
-| public_url_slug | text | Shareable URL path |
-| is_public | boolean | Visibility setting |
-| created_at | timestamp | Passport creation |
-| updated_at | timestamp | Last modification |
-
-#### 10. `skill_credentials`
-Individual verified credentials in the passport
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| passport_id | uuid | Parent passport FK |
-| credential_type | text | course_completion, certification, badge, skill_verification |
-| title | text | Credential name |
-| issuer | text | Issuing organization (tenant name) |
-| issued_at | timestamp | Date earned |
-| expires_at | timestamp | Optional expiration |
-| skills_verified | text[] | Array of skill names |
-| score | numeric | Achievement level (if applicable) |
-| verification_hash | text | Tamper-detection hash |
-| metadata | jsonb | Additional context |
+Add to Admin Dashboard or Channel Admin view:
+- **Work Order List**: Table of all work orders for their channel
+- **Create Work Order** dialog:
+  - Title, description
+  - Game channel selection
+  - XP reward (slider: 25-500)
+  - Difficulty level
+  - Success criteria builder
+  - Estimated time
+  - Max attempts
+- **Edit/Delete** existing work orders
+- **Analytics**: Completion rates, average scores
 
 ---
 
-## Feature Breakdown
-
-### 1. Curriculum Management (Admin/Instructor)
-
-**New Pages**:
-- `/admin/courses` - Course list with CRUD
-- `/admin/courses/:id/builder` - Drag-and-drop curriculum builder
-- `/admin/lessons/:id/editor` - Rich lesson content editor
-
-**Capabilities**:
-- Create courses with modules and lessons
-- Link existing work orders as simulation lessons
-- Embed YouTube videos as video lessons
-- Create quiz lessons with multiple choice questions
-- Set XP rewards at each level
-- Define passing criteria
-
-### 2. Learning Experience (Student)
-
-**New Pages**:
-- `/learn` - Course catalog with enrollment
-- `/learn/:courseId` - Course overview with syllabus
-- `/learn/:courseId/lesson/:lessonId` - Lesson player
-
-**Features**:
-- Enroll in available courses
-- Linear or flexible progression through lessons
-- Video player with progress tracking
-- Quiz interface with instant feedback
-- Seamless launch into simulation work orders
-- Progress bar and completion tracking
-
-### 3. Points & Gamification
-
-**XP System**:
-- Earn XP for completing lessons, modules, courses
-- Bonus XP for high scores (90%+ = 1.5x multiplier)
-- Streak bonuses for consecutive days of learning
-- Display XP prominently on profile
-
-**Levels**:
-- XP thresholds unlock levels (Novice → Expert)
-- Levels displayed as badges on profile
-- Level milestones unlock achievements
-
-### 4. Achievement Engine
-
-**Automatic Triggers**:
-- First lesson completed → "First Steps" achievement
-- Complete 10 work orders → "Dedicated Operator"
-- Perfect score on quiz → "Perfectionist"
-- 7-day learning streak → "Consistent Learner"
-- Course completion → Course-specific badge
-
-**Admin Configuration**:
-- Define custom achievements with conditions
-- Set rarity and XP rewards
-- Enable/disable achievements per tenant
-
-### 5. Skill Passport
-
-**Core Features**:
-- Aggregates all credentials in one place
-- Unique verification hash for each credential
-- Public shareable profile URL
-- QR code for mobile verification
-- Export to PDF with verification codes
-
-**Credential Types**:
-| Type | Source | Verification |
-|------|--------|--------------|
-| Course Completion | Finishing a course | Hash of user + course + date |
-| Certification | Passing certification exam | Hash + optional third-party |
-| Skill Badge | Achievement unlocked | Hash of badge + context |
-| Work Order Mastery | High scores on work orders | Hash of telemetry summary |
-
-**Blockchain-Style Verification**:
-- Each credential has a unique hash
-- Hashes are stored and can be verified against database
-- Public verification endpoint for employers
-- Tamper detection by recalculating hash
-
-### 6. KPI Dashboard
-
-**Student View** (Profile enhancement):
-- Total XP and current level
-- Courses in progress vs. completed
-- Weekly learning streak
-- Skill radar (existing, enhanced)
-- Recent achievements
-- Credential count
-
-**Instructor/Admin View** (Admin enhancement):
-- Class average progress
-- Course completion rates
-- Top performers
-- At-risk learners (no activity)
-- Popular courses/lessons
-
----
-
-## UI Components
-
-### New Components
+## New Components
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `CourseCard.tsx` | Course catalog | Display course preview |
-| `CoursePlayer.tsx` | Course view | Full course layout |
-| `LessonPlayer.tsx` | Lesson view | Content renderer by type |
-| `VideoLesson.tsx` | Lesson types | YouTube/video player |
-| `QuizLesson.tsx` | Lesson types | Interactive quiz |
-| `SimulationLesson.tsx` | Lesson types | Work order launcher |
-| `ProgressTracker.tsx` | Course view | Visual progress indicator |
-| `XPDisplay.tsx` | Profile/header | Points and level badge |
-| `AchievementPopup.tsx` | Global | Toast for unlocks |
-| `SkillPassportView.tsx` | Profile | Credential wallet |
-| `CredentialCard.tsx` | Passport | Individual credential |
-| `VerificationBadge.tsx` | Credential | Verified/unverified status |
-| `CurriculumBuilder.tsx` | Admin | Drag-drop course editor |
-| `LessonEditor.tsx` | Admin | Content creation |
-
-### Enhanced Existing Components
-
-| Component | Enhancement |
-|-----------|-------------|
-| `Profile.tsx` | Add XP, level, credential summary, Skill Passport tab |
-| `SkillRadar.tsx` | Add data from verified credentials |
-| `Admin.tsx` | Add Curriculum Management tab |
-| `AppSidebar.tsx` | Add "Learn" navigation item |
+| `WorkOrderDetailPage.tsx` | `/work-orders/:id` | Full work order view |
+| `WorkOrderFilters.tsx` | Work Orders page | Tab + subscription filters |
+| `ChannelSubscribeButton.tsx` | Various | Subscribe/unsubscribe toggle |
+| `WorkOrderCreateDialog.tsx` | Admin | Create new work order form |
+| `WorkOrderProgressBadge.tsx` | EventCard | Shows completion status |
+| `XPRewardBadge.tsx` | EventCard | Shows potential XP |
+| `DifficultyIndicator.tsx` | EventCard | Star rating for difficulty |
 
 ---
 
-## Implementation Phases
+## Hooks
 
-### Phase 1: Database & Foundation (Week 1)
-1. Create all new tables with migrations
-2. Set up RLS policies (tenant-scoped + user-scoped)
-3. Create seed data for sample courses
-4. Build core hooks: `useCourses`, `useEnrollment`, `useProgress`
+### `useChannelSubscriptions`
+```typescript
+- subscriptions: GameTitle[] // User's subscribed channels
+- isSubscribed(gameTitle): boolean
+- subscribe(gameTitle): Promise
+- unsubscribe(gameTitle): Promise
+```
 
-### Phase 2: Curriculum Management (Week 2)
-1. Admin course list page
-2. Course creation dialog
-3. Module and lesson CRUD
-4. Curriculum builder UI
-5. Lesson content editors (video, quiz, work order link)
+### `useSubscribedWorkOrders`
+```typescript
+- workOrders: WorkOrder[] // Filtered by user subscriptions
+- isLoading: boolean
+- refetch(): void
+```
 
-### Phase 3: Learning Experience (Week 3)
-1. Course catalog page (`/learn`)
-2. Course detail/syllabus view
-3. Lesson player with type routing
-4. Video lesson with progress tracking
-5. Quiz lesson with scoring
-6. Simulation lesson (work order launcher)
-7. Progress saving and completion tracking
-
-### Phase 4: Points & Achievements (Week 4)
-1. Points ledger and hooks
-2. XP awarding on lesson/course completion
-3. Achievement definitions and triggers
-4. Achievement checking engine (edge function)
-5. Achievement popup notifications
-6. XP display on profile header
-
-### Phase 5: Skill Passport (Week 5)
-1. Passport creation on first achievement
-2. Credential generation on completions
-3. Verification hash generation
-4. Passport view in profile
-5. Public passport page
-6. QR code generation
-7. PDF export functionality
-
-### Phase 6: KPIs & Polish (Week 6)
-1. Enhanced profile dashboard
-2. Admin analytics dashboard
-3. Instructor class progress view
-4. Mobile responsiveness
-5. Performance optimization
-6. Documentation
+### `useWorkOrderCompletion`
+```typescript
+- startWorkOrder(id): Promise<completionRecord>
+- completeWorkOrder(id, score): Promise<xpAwarded>
+- getUserProgress(workOrderId): CompletionRecord | null
+```
 
 ---
 
-## Security Considerations
+## XP Award Logic
 
-### RLS Policies
+When a work order is completed:
 
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|-------|--------|--------|--------|--------|
-| courses | Public (published) | Admin | Admin | Admin |
-| modules | Public (published) | Admin | Admin | Admin |
-| lessons | Public (published) | Admin | Admin | Admin |
-| user_course_enrollments | Own records | Own | Own | None |
-| user_lesson_progress | Own records | Own | Own | None |
-| user_points | Own records | System | None | None |
-| achievements | Public | Admin | Admin | Admin |
-| user_achievements | Own + Public | System | None | None |
-| skill_passport | Own + Public (if shared) | Own | Own | None |
-| skill_credentials | Own + Public (if shared) | System | None | None |
+```text
+base_xp = work_order.xp_reward
 
-### Data Integrity
-- Credential hashes computed server-side (edge function)
-- Points awarded only through validated completions
-- Achievement unlocks verified against actual progress
-
----
-
-## Technical Specifications
-
-### Verification Hash Algorithm
-```
-hash = SHA256(
-  user_id + 
-  credential_type + 
-  source_id + 
-  issued_at + 
-  SECRET_SALT
-)
-```
-
-### XP Calculation
-```
-base_xp = lesson.xp_reward
+// Score multiplier (like existing LMS)
 score_multiplier = score >= 90 ? 1.5 : score >= 80 ? 1.2 : 1.0
-streak_bonus = consecutive_days > 7 ? 1.1 : 1.0
-final_xp = base_xp * score_multiplier * streak_bonus
+
+// First completion bonus
+first_completion_bonus = is_first_attempt ? 1.25 : 1.0
+
+// Difficulty bonus
+difficulty_bonus = {
+  beginner: 1.0,
+  intermediate: 1.2,
+  advanced: 1.5
+}[difficulty]
+
+final_xp = base_xp * score_multiplier * first_completion_bonus * difficulty_bonus
 ```
 
-### Progress Calculation
-```
-course_progress = (completed_lessons / total_lessons) * 100
-module_progress = (completed_lessons_in_module / lessons_in_module) * 100
-```
+**XP is recorded in `user_points` table with:**
+- `source_type`: 'work_order'
+- `source_id`: work_order.id
+- `description`: "Completed {work_order.title}"
 
 ---
 
-## Success Metrics
+## RLS Policies
 
-| KPI | Target | Measurement |
-|-----|--------|-------------|
-| Course Completion Rate | > 60% | Completed / Enrolled |
-| Avg. Lessons per Session | > 3 | Lessons per login |
-| 7-Day Retention | > 40% | Return within 7 days |
-| Credential Shares | > 20% | Passports made public |
-| Achievement Unlock Rate | > 80% | Users with 5+ achievements |
+### `work_orders`
+| Action | Policy |
+|--------|--------|
+| SELECT | Public (all active work orders) |
+| INSERT | Admins + Channel admins |
+| UPDATE | Admins + Channel admins (own channel) |
+| DELETE | Admins only |
+
+### `user_work_order_completions`
+| Action | Policy |
+|--------|--------|
+| SELECT | Own records |
+| INSERT | Own records |
+| UPDATE | Own records |
+| DELETE | None |
+
+---
+
+## UI Changes
+
+### Work Orders Page Updates
+
+1. **Add Filter Tabs** below hero:
+   - For You / All / By Game Channel
+
+2. **Subscription Banner** (if no subscriptions):
+   - "Subscribe to channels to see personalized work orders"
+   - Quick-subscribe buttons for each game
+
+3. **Work Order Cards Enhanced**:
+   - XP badge in corner
+   - Difficulty stars
+   - Completion checkmark if done
+   - Progress bar if in-progress
+
+4. **New Work Order Button** (admin only):
+   - Opens `WorkOrderCreateDialog`
+
+### Admin Dashboard Updates
+
+1. **Work Orders Tab**:
+   - List of work orders (sortable, filterable)
+   - Quick stats: total, completions, avg score
+   - Create/Edit/Delete actions
+
+---
+
+## Implementation Order
+
+### Phase 1: Database (Foundation)
+1. Add columns to `work_orders` (xp_reward, channel_id, difficulty)
+2. Update source_type enum
+3. Create `user_work_order_completions` table
+4. Set up RLS policies
+5. Seed existing work orders with default XP values
+
+### Phase 2: Hooks & Data Layer
+1. Create `useChannelSubscriptions` hook
+2. Create `useSubscribedWorkOrders` hook
+3. Create `useWorkOrderCompletion` hook
+4. Integrate XP awarding with existing `useAwardPoints`
+
+### Phase 3: UI Components
+1. Create filter tabs component
+2. Create XP/difficulty badges
+3. Update `EventCard` with new badges
+4. Create channel subscribe button
+
+### Phase 4: Work Order Detail Page
+1. Create `/work-orders/:id` route and page
+2. Show full details, criteria, rewards
+3. Add "Start Work Order" flow
+4. Add completion history
+
+### Phase 5: Admin Management
+1. Add Work Orders tab to Admin
+2. Create work order creation dialog
+3. Add edit/delete functionality
+4. Add basic analytics
+
+---
+
+## File Changes Summary
+
+### New Files
+```text
+src/pages/WorkOrderDetail.tsx
+src/components/work-orders/WorkOrderFilters.tsx
+src/components/work-orders/ChannelSubscribeButton.tsx
+src/components/work-orders/WorkOrderCreateDialog.tsx
+src/components/work-orders/XPRewardBadge.tsx
+src/components/work-orders/DifficultyIndicator.tsx
+src/hooks/useChannelSubscriptions.ts
+src/hooks/useWorkOrders.ts
+src/hooks/useWorkOrderCompletion.ts
+```
+
+### Modified Files
+```text
+src/pages/WorkOrders.tsx (add filters, subscription logic)
+src/pages/Admin.tsx (add Work Orders management tab)
+src/components/marketplace/EventCard.tsx (add XP badge, status)
+src/types/tenant.ts (update WorkOrder interface)
+src/App.tsx (add work order detail route)
+```
 
 ---
 
 ## Summary
 
-This LMS implementation transforms the platform into a comprehensive learning environment with:
+This enhancement transforms Work Orders into a channel-centric feature where:
 
-- **Structured curriculum** with courses, modules, and diverse lesson types
-- **Gamified progression** through XP, levels, and achievements  
-- **Verified credentials** in a tamper-evident Skill Passport
-- **Rich analytics** for learners and administrators
-- **Seamless integration** with existing work orders and telemetry
-
-The Skill Passport becomes a portable, verifiable record that learners can share with employers, creating real-world value from their simulation training.
-
+1. **Users** see work orders from their subscribed game channels first
+2. **Channel admins** can create work orders with custom XP rewards
+3. **Completion tracking** records attempts and awards XP automatically
+4. **Gamification** encourages engagement with difficulty bonuses and score multipliers
+5. **Integration** with existing LMS XP system maintains unified progression
