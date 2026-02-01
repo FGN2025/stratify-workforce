@@ -1,11 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ReactNode } from 'react';
+import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 
 interface PageHeroProps {
   title: string;
   subtitle: string;
-  backgroundImage: string;
+  backgroundImage?: string;
+  locationKey?: string;
   primaryAction?: {
     label: string;
     icon?: ReactNode;
@@ -28,17 +30,23 @@ export function PageHero({
   title,
   subtitle,
   backgroundImage,
+  locationKey,
   primaryAction,
   secondaryAction,
   stats,
   children,
 }: PageHeroProps) {
+  // Fetch dynamic image if locationKey provided
+  const dynamicImageUrl = useSiteMediaUrl(locationKey || '');
+  const imageUrl = locationKey ? dynamicImageUrl : backgroundImage;
+  const fallbackImage = 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=1920&q=80';
+
   return (
     <section className="relative overflow-hidden rounded-2xl mb-8">
       {/* Background with overlay */}
       <div className="absolute inset-0">
         <img 
-          src={backgroundImage}
+          src={imageUrl || fallbackImage}
           alt=""
           className="w-full h-full object-cover"
         />
