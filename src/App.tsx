@@ -10,6 +10,8 @@ import { AdminRoute } from "@/components/auth/AdminRoute";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import WorkOrders from "./pages/WorkOrders";
+import Events from "./pages/Events";
+import EventDetail from "./pages/EventDetail";
 import Leaderboard from "./pages/Leaderboard";
 import Students from "./pages/Students";
 import Settings from "./pages/Settings";
@@ -41,6 +43,12 @@ const App = () => (
               
               {/* Learning routes */}
               <Route path="/learn" element={<Learn />} />
+              
+              {/* Events routes */}
+              <Route path="/events" element={<Events />} />
+              <Route path="/events/:id" element={
+                <ProtectedRoute><EventDetail /></ProtectedRoute>
+              } />
               
               {/* Protected routes */}
               <Route path="/profile" element={
