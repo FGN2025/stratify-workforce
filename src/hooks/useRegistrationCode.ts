@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logAuditAction } from '@/hooks/useAuditLog';
 
 export interface RegistrationCode {
   id: string;
@@ -117,6 +118,16 @@ export function useRegistrationCode() {
       if (error) {
         console.error('Error redeeming code:', error);
         return null;
+      }
+
+      // Log the redemption
+      if (data) {
+        await logAuditAction({
+          resourceType: 'registration_code',
+          action: 'redeemed',
+          resourceId: data as string,
+          details: { code: code.trim().toUpperCase() },
+        });
       }
 
       return data as string | null;

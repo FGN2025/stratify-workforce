@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuditLog } from '@/hooks/useAuditLog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -56,6 +57,7 @@ interface Tenant {
 type StatusFilter = 'all' | 'active' | 'inactive' | 'expired' | 'exhausted';
 
 export function RegistrationCodeManager() {
+  const { logAction } = useAuditLog();
   const [codes, setCodes] = useState<RegistrationCode[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,16 +146,29 @@ export function RegistrationCodeManager() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { error } = await supabase.from('registration_codes').insert({
+      const { data, error } = await supabase.from('registration_codes').insert({
         code: newCode.trim().toUpperCase(),
         description: description.trim() || null,
         tenant_id: selectedTenant && selectedTenant !== 'none' ? selectedTenant : null,
         max_uses: maxUses ? parseInt(maxUses) : null,
         expires_at: expiresAt || null,
         created_by: user.id,
-      });
+      }).select('id').single();
 
       if (error) throw error;
+
+      // Log audit action
+      await logAction({
+        resourceType: 'registration_code',
+        action: 'created',
+        resourceId: data?.id,
+        details: {
+          code: newCode.trim().toUpperCase(),
+          tenant_id: selectedTenant && selectedTenant !== 'none' ? selectedTenant : null,
+          max_uses: maxUses ? parseInt(maxUses) : null,
+          expires_at: expiresAt || null,
+        },
+      });
 
       toast({
         title: 'Code Created',
