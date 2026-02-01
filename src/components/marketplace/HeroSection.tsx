@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTenant } from '@/contexts/TenantContext';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
-import { JoinFGNSkillsDialog } from './JoinFGNSkillsDialog';
+import { JoinFGNAcademyDialog } from './JoinFGNAcademyDialog';
 import { ArrowRight, Play } from 'lucide-react';
 
 export function HeroSection() {
@@ -69,7 +69,7 @@ export function HeroSection() {
         </div>
       </section>
 
-      <JoinFGNSkillsDialog 
+      <JoinFGNAcademyDialog 
         open={showSkillsDialog} 
         onOpenChange={setShowSkillsDialog} 
       />

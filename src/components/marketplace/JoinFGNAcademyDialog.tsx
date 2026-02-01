@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -11,12 +11,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChannelSubscriptions } from '@/hooks/useChannelSubscriptions';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
+import { AcademyOnboardingDialog } from '@/components/onboarding/AcademyOnboardingDialog';
 import { GameIcon, getGameLabel } from '@/components/dashboard/GameIcon';
-import { Check, Loader2, Truck, Tractor, HardHat, Wrench } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import type { GameTitle } from '@/types/tenant';
 
-interface JoinFGNSkillsDialogProps {
+interface JoinFGNAcademyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -44,11 +46,27 @@ const AVAILABLE_SIMS: { game: GameTitle; description: string; workOrderCount: nu
   },
 ];
 
-export function JoinFGNSkillsDialog({ open, onOpenChange }: JoinFGNSkillsDialogProps) {
+export function JoinFGNAcademyDialog({ open, onOpenChange }: JoinFGNAcademyDialogProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isSubscribed, subscribe, unsubscribe, isSubscribing, isUnsubscribing } = useChannelSubscriptions();
+  const { hasCompletedOnboarding, isLoading: isLoadingOnboarding } = useOnboardingStatus();
   const [processingGame, setProcessingGame] = useState<GameTitle | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showSimSelection, setShowSimSelection] = useState(false);
+
+  // When dialog opens, determine which view to show
+  useEffect(() => {
+    if (open && user && !isLoadingOnboarding) {
+      if (hasCompletedOnboarding) {
+        setShowSimSelection(true);
+        setShowOnboarding(false);
+      } else {
+        setShowOnboarding(true);
+        setShowSimSelection(false);
+      }
+    }
+  }, [open, user, hasCompletedOnboarding, isLoadingOnboarding]);
 
   const handleToggleSubscription = async (game: GameTitle) => {
     if (!user) {
@@ -94,11 +112,73 @@ export function JoinFGNSkillsDialog({ open, onOpenChange }: JoinFGNSkillsDialogP
     navigate(`/work-orders?filter=${game}`);
   };
 
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    setShowSimSelection(true);
+  };
+
+  const handleDialogClose = (newOpen: boolean) => {
+    if (!newOpen) {
+      setShowOnboarding(false);
+      setShowSimSelection(false);
+    }
+    onOpenChange(newOpen);
+  };
+
+  // If not logged in, show sign-in prompt
+  if (!user) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Join FGN Academy</DialogTitle>
+            <DialogDescription>
+              Sign in to join FGN Academy and access simulation training.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 p-4 rounded-lg bg-muted/50 text-center">
+            <p className="text-sm text-muted-foreground mb-4">
+              Create an account or sign in to get started.
+            </p>
+            <Button onClick={() => { onOpenChange(false); navigate('/auth'); }}>
+              Sign In / Sign Up
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show loading state while checking onboarding status
+  if (isLoadingOnboarding) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show onboarding dialog if user hasn't completed it
+  if (showOnboarding) {
+    return (
+      <AcademyOnboardingDialog
+        open={open}
+        onOpenChange={handleDialogClose}
+        onComplete={handleOnboardingComplete}
+      />
+    );
+  }
+
+  // Show sim selection (default for users who have completed onboarding)
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl">Join FGN Skills</DialogTitle>
+          <DialogTitle className="text-xl">FGN Academy Simulations</DialogTitle>
           <DialogDescription>
             Subscribe to simulation tracks to access work orders, skill challenges, and training scenarios.
           </DialogDescription>
@@ -172,17 +252,6 @@ export function JoinFGNSkillsDialog({ open, onOpenChange }: JoinFGNSkillsDialogP
             );
           })}
         </div>
-
-        {!user && (
-          <div className="mt-4 p-3 rounded-lg bg-muted/50 text-center">
-            <p className="text-sm text-muted-foreground">
-              <Button variant="link" className="p-0 h-auto" onClick={() => { onOpenChange(false); navigate('/auth'); }}>
-                Sign in
-              </Button>
-              {' '}to subscribe and track your progress.
-            </p>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
