@@ -146,6 +146,38 @@ export type Database = {
         }
         Relationships: []
       }
+      community_memberships: {
+        Row: {
+          id: string
+          joined_at: string
+          role: Database["public"]["Enums"]["community_membership_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          role?: Database["public"]["Enums"]["community_membership_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          role?: Database["public"]["Enums"]["community_membership_role"]
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           cover_image_url: string | null
@@ -228,6 +260,72 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      leaderboard_embed_configs: {
+        Row: {
+          created_at: string
+          created_by: string
+          display_count: number
+          embed_token: string
+          expires_at: string | null
+          game_title: Database["public"]["Enums"]["game_title"] | null
+          id: string
+          is_active: boolean
+          show_avatars: boolean
+          show_change: boolean
+          tenant_id: string | null
+          theme: string
+          title: string
+          work_order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          display_count?: number
+          embed_token?: string
+          expires_at?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          id?: string
+          is_active?: boolean
+          show_avatars?: boolean
+          show_change?: boolean
+          tenant_id?: string | null
+          theme?: string
+          title: string
+          work_order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          display_count?: number
+          embed_token?: string
+          expires_at?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          id?: string
+          is_active?: boolean
+          show_avatars?: boolean
+          show_change?: boolean
+          tenant_id?: string | null
+          theme?: string
+          title?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_embed_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_embed_configs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lessons: {
         Row: {
@@ -534,30 +632,60 @@ export type Database = {
       tenants: {
         Row: {
           brand_color: string
+          category_type:
+            | Database["public"]["Enums"]["community_category_type"]
+            | null
+          cover_image_url: string | null
           created_at: string
+          description: string | null
           game_titles: Database["public"]["Enums"]["game_title"][] | null
           id: string
+          is_verified: boolean
+          location: string | null
           logo_url: string | null
+          member_count: number
           name: string
+          owner_id: string | null
           slug: string
+          website_url: string | null
         }
         Insert: {
           brand_color?: string
+          category_type?:
+            | Database["public"]["Enums"]["community_category_type"]
+            | null
+          cover_image_url?: string | null
           created_at?: string
+          description?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
           id?: string
+          is_verified?: boolean
+          location?: string | null
           logo_url?: string | null
+          member_count?: number
           name: string
+          owner_id?: string | null
           slug: string
+          website_url?: string | null
         }
         Update: {
           brand_color?: string
+          category_type?:
+            | Database["public"]["Enums"]["community_category_type"]
+            | null
+          cover_image_url?: string | null
           created_at?: string
+          description?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
           id?: string
+          is_verified?: boolean
+          location?: string | null
           logo_url?: string | null
+          member_count?: number
           name?: string
+          owner_id?: string | null
           slug?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -966,6 +1094,11 @@ export type Database = {
         | "score"
         | "streak"
       app_role: "admin" | "moderator" | "user"
+      community_category_type:
+        | "geography"
+        | "broadband_provider"
+        | "trade_skill"
+      community_membership_role: "member" | "moderator" | "admin"
       completion_status: "in_progress" | "completed" | "failed"
       credential_type:
         | "course_completion"
@@ -1124,6 +1257,12 @@ export const Constants = {
         "streak",
       ],
       app_role: ["admin", "moderator", "user"],
+      community_category_type: [
+        "geography",
+        "broadband_provider",
+        "trade_skill",
+      ],
+      community_membership_role: ["member", "moderator", "admin"],
       completion_status: ["in_progress", "completed", "failed"],
       credential_type: [
         "course_completion",
