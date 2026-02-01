@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      channel_posts: {
+        Row: {
+          channel_game: Database["public"]["Enums"]["game_title"]
+          content: string
+          created_at: string
+          id: string
+          likes_count: number
+          media_urls: string[] | null
+          user_id: string
+        }
+        Insert: {
+          channel_game: Database["public"]["Enums"]["game_title"]
+          content: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          media_urls?: string[] | null
+          user_id: string
+        }
+        Update: {
+          channel_game?: Database["public"]["Enums"]["game_title"]
+          content?: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          media_urls?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      channel_subscriptions: {
+        Row: {
+          created_at: string
+          game_title: Database["public"]["Enums"]["game_title"]
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_title: Database["public"]["Enums"]["game_title"]
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          game_title?: Database["public"]["Enums"]["game_title"]
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      game_channels: {
+        Row: {
+          accent_color: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          game_title: Database["public"]["Enums"]["game_title"]
+          id: string
+          member_count: number
+          name: string
+        }
+        Insert: {
+          accent_color?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          game_title: Database["public"]["Enums"]["game_title"]
+          id?: string
+          member_count?: number
+          name: string
+        }
+        Update: {
+          accent_color?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"]
+          id?: string
+          member_count?: number
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -97,6 +181,7 @@ export type Database = {
         Row: {
           brand_color: string
           created_at: string
+          game_titles: Database["public"]["Enums"]["game_title"][] | null
           id: string
           logo_url: string | null
           name: string
@@ -105,6 +190,7 @@ export type Database = {
         Insert: {
           brand_color?: string
           created_at?: string
+          game_titles?: Database["public"]["Enums"]["game_title"][] | null
           id?: string
           logo_url?: string | null
           name: string
@@ -113,6 +199,7 @@ export type Database = {
         Update: {
           brand_color?: string
           created_at?: string
+          game_titles?: Database["public"]["Enums"]["game_title"][] | null
           id?: string
           logo_url?: string | null
           name?: string

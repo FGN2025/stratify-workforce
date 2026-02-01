@@ -6,7 +6,8 @@ import {
   Users, 
   Settings,
   Gauge,
-  Trophy
+  Trophy,
+  ShieldCheck
 } from 'lucide-react';
 import {
   Sidebar,
@@ -22,6 +23,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useTenant } from '@/contexts/TenantContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
 
 const mainNavItems = [
@@ -33,6 +35,7 @@ const mainNavItems = [
 ];
 
 const adminNavItems = [
+  { title: 'Admin Dashboard', url: '/admin', icon: ShieldCheck, adminOnly: true },
   { title: 'Students', url: '/students', icon: Users },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
@@ -42,8 +45,14 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { tenant } = useTenant();
+  const { isAdmin } = useUserRole();
 
   const isActive = (path: string) => location.pathname === path;
+  
+  // Filter admin-only items based on user role
+  const visibleAdminItems = adminNavItems.filter(
+    (item) => !('adminOnly' in item && item.adminOnly) || isAdmin
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -104,7 +113,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminNavItems.map((item) => (
+              {visibleAdminItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
