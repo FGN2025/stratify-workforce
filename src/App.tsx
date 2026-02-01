@@ -18,6 +18,7 @@ import CommunityProfile from "./pages/CommunityProfile";
 import Auth from "./pages/Auth";
 import AgentWidget from "./pages/AgentWidget";
 import Admin from "./pages/Admin";
+import Learn from "./pages/Learn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,9 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/community/:slug" element={<CommunityProfile />} />
+              
+              {/* Learning routes */}
+              <Route path="/learn" element={<Learn />} />
               
               {/* Protected routes */}
               <Route path="/profile" element={

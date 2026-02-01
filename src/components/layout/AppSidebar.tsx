@@ -7,7 +7,8 @@ import {
   Settings,
   Gauge,
   Trophy,
-  ShieldCheck
+  ShieldCheck,
+  GraduationCap
 } from 'lucide-react';
 import {
   Sidebar,
@@ -28,6 +29,7 @@ import { cn } from '@/lib/utils';
 
 const mainNavItems = [
   { title: 'Discover', url: '/', icon: LayoutDashboard },
+  { title: 'Learn', url: '/learn', icon: GraduationCap },
   { title: 'Work Orders', url: '/work-orders', icon: ClipboardList },
   { title: 'Communities', url: '/communities', icon: Users },
   { title: 'Skill Passport', url: '/profile', icon: User },
