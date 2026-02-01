@@ -20,6 +20,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -57,6 +67,7 @@ export function TenantManagement() {
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState<TenantFormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
 
   useEffect(() => {
     fetchTenants();
@@ -141,17 +152,23 @@ export function TenantManagement() {
     }
   };
 
-  const handleDelete = async (tenant: Tenant) => {
-    if (!confirm(`Delete "${tenant.name}"? This action cannot be undone.`)) return;
+  const handleDelete = (tenant: Tenant) => {
+    setDeletingTenant(tenant);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingTenant) return;
 
     try {
-      const { error } = await supabase.from('tenants').delete().eq('id', tenant.id);
+      const { error } = await supabase.from('tenants').delete().eq('id', deletingTenant.id);
       if (error) throw error;
-      toast({ title: 'Deleted', description: `${tenant.name} has been deleted` });
+      toast({ title: 'Deleted', description: `${deletingTenant.name} has been deleted` });
       fetchTenants();
     } catch (error) {
       console.error('Error deleting tenant:', error);
       toast({ title: 'Error', description: 'Failed to delete tenant', variant: 'destructive' });
+    } finally {
+      setDeletingTenant(null);
     }
   };
 
@@ -324,6 +341,27 @@ export function TenantManagement() {
           )}
         </TableBody>
       </Table>
+
+      <AlertDialog open={!!deletingTenant} onOpenChange={() => setDeletingTenant(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tenant</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingTenant?.name}"? 
+              This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
