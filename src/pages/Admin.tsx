@@ -4,6 +4,7 @@ import { AdminHero } from '@/components/admin/AdminHero';
 import { AdminStatsGrid } from '@/components/admin/AdminStatsGrid';
 import { UserManagementTable } from '@/components/admin/UserManagementTable';
 import { MediaLibrary } from '@/components/admin/MediaLibrary';
+import { SimGamesManager } from '@/components/admin/SimGamesManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -181,6 +182,7 @@ export default function Admin() {
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList>
             <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="games">SIM Games</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
           </TabsList>
 
@@ -195,6 +197,14 @@ export default function Admin() {
                   isLoading={isLoading}
                   onRoleChange={handleRoleChange}
                 />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="games">
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <SimGamesManager />
               </CardContent>
             </Card>
           </TabsContent>
