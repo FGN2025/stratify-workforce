@@ -1,90 +1,158 @@
 
-# Fix: Super Admin Access Denied Error
+# Replace Native confirm() with Custom AlertDialog
 
 ## Problem
 
-After adding the `super_admin` role to the system, **darcy@fgn.gg** is being denied access to the Admin Dashboard. The error message shown is:
+The `TenantManagement.tsx` component uses a native browser `confirm()` dialog for delete confirmations (line 145). This has several issues:
 
-> "Access Denied - You don't have permission to access the admin dashboard."
-
-## Root Cause
-
-The `useUserRole` hook only checks for exact role matches:
-
-```typescript
-isAdmin: role === 'admin',      // Returns FALSE for super_admin
-isModerator: role === 'moderator', // Returns FALSE for super_admin
-```
-
-Since darcy@fgn.gg now has the `super_admin` role (not `admin`), the frontend denies access even though the database function `has_role()` was correctly updated to handle inheritance.
-
----
+- Inconsistent styling with the rest of the application
+- Cannot be styled or branded
+- Difficult to test in automated testing environments
+- Blocks the JavaScript thread
+- Poor accessibility compared to custom dialogs
 
 ## Solution
 
-Update the `useUserRole` hook to recognize that `super_admin` has all the privileges of `admin` and `moderator`.
+Replace the native `confirm()` with a controlled `AlertDialog` component, following the same pattern already used in `RoleEscalationControls.tsx` and `DangerousOperations.tsx`.
 
 ---
 
-## Files to Modify
+## File to Modify
 
 | File | Change |
 |------|--------|
-| `src/hooks/useUserRole.ts` | Update role checks to include `super_admin` |
+| `src/components/admin/superadmin/TenantManagement.tsx` | Add AlertDialog imports and controlled state for delete confirmation |
 
 ---
 
 ## Implementation Details
 
-### Update useUserRole.ts
+### 1. Add AlertDialog Imports
 
-Add `isSuperAdmin` to the return interface and update the boolean checks:
+Add the AlertDialog component imports alongside the existing Dialog imports:
 
 ```typescript
-interface UseUserRoleReturn {
-  role: AppRole | null;
-  isSuperAdmin: boolean;  // NEW
-  isAdmin: boolean;
-  isModerator: boolean;
-  isLoading: boolean;
-}
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 ```
 
-Update the return statement to handle role inheritance:
+### 2. Add State for Pending Delete
+
+Add a new state variable to track which tenant is pending deletion:
 
 ```typescript
-return {
-  role,
-  isSuperAdmin: role === 'super_admin',
-  isAdmin: role === 'admin' || role === 'super_admin',
-  isModerator: role === 'moderator' || role === 'super_admin',
-  isLoading,
+const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
+```
+
+### 3. Update handleDelete Function
+
+Change from immediate confirmation to setting pending state:
+
+```typescript
+const handleDelete = (tenant: Tenant) => {
+  setDeletingTenant(tenant);
 };
 ```
 
+### 4. Add New confirmDelete Function
+
+Create a new function that performs the actual deletion:
+
+```typescript
+const confirmDelete = async () => {
+  if (!deletingTenant) return;
+
+  try {
+    const { error } = await supabase
+      .from('tenants')
+      .delete()
+      .eq('id', deletingTenant.id);
+    
+    if (error) throw error;
+    
+    toast({ 
+      title: 'Deleted', 
+      description: `${deletingTenant.name} has been deleted` 
+    });
+    
+    fetchTenants();
+  } catch (error) {
+    console.error('Error deleting tenant:', error);
+    toast({ 
+      title: 'Error', 
+      description: 'Failed to delete tenant', 
+      variant: 'destructive' 
+    });
+  } finally {
+    setDeletingTenant(null);
+  }
+};
+```
+
+### 5. Add AlertDialog Component
+
+Add the AlertDialog at the end of the component's JSX (after the Table):
+
+```typescript
+<AlertDialog 
+  open={!!deletingTenant} 
+  onOpenChange={() => setDeletingTenant(null)}
+>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Delete Tenant</AlertDialogTitle>
+      <AlertDialogDescription>
+        Are you sure you want to delete "{deletingTenant?.name}"? 
+        This action cannot be undone and will remove all associated data.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction 
+        onClick={confirmDelete}
+        className="bg-destructive hover:bg-destructive/90"
+      >
+        Delete
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
 ---
 
-## How This Fixes the Issue
+## Before vs After Comparison
 
-| Check | Before | After |
-|-------|--------|-------|
-| `isSuperAdmin` | N/A | `true` for super_admin |
-| `isAdmin` | `false` for super_admin | `true` for super_admin |
-| `isModerator` | `false` for super_admin | `true` for super_admin |
+| Aspect | Before (native confirm) | After (AlertDialog) |
+|--------|------------------------|---------------------|
+| Styling | Browser default | Matches app theme |
+| Thread blocking | Yes | No |
+| Testability | Difficult | Easy |
+| Accessibility | Basic | Full ARIA support |
+| Branding | None | Customizable |
+| Animation | None | Smooth transitions |
 
 ---
 
-## Impact Analysis
+## Pattern Consistency
 
-The following components use `isAdmin` from `useUserRole`:
+This change aligns `TenantManagement.tsx` with the patterns already established in:
 
-1. **`AdminRoute.tsx`** - Guards admin dashboard access (will now work correctly)
-2. **`AppSidebar.tsx`** - Filters admin nav items (will now show admin links)
+- `RoleEscalationControls.tsx` - Uses `pendingChange` state + AlertDialog
+- `DangerousOperations.tsx` - Uses `selectedOperation` state + AlertDialog
 
-No database changes required since the `has_role()` function already handles inheritance correctly.
+All Super Admin panel components will now use consistent confirmation dialogs.
 
 ---
 
 ## Summary
 
-This is a one-file fix that updates the frontend role checking logic to match the database function's behavior, ensuring `super_admin` users have all admin and moderator privileges throughout the application.
+This is a straightforward refactor that replaces the native `confirm()` dialog with a custom `AlertDialog` component. The change improves user experience, testability, and maintains consistency with other components in the Super Admin panel.
