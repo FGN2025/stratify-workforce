@@ -1,335 +1,329 @@
 
-# Channel-Based Work Orders with XP Rewards
+# Gap Analysis: FGN Academy vs SimGrid + Community & Embed Features
 
-## Overview
+## Executive Summary
 
-This plan enhances the Work Orders feature to be channel-subscription aware, allowing users to see work orders from game channels they've subscribed to. Channel admins will be able to create and manage work orders with customizable point awards.
-
----
-
-## Current State Analysis
-
-| Component | Status | Gap |
-|-----------|--------|-----|
-| `work_orders` table | Has game_title, tenant_id | No XP/points field, no channel link |
-| `game_channels` table | Exists with 4 game channels | Not linked to work orders |
-| `channel_subscriptions` table | Exists but empty | Users can subscribe to game channels |
-| `user_points` table | Full XP ledger system | Missing "work_order" as source_type |
-| Work Orders page | Shows all work orders | No subscription filtering |
+This plan addresses three major requirements:
+1. Feature gaps between FGN Academy and SimGrid (simulation racing platform)
+2. Embeddable leaderboards that admins can push to external websites
+3. Active "Create Community" button with categorization by geography, broadband provider, and trade skill tracks
 
 ---
 
-## Database Changes
+## Part 1: SimGrid Feature Gap Analysis
 
-### 1. Extend `work_orders` Table
+### What SimGrid Has That FGN Academy is Missing
 
-Add new columns to support point rewards and channel association:
+| Feature | SimGrid | FGN Academy | Priority |
+|---------|---------|-------------|----------|
+| **Ranked/Quick Race** | Real-time matchmaking queue | No live matchmaking | Low (different domain) |
+| **Championships/Seasons** | Multi-round event series | Single work orders | Medium |
+| **Grid Rank** | Skill-based rating system | Basic score only | High |
+| **Event Registration** | Sign-up with slots/capacity | No capacity limits | Medium |
+| **Discord Integration** | OAuth login via Discord | Email only | Medium |
+| **Platform Tags** | PC/Console/Crossplay badges | No platform info | Low |
+| **Community Discovery** | Rich community cards with event counts | Basic community cards | High |
+| **Embeddable Widgets** | Results/standings widgets | None | Critical |
+| **Event Scheduling** | Recurring events with countdowns | Static work orders | Medium |
+
+### Features FGN Academy Already Has (Advantage)
+
+| Feature | Description |
+|---------|-------------|
+| XP/Points System | Full ledger with multipliers |
+| Skill Passport | Verifiable credentials |
+| Course LMS | Structured learning paths |
+| Achievement System | Badges and achievements |
+| Work Order Completion | Tracked attempts with scores |
+
+---
+
+## Part 2: Community Creation System
+
+### Current State
+- `tenants` table exists with: name, slug, brand_color, logo_url, game_titles
+- "Create Community" button is present but has no `onClick` handler
+- No categorization fields exist
+
+### Required Database Changes
+
+**Extend `tenants` table with new columns:**
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `xp_reward` | integer | Base XP awarded on completion (default: 50) |
-| `channel_id` | uuid | Optional link to game_channels table |
-| `difficulty` | text | beginner, intermediate, advanced |
-| `estimated_time_minutes` | integer | Expected completion time |
-| `max_attempts` | integer | Max tries allowed (null = unlimited) |
+| `category_type` | enum | 'geography', 'broadband_provider', 'trade_skill' |
+| `description` | text | Community description |
+| `cover_image_url` | text | Banner image |
+| `website_url` | text | External link |
+| `location` | text | For geography-based communities |
+| `is_verified` | boolean | Admin-verified badge |
+| `member_count` | integer | Cached count |
+| `owner_id` | uuid | Creator/admin of community |
 
-### 2. Add "work_order" to source_type Enum
-
-Update the `source_type` enum to include work orders as a valid point source:
-
-```sql
-ALTER TYPE source_type ADD VALUE 'work_order';
-```
-
-### 3. Create `user_work_order_completions` Table
-
-Track individual work order attempts and completions:
+**Create `community_memberships` table:**
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
 | `user_id` | uuid | FK to profiles |
-| `work_order_id` | uuid | FK to work_orders |
-| `status` | text | in_progress, completed, failed |
-| `score` | numeric | Achievement score |
-| `xp_awarded` | integer | Points given |
-| `attempt_number` | integer | Which attempt this is |
-| `started_at` | timestamp | When started |
-| `completed_at` | timestamp | When finished |
-| `metadata` | jsonb | Additional telemetry data |
+| `tenant_id` | uuid | FK to tenants |
+| `role` | enum | 'member', 'moderator', 'admin' |
+| `joined_at` | timestamp | When joined |
+
+### New Components
+
+1. **CreateCommunityDialog** - Modal form for admins to create communities
+   - Name, slug, description
+   - Category type selector (Geography / Broadband / Trade Skill)
+   - Sub-category based on type:
+     - Geography: State/Region dropdown
+     - Broadband: Provider selection (Cox, Comcast, etc.)
+     - Trade Skill: Track selection (Trucking, Farming, Construction, Mechanic)
+   - Logo upload
+   - Brand color picker
+
+2. **CommunityFilterBar** - Filter communities by category type
 
 ---
 
-## Architecture
+## Part 3: Embeddable Leaderboard System
+
+### Architecture Overview
 
 ```text
-+-------------------+     +-------------------+     +-------------------+
-|   game_channels   |     |   work_orders     |     |  user_work_order  |
-|   (ATS, etc.)     |<----|   (channel_id)    |---->|   _completions    |
-+-------------------+     +-------------------+     +-------------------+
-        |                         |                         |
-        v                         v                         v
-+-------------------+     +-------------------+     +-------------------+
-|    channel_       |     |   xp_reward,      |     |   status, score,  |
-|  subscriptions    |     |   difficulty      |     |   xp_awarded      |
-|  (user → game)    |     |                   |     |                   |
-+-------------------+     +-------------------+     +-------------------+
++------------------+     +--------------------+     +------------------+
+|  Admin Dashboard |     |   leaderboard_     |     |  Public Embed    |
+|  (Generate Code) |---->|   embed_configs    |---->|  /embed/:token   |
++------------------+     +--------------------+     +------------------+
+                                  |
+                                  v
+                         +------------------+
+                         |  Leaderboard     |
+                         |  Data Query      |
+                         +------------------+
+```
+
+### Database Schema
+
+**Create `leaderboard_embed_configs` table:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `tenant_id` | uuid | FK to tenants (optional, null = global) |
+| `work_order_id` | uuid | FK to work_orders (optional) |
+| `game_title` | game_title | Filter by game (optional) |
+| `title` | text | Custom title for the embed |
+| `display_count` | integer | Number of entries to show (5, 10, 25) |
+| `theme` | text | 'dark', 'light', 'auto' |
+| `show_avatars` | boolean | Display user avatars |
+| `show_change` | boolean | Show rank change arrows |
+| `embed_token` | text | Unique public token |
+| `is_active` | boolean | Enable/disable embed |
+| `created_by` | uuid | Admin who created |
+| `created_at` | timestamp | Creation time |
+| `expires_at` | timestamp | Optional expiration |
+
+### Implementation Components
+
+1. **LeaderboardEmbedManager** (Admin tab)
+   - List existing embed configurations
+   - Create new embed with settings
+   - Copy embed code (iframe + script)
+   - Preview embed
+   - Enable/disable embeds
+
+2. **LeaderboardEmbedDialog** (Create/Edit form)
+   - Scope selector (Global / Community / Work Order / Game)
+   - Display options (count, avatars, theme)
+   - Custom title
+   - Generate preview
+
+3. **EmbedLeaderboard** (Public route: `/embed/leaderboard/:token`)
+   - Standalone React component
+   - Fetches data from public API
+   - Responsive design for iframe embedding
+   - CSS isolation to prevent host site conflicts
+
+### Embed Code Output
+
+```html
+<!-- FGN Academy Leaderboard Widget -->
+<iframe
+  src="https://fgn-academy.lovable.app/embed/leaderboard/abc123xyz"
+  width="400"
+  height="500"
+  frameborder="0"
+  style="border-radius: 8px; overflow: hidden;"
+  title="FGN Academy Leaderboard"
+></iframe>
 ```
 
 ---
 
-## Feature Implementation
+## Implementation Plan
 
-### 1. Subscription-Based Work Order Filtering
+### Phase 1: Database Schema Updates
 
-Update the Work Orders page to show:
-- **My Channels**: Work orders from subscribed game channels (prioritized)
-- **All Channels**: Browse work orders from all channels
-- **Trending**: Popular work orders across all channels
+1. Add community categorization columns to `tenants`:
+   - `category_type` enum: 'geography', 'broadband_provider', 'trade_skill'
+   - `description`, `cover_image_url`, `website_url`, `location`
+   - `is_verified`, `member_count`, `owner_id`
 
-**Filter Tabs:**
-| Tab | Description |
-|-----|-------------|
-| For You | Work orders from subscribed channels |
-| All | All active work orders |
-| Trucking | ATS game channel only |
-| Farming | Farming_Sim channel only |
-| Construction | Construction_Sim channel only |
-| Mechanic | Mechanic_Sim channel only |
+2. Create `community_memberships` table for user-community relationships
 
-### 2. Work Order Card Enhancements
+3. Create `leaderboard_embed_configs` table for embed settings
 
-Add to `EventCard.tsx`:
-- XP reward badge showing potential points
-- Difficulty indicator (beginner/intermediate/advanced stars)
-- Estimated completion time
-- User's completion status (if attempted)
-- Progress indicator for in-progress work orders
+4. Set up RLS policies:
+   - Admins can create/edit communities and embeds
+   - Public can read embed configs by token
+   - Users can join communities
 
-### 3. Channel Subscription Flow
+### Phase 2: Community Creation UI
 
-Add subscription buttons to:
-- Game channel pages
-- Work Orders page filter section
-- First-time user onboarding
+1. **CreateCommunityDialog.tsx**
+   - Form with category type selector
+   - Dynamic sub-fields based on category
+   - Image upload integration
+   - Validation and submission
 
-**Quick Subscribe Component:**
-Shows game channel cards with subscribe/unsubscribe toggle
+2. **Update Communities.tsx**
+   - Wire up "Create Community" button (admin-only)
+   - Add category filter tabs
 
-### 4. Work Order Detail Page
+3. **Update CommunityCard.tsx**
+   - Display category badge
+   - Show member count
+   - Show verified status
 
-Create `/work-orders/:id` with:
-- Full work order description
-- Success criteria breakdown
-- XP reward + difficulty + time
-- "Start Work Order" button
-- Previous attempts history
-- Leaderboard for this work order
-- Related work orders from same channel
+4. **Update CommunityProfile.tsx**
+   - Display full description
+   - Show category information
+   - Join/Leave functionality
 
-### 5. Admin Work Order Management
+### Phase 3: Embeddable Leaderboards
 
-Add to Admin Dashboard or Channel Admin view:
-- **Work Order List**: Table of all work orders for their channel
-- **Create Work Order** dialog:
-  - Title, description
-  - Game channel selection
-  - XP reward (slider: 25-500)
-  - Difficulty level
-  - Success criteria builder
-  - Estimated time
-  - Max attempts
-- **Edit/Delete** existing work orders
-- **Analytics**: Completion rates, average scores
+1. **Add Embed Tab to Admin Dashboard**
+   - New tab: "Embed Widgets"
+   - List of existing embed configurations
+   - Create new embed button
 
----
+2. **LeaderboardEmbedDialog.tsx**
+   - Scope selection (Global/Community/Work Order/Game)
+   - Style configuration
+   - Preview pane
+   - Generate embed code
 
-## New Components
+3. **Public Embed Route**
+   - New route: `/embed/leaderboard/:token`
+   - Standalone page with minimal wrapper
+   - Query leaderboard data based on config
+   - Render compact leaderboard UI
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `WorkOrderDetailPage.tsx` | `/work-orders/:id` | Full work order view |
-| `WorkOrderFilters.tsx` | Work Orders page | Tab + subscription filters |
-| `ChannelSubscribeButton.tsx` | Various | Subscribe/unsubscribe toggle |
-| `WorkOrderCreateDialog.tsx` | Admin | Create new work order form |
-| `WorkOrderProgressBadge.tsx` | EventCard | Shows completion status |
-| `XPRewardBadge.tsx` | EventCard | Shows potential XP |
-| `DifficultyIndicator.tsx` | EventCard | Star rating for difficulty |
+4. **EmbedLeaderboard.tsx**
+   - Self-contained component
+   - Dark/light theme support
+   - Responsive sizing
+   - Auto-refresh option
 
----
+### Phase 4: Hook & Service Layer
 
-## Hooks
+1. **useCommunities.ts** (enhance)
+   - `createCommunity(data)`
+   - `joinCommunity(tenantId)`
+   - `leaveCommunity(tenantId)`
+   - `filterByCategory(type)`
 
-### `useChannelSubscriptions`
-```typescript
-- subscriptions: GameTitle[] // User's subscribed channels
-- isSubscribed(gameTitle): boolean
-- subscribe(gameTitle): Promise
-- unsubscribe(gameTitle): Promise
-```
+2. **useLeaderboardEmbed.ts** (new)
+   - `createEmbed(config)`
+   - `updateEmbed(id, config)`
+   - `deleteEmbed(id)`
+   - `getEmbedByToken(token)`
 
-### `useSubscribedWorkOrders`
-```typescript
-- workOrders: WorkOrder[] // Filtered by user subscriptions
-- isLoading: boolean
-- refetch(): void
-```
-
-### `useWorkOrderCompletion`
-```typescript
-- startWorkOrder(id): Promise<completionRecord>
-- completeWorkOrder(id, score): Promise<xpAwarded>
-- getUserProgress(workOrderId): CompletionRecord | null
-```
-
----
-
-## XP Award Logic
-
-When a work order is completed:
-
-```text
-base_xp = work_order.xp_reward
-
-// Score multiplier (like existing LMS)
-score_multiplier = score >= 90 ? 1.5 : score >= 80 ? 1.2 : 1.0
-
-// First completion bonus
-first_completion_bonus = is_first_attempt ? 1.25 : 1.0
-
-// Difficulty bonus
-difficulty_bonus = {
-  beginner: 1.0,
-  intermediate: 1.2,
-  advanced: 1.5
-}[difficulty]
-
-final_xp = base_xp * score_multiplier * first_completion_bonus * difficulty_bonus
-```
-
-**XP is recorded in `user_points` table with:**
-- `source_type`: 'work_order'
-- `source_id`: work_order.id
-- `description`: "Completed {work_order.title}"
-
----
-
-## RLS Policies
-
-### `work_orders`
-| Action | Policy |
-|--------|--------|
-| SELECT | Public (all active work orders) |
-| INSERT | Admins + Channel admins |
-| UPDATE | Admins + Channel admins (own channel) |
-| DELETE | Admins only |
-
-### `user_work_order_completions`
-| Action | Policy |
-|--------|--------|
-| SELECT | Own records |
-| INSERT | Own records |
-| UPDATE | Own records |
-| DELETE | None |
-
----
-
-## UI Changes
-
-### Work Orders Page Updates
-
-1. **Add Filter Tabs** below hero:
-   - For You / All / By Game Channel
-
-2. **Subscription Banner** (if no subscriptions):
-   - "Subscribe to channels to see personalized work orders"
-   - Quick-subscribe buttons for each game
-
-3. **Work Order Cards Enhanced**:
-   - XP badge in corner
-   - Difficulty stars
-   - Completion checkmark if done
-   - Progress bar if in-progress
-
-4. **New Work Order Button** (admin only):
-   - Opens `WorkOrderCreateDialog`
-
-### Admin Dashboard Updates
-
-1. **Work Orders Tab**:
-   - List of work orders (sortable, filterable)
-   - Quick stats: total, completions, avg score
-   - Create/Edit/Delete actions
-
----
-
-## Implementation Order
-
-### Phase 1: Database (Foundation)
-1. Add columns to `work_orders` (xp_reward, channel_id, difficulty)
-2. Update source_type enum
-3. Create `user_work_order_completions` table
-4. Set up RLS policies
-5. Seed existing work orders with default XP values
-
-### Phase 2: Hooks & Data Layer
-1. Create `useChannelSubscriptions` hook
-2. Create `useSubscribedWorkOrders` hook
-3. Create `useWorkOrderCompletion` hook
-4. Integrate XP awarding with existing `useAwardPoints`
-
-### Phase 3: UI Components
-1. Create filter tabs component
-2. Create XP/difficulty badges
-3. Update `EventCard` with new badges
-4. Create channel subscribe button
-
-### Phase 4: Work Order Detail Page
-1. Create `/work-orders/:id` route and page
-2. Show full details, criteria, rewards
-3. Add "Start Work Order" flow
-4. Add completion history
-
-### Phase 5: Admin Management
-1. Add Work Orders tab to Admin
-2. Create work order creation dialog
-3. Add edit/delete functionality
-4. Add basic analytics
+3. **useLeaderboardData.ts** (new)
+   - `getLeaderboard(scope, filters)`
+   - Supports global, community, work order, game filtering
 
 ---
 
 ## File Changes Summary
 
 ### New Files
+
 ```text
-src/pages/WorkOrderDetail.tsx
-src/components/work-orders/WorkOrderFilters.tsx
-src/components/work-orders/ChannelSubscribeButton.tsx
-src/components/work-orders/WorkOrderCreateDialog.tsx
-src/components/work-orders/XPRewardBadge.tsx
-src/components/work-orders/DifficultyIndicator.tsx
-src/hooks/useChannelSubscriptions.ts
-src/hooks/useWorkOrders.ts
-src/hooks/useWorkOrderCompletion.ts
+src/components/admin/LeaderboardEmbedManager.tsx
+src/components/admin/LeaderboardEmbedDialog.tsx
+src/components/admin/CreateCommunityDialog.tsx
+src/components/embed/EmbedLeaderboard.tsx
+src/pages/EmbedLeaderboard.tsx
+src/hooks/useCommunities.ts
+src/hooks/useLeaderboardEmbed.ts
+src/hooks/useLeaderboardData.ts
 ```
 
 ### Modified Files
+
 ```text
-src/pages/WorkOrders.tsx (add filters, subscription logic)
-src/pages/Admin.tsx (add Work Orders management tab)
-src/components/marketplace/EventCard.tsx (add XP badge, status)
-src/types/tenant.ts (update WorkOrder interface)
-src/App.tsx (add work order detail route)
+src/pages/Admin.tsx
+  - Add "Embed Widgets" tab
+  - Add community management controls
+
+src/pages/Communities.tsx
+  - Wire "Create Community" button with dialog
+  - Add category filter tabs
+
+src/components/marketplace/CommunityCard.tsx
+  - Add category badge
+  - Add member count display
+
+src/components/marketplace/PageHero.tsx
+  - Ensure onClick handler is passed through
+
+src/types/tenant.ts
+  - Add new Tenant fields
+  - Add CommunityMembership interface
+  - Add LeaderboardEmbedConfig interface
+
+src/App.tsx
+  - Add embed route: /embed/leaderboard/:token
 ```
+
+---
+
+## Technical Notes
+
+### Community Category Types
+
+| Type | Examples |
+|------|----------|
+| Geography | Texas Region, California Bay Area, Northeast Corridor |
+| Broadband Provider | Cox Broadband, Comcast, AT&T Fiber |
+| Trade Skill | Commercial Trucking, Heavy Equipment, Precision Agriculture |
+
+### Embed Security
+
+- Tokens are UUIDs, not guessable
+- RLS ensures only public data is exposed
+- Optional expiration for time-limited embeds
+- Admins can disable embeds instantly
+
+### Embed Styling
+
+- CSS variables for theming
+- Shadow DOM consideration for isolation (optional)
+- Responsive breakpoints for various embed sizes
+- Minimal external dependencies
 
 ---
 
 ## Summary
 
-This enhancement transforms Work Orders into a channel-centric feature where:
+This plan delivers:
 
-1. **Users** see work orders from their subscribed game channels first
-2. **Channel admins** can create work orders with custom XP rewards
-3. **Completion tracking** records attempts and awards XP automatically
-4. **Gamification** encourages engagement with difficulty bonuses and score multipliers
-5. **Integration** with existing LMS XP system maintains unified progression
+1. **Active Community Creation** - Admins can create communities categorized by geography, broadband provider, or trade skill track
+
+2. **Embeddable Leaderboards** - Admins can generate iframe embed codes for leaderboards scoped to global, community, work order, or game level
+
+3. **SimGrid Parity** - Improved community cards, member counts, and the foundation for championships/seasons (future phase)
+
+The implementation uses the existing database patterns and authentication system while adding focused new capabilities for community management and external widget distribution.
