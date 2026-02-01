@@ -25,8 +25,9 @@ import { useTenant } from '@/contexts/TenantContext';
 import { cn } from '@/lib/utils';
 
 const mainNavItems = [
-  { title: 'Dispatcher', url: '/', icon: LayoutDashboard },
+  { title: 'Discover', url: '/', icon: LayoutDashboard },
   { title: 'Work Orders', url: '/work-orders', icon: ClipboardList },
+  { title: 'Communities', url: '/communities', icon: Users },
   { title: 'Skill Passport', url: '/profile', icon: User },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
 ];
