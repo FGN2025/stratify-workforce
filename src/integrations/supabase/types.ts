@@ -1119,6 +1119,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_profile: {
+        Args: { profile_id: string; viewer_id: string }
+        Returns: boolean
+      }
       get_child_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
       get_course_progress: {
         Args: { p_course_id: string; p_user_id: string }
