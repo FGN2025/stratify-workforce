@@ -137,7 +137,7 @@ export function RegistrationCodeManager() {
       const { error } = await supabase.from('registration_codes').insert({
         code: newCode.trim().toUpperCase(),
         description: description.trim() || null,
-        tenant_id: selectedTenant || null,
+        tenant_id: selectedTenant && selectedTenant !== 'none' ? selectedTenant : null,
         max_uses: maxUses ? parseInt(maxUses) : null,
         expires_at: expiresAt || null,
         created_by: user.id,
@@ -305,7 +305,7 @@ export function RegistrationCodeManager() {
                     <SelectValue placeholder="Select a tenant..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No tenant (global code)</SelectItem>
+                    <SelectItem value="none">No tenant (global code)</SelectItem>
                     {tenants.map((tenant) => (
                       <SelectItem key={tenant.id} value={tenant.id}>
                         {tenant.name}
