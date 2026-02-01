@@ -1,103 +1,94 @@
 
 
-# FGN Academy Registration Form with Smarty Address Validation
+# Registration Override Code Feature
 
 ## Overview
 
-Create a multi-step onboarding flow that collects user information (Name, Address, ZIP, Discord ID) when they first join FGN Academy, with real-time address validation using the Smarty US Street API.
+Add an optional override code field to the FGN Academy registration form that allows users to bypass address verification. These codes are created and managed by Tenant Admins or Super Admins, enabling them to pre-authorize users for specific organizations.
 
 ---
 
 ## User Flow
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    FGN Academy Onboarding Flow                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. User clicks "Join FGN Academy" button                       │
-│                          ↓                                       │
-│  2. Check if user has completed onboarding                      │
-│          ↓                              ↓                        │
-│     [Not Complete]                 [Complete]                    │
-│          ↓                              ↓                        │
-│  3. Show Registration Form         4. Show Sim Selection        │
-│     - Full Name                       (current dialog)          │
-│     - Street Address                                            │
-│     - City                                                      │
-│     - State                                                     │
-│     - ZIP Code                                                  │
-│     - Discord ID (placeholder)                                  │
-│          ↓                                                      │
-│  5. Validate address via Smarty API                             │
-│          ↓                                                      │
-│  6. Show validated/corrected address                            │
-│          ↓                                                      │
-│  7. Save to database → Proceed to Sim Selection                 │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+Registration Flow with Override Code
+=====================================
+
+User enters registration info:
+  - Full Name
+  - Discord ID (placeholder)
+  - Override Code (optional)       <-- NEW FIELD
+  - Street Address
+  - City, State, ZIP
+
+                    |
+                    v
+          Is Override Code provided?
+         /                           \
+       Yes                            No
+        |                              |
+        v                              v
+  Validate code against           Continue normal
+  registration_codes table        Smarty address
+        |                         verification
+        v                              |
+  Is code valid & active?              |
+   /              \                    |
+ Yes              No                   |
+  |                |                   |
+  v                v                   v
+Mark registration  Show error     Smarty validates
+as verified       "Invalid code"   address
+(skip Smarty)          |               |
+  |                    |               v
+  v                    |         Show validated
+Associate user    <----+         or original
+with tenant                      address options
+from code                              |
+  |                                    |
+  v                                    v
+  Save to user_addresses with:
+  - is_validated = true (code) OR from Smarty
+  - override_code_id = code.id (if used)
+  - tenant_id = code.tenant_id (if used)
 ```
 
 ---
 
 ## Database Changes
 
-### New Table: `user_addresses`
+### New Table: `registration_codes`
 
-Store validated user addresses for FGN Academy membership verification.
+Store override codes that bypass address verification.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | uuid | Primary key |
-| user_id | uuid | References auth user (unique) |
-| full_name | text | User's full name |
-| street_address | text | Street address line |
-| city | text | City name |
-| state | text | State abbreviation (2 chars) |
-| zip_code | text | 5-digit ZIP code |
-| discord_id | text | Discord username (placeholder) |
-| is_validated | boolean | Whether address was validated by Smarty |
-| smarty_response | jsonb | Full Smarty API response for audit |
+| code | text | Unique alphanumeric code (e.g., "ACADEMY2025") |
+| tenant_id | uuid | Associated tenant (nullable for global codes) |
+| created_by | uuid | Admin who created the code |
+| description | text | Internal note about code purpose |
+| max_uses | integer | Maximum redemptions allowed (null = unlimited) |
+| current_uses | integer | Number of times code has been used |
+| is_active | boolean | Whether code is currently valid |
+| expires_at | timestamptz | Optional expiration date |
 | created_at | timestamptz | Creation timestamp |
-| updated_at | timestamptz | Last update timestamp |
 
-### RLS Policies
+### Modify Table: `user_addresses`
 
-- Users can INSERT their own address
-- Users can SELECT their own address
-- Users can UPDATE their own address
-- Admins can view all addresses
+Add columns to track override code usage:
 
----
+| Column | Type | Description |
+|--------|------|-------------|
+| override_code_id | uuid | Reference to the code used (nullable) |
+| tenant_id | uuid | Tenant the user is associated with via code |
 
-## Smarty API Integration
+### RLS Policies for `registration_codes`
 
-### API Details
-
-- **Endpoint**: `https://us-street.api.smarty.com/street-address`
-- **Embedded Key**: `260377163906526147` (client-side safe)
-- **Method**: GET with query parameters
-
-### Request Parameters
-
-| Parameter | Value |
-|-----------|-------|
-| key | Embedded key |
-| street | User's street address |
-| city | User's city |
-| state | User's state |
-| zipcode | User's ZIP |
-| candidates | 1 |
-
-### Response Handling
-
-The Smarty API returns an array of validated addresses. An empty array means the address could not be validated.
-
-| Scenario | UI Behavior |
-|----------|-------------|
-| Valid address found | Show corrected address, allow user to accept |
-| No match found | Show warning, allow user to proceed with manual entry |
-| API error | Show error message, allow retry |
+| Policy | Description |
+|--------|-------------|
+| Select (Public) | Anyone can check if a code exists (for validation) |
+| Insert/Update/Delete | Only admins and super_admins can manage codes |
 
 ---
 
@@ -105,107 +96,162 @@ The Smarty API returns an array of validated addresses. An empty array means the
 
 ### New Components
 
-1. **`AcademyOnboardingDialog.tsx`**
-   - Multi-step dialog for collecting user registration info
-   - Step 1: Personal Info (Name, Discord ID)
-   - Step 2: Address Entry with Smarty validation
-   - Step 3: Confirmation/Success
+1. **`RegistrationCodeManager.tsx`** (Admin Panel)
+   - Add to Admin page under User Management or new tab
+   - CRUD interface for managing override codes
+   - Shows usage statistics, expiration, tenant association
 
-2. **`AddressValidationForm.tsx`**
-   - Reusable address form with Smarty integration
-   - Real-time validation on blur or submit
-   - Shows validated vs original address comparison
-
-3. **`useAddressValidation.ts`**
-   - Custom hook for Smarty API calls
-   - Handles loading, error, and validated states
+2. **`OverrideCodeInput.tsx`**
+   - Collapsible section in registration form: "Have an override code?"
+   - Real-time code validation with visual feedback
+   - Shows associated tenant name when valid code entered
 
 ### Modified Components
 
-1. **`JoinFGNSkillsDialog.tsx`** (rename to `JoinFGNAcademyDialog.tsx`)
-   - Check if user has completed onboarding first
-   - If not, show onboarding flow before sim selection
+1. **`AcademyOnboardingDialog.tsx`**
+   - Add override code field to Personal Info step
+   - Pass override code to Address step
 
-2. **`HeroSection.tsx`**
-   - Update import to use renamed dialog component
+2. **`AddressValidationForm.tsx`**
+   - Accept optional override code prop
+   - If valid code provided, skip Smarty validation
+   - Show confirmation: "Code accepted - address verification bypassed"
+
+3. **`useOnboardingStatus.ts`**
+   - Update `SaveAddressInput` interface to include override code
+   - Track code usage when saving address
+
+### New Hooks
+
+1. **`useRegistrationCode.ts`**
+   - Validate code against database
+   - Return code details (tenant, validity, remaining uses)
+   - Handle code redemption (increment usage count)
 
 ---
 
-## Form Validation Schema
+## Validation Logic
 
-Using Zod for client-side validation:
+When a user enters an override code:
 
-```typescript
-const registrationSchema = z.object({
-  fullName: z.string()
-    .trim()
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name must be less than 100 characters"),
-  streetAddress: z.string()
-    .trim()
-    .min(5, "Please enter a valid street address")
-    .max(200, "Address too long"),
-  city: z.string()
-    .trim()
-    .min(2, "Please enter a valid city")
-    .max(100, "City name too long"),
-  state: z.string()
-    .length(2, "Please use 2-letter state code"),
-  zipCode: z.string()
-    .regex(/^\d{5}(-\d{4})?$/, "Please enter a valid ZIP code"),
-  discordId: z.string()
-    .trim()
-    .max(50, "Discord ID too long")
-    .optional(),
-});
+1. Query `registration_codes` table by code value
+2. Check conditions:
+   - `is_active = true`
+   - `expires_at IS NULL OR expires_at > now()`
+   - `max_uses IS NULL OR current_uses < max_uses`
+3. If valid:
+   - Display tenant name (if associated)
+   - Allow proceeding without Smarty verification
+   - Mark `is_validated = true` on save
+   - Increment `current_uses` on code
+   - Store `override_code_id` and `tenant_id` in user_addresses
+
+---
+
+## Admin Management Interface
+
+Add a new tab or section in the Admin panel for code management:
+
+**Features:**
+- Create new codes with:
+  - Custom code string (or auto-generate)
+  - Optional tenant association
+  - Optional usage limit
+  - Optional expiration date
+  - Description/notes
+- View all codes with usage statistics
+- Activate/deactivate codes
+- Delete expired codes
+- Filter by tenant, status, usage
+
+**Access Control:**
+- Tenant Admins: Can create/manage codes for their tenant only
+- Super Admins: Can create/manage all codes (including global ones)
+
+---
+
+## UI Design
+
+### Personal Info Step (Updated)
+
+```text
++------------------------------------------+
+| Full Name *                              |
+| [John Doe                            ]   |
+|                                          |
+| Discord ID (optional)                    |
+| [username#1234                       ]   |
+| Coming soon: Discord integration         |
+|                                          |
+| ▼ Have an override code?                 |
+| +--------------------------------------+ |
+| | Override Code                        | |
+| | [ACADEMY2025                     ]   | |
+| | ✓ Code valid - FGN Academy          | |
+| +--------------------------------------+ |
+|                                          |
+|                          [Continue]      |
++------------------------------------------+
+```
+
+### Address Step with Valid Code
+
+```text
++------------------------------------------+
+| Code Override Active                     |
+| You're registering with code ACADEMY2025 |
+| associated with FGN Academy.             |
+|                                          |
+| Your address (for records):              |
+| Street: [123 Main St              ]      |
+| City:   [Springfield  ] State: [IL]      |
+| ZIP:    [62701      ]                    |
+|                                          |
+| ⓘ Address verification bypassed         |
+|                                          |
+| [Back]              [Complete Registration]
++------------------------------------------+
 ```
 
 ---
 
 ## Security Considerations
 
-### Smarty Embedded Key
-
-The embedded key (`260377163906526147`) is designed for client-side use and is safe to include in frontend code. It has:
-- Domain restrictions (can be configured in Smarty dashboard)
-- Rate limiting
-- No access to account management APIs
-
-### Address Data Protection
-
-- RLS policies restrict access to own data only
-- Sensitive fields not exposed via public API
-- Smarty response stored for audit purposes only
+1. **Code Validation**: Server-side validation in database (RLS)
+2. **Rate Limiting**: Consider limiting code validation attempts
+3. **Audit Trail**: Log code creation/usage in system_audit_logs
+4. **Case Insensitivity**: Codes should be case-insensitive
+5. **No Code Enumeration**: Generic error message for invalid codes
 
 ---
 
 ## Implementation Steps
 
 ### Phase 1: Database Setup
-1. Create `user_addresses` table with all columns
-2. Add RLS policies for user-level access
-3. Add index on `user_id` for fast lookups
+1. Create `registration_codes` table with columns
+2. Add `override_code_id` and `tenant_id` to `user_addresses` table
+3. Set up RLS policies for code management
+4. Add database index on `code` column (case-insensitive)
 
-### Phase 2: Address Validation Hook
-1. Create `useAddressValidation.ts` hook
-2. Implement Smarty API call with error handling
-3. Add response parsing and normalization
+### Phase 2: Code Validation Hook
+1. Create `useRegistrationCode.ts` hook
+2. Implement code lookup and validation
+3. Handle usage counting and expiration checks
 
-### Phase 3: Registration Form Components
-1. Create `AcademyOnboardingDialog.tsx` with multi-step flow
-2. Create `AddressValidationForm.tsx` with validation UI
-3. Add address comparison view (original vs validated)
+### Phase 3: Update Registration Form
+1. Add collapsible override code input to Personal Info step
+2. Modify AddressValidationForm to accept and honor override codes
+3. Update save logic to record code usage
 
-### Phase 4: Integration
-1. Rename `JoinFGNSkillsDialog.tsx` to `JoinFGNAcademyDialog.tsx`
-2. Add onboarding check before showing sim selection
-3. Update `HeroSection.tsx` import
-4. Create hook to check onboarding status
+### Phase 4: Admin Management UI
+1. Create RegistrationCodeManager component
+2. Add new tab to Admin panel (or sub-section under User Management)
+3. Implement CRUD operations for codes
 
 ### Phase 5: Testing
-1. Test valid US addresses
-2. Test invalid/unverifiable addresses
-3. Test error handling and edge cases
+1. Test valid code bypasses verification
+2. Test expired/depleted codes are rejected
+3. Test tenant association flows
 4. Verify RLS policies work correctly
 
 ---
@@ -214,29 +260,17 @@ The embedded key (`260377163906526147`) is designed for client-side use and is s
 
 | File | Purpose |
 |------|---------|
-| `supabase/migrations/[timestamp]_create_user_addresses.sql` | Database migration |
-| `src/hooks/useAddressValidation.ts` | Smarty API integration hook |
-| `src/hooks/useOnboardingStatus.ts` | Check if user completed onboarding |
-| `src/components/onboarding/AcademyOnboardingDialog.tsx` | Main onboarding dialog |
-| `src/components/onboarding/AddressValidationForm.tsx` | Address form with validation |
+| `supabase/migrations/[timestamp]_create_registration_codes.sql` | Database migration |
+| `src/hooks/useRegistrationCode.ts` | Code validation and redemption hook |
+| `src/components/admin/RegistrationCodeManager.tsx` | Admin CRUD interface |
+| `src/components/onboarding/OverrideCodeInput.tsx` | Collapsible code input component |
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/marketplace/JoinFGNSkillsDialog.tsx` | Rename and add onboarding check |
-| `src/components/marketplace/HeroSection.tsx` | Update dialog import |
-
----
-
-## UI Preview
-
-The registration form will match the existing app design:
-- Glass card styling consistent with Auth page
-- Step indicators showing progress
-- Real-time validation feedback
-- Address correction suggestions from Smarty
-- Clear success/error states
-
-The Discord ID field will be labeled as "Coming soon - Discord integration" to indicate it's a placeholder for the future connector.
+| `src/components/onboarding/AcademyOnboardingDialog.tsx` | Add override code state and pass to form |
+| `src/components/onboarding/AddressValidationForm.tsx` | Accept override code, skip Smarty if valid |
+| `src/hooks/useOnboardingStatus.ts` | Update interface and save logic for code tracking |
+| `src/pages/Admin.tsx` | Add Registration Codes tab |
 
