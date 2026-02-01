@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { XPRewardBadge } from '@/components/work-orders/XPRewardBadge';
 import { GameIcon } from '@/components/dashboard/GameIcon';
 import { DifficultyIndicator } from '@/components/work-orders/DifficultyIndicator';
+import { EventRegistrationButton } from '@/components/events/EventRegistrationButton';
 import { useEventById } from '@/hooks/useEventById';
 import { cn } from '@/lib/utils';
 import type { EventStatus } from '@/types/events';
@@ -267,28 +268,7 @@ export default function EventDetail() {
             {/* Registration card */}
             <Card className="sticky top-6">
               <CardContent className="pt-6">
-                {registrationOpen && !isFull ? (
-                  <>
-                    <Button className="w-full mb-3" size="lg">
-                      Register Now
-                    </Button>
-                    <p className="text-xs text-center text-muted-foreground">
-                      Free to join • Earn {event.work_order?.xp_reward || 0} XP
-                    </p>
-                  </>
-                ) : isFull ? (
-                  <Button className="w-full mb-3" size="lg" disabled>
-                    Event Full
-                  </Button>
-                ) : hasEnded ? (
-                  <Button className="w-full mb-3" size="lg" disabled>
-                    Event Ended
-                  </Button>
-                ) : (
-                  <Button className="w-full mb-3" size="lg" disabled>
-                    Registration Not Open
-                  </Button>
-                )}
+                <EventRegistrationButton event={event} />
 
                 <div className="flex gap-2 mt-4">
                   <Button variant="outline" className="flex-1" asChild>
