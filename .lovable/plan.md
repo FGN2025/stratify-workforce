@@ -1,153 +1,187 @@
 
-# Fix Admin Panel Menu Visibility Race Condition
+
+# Fix Profiles Table Security - Tenant-Scoped Visibility
 
 ## Problem Summary
 
-The "Admin Dashboard" menu item is not appearing in the sidebar because of a race condition between authentication state and role fetching. The sidebar renders before the role data loads, and since `isAdmin` defaults to `false` during loading, the admin menu item gets filtered out.
+The `profiles` table has a public `SELECT` policy (`USING (true)`) that allows anyone, including unauthenticated users, to query all profile data. This exposes sensitive information including:
+- `tenant_id` (organizational affiliation)
+- `employability_score` (performance metrics)
+- `skills` (detailed competency scores)
 
 ---
 
-## Root Cause Analysis
+## Solution Overview
 
-### Current Flow (Broken)
+Implement tenant-scoped visibility with the following access rules:
 
-```text
-1. Page loads
-2. AppSidebar renders
-3. useUserRole() called, starts async fetch
-   - isLoading = true
-   - isAdmin = false (default)
-4. visibleAdminItems filters out "Admin Dashboard" (isAdmin is false)
-5. Sidebar renders WITHOUT Admin Dashboard
-6. Role fetch completes, isAdmin = true
-7. Component should re-render, but filtering already done
+| User Type | Can View |
+|-----------|----------|
+| Unauthenticated | Nothing |
+| Authenticated (any) | Own profile only |
+| Same tenant member | Profiles in same tenant |
+| Parent tenant member | Profiles in child tenants |
+| Admin / Super Admin | All profiles |
+
+---
+
+## Database Changes
+
+### 1. Create Helper Function for Tenant-Scoped Profile Access
+
+Create a new SECURITY DEFINER function to check if a user can view another user's profile based on tenant membership hierarchy.
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_profile(viewer_id uuid, profile_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT 
+    -- Users can always see their own profile
+    viewer_id = profile_id
+    OR
+    -- Admins can see all profiles
+    EXISTS (
+      SELECT 1 FROM user_roles 
+      WHERE user_id = viewer_id 
+      AND role IN ('admin', 'super_admin')
+    )
+    OR
+    -- Users in the same tenant can see each other
+    EXISTS (
+      SELECT 1 FROM profiles p1
+      JOIN profiles p2 ON p1.tenant_id = p2.tenant_id
+      WHERE p1.id = viewer_id AND p2.id = profile_id
+      AND p1.tenant_id IS NOT NULL
+    )
+    OR
+    -- Users can see profiles in tenants they're members of (via community_memberships)
+    EXISTS (
+      SELECT 1 FROM community_memberships cm
+      JOIN profiles p ON p.tenant_id = cm.tenant_id
+      WHERE cm.user_id = viewer_id AND p.id = profile_id
+    )
+    OR
+    -- Users in parent tenants can see profiles in child tenants
+    EXISTS (
+      SELECT 1 FROM community_memberships cm
+      JOIN profiles p ON p.tenant_id IN (SELECT get_child_tenants(cm.tenant_id))
+      WHERE cm.user_id = viewer_id AND p.id = profile_id
+    )
+$$;
 ```
 
-### Evidence
+### 2. Replace Public SELECT Policy
 
-| Check | Result |
-|-------|--------|
-| Network request to `user_roles` | Returns `{"role":"super_admin"}` |
-| AdminRoute component | Correctly waits for `isLoading` to be false |
-| AppSidebar component | Does NOT check `isLoading` state |
-| Sidebar menu extraction | Shows "Students" and "Settings" but NOT "Admin Dashboard" |
+```sql
+-- Drop the overly permissive policy
+DROP POLICY IF EXISTS "Users can view all profiles" ON public.profiles;
 
----
-
-## Solution
-
-Update `AppSidebar.tsx` to check the loading state and show admin items while loading (optimistic UI). This prevents the menu from "jumping" when the role loads.
-
-### Approach: Show Admin Items While Loading
-
-If authentication is in progress, assume the user might be an admin and show the menu item. Once loading completes, the correct visibility will be applied.
+-- Create tenant-scoped SELECT policy
+CREATE POLICY "Users can view profiles in their organization"
+ON public.profiles
+FOR SELECT
+TO authenticated
+USING (public.can_view_profile(auth.uid(), id));
+```
 
 ---
 
-## File to Modify
+## Why This Approach
+
+### Using a Helper Function
+
+1. **Avoids RLS recursion**: The `SECURITY DEFINER` function bypasses RLS when checking membership, preventing infinite loops
+2. **Maintainable**: Single place to update access logic
+3. **Leverages existing functions**: Uses `get_child_tenants()` already in the database
+4. **Hierarchical support**: Parent tenant admins can see child tenant profiles
+
+### Access Matrix
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    Profile Visibility Matrix                     │
+├─────────────────────┬───────────────────────────────────────────┤
+│ Viewer              │ Can See Profiles Of                       │
+├─────────────────────┼───────────────────────────────────────────┤
+│ Anonymous           │ None                                      │
+│ Authenticated       │ Self                                      │
+│ Same tenant_id      │ All profiles with same tenant_id          │
+│ Tenant member       │ Profiles in tenants they're members of    │
+│ Parent tenant       │ Profiles in child tenants (hierarchy)     │
+│ Admin               │ All profiles                              │
+└─────────────────────┴───────────────────────────────────────────┘
+```
+
+---
+
+## Impact on Existing Code
+
+### Admin Panel (Admin.tsx)
+- Fetches all profiles for user management
+- Will continue working because admins bypass restrictions
+
+### Leaderboard (usePoints.ts)
+- Fetches profiles by user IDs for display
+- Will work for profiles within the user's tenant scope
+- May need adjustment if leaderboard should be cross-tenant public
+
+### Audit Logs (useAuditLogs.ts)
+- Admin-only feature, will continue working
+
+### RoleEscalationControls.tsx
+- Super admin feature, will continue working
+
+---
+
+## Consideration: Public Leaderboard Feature
+
+If leaderboards need to display profiles publicly (for embeddable widgets), consider creating a limited public view:
+
+```sql
+CREATE VIEW public.profiles_public
+WITH (security_invoker = on) AS
+SELECT id, username, avatar_url
+FROM public.profiles;
+
+-- Grant public SELECT on the view only
+```
+
+This keeps sensitive fields (tenant_id, scores, skills) protected while allowing basic profile info for public displays.
+
+---
+
+## Migration Summary
+
+| Step | Action |
+|------|--------|
+| 1 | Create `can_view_profile()` helper function |
+| 2 | Drop existing public SELECT policy |
+| 3 | Create new tenant-scoped SELECT policy |
+| 4 | (Optional) Create public view for leaderboards |
+
+---
+
+## Security Verification
+
+After implementation, the following should be true:
+
+1. Unauthenticated requests return empty results
+2. Authenticated users see only their profile and profiles in their tenant/memberships
+3. Admins see all profiles
+4. Sensitive fields (scores, skills, tenant_id) are not accessible to unauthorized viewers
+
+---
+
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/layout/AppSidebar.tsx` | Add `isLoading` check to prevent premature filtering |
+| (Migration) | SQL to create function and update RLS policies |
+| (Security Finding) | Delete `profiles_table_public_exposure` finding |
 
----
+No frontend code changes required - the existing queries will automatically respect the new RLS policies.
 
-## Implementation Details
-
-### 1. Destructure isLoading from useUserRole
-
-```typescript
-// Before (line 50)
-const { isAdmin } = useUserRole();
-
-// After
-const { isAdmin, isLoading: roleLoading } = useUserRole();
-```
-
-### 2. Also get auth loading state
-
-```typescript
-// Add import
-import { useAuth } from '@/contexts/AuthContext';
-
-// In component
-const { isLoading: authLoading } = useAuth();
-```
-
-### 3. Update filtering logic
-
-```typescript
-// Before (lines 55-57)
-const visibleAdminItems = adminNavItems.filter(
-  (item) => !('adminOnly' in item && item.adminOnly) || isAdmin
-);
-
-// After - Show admin items if still loading (optimistic) or if user is admin
-const isLoadingAuth = authLoading || roleLoading;
-const visibleAdminItems = adminNavItems.filter(
-  (item) => !('adminOnly' in item && item.adminOnly) || isLoadingAuth || isAdmin
-);
-```
-
----
-
-## Why This Works
-
-| State | isLoadingAuth | isAdmin | Admin Item Visible? |
-|-------|---------------|---------|---------------------|
-| Initial render | true | false | Yes (optimistic) |
-| After role loads (admin) | false | true | Yes |
-| After role loads (not admin) | false | false | No |
-| Not authenticated | false | false | No |
-
-This approach:
-1. Shows admin items during loading to prevent UI jumps
-2. Correctly hides items once loading completes if user is not an admin
-3. The admin route protection still prevents unauthorized access even if the menu item is visible
-
----
-
-## Alternative Approach (Not Recommended)
-
-Show a skeleton loader for admin items while loading. This is more complex and creates visual noise for most users who aren't admins.
-
----
-
-## Code Changes Summary
-
-```typescript
-// src/components/layout/AppSidebar.tsx
-
-import { useAuth } from '@/contexts/AuthContext';
-
-export function AppSidebar() {
-  // ... existing code ...
-  
-  const { isLoading: authLoading } = useAuth();
-  const { isAdmin, isLoading: roleLoading } = useUserRole();
-  
-  // Show admin items while loading to prevent race condition
-  const isLoadingAuth = authLoading || roleLoading;
-  const visibleAdminItems = adminNavItems.filter(
-    (item) => !('adminOnly' in item && item.adminOnly) || isLoadingAuth || isAdmin
-  );
-  
-  // ... rest of component ...
-}
-```
-
----
-
-## Testing Plan
-
-1. Log out and log back in as admin user (darcy@fgn.gg)
-2. Verify "Admin Dashboard" appears in the sidebar immediately
-3. Log in as a non-admin user
-4. Verify "Admin Dashboard" disappears after loading completes
-5. Verify clicking "Admin Dashboard" as non-admin redirects to home with toast message
-
----
-
-## Summary
-
-This is a one-file fix that adds proper loading state handling to the sidebar menu. The admin menu item will now appear correctly by showing it optimistically during loading and then correctly filtering based on the user's actual role once the data loads.
