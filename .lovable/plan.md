@@ -1,318 +1,153 @@
 
-# Hierarchical Tenant Structure with Extended Categories and Roles
+# Fix Admin Panel Menu Visibility Race Condition
 
-## Executive Summary
+## Problem Summary
 
-This plan extends your tenant/community system to support a multi-level organizational hierarchy (Broadband Operator > School/Employer > End Users) with flexible role and category types that can be extended as needed.
+The "Admin Dashboard" menu item is not appearing in the sidebar because of a race condition between authentication state and role fetching. The sidebar renders before the role data loads, and since `isAdmin` defaults to `false` during loading, the admin menu item gets filtered out.
 
 ---
 
-## Current State Analysis
+## Root Cause Analysis
 
-### What Exists Today
-
-| Component | Current Implementation | Limitation |
-|-----------|----------------------|------------|
-| **Tenants** | Flat structure with `id`, `name`, `slug`, `category_type` | No parent-child relationships |
-| **Platform Roles** | `app_role` enum: `super_admin`, `admin`, `moderator`, `user` | Global platform roles only |
-| **Community Roles** | `community_membership_role` enum: `member`, `moderator`, `admin` | Generic, not business-specific |
-| **Categories** | `community_category_type` enum: `geography`, `broadband_provider`, `trade_skill` | Missing school, employer, training_center |
-
-### Data Flow Today
+### Current Flow (Broken)
 
 ```text
-Platform Level:          user_roles (super_admin, admin, moderator, user)
-                                |
-                                v
-Tenant Level:           tenants (flat, no hierarchy)
-                                |
-                                v
-Membership Level:       community_memberships (member, moderator, admin)
+1. Page loads
+2. AppSidebar renders
+3. useUserRole() called, starts async fetch
+   - isLoading = true
+   - isAdmin = false (default)
+4. visibleAdminItems filters out "Admin Dashboard" (isAdmin is false)
+5. Sidebar renders WITHOUT Admin Dashboard
+6. Role fetch completes, isAdmin = true
+7. Component should re-render, but filtering already done
 ```
+
+### Evidence
+
+| Check | Result |
+|-------|--------|
+| Network request to `user_roles` | Returns `{"role":"super_admin"}` |
+| AdminRoute component | Correctly waits for `isLoading` to be false |
+| AppSidebar component | Does NOT check `isLoading` state |
+| Sidebar menu extraction | Shows "Students" and "Settings" but NOT "Admin Dashboard" |
 
 ---
 
-## Proposed Architecture
+## Solution
 
-### New Hierarchical Structure
+Update `AppSidebar.tsx` to check the loading state and show admin items while loading (optimistic UI). This prevents the menu from "jumping" when the role loads.
 
-```text
-                    ┌─────────────────────┐
-                    │   Broadband Operator│  (top-level tenant)
-                    │   e.g., Cox, AT&T   │
-                    └─────────┬───────────┘
-                              │
-           ┌──────────────────┼──────────────────┐
-           │                  │                  │
-    ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐
-    │   School    │    │  Employer   │    │  Training   │
-    │  Community  │    │  Community  │    │   Center    │
-    └──────┬──────┘    └──────┬──────┘    └──────┬──────┘
-           │                  │                  │
-    ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐
-    │  Students   │    │  Employees  │    │ Apprentices │
-    │  Teachers   │    │  Managers   │    │ Instructors │
-    └─────────────┘    └─────────────┘    └─────────────┘
-```
+### Approach: Show Admin Items While Loading
+
+If authentication is in progress, assume the user might be an admin and show the menu item. Once loading completes, the correct visibility will be applied.
 
 ---
 
-## Database Changes
+## File to Modify
 
-### 1. Add Hierarchical Fields to Tenants Table
+| File | Change |
+|------|--------|
+| `src/components/layout/AppSidebar.tsx` | Add `isLoading` check to prevent premature filtering |
 
-Add `parent_tenant_id` column to enable parent-child relationships:
+---
 
-```sql
--- Add parent_tenant_id for hierarchy
-ALTER TABLE public.tenants 
-ADD COLUMN parent_tenant_id UUID REFERENCES public.tenants(id) ON DELETE SET NULL;
+## Implementation Details
 
--- Add hierarchy_level for quick depth queries
-ALTER TABLE public.tenants 
-ADD COLUMN hierarchy_level INTEGER NOT NULL DEFAULT 0;
+### 1. Destructure isLoading from useUserRole
 
--- Create index for efficient hierarchy queries
-CREATE INDEX idx_tenants_parent ON public.tenants(parent_tenant_id);
-CREATE INDEX idx_tenants_hierarchy_level ON public.tenants(hierarchy_level);
+```typescript
+// Before (line 50)
+const { isAdmin } = useUserRole();
+
+// After
+const { isAdmin, isLoading: roleLoading } = useUserRole();
 ```
 
-### 2. Extend Category Types
+### 2. Also get auth loading state
 
-Add new organization types to the enum:
+```typescript
+// Add import
+import { useAuth } from '@/contexts/AuthContext';
 
-```sql
--- Add new category types for schools, employers, training centers
-ALTER TYPE public.community_category_type ADD VALUE 'school';
-ALTER TYPE public.community_category_type ADD VALUE 'employer';
-ALTER TYPE public.community_category_type ADD VALUE 'training_center';
-ALTER TYPE public.community_category_type ADD VALUE 'government';
-ALTER TYPE public.community_category_type ADD VALUE 'nonprofit';
+// In component
+const { isLoading: authLoading } = useAuth();
 ```
 
-### 3. Extend Membership Roles
+### 3. Update filtering logic
 
-Add business-specific roles to the membership enum:
+```typescript
+// Before (lines 55-57)
+const visibleAdminItems = adminNavItems.filter(
+  (item) => !('adminOnly' in item && item.adminOnly) || isAdmin
+);
 
-```sql
--- Add new membership roles for students, employees, instructors, etc.
-ALTER TYPE public.community_membership_role ADD VALUE 'student';
-ALTER TYPE public.community_membership_role ADD VALUE 'employee';
-ALTER TYPE public.community_membership_role ADD VALUE 'apprentice';
-ALTER TYPE public.community_membership_role ADD VALUE 'instructor';
-ALTER TYPE public.community_membership_role ADD VALUE 'manager';
-ALTER TYPE public.community_membership_role ADD VALUE 'subscriber';
-ALTER TYPE public.community_membership_role ADD VALUE 'owner';
-```
-
-### 4. Create Helper Functions
-
-Functions to work with the hierarchy:
-
-```sql
--- Function to get all child tenants (recursive)
-CREATE OR REPLACE FUNCTION public.get_child_tenants(p_tenant_id UUID)
-RETURNS SETOF UUID
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  WITH RECURSIVE children AS (
-    SELECT id FROM tenants WHERE parent_tenant_id = p_tenant_id
-    UNION ALL
-    SELECT t.id FROM tenants t
-    INNER JOIN children c ON t.parent_tenant_id = c.id
-  )
-  SELECT id FROM children;
-$$;
-
--- Function to get all parent tenants (ancestry chain)
-CREATE OR REPLACE FUNCTION public.get_parent_tenants(p_tenant_id UUID)
-RETURNS SETOF UUID
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  WITH RECURSIVE parents AS (
-    SELECT parent_tenant_id FROM tenants WHERE id = p_tenant_id
-    UNION ALL
-    SELECT t.parent_tenant_id FROM tenants t
-    INNER JOIN parents p ON t.id = p.parent_tenant_id
-    WHERE t.parent_tenant_id IS NOT NULL
-  )
-  SELECT parent_tenant_id FROM parents WHERE parent_tenant_id IS NOT NULL;
-$$;
-
--- Function to check if user has role in tenant or parent tenants
-CREATE OR REPLACE FUNCTION public.has_tenant_role(
-  p_user_id UUID, 
-  p_tenant_id UUID, 
-  p_role community_membership_role
-)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM community_memberships cm
-    WHERE cm.user_id = p_user_id
-      AND cm.role = p_role
-      AND (
-        cm.tenant_id = p_tenant_id
-        OR cm.tenant_id IN (SELECT get_parent_tenants(p_tenant_id))
-      )
-  )
-$$;
-```
-
-### 5. Update RLS Policies
-
-Add policies that respect hierarchy:
-
-```sql
--- Tenant admins can manage child tenants
-CREATE POLICY "Tenant admins can manage child tenants"
-ON public.tenants
-FOR ALL
-USING (
-  has_role(auth.uid(), 'admin'::app_role)
-  OR EXISTS (
-    SELECT 1 FROM community_memberships cm
-    WHERE cm.user_id = auth.uid()
-      AND cm.role = 'admin'
-      AND (
-        cm.tenant_id = tenants.id
-        OR cm.tenant_id IN (SELECT get_parent_tenants(tenants.id))
-      )
-  )
+// After - Show admin items if still loading (optimistic) or if user is admin
+const isLoadingAuth = authLoading || roleLoading;
+const visibleAdminItems = adminNavItems.filter(
+  (item) => !('adminOnly' in item && item.adminOnly) || isLoadingAuth || isAdmin
 );
 ```
 
 ---
 
-## Frontend Changes
+## Why This Works
 
-### 1. Update TenantManagement Component
+| State | isLoadingAuth | isAdmin | Admin Item Visible? |
+|-------|---------------|---------|---------------------|
+| Initial render | true | false | Yes (optimistic) |
+| After role loads (admin) | false | true | Yes |
+| After role loads (not admin) | false | false | No |
+| Not authenticated | false | false | No |
 
-Modify `src/components/admin/superadmin/TenantManagement.tsx`:
+This approach:
+1. Shows admin items during loading to prevent UI jumps
+2. Correctly hides items once loading completes if user is not an admin
+3. The admin route protection still prevents unauthorized access even if the menu item is visible
 
-- Add parent tenant selector dropdown in create/edit form
-- Display hierarchy level indicator in the table
-- Add tree view for visualizing tenant relationships
-- Update form to include new category types
+---
 
-### 2. Update Type Definitions
+## Alternative Approach (Not Recommended)
 
-Modify `src/types/tenant.ts`:
+Show a skeleton loader for admin items while loading. This is more complex and creates visual noise for most users who aren't admins.
+
+---
+
+## Code Changes Summary
 
 ```typescript
-export interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
-  brand_color: string;
-  logo_url: string | null;
-  created_at: string;
-  // New fields
-  parent_tenant_id: string | null;
-  hierarchy_level: number;
-  category_type: CategoryType | null;
-  children?: Tenant[]; // For tree display
+// src/components/layout/AppSidebar.tsx
+
+import { useAuth } from '@/contexts/AuthContext';
+
+export function AppSidebar() {
+  // ... existing code ...
+  
+  const { isLoading: authLoading } = useAuth();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
+  
+  // Show admin items while loading to prevent race condition
+  const isLoadingAuth = authLoading || roleLoading;
+  const visibleAdminItems = adminNavItems.filter(
+    (item) => !('adminOnly' in item && item.adminOnly) || isLoadingAuth || isAdmin
+  );
+  
+  // ... rest of component ...
 }
-
-export type CategoryType = 
-  | 'geography' 
-  | 'broadband_provider' 
-  | 'trade_skill'
-  | 'school'
-  | 'employer'
-  | 'training_center'
-  | 'government'
-  | 'nonprofit';
-
-export type MembershipRole = 
-  | 'member' 
-  | 'moderator' 
-  | 'admin'
-  | 'student'
-  | 'employee'
-  | 'apprentice'
-  | 'instructor'
-  | 'manager'
-  | 'subscriber'
-  | 'owner';
 ```
-
-### 3. Create Tenant Hierarchy Component
-
-New component for visualizing and managing the tree:
-
-```text
-src/components/admin/superadmin/TenantHierarchyTree.tsx
-```
-
-This will display tenants in a collapsible tree structure with drag-and-drop reordering.
-
-### 4. Update TenantContext
-
-Modify `src/contexts/TenantContext.tsx` to support hierarchy navigation and inherited permissions.
 
 ---
 
-## Files to Create/Modify
+## Testing Plan
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/migrations/[timestamp]_add_tenant_hierarchy.sql` | Create | Database migration for hierarchy support |
-| `src/types/tenant.ts` | Modify | Add hierarchy fields and new types |
-| `src/components/admin/superadmin/TenantManagement.tsx` | Modify | Add parent selector and hierarchy display |
-| `src/components/admin/superadmin/TenantHierarchyTree.tsx` | Create | New tree visualization component |
-| `src/contexts/TenantContext.tsx` | Modify | Add hierarchy navigation support |
-| `src/hooks/useTenantHierarchy.ts` | Create | Hook for hierarchy queries |
-
----
-
-## Example Use Cases After Implementation
-
-### Use Case 1: Cox Broadband Structure
-
-```text
-Cox Broadband (broadband_provider)
-├── Cox Arizona Training Center (training_center)
-│   └── Members: instructors, apprentices, subscribers
-├── Cox California Employment (employer)
-│   └── Members: employees, managers
-└── Cox Skills Academy (school)
-    └── Members: students, instructors
-```
-
-### Use Case 2: Role Inheritance
-
-A user who is an `admin` at "Cox Broadband" automatically has admin visibility over all child tenants (Cox Arizona, Cox California, etc.) without needing separate membership records.
-
----
-
-## Migration Strategy
-
-1. **Phase 1**: Add database columns and enums (non-breaking)
-2. **Phase 2**: Update UI to support new fields
-3. **Phase 3**: Add hierarchy visualization
-4. **Phase 4**: Implement inherited permissions
+1. Log out and log back in as admin user (darcy@fgn.gg)
+2. Verify "Admin Dashboard" appears in the sidebar immediately
+3. Log in as a non-admin user
+4. Verify "Admin Dashboard" disappears after loading completes
+5. Verify clicking "Admin Dashboard" as non-admin redirects to home with toast message
 
 ---
 
 ## Summary
 
-This plan adds hierarchical multi-tenancy to support your business structure:
-
-- Broadband operators as top-level tenants
-- Schools, employers, and training centers as child tenants  
-- Extended roles (student, employee, apprentice, instructor, manager, subscriber)
-- Inherited permissions through the hierarchy
-- Flexible enum types that can be extended as needed
-
-The design maintains backward compatibility with existing data while enabling the new organizational structure.
+This is a one-file fix that adds proper loading state handling to the sidebar menu. The admin menu item will now appear correctly by showing it optimistically during loading and then correctly filtering based on the user's actual role once the data loads.
