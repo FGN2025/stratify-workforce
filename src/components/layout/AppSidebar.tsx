@@ -8,7 +8,8 @@ import {
   Gauge,
   Trophy,
   ShieldCheck,
-  GraduationCap
+  GraduationCap,
+  CalendarDays
 } from 'lucide-react';
 import {
   Sidebar,
@@ -31,6 +32,7 @@ import { cn } from '@/lib/utils';
 const mainNavItems = [
   { title: 'Discover', url: '/', icon: LayoutDashboard },
   { title: 'Learn', url: '/learn', icon: GraduationCap },
+  { title: 'Events', url: '/events', icon: CalendarDays },
   { title: 'Work Orders', url: '/work-orders', icon: ClipboardList },
   { title: 'Communities', url: '/communities', icon: Users },
   { title: 'Skill Passport', url: '/profile', icon: User },
