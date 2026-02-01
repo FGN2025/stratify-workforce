@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminRoute } from "@/components/auth/AdminRoute";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import WorkOrders from "./pages/WorkOrders";
@@ -16,6 +17,7 @@ import Communities from "./pages/Communities";
 import CommunityProfile from "./pages/CommunityProfile";
 import Auth from "./pages/Auth";
 import AgentWidget from "./pages/AgentWidget";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +52,9 @@ const App = () => (
               } />
               <Route path="/settings" element={
                 <ProtectedRoute><Settings /></ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <AdminRoute><Admin /></AdminRoute>
               } />
               <Route path="/agent-widget" element={<AgentWidget />} />
               
