@@ -18,16 +18,26 @@ const actionIcons: Record<string, React.ReactNode> = {
   role_change: <Shield className="h-4 w-4 text-amber-400" />,
   delete: <Trash className="h-4 w-4 text-destructive" />,
   create: <Activity className="h-4 w-4 text-emerald-400" />,
+  created: <Activity className="h-4 w-4 text-emerald-400" />,
   update: <Settings className="h-4 w-4 text-blue-400" />,
+  updated: <Settings className="h-4 w-4 text-blue-400" />,
   bulk_delete: <Trash className="h-4 w-4 text-destructive" />,
+  bulk_activate: <Activity className="h-4 w-4 text-emerald-400" />,
+  bulk_deactivate: <Settings className="h-4 w-4 text-amber-400" />,
+  redeemed: <Activity className="h-4 w-4 text-blue-400" />,
 };
 
 const actionColors: Record<string, string> = {
   role_change: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   delete: 'bg-destructive/20 text-destructive border-destructive/30',
   create: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  created: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
   update: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  updated: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   bulk_delete: 'bg-destructive/20 text-destructive border-destructive/30',
+  bulk_activate: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  bulk_deactivate: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  redeemed: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 };
 
 export function SystemAuditLogs() {
@@ -49,7 +59,24 @@ export function SystemAuditLogs() {
     if (log.action === 'bulk_delete') {
       return (
         <span className="text-xs text-muted-foreground">
-          Deleted {String(details.count || 0)} {String(details.type || '')}
+          Deleted {String(details.count || 0)} {String(details.type || 'codes')}
+        </span>
+      );
+    }
+
+    if (log.action === 'bulk_activate' || log.action === 'bulk_deactivate') {
+      const actionVerb = log.action === 'bulk_activate' ? 'Activated' : 'Deactivated';
+      return (
+        <span className="text-xs text-muted-foreground">
+          {actionVerb} {String(details.count || 0)} codes
+        </span>
+      );
+    }
+
+    if (log.action === 'redeemed') {
+      return (
+        <span className="text-xs text-muted-foreground">
+          Code redeemed
         </span>
       );
     }

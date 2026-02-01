@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -31,7 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, Copy, Loader2, Pencil, Search, X } from 'lucide-react';
+import { Plus, Trash2, Copy, Loader2, Pencil, Search, X, Power, PowerOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { RegistrationCodeEditDialog } from './RegistrationCodeEditDialog';
 
@@ -65,6 +66,10 @@ export function RegistrationCodeManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCode, setEditingCode] = useState<RegistrationCode | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Selection state for bulk actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -300,6 +305,174 @@ export function RegistrationCodeManager() {
 
   const hasActiveFilters = searchQuery !== '' || statusFilter !== 'all' || tenantFilter !== 'all';
 
+  // Selection helpers
+  const allFilteredSelected = filteredCodes.length > 0 && filteredCodes.every((c) => selectedIds.has(c.id));
+  const someFilteredSelected = filteredCodes.some((c) => selectedIds.has(c.id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      // Deselect all filtered codes
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredCodes.forEach((c) => next.delete(c.id));
+        return next;
+      });
+    } else {
+      // Select all filtered codes
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredCodes.forEach((c) => next.add(c.id));
+        return next;
+      });
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  // Bulk actions
+  const bulkDeactivate = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Deactivate ${selectedIds.size} selected code(s)?`)) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const idsArray = Array.from(selectedIds);
+      const { error } = await supabase
+        .from('registration_codes')
+        .update({ is_active: false })
+        .in('id', idsArray);
+
+      if (error) throw error;
+
+      // Log audit
+      await logAction({
+        resourceType: 'registration_code',
+        action: 'bulk_deactivate',
+        details: {
+          count: idsArray.length,
+          code_ids: idsArray,
+        },
+      });
+
+      toast({
+        title: 'Codes Deactivated',
+        description: `${idsArray.length} code(s) have been deactivated.`,
+      });
+
+      clearSelection();
+      fetchCodes();
+    } catch (error) {
+      console.error('Error bulk deactivating:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to deactivate codes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const bulkActivate = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Activate ${selectedIds.size} selected code(s)?`)) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const idsArray = Array.from(selectedIds);
+      const { error } = await supabase
+        .from('registration_codes')
+        .update({ is_active: true })
+        .in('id', idsArray);
+
+      if (error) throw error;
+
+      // Log audit
+      await logAction({
+        resourceType: 'registration_code',
+        action: 'bulk_activate',
+        details: {
+          count: idsArray.length,
+          code_ids: idsArray,
+        },
+      });
+
+      toast({
+        title: 'Codes Activated',
+        description: `${idsArray.length} code(s) have been activated.`,
+      });
+
+      clearSelection();
+      fetchCodes();
+    } catch (error) {
+      console.error('Error bulk activating:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to activate codes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to permanently delete ${selectedIds.size} code(s)? This cannot be undone.`)) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const idsArray = Array.from(selectedIds);
+      const codesToDelete = codes.filter((c) => idsArray.includes(c.id));
+
+      const { error } = await supabase
+        .from('registration_codes')
+        .delete()
+        .in('id', idsArray);
+
+      if (error) throw error;
+
+      // Log audit
+      await logAction({
+        resourceType: 'registration_code',
+        action: 'bulk_delete',
+        details: {
+          count: idsArray.length,
+          codes: codesToDelete.map((c) => c.code),
+        },
+      });
+
+      toast({
+        title: 'Codes Deleted',
+        description: `${idsArray.length} code(s) have been permanently deleted.`,
+      });
+
+      clearSelection();
+      fetchCodes();
+    } catch (error) {
+      console.error('Error bulk deleting:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete codes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -451,11 +624,56 @@ export function RegistrationCodeManager() {
       </div>
 
       {/* Results summary */}
-      {hasActiveFilters && (
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredCodes.length} of {codes.length} codes
-        </p>
-      )}
+      <div className="flex items-center justify-between">
+        {hasActiveFilters && (
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredCodes.length} of {codes.length} codes
+          </p>
+        )}
+        {!hasActiveFilters && <div />}
+        
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-lg border">
+            <span className="text-sm font-medium">{selectedIds.size} selected</span>
+            <div className="h-4 w-px bg-border" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={bulkActivate}
+              disabled={isBulkActionLoading}
+            >
+              <Power className="h-4 w-4 mr-1" />
+              Activate
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={bulkDeactivate}
+              disabled={isBulkActionLoading}
+            >
+              <PowerOff className="h-4 w-4 mr-1" />
+              Deactivate
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={bulkDelete}
+              disabled={isBulkActionLoading}
+            >
+              {isBulkActionLoading ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1" />
+              )}
+              Delete
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
@@ -477,6 +695,14 @@ export function RegistrationCodeManager() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={allFilteredSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                    className={someFilteredSelected && !allFilteredSelected ? 'data-[state=checked]:bg-primary/50' : ''}
+                  />
+                </TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Tenant</TableHead>
                 <TableHead>Usage</TableHead>
@@ -489,8 +715,16 @@ export function RegistrationCodeManager() {
             <TableBody>
               {filteredCodes.map((code) => {
                 const status = getCodeStatus(code);
+                const isSelected = selectedIds.has(code.id);
                 return (
-                  <TableRow key={code.id}>
+                  <TableRow key={code.id} className={isSelected ? 'bg-muted/50' : ''}>
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectOne(code.id)}
+                        aria-label={`Select ${code.code}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <code className="font-mono text-sm bg-muted px-2 py-1 rounded">
