@@ -1,51 +1,175 @@
+import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { StatsGrid } from '@/components/dashboard/StatsGrid';
-import { ActiveWorkOrders } from '@/components/dashboard/ActiveWorkOrders';
-import { LiveMonitor } from '@/components/dashboard/LiveMonitor';
+import { HeroSection } from '@/components/marketplace/HeroSection';
+import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
+import { EventCard } from '@/components/marketplace/EventCard';
+import { CommunityCard } from '@/components/marketplace/CommunityCard';
+import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TrendingUp, Flame, Users, Zap } from 'lucide-react';
+import type { WorkOrder, GameTitle, Tenant } from '@/types/tenant';
 
 const Index = () => {
-  const { tenant, isLoading } = useTenant();
+  const { tenant } = useTenant();
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [communities, setCommunities] = useState<Tenant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      
+      // Fetch work orders and tenants in parallel
+      const [workOrdersRes, tenantsRes] = await Promise.all([
+        supabase
+          .from('work_orders')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('tenants')
+          .select('*')
+          .order('name', { ascending: true })
+      ]);
+
+      if (workOrdersRes.data) {
+        const typedWorkOrders: WorkOrder[] = workOrdersRes.data.map(wo => ({
+          id: wo.id,
+          tenant_id: wo.tenant_id,
+          title: wo.title,
+          description: wo.description,
+          game_title: wo.game_title as GameTitle,
+          success_criteria: (wo.success_criteria as Record<string, number>) || {},
+          is_active: wo.is_active ?? true,
+          created_at: wo.created_at,
+        }));
+        setWorkOrders(typedWorkOrders);
+      }
+
+      if (tenantsRes.data) {
+        const typedTenants: Tenant[] = tenantsRes.data.map(t => ({
+          id: t.id,
+          name: t.name,
+          slug: t.slug,
+          brand_color: t.brand_color,
+          logo_url: t.logo_url,
+          created_at: t.created_at,
+        }));
+        setCommunities(typedTenants);
+      }
+
+      setIsLoading(false);
+    }
+
+    fetchData();
+  }, []);
+
+  // Get random community for each work order
+  const getRandomCommunity = () => {
+    if (communities.length === 0) return undefined;
+    return communities[Math.floor(Math.random() * communities.length)];
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="space-y-8">
+          <Skeleton className="h-64 w-full rounded-2xl" />
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-48" />
+            <div className="flex gap-4">
+              {[1, 2, 3, 4].map(i => (
+                <Skeleton key={i} className="h-72 w-72 shrink-0 rounded-xl" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Dispatcher
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {isLoading ? (
-                <Skeleton className="h-4 w-48" />
-              ) : (
-                <>Welcome to {tenant?.name || 'FGN Academy'} Command Center</>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="status-led status-led-online" />
-            <span className="text-xs text-muted-foreground">Systems Online</span>
-          </div>
-        </div>
+      <div className="space-y-10">
+        {/* Hero Section */}
+        <HeroSection />
 
-        {/* Stats Grid */}
-        <StatsGrid />
+        {/* Trending Work Orders */}
+        <HorizontalCarousel
+          title="Trending Work Orders"
+          subtitle="Discover the most popular training scenarios filling up fast!"
+          viewAllLink="/work-orders"
+          icon={<Flame className="h-5 w-5" />}
+        >
+          {workOrders.slice(0, 6).map((wo, idx) => (
+            <div key={wo.id} className="w-72 shrink-0 snap-start">
+              <EventCard 
+                workOrder={wo}
+                community={getRandomCommunity()}
+                variant={idx === 0 ? 'featured' : 'default'}
+              />
+            </div>
+          ))}
+        </HorizontalCarousel>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Work Orders - 2 columns */}
-          <div className="lg:col-span-2">
-            <ActiveWorkOrders />
-          </div>
+        {/* Featured Communities */}
+        <HorizontalCarousel
+          title="Featured Communities"
+          subtitle="Join top training organizations and level up your skills"
+          viewAllLink="/communities"
+          icon={<Users className="h-5 w-5" />}
+        >
+          {communities.map((community, idx) => (
+            <div key={community.id} className="w-72 shrink-0 snap-start">
+              <CommunityCard 
+                community={community}
+                featured={idx === 0}
+              />
+            </div>
+          ))}
+        </HorizontalCarousel>
 
-          {/* Live Monitor - 1 column */}
-          <div className="lg:col-span-1">
-            <LiveMonitor />
-          </div>
-        </div>
+        {/* Recently Added */}
+        <HorizontalCarousel
+          title="Recently Added"
+          subtitle="Fresh training scenarios just added to the platform"
+          viewAllLink="/work-orders?sort=newest"
+          icon={<Zap className="h-5 w-5" />}
+        >
+          {workOrders.slice(0, 4).map((wo) => (
+            <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
+              <EventCard 
+                workOrder={wo}
+                community={getRandomCommunity()}
+                variant="compact"
+              />
+            </div>
+          ))}
+        </HorizontalCarousel>
+
+        {/* Popular This Week */}
+        {workOrders.length > 0 && (
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="text-lg font-bold uppercase tracking-wide">Popular This Week</h2>
+                <p className="text-sm text-muted-foreground">Top-rated training scenarios based on completions</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {workOrders.slice(0, 6).map((wo) => (
+                <EventCard 
+                  key={`popular-${wo.id}`}
+                  workOrder={wo}
+                  community={getRandomCommunity()}
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </AppLayout>
   );
