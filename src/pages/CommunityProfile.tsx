@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { EventCard } from '@/components/marketplace/EventCard';
+import { TenantBreadcrumb } from '@/components/TenantBreadcrumb';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -110,6 +111,9 @@ const CommunityProfile = () => {
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Tenant Breadcrumb */}
+        <TenantBreadcrumb currentTenant={community} />
+
         {/* Cover Banner */}
         <div 
           className="relative h-48 rounded-xl overflow-hidden"
