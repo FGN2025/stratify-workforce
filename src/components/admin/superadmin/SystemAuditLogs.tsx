@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuditLogs, type AuditLog } from '@/hooks/useAuditLogs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,21 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RefreshCw, Activity, User, Shield, Trash, Settings, Loader2, Filter, X } from 'lucide-react';
+import { 
+  RefreshCw, 
+  Activity, 
+  User, 
+  Shield, 
+  Trash, 
+  Settings, 
+  Loader2, 
+  Filter, 
+  X,
+  ChevronFirst,
+  ChevronLast,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import { formatDistanceToNow, isAfter, isBefore, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 const actionIcons: Record<string, React.ReactNode> = {
@@ -58,6 +72,10 @@ export function SystemAuditLogs() {
   const [resourceFilter, setResourceFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Extract unique actions and resource types from logs
   const uniqueActions = useMemo(() => {
@@ -103,6 +121,21 @@ export function SystemAuditLogs() {
       return true;
     });
   }, [logs, actionFilter, resourceFilter, startDate, endDate]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLogs = filteredLogs.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [actionFilter, resourceFilter, startDate, endDate, itemsPerPage]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   const hasActiveFilters = actionFilter !== 'all' || resourceFilter !== 'all' || startDate || endDate;
 
@@ -248,13 +281,7 @@ export function SystemAuditLogs() {
         )}
       </div>
 
-      {/* Results count */}
-      <div className="text-sm text-muted-foreground">
-        Showing {filteredLogs.length} of {logs.length} logs
-        {hasActiveFilters && ' (filtered)'}
-      </div>
-
-      <ScrollArea className="h-[500px] rounded-lg border">
+      <ScrollArea className="h-[400px] rounded-lg border">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
@@ -266,7 +293,7 @@ export function SystemAuditLogs() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLogs.map((log) => (
+            {paginatedLogs.map((log) => (
               <TableRow 
                 key={log.id}
                 className={newLogIds.has(log.id) ? 'animate-fade-in bg-primary/10 transition-colors duration-1000' : ''}
@@ -297,7 +324,7 @@ export function SystemAuditLogs() {
                 <TableCell>{formatDetails(log)}</TableCell>
               </TableRow>
             ))}
-            {filteredLogs.length === 0 && (
+            {paginatedLogs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   {hasActiveFilters 
@@ -309,6 +336,82 @@ export function SystemAuditLogs() {
           </TableBody>
         </Table>
       </ScrollArea>
+
+      {/* Pagination Controls */}
+      {filteredLogs.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              Showing {startIndex + 1}–{Math.min(endIndex, filteredLogs.length)} of {filteredLogs.length}
+              {hasActiveFilters && ` (${logs.length} total)`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">Per page:</Label>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => setItemsPerPage(Number(value))}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronFirst className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <span className="text-sm px-2">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage >= totalPages}
+              >
+                <ChevronLast className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
