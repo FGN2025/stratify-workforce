@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { useAuditLog } from '@/hooks/useAuditLog';
 import { Loader2 } from 'lucide-react';
 
 interface RegistrationCode {
@@ -52,6 +53,7 @@ export function RegistrationCodeEditDialog({
   onOpenChange,
   onSaved,
 }: RegistrationCodeEditDialogProps) {
+  const { logAction } = useAuditLog();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [description, setDescription] = useState('');
   const [selectedTenant, setSelectedTenant] = useState<string>('');
@@ -79,17 +81,35 @@ export function RegistrationCodeEditDialog({
 
     setIsSubmitting(true);
     try {
+      const updatedFields = {
+        description: description.trim() || null,
+        tenant_id: selectedTenant && selectedTenant !== 'none' ? selectedTenant : null,
+        max_uses: maxUses ? parseInt(maxUses) : null,
+        expires_at: expiresAt || null,
+      };
+
       const { error } = await supabase
         .from('registration_codes')
-        .update({
-          description: description.trim() || null,
-          tenant_id: selectedTenant && selectedTenant !== 'none' ? selectedTenant : null,
-          max_uses: maxUses ? parseInt(maxUses) : null,
-          expires_at: expiresAt || null,
-        })
+        .update(updatedFields)
         .eq('id', code.id);
 
       if (error) throw error;
+
+      // Log audit action with changes
+      await logAction({
+        resourceType: 'registration_code',
+        action: 'updated',
+        resourceId: code.id,
+        details: {
+          code: code.code,
+          changes: {
+            description: { from: code.description, to: updatedFields.description },
+            tenant_id: { from: code.tenant_id, to: updatedFields.tenant_id },
+            max_uses: { from: code.max_uses, to: updatedFields.max_uses },
+            expires_at: { from: code.expires_at, to: updatedFields.expires_at },
+          },
+        },
+      });
 
       toast({
         title: 'Code Updated',
