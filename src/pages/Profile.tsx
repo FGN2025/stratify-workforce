@@ -1,8 +1,11 @@
 import { AppLayout } from '@/components/layout/AppLayout';
+import { PageHero } from '@/components/marketplace/PageHero';
+import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { SkillRadar } from '@/components/profile/SkillRadar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTenant } from '@/contexts/TenantContext';
 import { 
   Award, 
@@ -11,7 +14,11 @@ import {
   Shield, 
   TrendingUp,
   Download,
-  Share2
+  Share2,
+  Trophy,
+  Star,
+  Target,
+  Zap
 } from 'lucide-react';
 import type { SkillSet } from '@/types/tenant';
 
@@ -40,31 +47,83 @@ const tenantAverage: SkillSet = {
   equipment_care: 62,
 };
 
+const recentAchievements = [
+  { id: 1, title: 'Speed Demon', description: 'Complete 10 deliveries under time limit', icon: Zap, color: 'text-amber-500' },
+  { id: 2, title: 'Safety First', description: 'Zero incidents for 30 days', icon: Shield, color: 'text-emerald-500' },
+  { id: 3, title: 'Top Performer', description: 'Ranked #1 in your community', icon: Trophy, color: 'text-primary' },
+];
+
+const recentCertifications = [
+  { id: 1, name: 'CDL Class A', date: '2024-12-01', status: 'verified' },
+  { id: 2, name: 'Hazmat Endorsement', date: '2024-11-15', status: 'verified' },
+  { id: 3, name: 'Safety Excellence', date: '2024-10-20', status: 'verified' },
+  { id: 4, name: 'Advanced Maneuvering', date: '2025-01-28', status: 'pending' },
+];
+
+function AchievementCard({ achievement }: { achievement: typeof recentAchievements[0] }) {
+  const Icon = achievement.icon;
+  return (
+    <Card className="glass-card min-w-[200px] hover:border-primary/50 transition-all">
+      <CardContent className="p-4">
+        <div className={`h-10 w-10 rounded-full bg-muted flex items-center justify-center mb-3 ${achievement.color}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <h4 className="font-semibold text-sm">{achievement.title}</h4>
+        <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CertificationCard({ cert }: { cert: typeof recentCertifications[0] }) {
+  return (
+    <Card className="glass-card min-w-[220px] hover:border-primary/50 transition-all">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+            <Award className="h-5 w-5 text-primary" />
+          </div>
+          <Badge 
+            variant={cert.status === 'verified' ? 'default' : 'outline'}
+            className={cert.status === 'verified' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : ''}
+          >
+            {cert.status === 'verified' ? 'Verified' : 'Pending'}
+          </Badge>
+        </div>
+        <h4 className="font-semibold text-sm mt-3">{cert.name}</h4>
+        <p className="text-xs text-muted-foreground mt-1">
+          Issued {new Date(cert.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 const Profile = () => {
   const { tenant } = useTenant();
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Skill Passport</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Your verified credentials and competency profile
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Share2 className="h-4 w-4" />
-              Share
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
-              Export PDF
-            </Button>
-          </div>
-        </div>
+      <div className="space-y-10">
+        {/* Hero Section */}
+        <PageHero
+          title="Skill Passport"
+          subtitle="Your verified credentials and competency profile. Track achievements, certifications, and career-ready metrics."
+          backgroundImage="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=1600&h=600&fit=crop"
+          primaryAction={{
+            label: 'Export PDF',
+            icon: <Download className="h-4 w-4" />,
+          }}
+          secondaryAction={{
+            label: 'Share',
+            icon: <Share2 className="h-4 w-4" />,
+          }}
+          stats={[
+            { value: `${mockProfile.employability_score}`, label: 'Employability Score', highlight: true },
+            { value: `${mockProfile.total_hours}h`, label: 'Total Hours' },
+            { value: `${mockProfile.certifications.length}`, label: 'Certifications' },
+          ]}
+        />
 
         {/* Profile Header Card */}
         <div className="glass-card p-6">
@@ -149,8 +208,43 @@ const Profile = () => {
           </div>
         </div>
 
+        {/* Recent Achievements Carousel */}
+        <HorizontalCarousel
+          title="Recent Achievements"
+          subtitle="Milestones and accomplishments"
+          icon={<Trophy className="h-5 w-5" />}
+        >
+          {recentAchievements.map((achievement) => (
+            <div key={achievement.id} className="shrink-0 snap-start">
+              <AchievementCard achievement={achievement} />
+            </div>
+          ))}
+        </HorizontalCarousel>
+
+        {/* Certifications Carousel */}
+        <HorizontalCarousel
+          title="Certifications"
+          subtitle="Your verified credentials and qualifications"
+          icon={<Award className="h-5 w-5" />}
+        >
+          {recentCertifications.map((cert) => (
+            <div key={cert.id} className="shrink-0 snap-start">
+              <CertificationCard cert={cert} />
+            </div>
+          ))}
+        </HorizontalCarousel>
+
         {/* Skill Radar */}
-        <SkillRadar skills={mockProfile.skills} tenantAverage={tenantAverage} />
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <Target className="h-5 w-5 text-primary" />
+            <div>
+              <h2 className="text-lg font-bold uppercase tracking-wide">Skill Analysis</h2>
+              <p className="text-sm text-muted-foreground">Your competency breakdown vs organization average</p>
+            </div>
+          </div>
+          <SkillRadar skills={mockProfile.skills} tenantAverage={tenantAverage} />
+        </section>
       </div>
     </AppLayout>
   );

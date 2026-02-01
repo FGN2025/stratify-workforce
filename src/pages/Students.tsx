@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { PageHero } from '@/components/marketplace/PageHero';
+import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -20,7 +23,11 @@ import {
   Mail,
   Clock,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Users,
+  Star,
+  Zap,
+  GraduationCap
 } from 'lucide-react';
 import { GameIcon } from '@/components/dashboard/GameIcon';
 import { useTenant } from '@/contexts/TenantContext';
@@ -67,6 +74,48 @@ function StatusBadge({ status }: { status: Student['status'] }) {
   );
 }
 
+function StudentCard({ student }: { student: Student }) {
+  return (
+    <Card className="glass-card min-w-[240px] hover:border-primary/50 transition-all">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="relative">
+            <Avatar className="h-12 w-12 border border-border">
+              <AvatarImage src={student.avatar_url || ''} />
+              <AvatarFallback className="text-sm bg-muted">
+                {student.username.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {student.status === 'active' && (
+              <div className="absolute -bottom-0.5 -right-0.5 status-led status-led-online" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate">{student.username}</p>
+            <StatusBadge status={student.status} />
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+          <div>
+            <p className="font-data text-lg text-primary">{student.employability_score}</p>
+            <p className="text-[10px] text-muted-foreground">Score</p>
+          </div>
+          <div className="text-right">
+            <p className="font-data text-lg">{student.total_hours}h</p>
+            <p className="text-[10px] text-muted-foreground">Hours</p>
+          </div>
+          {student.trend > 0 ? (
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
+          ) : student.trend < 0 ? (
+            <TrendingDown className="h-4 w-4 text-red-500" />
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 const Students = () => {
   const { tenant } = useTenant();
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,162 +125,185 @@ const Students = () => {
     student.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const activeStudents = mockStudents.filter(s => s.status === 'active');
+  const topPerformers = [...mockStudents].sort((a, b) => b.employability_score - a.employability_score).slice(0, 4);
+  const risingStars = mockStudents.filter(s => s.trend > 2);
+
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Students</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Manage enrolled operators in {tenant?.name || 'your organization'}
-            </p>
-          </div>
-          <Button className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Add Student
-          </Button>
-        </div>
+      <div className="space-y-10">
+        {/* Hero Section */}
+        <PageHero
+          title="Students"
+          subtitle="Monitor and manage enrolled operators. Track progress, view certifications, and support your team's development."
+          backgroundImage="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1600&h=600&fit=crop"
+          primaryAction={{
+            label: 'Add Student',
+            icon: <UserPlus className="h-4 w-4" />,
+          }}
+          secondaryAction={{
+            label: 'Filter',
+            icon: <Filter className="h-4 w-4" />,
+          }}
+          stats={[
+            { value: `${mockStudents.length}`, label: 'Total Students', highlight: true },
+            { value: `${activeStudents.length}`, label: 'Active Now' },
+            { value: `${(mockStudents.reduce((acc, s) => acc + s.employability_score, 0) / mockStudents.length).toFixed(1)}`, label: 'Avg. Score' },
+          ]}
+        />
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name or email..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" className="gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-        </div>
+        {/* Active Now Carousel */}
+        {activeStudents.length > 0 && (
+          <HorizontalCarousel
+            title="Active Now"
+            subtitle="Students currently in training sessions"
+            icon={<Zap className="h-5 w-5" />}
+          >
+            {activeStudents.map((student) => (
+              <div key={`active-${student.id}`} className="shrink-0 snap-start">
+                <StudentCard student={student} />
+              </div>
+            ))}
+          </HorizontalCarousel>
+        )}
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="glass-card p-4">
-            <p className="text-xs text-muted-foreground">Total Students</p>
-            <p className="font-data text-2xl text-foreground mt-1">{mockStudents.length}</p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-xs text-muted-foreground">Active Now</p>
-            <p className="font-data text-2xl text-emerald-500 mt-1">
-              {mockStudents.filter(s => s.status === 'active').length}
-            </p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-xs text-muted-foreground">Avg. Score</p>
-            <p className="font-data text-2xl text-primary mt-1">
-              {(mockStudents.reduce((acc, s) => acc + s.employability_score, 0) / mockStudents.length).toFixed(1)}
-            </p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-xs text-muted-foreground">Total Hours</p>
-            <p className="font-data text-2xl text-foreground mt-1">
-              {mockStudents.reduce((acc, s) => acc + s.total_hours, 0)}h
-            </p>
-          </div>
-        </div>
-
-        {/* Students Table */}
-        <div className="glass-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Student</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="text-muted-foreground text-right">Score</TableHead>
-                <TableHead className="text-muted-foreground text-right">Hours</TableHead>
-                <TableHead className="text-muted-foreground">Current Activity</TableHead>
-                <TableHead className="text-muted-foreground">Last Active</TableHead>
-                <TableHead className="text-muted-foreground w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStudents.map((student) => (
-                <TableRow 
-                  key={student.id} 
-                  className="border-border hover:bg-muted/30 cursor-pointer"
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <Avatar className="h-9 w-9 border border-border">
-                          <AvatarImage src={student.avatar_url || ''} />
-                          <AvatarFallback className="text-xs bg-muted">
-                            {student.username.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {student.status === 'active' && (
-                          <div className="absolute -bottom-0.5 -right-0.5 status-led status-led-online" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{student.username}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {student.email}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <StatusBadge status={student.status} />
-                  </TableCell>
-
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="font-data text-primary">{student.employability_score}</span>
-                      {student.trend > 0 ? (
-                        <TrendingUp className="h-3 w-3 text-emerald-500" />
-                      ) : student.trend < 0 ? (
-                        <TrendingDown className="h-3 w-3 text-red-500" />
-                      ) : null}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="text-right">
-                    <span className="font-data text-muted-foreground">{student.total_hours}h</span>
-                  </TableCell>
-
-                  <TableCell>
-                    {student.current_game ? (
-                      <div className="flex items-center gap-2">
-                        <GameIcon game={student.current_game} size="sm" />
-                        <span className="text-xs text-muted-foreground">In session</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {student.last_active}
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {filteredStudents.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground">
-              No students found matching "{searchQuery}"
+        {/* Top Performers Carousel */}
+        <HorizontalCarousel
+          title="Top Performers"
+          subtitle="Highest scoring operators this month"
+          icon={<Star className="h-5 w-5" />}
+        >
+          {topPerformers.map((student) => (
+            <div key={`top-${student.id}`} className="shrink-0 snap-start">
+              <StudentCard student={student} />
             </div>
-          )}
-        </div>
+          ))}
+        </HorizontalCarousel>
+
+        {/* Search & Table Section */}
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <GraduationCap className="h-5 w-5 text-primary" />
+            <div>
+              <h2 className="text-lg font-bold uppercase tracking-wide">All Students</h2>
+              <p className="text-sm text-muted-foreground">Complete roster for {tenant?.name || 'your organization'}</p>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" className="gap-2">
+              <Filter className="h-4 w-4" />
+              Filter
+            </Button>
+          </div>
+
+          {/* Students Table */}
+          <div className="glass-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Student</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Score</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Hours</TableHead>
+                  <TableHead className="text-muted-foreground">Current Activity</TableHead>
+                  <TableHead className="text-muted-foreground">Last Active</TableHead>
+                  <TableHead className="text-muted-foreground w-10"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStudents.map((student) => (
+                  <TableRow 
+                    key={student.id} 
+                    className="border-border hover:bg-muted/30 cursor-pointer"
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Avatar className="h-9 w-9 border border-border">
+                            <AvatarImage src={student.avatar_url || ''} />
+                            <AvatarFallback className="text-xs bg-muted">
+                              {student.username.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {student.status === 'active' && (
+                            <div className="absolute -bottom-0.5 -right-0.5 status-led status-led-online" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{student.username}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {student.email}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <StatusBadge status={student.status} />
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="font-data text-primary">{student.employability_score}</span>
+                        {student.trend > 0 ? (
+                          <TrendingUp className="h-3 w-3 text-emerald-500" />
+                        ) : student.trend < 0 ? (
+                          <TrendingDown className="h-3 w-3 text-red-500" />
+                        ) : null}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <span className="font-data text-muted-foreground">{student.total_hours}h</span>
+                    </TableCell>
+
+                    <TableCell>
+                      {student.current_game ? (
+                        <div className="flex items-center gap-2">
+                          <GameIcon game={student.current_game} size="sm" />
+                          <span className="text-xs text-muted-foreground">In session</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {student.last_active}
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {filteredStudents.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                No students found matching "{searchQuery}"
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </AppLayout>
   );
