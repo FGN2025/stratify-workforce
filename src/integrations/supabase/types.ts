@@ -1129,6 +1129,14 @@ export type Database = {
         Returns: number
       }
       get_parent_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
+      get_public_profile_data: {
+        Args: { profile_ids?: string[] }
+        Returns: {
+          avatar_url: string
+          id: string
+          username: string
+        }[]
+      }
       get_user_level: { Args: { p_user_id: string }; Returns: number }
       get_user_total_xp: { Args: { p_user_id: string }; Returns: number }
       has_role: {
