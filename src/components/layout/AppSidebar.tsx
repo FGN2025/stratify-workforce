@@ -24,6 +24,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
 
@@ -47,13 +48,15 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { tenant } = useTenant();
-  const { isAdmin } = useUserRole();
+  const { isLoading: authLoading } = useAuth();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
 
   const isActive = (path: string) => location.pathname === path;
   
-  // Filter admin-only items based on user role
+  // Show admin items while loading (optimistic) to prevent race condition
+  const isLoadingAuth = authLoading || roleLoading;
   const visibleAdminItems = adminNavItems.filter(
-    (item) => !('adminOnly' in item && item.adminOnly) || isAdmin
+    (item) => !('adminOnly' in item && item.adminOnly) || isLoadingAuth || isAdmin
   );
 
   return (
