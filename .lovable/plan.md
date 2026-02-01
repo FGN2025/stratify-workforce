@@ -1,144 +1,295 @@
 
-# Add Thumbnail Upload for Cover Images
+
+# Work Orders Management Tab - Implementation Plan
 
 ## Overview
 
-Enhance the SIM Game Edit Dialog to allow admins to either upload a thumbnail image or paste a URL for cover images. This follows the existing pattern used in `MediaUploadDialog`.
+Add a comprehensive Work Orders Management tab to the Admin Dashboard, enabling administrators to create, edit, activate/deactivate, delete, and filter work orders across all simulation games.
 
 ---
 
-## Current State
+## Current State Analysis
 
-- `SimGameEditDialog.tsx` has a simple text input for "Cover Image URL"
-- `useMediaLibrary.ts` already provides an `uploadFile` mutation that handles:
-  - File upload to `media-assets` storage bucket
-  - Returns the public URL after upload
-- `MediaUploadDialog.tsx` shows the established drag-and-drop upload pattern
+| Component | Status |
+|-----------|--------|
+| `work_orders` table | Exists with full schema and admin RLS policies |
+| `useWorkOrders` hook | Read-only, filters by active work orders |
+| Admin Dashboard | Has tabs for Users, SIM Games, Media Library |
+| Work Orders Management UI | **Not implemented** |
+
+---
+
+## Database Schema (Already Exists)
+
+The `work_orders` table has these fields:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | uuid | Primary key |
+| `title` | text | Required |
+| `description` | text | Optional |
+| `game_title` | enum | ATS, Farming_Sim, Construction_Sim, Mechanic_Sim |
+| `difficulty` | enum | beginner, intermediate, advanced |
+| `xp_reward` | integer | Default: 50 |
+| `estimated_time_minutes` | integer | Optional |
+| `max_attempts` | integer | Optional |
+| `success_criteria` | jsonb | Default: {min_score: 80, max_damage: 5} |
+| `is_active` | boolean | Default: true |
+| `channel_id` | uuid | FK to game_channels |
+| `tenant_id` | uuid | FK to tenants |
+| `created_at` | timestamp | Auto-generated |
+
+RLS policies already allow admins to INSERT, UPDATE, DELETE.
 
 ---
 
 ## Implementation Plan
 
-### 1. Update SimGameEditDialog Component
+### 1. Create WorkOrdersManager Component
 
-**Add upload mode toggle and file handling:**
+New file: `src/components/admin/WorkOrdersManager.tsx`
 
-| Addition | Description |
-|----------|-------------|
-| `uploadMode` state | Toggle between 'url' and 'upload' |
-| `file` state | Store selected file |
-| `previewUrl` state | Local preview before upload |
-| `isUploading` state | Loading state during upload |
-| Mode switcher UI | Buttons to switch between URL and Upload |
-| Drag-and-drop zone | File input area with preview |
-| File validation | Accept only image types |
+**Features:**
+- Tabular view of all work orders (active and inactive)
+- Columns: Title, Game, Difficulty, XP, Status, Time, Actions
+- Filter bar for game type and difficulty
+- Quick toggle for active/inactive status
+- Edit and Delete action buttons
+- Create new work order button
 
-**UI Layout Changes:**
+**UI Layout:**
 
 ```text
-Cover Image
-+-------------------+-------------------+
-|   [URL]   |   [Upload]   |  <-- mode tabs
-+-------------------+-------------------+
+Work Orders Management
+Configure training scenarios for simulation games
 
-[URL mode]
-+---------------------------------------+
-| https://...                           |
-+---------------------------------------+
+[+ Create Work Order]                    [Game: All ▼] [Difficulty: All ▼]
 
-[Upload mode]
-+---------------------------------------+
-|                                       |
-|      [drag & drop or click]           |
-|      JPG, PNG, WEBP supported         |
-|                                       |
-+---------------------------------------+
++------------------------------------------------------------------------+
+| Title          | Game     | Difficulty | XP  | Time | Status | Actions |
++------------------------------------------------------------------------+
+| Highway Run    | ATS      | Beginner   | 50  | 30m  | Active | [✓][✎][🗑]|
+| Farm Harvest   | Farming  | Advanced   | 100 | 60m  | Active | [✓][✎][🗑]|
++------------------------------------------------------------------------+
 ```
 
-### 2. File Upload Integration
+### 2. Create WorkOrderEditDialog Component
 
-- Import `useMediaLibrary` hook for `uploadFile` mutation
-- On form submit with upload mode:
-  1. Upload file to `media-assets/game-covers/` folder
-  2. Get returned public URL
-  3. Save URL to `cover_image_url` field
+New file: `src/components/admin/WorkOrderEditDialog.tsx`
 
-### 3. File Changes
+**Features:**
+- Modal dialog for create/edit operations
+- Form fields for all work order properties
+- Game channel auto-selection based on game_title
+- JSON editor for success criteria
+- Tenant assignment (optional)
 
-**Modified Files:**
+**Form Layout:**
 
 ```text
-src/components/admin/SimGameEditDialog.tsx
-  - Import useMediaLibrary hook
-  - Add upload mode state and toggle UI
-  - Add drag-and-drop file input zone
-  - Add file preview display
-  - Handle file upload on submit
-  - Add loading state during upload
++-----------------------------------------+
+| Create Work Order                       |
++-----------------------------------------+
+| Title *           [________________]    |
+| Description       [________________]    |
+|                   [________________]    |
+| Game *            [ATS ▼]               |
+| Difficulty *      [Beginner ▼]          |
+| XP Reward *       [50]                  |
+| Est. Time (min)   [30]                  |
+| Max Attempts      [___]                 |
+| Success Criteria                        |
+|   Min Score       [80] %                |
+|   Max Damage      [5]                   |
+| Tenant (optional) [None ▼]              |
+|                                         |
+|              [Cancel]  [Save]           |
++-----------------------------------------+
 ```
+
+### 3. Update Admin.tsx
+
+Add "Work Orders" tab to the existing tabbed interface:
+
+```typescript
+<TabsList>
+  <TabsTrigger value="users">User Management</TabsTrigger>
+  <TabsTrigger value="work-orders">Work Orders</TabsTrigger>  // NEW
+  <TabsTrigger value="games">SIM Games</TabsTrigger>
+  <TabsTrigger value="media">Media Library</TabsTrigger>
+</TabsList>
+```
+
+---
+
+## New Files
+
+| File | Description |
+|------|-------------|
+| `src/components/admin/WorkOrdersManager.tsx` | Main management grid component |
+| `src/components/admin/WorkOrderEditDialog.tsx` | Create/Edit modal dialog |
 
 ---
 
 ## Technical Details
 
-### State Additions
+### WorkOrdersManager.tsx
 
 ```typescript
-const [uploadMode, setUploadMode] = useState<'url' | 'upload'>('url');
-const [file, setFile] = useState<File | null>(null);
-const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-const [isUploading, setIsUploading] = useState(false);
+// State management
+const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+const [isLoading, setIsLoading] = useState(true);
+const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
+const [isDialogOpen, setIsDialogOpen] = useState(false);
+const [gameFilter, setGameFilter] = useState<GameTitle | 'all'>('all');
+const [difficultyFilter, setDifficultyFilter] = useState<WorkOrderDifficulty | 'all'>('all');
 ```
 
-### Upload Logic
+### CRUD Operations
 
 ```typescript
-const { uploadFile } = useMediaLibrary();
+// Fetch all work orders (including inactive for admin view)
+const fetchWorkOrders = async () => {
+  const { data, error } = await supabase
+    .from('work_orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+  // No is_active filter - admins see all
+};
 
-const handleSubmit = async (e: React.FormEvent) => {
-  let finalCoverUrl = coverImageUrl;
-  
-  // If in upload mode with a file, upload first
-  if (uploadMode === 'upload' && file) {
-    setIsUploading(true);
-    finalCoverUrl = await uploadFile.mutateAsync({
-      file,
-      folder: 'game-covers'
-    });
+// Toggle active status
+const handleToggleActive = async (id: string, currentStatus: boolean) => {
+  await supabase
+    .from('work_orders')
+    .update({ is_active: !currentStatus })
+    .eq('id', id);
+};
+
+// Delete work order
+const handleDelete = async (id: string) => {
+  // Confirmation dialog first
+  await supabase
+    .from('work_orders')
+    .delete()
+    .eq('id', id);
+};
+
+// Create/Update
+const handleSave = async (data: WorkOrderFormData) => {
+  if (editingWorkOrder) {
+    await supabase.from('work_orders').update(data).eq('id', editingWorkOrder.id);
+  } else {
+    await supabase.from('work_orders').insert(data);
   }
-  
-  await onSave({
-    ...data,
-    cover_image_url: finalCoverUrl || null
-  });
 };
 ```
 
-### UI Components
+### WorkOrderEditDialog.tsx
 
-- Mode toggle buttons (URL / Upload)
-- Drag-and-drop zone with visual feedback
-- Image preview thumbnail
-- Remove file button
-- Loading spinner during upload
+Form validation and state:
+
+```typescript
+const [title, setTitle] = useState('');
+const [description, setDescription] = useState('');
+const [gameTitle, setGameTitle] = useState<GameTitle | ''>('');
+const [difficulty, setDifficulty] = useState<WorkOrderDifficulty>('beginner');
+const [xpReward, setXpReward] = useState(50);
+const [estimatedTime, setEstimatedTime] = useState<number | null>(30);
+const [maxAttempts, setMaxAttempts] = useState<number | null>(null);
+const [successCriteria, setSuccessCriteria] = useState({
+  min_score: 80,
+  max_damage: 5
+});
+const [isActive, setIsActive] = useState(true);
+const [tenantId, setTenantId] = useState<string | null>(null);
+```
 
 ---
 
-## User Experience
+## Component Dependencies
 
-1. Admin opens SIM Game edit dialog
-2. Scrolls to "Cover Image" section
-3. Sees two tabs: "URL" (default) and "Upload"
-4. **URL mode**: Paste external URL as before
-5. **Upload mode**: 
-   - Drag-and-drop or click to select file
-   - See preview of selected image
-   - Option to remove and select different file
-6. On save: file uploads first, then channel updates with new URL
-7. Loading indicator shows during upload process
+```text
+WorkOrdersManager
+├── imports supabase client
+├── imports WorkOrderEditDialog
+├── imports UI components (Table, Button, Badge, Select, Switch)
+├── imports lucide icons (Plus, Edit, Trash2, etc.)
+└── uses game title/difficulty enums from types
+
+WorkOrderEditDialog
+├── imports Dialog components
+├── imports Form components (Input, Select, Textarea, Switch)
+├── fetches game_channels for channel_id linking
+├── fetches tenants for optional assignment
+└── validates required fields before save
+```
+
+---
+
+## Admin Dashboard Update
+
+Modify `src/pages/Admin.tsx` to:
+
+1. Import `WorkOrdersManager` component
+2. Add "Work Orders" tab before "SIM Games"
+3. Include work orders count in admin stats
+
+---
+
+## UI Components Used
+
+| Component | Purpose |
+|-----------|---------|
+| `Table` | List work orders in rows |
+| `Select` | Filter dropdowns, game/difficulty selectors |
+| `Switch` | Quick toggle for is_active |
+| `Badge` | Display difficulty, game type |
+| `Dialog` | Edit/Create modal |
+| `Input` | Text fields |
+| `Textarea` | Description field |
+| `Button` | Actions |
+| `AlertDialog` | Delete confirmation |
+
+---
+
+## Filtering Logic
+
+```typescript
+const filteredWorkOrders = useMemo(() => {
+  return workOrders.filter(wo => {
+    const matchesGame = gameFilter === 'all' || wo.game_title === gameFilter;
+    const matchesDifficulty = difficultyFilter === 'all' || wo.difficulty === difficultyFilter;
+    return matchesGame && matchesDifficulty;
+  });
+}, [workOrders, gameFilter, difficultyFilter]);
+```
+
+---
+
+## Success Criteria Editor
+
+A simple key-value editor for the jsonb field:
+
+```typescript
+// Common criteria options
+const criteriaFields = [
+  { key: 'min_score', label: 'Minimum Score (%)', type: 'number' },
+  { key: 'max_damage', label: 'Max Damage', type: 'number' },
+  { key: 'time_limit', label: 'Time Limit (sec)', type: 'number' },
+];
+```
 
 ---
 
 ## Summary
 
-This enhancement adds thumbnail upload capability to the SIM Games Management dialog while preserving the existing URL option. It reuses the established `useMediaLibrary` upload infrastructure and follows the UI patterns from `MediaUploadDialog`.
+This implementation adds a full Work Orders Management tab to the Admin Dashboard with:
+
+- **Create**: New work orders with all configurable fields
+- **Edit**: Modify existing work orders via dialog
+- **Activate/Deactivate**: Quick toggle without opening dialog
+- **Delete**: With confirmation dialog
+- **Filter**: By game type and difficulty level
+
+The design follows the established patterns from `SimGamesManager` and `MediaLibrary` components, ensuring consistency across the admin interface.
+
