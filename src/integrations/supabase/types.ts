@@ -823,38 +823,110 @@ export type Database = {
         }
         Relationships: []
       }
+      user_work_order_completions: {
+        Row: {
+          attempt_number: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          score: number | null
+          started_at: string
+          status: Database["public"]["Enums"]["completion_status"]
+          user_id: string
+          work_order_id: string
+          xp_awarded: number | null
+        }
+        Insert: {
+          attempt_number?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          score?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["completion_status"]
+          user_id: string
+          work_order_id: string
+          xp_awarded?: number | null
+        }
+        Update: {
+          attempt_number?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          score?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["completion_status"]
+          user_id?: string
+          work_order_id?: string
+          xp_awarded?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_work_order_completions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_orders: {
         Row: {
+          channel_id: string | null
           created_at: string
           description: string | null
+          difficulty: Database["public"]["Enums"]["work_order_difficulty"]
+          estimated_time_minutes: number | null
           game_title: Database["public"]["Enums"]["game_title"]
           id: string
           is_active: boolean | null
+          max_attempts: number | null
           success_criteria: Json | null
           tenant_id: string | null
           title: string
+          xp_reward: number
         }
         Insert: {
+          channel_id?: string | null
           created_at?: string
           description?: string | null
+          difficulty?: Database["public"]["Enums"]["work_order_difficulty"]
+          estimated_time_minutes?: number | null
           game_title: Database["public"]["Enums"]["game_title"]
           id?: string
           is_active?: boolean | null
+          max_attempts?: number | null
           success_criteria?: Json | null
           tenant_id?: string | null
           title: string
+          xp_reward?: number
         }
         Update: {
+          channel_id?: string | null
           created_at?: string
           description?: string | null
+          difficulty?: Database["public"]["Enums"]["work_order_difficulty"]
+          estimated_time_minutes?: number | null
           game_title?: Database["public"]["Enums"]["game_title"]
           id?: string
           is_active?: boolean | null
+          max_attempts?: number | null
           success_criteria?: Json | null
           tenant_id?: string | null
           title?: string
+          xp_reward?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "work_orders_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "game_channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_orders_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -894,6 +966,7 @@ export type Database = {
         | "score"
         | "streak"
       app_role: "admin" | "moderator" | "user"
+      completion_status: "in_progress" | "completed" | "failed"
       credential_type:
         | "course_completion"
         | "certification"
@@ -911,6 +984,8 @@ export type Database = {
         | "achievement"
         | "bonus"
         | "redemption"
+        | "work_order"
+      work_order_difficulty: "beginner" | "intermediate" | "advanced"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1049,6 +1124,7 @@ export const Constants = {
         "streak",
       ],
       app_role: ["admin", "moderator", "user"],
+      completion_status: ["in_progress", "completed", "failed"],
       credential_type: [
         "course_completion",
         "certification",
@@ -1067,7 +1143,9 @@ export const Constants = {
         "achievement",
         "bonus",
         "redemption",
+        "work_order",
       ],
+      work_order_difficulty: ["beginner", "intermediate", "advanced"],
     },
   },
 } as const
