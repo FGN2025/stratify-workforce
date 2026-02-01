@@ -51,7 +51,7 @@ const actionColors: Record<string, string> = {
 };
 
 export function SystemAuditLogs() {
-  const { logs, isLoading, refetch } = useAuditLogs();
+  const { logs, isLoading, refetch, newLogIds } = useAuditLogs();
   
   // Filter states
   const [actionFilter, setActionFilter] = useState<string>('all');
@@ -267,7 +267,10 @@ export function SystemAuditLogs() {
           </TableHeader>
           <TableBody>
             {filteredLogs.map((log) => (
-              <TableRow key={log.id}>
+              <TableRow 
+                key={log.id}
+                className={newLogIds.has(log.id) ? 'animate-fade-in bg-primary/10 transition-colors duration-1000' : ''}
+              >
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
                 </TableCell>

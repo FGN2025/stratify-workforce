@@ -19,6 +19,7 @@ export function useAuditLogs() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [newLogIds, setNewLogIds] = useState<Set<string>>(new Set());
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -73,6 +74,15 @@ export function useAuditLogs() {
     return data?.username || 'Unknown';
   }, []);
 
+  // Clear highlight from a specific log after animation completes
+  const clearNewLogHighlight = useCallback((logId: string) => {
+    setNewLogIds(prev => {
+      const next = new Set(prev);
+      next.delete(logId);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!user) return;
     fetchLogs();
@@ -96,8 +106,16 @@ export function useAuditLogs() {
             actor_username: actorUsername,
           };
 
+          // Mark this log as new for highlighting
+          setNewLogIds(prev => new Set(prev).add(enrichedLog.id));
+
           // Add new log to the top of the list
           setLogs((prev) => [enrichedLog, ...prev.slice(0, 99)]);
+
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            clearNewLogHighlight(enrichedLog.id);
+          }, 3000);
         }
       )
       .subscribe();
@@ -105,7 +123,7 @@ export function useAuditLogs() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchLogs, fetchActorUsername]);
+  }, [user, fetchLogs, fetchActorUsername, clearNewLogHighlight]);
 
   const logAction = async (
     action: string,
@@ -129,5 +147,5 @@ export function useAuditLogs() {
     }
   };
 
-  return { logs, isLoading, refetch: fetchLogs, logAction };
+  return { logs, isLoading, refetch: fetchLogs, logAction, newLogIds };
 }
