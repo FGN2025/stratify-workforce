@@ -228,6 +228,169 @@ export type Database = {
           },
         ]
       }
+      event_matches: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          match_order: number
+          player1_id: string | null
+          player1_score: number | null
+          player2_id: string | null
+          player2_score: number | null
+          round_number: number
+          scheduled_time: string | null
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+          winner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          match_order: number
+          player1_id?: string | null
+          player1_score?: number | null
+          player2_id?: string | null
+          player2_score?: number | null
+          round_number: number
+          scheduled_time?: string | null
+          status?: Database["public"]["Enums"]["match_status"]
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          match_order?: number
+          player1_id?: string | null
+          player1_score?: number | null
+          player2_id?: string | null
+          player2_score?: number | null
+          round_number?: number
+          scheduled_time?: string | null
+          status?: Database["public"]["Enums"]["match_status"]
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_matches_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_registrations: {
+        Row: {
+          bracket_seed: number | null
+          event_id: string
+          id: string
+          registered_at: string
+          status: Database["public"]["Enums"]["registration_status"]
+          user_id: string
+        }
+        Insert: {
+          bracket_seed?: number | null
+          event_id: string
+          id?: string
+          registered_at?: string
+          status?: Database["public"]["Enums"]["registration_status"]
+          user_id: string
+        }
+        Update: {
+          bracket_seed?: number | null
+          event_id?: string
+          id?: string
+          registered_at?: string
+          status?: Database["public"]["Enums"]["registration_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          event_type: Database["public"]["Enums"]["event_type"]
+          google_calendar_event_id: string | null
+          id: string
+          max_participants: number | null
+          min_participants: number | null
+          registration_deadline: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status: Database["public"]["Enums"]["event_status"]
+          tenant_id: string | null
+          title: string
+          updated_at: string
+          work_order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          event_type?: Database["public"]["Enums"]["event_type"]
+          google_calendar_event_id?: string | null
+          id?: string
+          max_participants?: number | null
+          min_participants?: number | null
+          registration_deadline?: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status?: Database["public"]["Enums"]["event_status"]
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_type?: Database["public"]["Enums"]["event_type"]
+          google_calendar_event_id?: string | null
+          id?: string
+          max_participants?: number | null
+          min_participants?: number | null
+          registration_deadline?: string | null
+          scheduled_end?: string
+          scheduled_start?: string
+          status?: Database["public"]["Enums"]["event_status"]
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_channels: {
         Row: {
           accent_color: string
@@ -1311,10 +1474,20 @@ export type Database = {
         | "badge"
         | "skill_verification"
       difficulty_level: "beginner" | "intermediate" | "advanced"
+      event_status:
+        | "draft"
+        | "published"
+        | "registration_open"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      event_type: "quest" | "head_to_head"
       game_title: "ATS" | "Farming_Sim" | "Construction_Sim" | "Mechanic_Sim"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
+      match_status: "pending" | "in_progress" | "completed"
       points_type: "xp" | "credits" | "tokens"
       progress_status: "not_started" | "in_progress" | "completed" | "failed"
+      registration_status: "registered" | "confirmed" | "cancelled" | "no_show"
       source_type:
         | "lesson"
         | "module"
@@ -1492,10 +1665,21 @@ export const Constants = {
         "skill_verification",
       ],
       difficulty_level: ["beginner", "intermediate", "advanced"],
+      event_status: [
+        "draft",
+        "published",
+        "registration_open",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
+      event_type: ["quest", "head_to_head"],
       game_title: ["ATS", "Farming_Sim", "Construction_Sim", "Mechanic_Sim"],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
+      match_status: ["pending", "in_progress", "completed"],
       points_type: ["xp", "credits", "tokens"],
       progress_status: ["not_started", "in_progress", "completed", "failed"],
+      registration_status: ["registered", "confirmed", "cancelled", "no_show"],
       source_type: [
         "lesson",
         "module",
