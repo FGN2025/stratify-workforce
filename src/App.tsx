@@ -50,8 +50,11 @@ const App = () => (
                 <ProtectedRoute><EventDetail /></ProtectedRoute>
               } />
               
-              {/* Protected routes */}
+              {/* Profile routes */}
               <Route path="/profile" element={
+                <ProtectedRoute><Profile /></ProtectedRoute>
+              } />
+              <Route path="/profile/:userId" element={
                 <ProtectedRoute><Profile /></ProtectedRoute>
               } />
               <Route path="/work-orders" element={
