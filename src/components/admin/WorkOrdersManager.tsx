@@ -30,8 +30,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Edit, Trash2, Clock, Trophy } from 'lucide-react';
-import { WorkOrderEditDialog } from './WorkOrderEditDialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Plus, Edit, Trash2, Clock, Trophy, FileUp } from 'lucide-react';
+import { WorkOrderEditDialog, type EvidenceRequirements } from './WorkOrderEditDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
@@ -52,6 +58,7 @@ interface WorkOrder {
   channel_id: string | null;
   tenant_id: string | null;
   created_at: string;
+  evidence_requirements: EvidenceRequirements | null;
 }
 
 const GAME_LABELS: Record<GameTitle, string> = {
@@ -89,7 +96,12 @@ export function WorkOrdersManager() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWorkOrders(data || []);
+      // Cast evidence_requirements from Json to our typed interface
+      const workOrdersData = (data || []).map((wo) => ({
+        ...wo,
+        evidence_requirements: wo.evidence_requirements as unknown as EvidenceRequirements | null,
+      }));
+      setWorkOrders(workOrdersData);
     } catch (error) {
       console.error('Error fetching work orders:', error);
       toast({
@@ -275,6 +287,7 @@ export function WorkOrdersManager() {
               <TableHead>Difficulty</TableHead>
               <TableHead className="text-center">XP</TableHead>
               <TableHead className="text-center">Time</TableHead>
+              <TableHead className="text-center">Evidence</TableHead>
               <TableHead className="text-center">Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -282,7 +295,7 @@ export function WorkOrdersManager() {
           <TableBody>
             {filteredWorkOrders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No work orders found
                 </TableCell>
               </TableRow>
@@ -315,6 +328,28 @@ export function WorkOrdersManager() {
                         <Clock className="h-3 w-3" />
                         <span>{wo.estimated_time_minutes}m</span>
                       </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {wo.evidence_requirements?.required ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="flex items-center justify-center">
+                              <FileUp className="h-4 w-4 text-primary" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">
+                              {wo.evidence_requirements.min_uploads}-{wo.evidence_requirements.max_uploads} files required
+                              <br />
+                              Types: {wo.evidence_requirements.allowed_types.join(', ')}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

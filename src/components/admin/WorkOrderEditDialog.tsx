@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -21,12 +22,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Loader2, ChevronDown, FileUp } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
 type WorkOrderDifficulty = Database['public']['Enums']['work_order_difficulty'];
 type Json = Database['public']['Tables']['work_orders']['Row']['success_criteria'];
+
+export interface EvidenceRequirements {
+  required: boolean;
+  min_uploads: number;
+  max_uploads: number;
+  allowed_types: ('image' | 'video' | 'document')[];
+  instructions: string;
+  deadline_hours: number | null;
+}
 
 interface WorkOrder {
   id: string;
@@ -41,6 +56,7 @@ interface WorkOrder {
   is_active: boolean | null;
   channel_id: string | null;
   tenant_id: string | null;
+  evidence_requirements: EvidenceRequirements | null;
 }
 
 interface GameChannel {
@@ -85,6 +101,14 @@ export function WorkOrderEditDialog({
   const [channelId, setChannelId] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
 
+  // Evidence requirements state
+  const [evidenceRequired, setEvidenceRequired] = useState(false);
+  const [evidenceMinUploads, setEvidenceMinUploads] = useState<string>('1');
+  const [evidenceMaxUploads, setEvidenceMaxUploads] = useState<string>('5');
+  const [evidenceAllowedTypes, setEvidenceAllowedTypes] = useState<('image' | 'video' | 'document')[]>(['image']);
+  const [evidenceInstructions, setEvidenceInstructions] = useState('');
+  const [evidenceDeadlineHours, setEvidenceDeadlineHours] = useState<string>('');
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   // Fetch channels and tenants on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -117,6 +141,25 @@ export function WorkOrderEditDialog({
         setIsActive(workOrder.is_active ?? true);
         setChannelId(workOrder.channel_id || '');
         setTenantId(workOrder.tenant_id || '');
+        // Evidence requirements
+        const evidence = workOrder.evidence_requirements;
+        if (evidence) {
+          setEvidenceRequired(evidence.required);
+          setEvidenceMinUploads(evidence.min_uploads?.toString() || '1');
+          setEvidenceMaxUploads(evidence.max_uploads?.toString() || '5');
+          setEvidenceAllowedTypes(evidence.allowed_types || ['image']);
+          setEvidenceInstructions(evidence.instructions || '');
+          setEvidenceDeadlineHours(evidence.deadline_hours?.toString() || '');
+          setEvidenceOpen(evidence.required);
+        } else {
+          setEvidenceRequired(false);
+          setEvidenceMinUploads('1');
+          setEvidenceMaxUploads('5');
+          setEvidenceAllowedTypes(['image']);
+          setEvidenceInstructions('');
+          setEvidenceDeadlineHours('');
+          setEvidenceOpen(false);
+        }
       } else {
         // Reset to defaults for create mode
         setTitle('');
@@ -131,6 +174,14 @@ export function WorkOrderEditDialog({
         setIsActive(true);
         setChannelId('');
         setTenantId('');
+        // Reset evidence
+        setEvidenceRequired(false);
+        setEvidenceMinUploads('1');
+        setEvidenceMaxUploads('5');
+        setEvidenceAllowedTypes(['image']);
+        setEvidenceInstructions('');
+        setEvidenceDeadlineHours('');
+        setEvidenceOpen(false);
       }
     }
   }, [open, workOrder]);
@@ -157,6 +208,18 @@ export function WorkOrderEditDialog({
       if (minScore) successCriteria.min_score = parseInt(minScore, 10);
       if (maxDamage) successCriteria.max_damage = parseInt(maxDamage, 10);
 
+      // Build evidence requirements object
+      const evidenceRequirements: EvidenceRequirements | null = evidenceRequired
+        ? {
+            required: true,
+            min_uploads: parseInt(evidenceMinUploads, 10) || 1,
+            max_uploads: parseInt(evidenceMaxUploads, 10) || 5,
+            allowed_types: evidenceAllowedTypes.length > 0 ? evidenceAllowedTypes : ['image'],
+            instructions: evidenceInstructions.trim(),
+            deadline_hours: evidenceDeadlineHours ? parseInt(evidenceDeadlineHours, 10) : null,
+          }
+        : null;
+
       const data = {
         title: title.trim(),
         description: description.trim() || null,
@@ -169,6 +232,7 @@ export function WorkOrderEditDialog({
         is_active: isActive,
         channel_id: channelId || null,
         tenant_id: tenantId || null,
+        evidence_requirements: evidenceRequirements as unknown as Json,
       };
 
       if (workOrder) {
@@ -392,6 +456,143 @@ export function WorkOrderEditDialog({
               </Select>
             </div>
           </div>
+
+          {/* Evidence Requirements */}
+          <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
+            <div className="rounded-lg border border-border/50 overflow-hidden">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <FileUp className="h-5 w-5 text-muted-foreground" />
+                  <div className="text-left">
+                    <Label className="font-medium cursor-pointer">Evidence Requirements</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Require users to upload proof of completion
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {evidenceRequired && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
+                      Required
+                    </span>
+                  )}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${evidenceOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="p-4 pt-0 space-y-4 border-t border-border/50">
+                  {/* Enable Evidence Toggle */}
+                  <div className="flex items-center justify-between pt-4">
+                    <Label htmlFor="evidence-required" className="text-sm">
+                      Require evidence submission
+                    </Label>
+                    <Switch
+                      id="evidence-required"
+                      checked={evidenceRequired}
+                      onCheckedChange={setEvidenceRequired}
+                    />
+                  </div>
+
+                  {evidenceRequired && (
+                    <>
+                      {/* Upload Limits */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="min-uploads" className="text-sm font-normal text-muted-foreground">
+                            Minimum files
+                          </Label>
+                          <Input
+                            id="min-uploads"
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={evidenceMinUploads}
+                            onChange={(e) => setEvidenceMinUploads(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="max-uploads" className="text-sm font-normal text-muted-foreground">
+                            Maximum files
+                          </Label>
+                          <Input
+                            id="max-uploads"
+                            type="number"
+                            min={1}
+                            max={20}
+                            value={evidenceMaxUploads}
+                            onChange={(e) => setEvidenceMaxUploads(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Allowed File Types */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-normal text-muted-foreground">
+                          Allowed file types
+                        </Label>
+                        <div className="flex flex-wrap gap-4">
+                          {(['image', 'video', 'document'] as const).map((type) => (
+                            <div key={type} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`type-${type}`}
+                                checked={evidenceAllowedTypes.includes(type)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setEvidenceAllowedTypes([...evidenceAllowedTypes, type]);
+                                  } else {
+                                    setEvidenceAllowedTypes(
+                                      evidenceAllowedTypes.filter((t) => t !== type)
+                                    );
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`type-${type}`}
+                                className="text-sm font-normal capitalize cursor-pointer"
+                              >
+                                {type === 'image' ? 'Images (jpg, png, webp)' :
+                                 type === 'video' ? 'Videos (mp4, mov)' :
+                                 'Documents (pdf, doc)'}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Instructions */}
+                      <div className="space-y-2">
+                        <Label htmlFor="evidence-instructions" className="text-sm font-normal text-muted-foreground">
+                          Instructions for users
+                        </Label>
+                        <Textarea
+                          id="evidence-instructions"
+                          value={evidenceInstructions}
+                          onChange={(e) => setEvidenceInstructions(e.target.value)}
+                          placeholder="E.g., Upload a screenshot of your completed delivery showing the score screen..."
+                          rows={2}
+                        />
+                      </div>
+
+                      {/* Deadline */}
+                      <div className="space-y-2">
+                        <Label htmlFor="deadline-hours" className="text-sm font-normal text-muted-foreground">
+                          Submission deadline (hours after completion, optional)
+                        </Label>
+                        <Input
+                          id="deadline-hours"
+                          type="number"
+                          min={1}
+                          value={evidenceDeadlineHours}
+                          onChange={(e) => setEvidenceDeadlineHours(e.target.value)}
+                          placeholder="No deadline"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
 
           {/* Active Toggle */}
           <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
