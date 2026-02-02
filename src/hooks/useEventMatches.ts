@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { fireBurstConfetti } from '@/hooks/useConfetti';
 import type { EventMatchWithPlayers, Bracket, BracketRound, MatchStatus } from '@/types/events';
 
 export function useEventMatches(eventId: string | undefined) {
@@ -145,6 +146,8 @@ export function useUpdateMatch() {
       
       // Check if tournament was completed
       if (data.round_number === 1) {
+        // Fire celebratory confetti for tournament completion
+        fireBurstConfetti();
         toast({
           title: '🏆 Tournament Complete!',
           description: 'The champion has been crowned!',
