@@ -8,6 +8,7 @@ import { WorkOrdersManager } from '@/components/admin/WorkOrdersManager';
 import { SimGamesManager } from '@/components/admin/SimGamesManager';
 import { RegistrationCodeManager } from '@/components/admin/RegistrationCodeManager';
 import { EventsManager } from '@/components/admin/EventsManager';
+import { EvidenceReviewQueue } from '@/components/admin/EvidenceReviewQueue';
 import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -186,10 +187,11 @@ export default function Admin() {
 
         {/* Tabbed Content */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="work-orders">Work Orders</TabsTrigger>
+            <TabsTrigger value="evidence">Evidence Review</TabsTrigger>
             <TabsTrigger value="games">SIM Games</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
             <TabsTrigger value="codes">Registration Codes</TabsTrigger>
@@ -227,6 +229,14 @@ export default function Admin() {
             <Card className="border-border/50">
               <CardContent className="pt-6">
                 <WorkOrdersManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="evidence">
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <EvidenceReviewQueue />
               </CardContent>
             </Card>
           </TabsContent>
