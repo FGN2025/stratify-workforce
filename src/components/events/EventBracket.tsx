@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Trophy, User, ChevronRight, Shuffle, Users } from 'lucide-react';
+import { Trophy, User, Shuffle, Users } from 'lucide-react';
+import { MergingBracketConnector } from './BracketConnector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -534,7 +535,7 @@ export function EventBracket({ eventId, eventStatus, minParticipants = 2 }: Even
                       minHeight: `${round.matches.length * 120}px`,
                     }}
                   >
-                    {round.matches.map(match => (
+                    {round.matches.map((match, matchIndex) => (
                       <div key={match.id} className="flex items-center">
                         <MatchCard
                           match={match}
@@ -543,9 +544,15 @@ export function EventBracket({ eventId, eventStatus, minParticipants = 2 }: Even
                           currentUserId={user?.id}
                           onRecordResult={handleRecordResult}
                         />
-                        {/* Connector arrow to next round */}
+                        {/* Connector lines to next round */}
                         {roundIndex < displayRounds.length - 1 && (
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 mx-2" />
+                          <MergingBracketConnector
+                            matchCount={round.matches.length}
+                            matchIndex={matchIndex}
+                            matchHeight={140}
+                            matchGap={16}
+                            hasWinner={!!match.winner_id}
+                          />
                         )}
                       </div>
                     ))}
