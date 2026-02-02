@@ -182,27 +182,23 @@ const WorkOrders = () => {
           </HorizontalCarousel>
         )}
 
-        {/* Competitions Grid */}
+        {/* Competitions Carousel */}
         {filteredWorkOrders.length > 0 && (
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <Trophy className="h-5 w-5 text-primary" />
-              <div>
-                <h2 className="text-lg font-bold uppercase tracking-wide">Active Competitions</h2>
-                <p className="text-sm text-muted-foreground">Compete with other operators for top rankings</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredWorkOrders.slice(0, 6).map((wo) => (
+          <HorizontalCarousel
+            title="Active Competitions"
+            subtitle="Compete with other operators for top rankings"
+            icon={<Trophy className="h-5 w-5" />}
+            viewAllLink="/work-orders?filter=competitions"
+          >
+            {filteredWorkOrders.slice(0, 6).map((wo) => (
+              <div key={`competition-${wo.id}`} className="w-72 shrink-0 snap-start">
                 <EventCard 
-                  key={`competition-${wo.id}`}
                   workOrder={wo}
                   community={getRandomCommunity()}
                 />
-              ))}
-            </div>
-          </section>
+              </div>
+            ))}
+          </HorizontalCarousel>
         )}
 
         {/* Empty State */}

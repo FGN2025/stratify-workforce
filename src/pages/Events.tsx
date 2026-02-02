@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, isSameDay, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { Calendar as CalendarIcon, Filter, List, Grid3X3 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { EventCalendar } from '@/components/events/EventCalendar';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/button';
@@ -216,14 +217,10 @@ export default function Events() {
         ) : (
           /* List View */
           <div>
-            <h2 className="text-lg font-semibold mb-4">
-              Upcoming Events ({upcomingEvents.length})
-            </h2>
-
             {eventsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className="h-[200px] rounded-lg" />
+              <div className="flex gap-4 overflow-hidden">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-[200px] w-80 shrink-0 rounded-lg" />
                 ))}
               </div>
             ) : upcomingEvents.length === 0 ? (
@@ -239,15 +236,20 @@ export default function Events() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <HorizontalCarousel
+                title="Upcoming Events"
+                subtitle={`${upcomingEvents.length} events scheduled`}
+                icon={<CalendarIcon className="h-5 w-5" />}
+              >
                 {upcomingEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onClick={() => handleEventClick(event.id)}
-                  />
+                  <div key={event.id} className="w-80 shrink-0 snap-start">
+                    <EventCard
+                      event={event}
+                      onClick={() => handleEventClick(event.id)}
+                    />
+                  </div>
                 ))}
-              </div>
+              </HorizontalCarousel>
             )}
           </div>
         )}
