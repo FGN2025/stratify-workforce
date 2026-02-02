@@ -3,7 +3,6 @@ import { format, formatDistanceToNow, isPast, isFuture } from 'date-fns';
 import { 
   Calendar, 
   Clock, 
-  Users, 
   ArrowLeft, 
   Swords, 
   Target,
@@ -20,6 +19,7 @@ import { GameIcon } from '@/components/dashboard/GameIcon';
 import { DifficultyIndicator } from '@/components/work-orders/DifficultyIndicator';
 import { EventRegistrationButton } from '@/components/events/EventRegistrationButton';
 import { EventBracket } from '@/components/events/EventBracket';
+import { ParticipantList } from '@/components/events/ParticipantList';
 import { useEventById } from '@/hooks/useEventById';
 import { cn } from '@/lib/utils';
 import type { EventStatus } from '@/types/events';
@@ -227,41 +227,11 @@ export default function EventDetail() {
               </CardContent>
             </Card>
 
-            {/* Participants placeholder - will be expanded with actual list */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  Participants
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <span className="text-2xl font-bold font-data">
-                      {event.registration_count || 0}
-                    </span>
-                    {event.max_participants && (
-                      <span className="text-muted-foreground"> / {event.max_participants}</span>
-                    )}
-                    <span className="text-muted-foreground ml-2">registered</span>
-                  </div>
-                  {spotsLeft !== null && spotsLeft > 0 && spotsLeft <= 10 && (
-                    <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-                      {spotsLeft} spots left
-                    </Badge>
-                  )}
-                  {isFull && (
-                    <Badge variant="outline" className="bg-destructive/20 text-destructive border-destructive/30">
-                      Full
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Minimum {event.min_participants} participants required to run this event.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Participants list with avatars and status */}
+            <ParticipantList 
+              eventId={event.id} 
+              maxParticipants={event.max_participants} 
+            />
 
             {/* Bracket for H2H events */}
             {event.event_type === 'head_to_head' && (
