@@ -112,7 +112,8 @@ export function useUpdateMatch() {
       player1Score?: number;
       player2Score?: number;
     }) => {
-      const { data, error } = await supabase
+      // Update the current match
+      const { data: updatedMatch, error } = await supabase
         .from('event_matches')
         .update({
           winner_id: winnerId,
@@ -125,13 +126,17 @@ export function useUpdateMatch() {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Advance winner to next round
+      await advanceWinnerToNextRound(updatedMatch);
+
+      return updatedMatch;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['event-matches', data.event_id] });
       toast({
         title: 'Match updated',
-        description: 'Match result has been recorded.',
+        description: 'Match result has been recorded and winner advanced.',
       });
     },
     onError: (error: Error) => {
@@ -142,4 +147,52 @@ export function useUpdateMatch() {
       });
     },
   });
+}
+
+// Advance the winner of a completed match to the next round
+async function advanceWinnerToNextRound(completedMatch: {
+  id: string;
+  event_id: string;
+  round_number: number;
+  match_order: number;
+  winner_id: string | null;
+}) {
+  if (!completedMatch.winner_id) return;
+
+  // Round 1 is the finals - no next round
+  if (completedMatch.round_number <= 1) return;
+
+  const nextRoundNumber = completedMatch.round_number - 1;
+  // Two matches feed into one: match 1&2 -> match 1, match 3&4 -> match 2, etc.
+  const nextMatchOrder = Math.ceil(completedMatch.match_order / 2);
+  // Odd match_order goes to player1, even goes to player2
+  const isPlayer1Slot = completedMatch.match_order % 2 === 1;
+
+  // Find the next round match
+  const { data: nextMatch, error: findError } = await supabase
+    .from('event_matches')
+    .select('*')
+    .eq('event_id', completedMatch.event_id)
+    .eq('round_number', nextRoundNumber)
+    .eq('match_order', nextMatchOrder)
+    .single();
+
+  if (findError || !nextMatch) {
+    console.error('Could not find next round match:', findError);
+    return;
+  }
+
+  // Update the appropriate player slot
+  const updateData = isPlayer1Slot
+    ? { player1_id: completedMatch.winner_id }
+    : { player2_id: completedMatch.winner_id };
+
+  const { error: updateError } = await supabase
+    .from('event_matches')
+    .update(updateData)
+    .eq('id', nextMatch.id);
+
+  if (updateError) {
+    console.error('Failed to advance winner:', updateError);
+  }
 }

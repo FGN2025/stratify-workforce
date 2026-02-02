@@ -108,6 +108,39 @@ function generateBracketMatches(
   return matches;
 }
 
+// Advance a bye winner to the next round
+async function advanceByeWinner(
+  eventId: string,
+  match: { match_order: number; player1_id: string | null; player2_id: string | null },
+  currentRoundNumber: number
+) {
+  const winnerId = match.player1_id || match.player2_id;
+  if (!winnerId || currentRoundNumber <= 1) return;
+
+  const nextRoundNumber = currentRoundNumber - 1;
+  const nextMatchOrder = Math.ceil(match.match_order / 2);
+  const isPlayer1Slot = match.match_order % 2 === 1;
+
+  const { data: nextMatch, error: findError } = await supabase
+    .from('event_matches')
+    .select('*')
+    .eq('event_id', eventId)
+    .eq('round_number', nextRoundNumber)
+    .eq('match_order', nextMatchOrder)
+    .single();
+
+  if (findError || !nextMatch) return;
+
+  const updateData = isPlayer1Slot
+    ? { player1_id: winnerId }
+    : { player2_id: winnerId };
+
+  await supabase
+    .from('event_matches')
+    .update(updateData)
+    .eq('id', nextMatch.id);
+}
+
 export function useBracketGeneration() {
   const queryClient = useQueryClient();
 
@@ -160,6 +193,9 @@ export function useBracketGeneration() {
               status: 'completed',
             })
             .eq('id', match.id);
+          
+          // Advance to next round
+          await advanceByeWinner(eventId, match, firstRoundNumber);
         } else if (match.player2_id && !match.player1_id) {
           await supabase
             .from('event_matches')
@@ -168,6 +204,9 @@ export function useBracketGeneration() {
               status: 'completed',
             })
             .eq('id', match.id);
+          
+          // Advance to next round
+          await advanceByeWinner(eventId, match, firstRoundNumber);
         }
       }
 
