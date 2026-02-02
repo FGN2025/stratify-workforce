@@ -305,12 +305,15 @@ export function EventEditDialog({
 
             <div className="space-y-2">
               <Label htmlFor="workOrder">Linked Work Order</Label>
-              <Select value={workOrderId} onValueChange={setWorkOrderId}>
+              <Select
+                value={workOrderId || '__none__'}
+                onValueChange={v => setWorkOrderId(v === '__none__' ? '' : v)}
+              >
                 <SelectTrigger id="workOrder">
                   <SelectValue placeholder="Select work order (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {workOrders.map(wo => (
                     <SelectItem key={wo.id} value={wo.id}>
                       {wo.title} ({wo.game_title.replace('_', ' ')})
@@ -419,12 +422,15 @@ export function EventEditDialog({
 
             <div className="space-y-2">
               <Label htmlFor="tenant">Community</Label>
-              <Select value={tenantId} onValueChange={setTenantId}>
+              <Select
+                value={tenantId || '__none__'}
+                onValueChange={v => setTenantId(v === '__none__' ? '' : v)}
+              >
                 <SelectTrigger id="tenant">
                   <SelectValue placeholder="Select community (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Global)</SelectItem>
+                  <SelectItem value="__none__">None (Global)</SelectItem>
                   {tenants.map(t => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
