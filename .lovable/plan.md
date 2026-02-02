@@ -1,114 +1,75 @@
 
-# Plan: Add Skill Passport Links to Students Page
+# Plan: Create Sample Student Data
 
 ## Overview
-Enable admins to navigate directly to any student's Skill Passport (profile page) from the Students management view. This also requires replacing the mock data with real database records.
+Insert sample student records into the database for American Truck Simulator (ATS) and Construction Simulator to populate the Students page with demo data.
 
 ---
 
-## Changes Required
+## Data to Create
 
-### 1. Create `useStudents` Hook
-**New file: `src/hooks/useStudents.ts`**
+### 1. Sample Profiles (8 students)
+Create student profiles assigned to the **FGN Global** tenant (`efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca`):
 
-Fetch real student data from the database:
-- Query the `profiles` table for users in the current tenant
-- Join with `user_game_stats` to get total hours and last activity
-- Join with `telemetry_sessions` to detect active sessions
-- Calculate trend data from recent score changes
+| Username | Employability Score | Avatar | Skills Focus |
+|----------|---------------------|--------|--------------|
+| Jake_Trucker | 85 | - | ATS specialist |
+| Maria_Roads | 72 | - | ATS driver |
+| Sam_Diesel | 68 | - | ATS / mixed |
+| Emma_Wheeler | 91 | - | Top ATS performer |
+| Carlos_Builder | 78 | - | Construction specialist |
+| Alex_Crane | 65 | - | Construction operator |
+| Sophie_Excavator | 82 | - | Construction / mixed |
+| Mike_Concrete | 70 | - | Construction worker |
 
-### 2. Update Students Page
-**File: `src/pages/Students.tsx`**
+### 2. Game Stats for Each Student
+Create `user_game_stats` records to show play time and activity:
 
-- Replace mock data with the new `useStudents` hook
-- Add navigation to `/profile/:userId` when clicking a student row
-- Add explicit "View Passport" link in the actions column
-- Replace the non-functional "MoreVertical" button with a dropdown menu containing:
-  - "View Skill Passport" - navigates to `/profile/:userId`
-  - "Send Message" (placeholder for future)
-  - "View Activity" (placeholder for future)
-
-### 3. UI Enhancements
-- Make the entire row clickable to view the student's profile
-- Add hover state feedback to indicate clickability
-- Include a direct "View Passport" button/link for quick access
-- Add loading and empty states for real data
+| Student | Game | Hours Played | Last Played |
+|---------|------|--------------|-------------|
+| Jake_Trucker | ATS | 45 | 2 hours ago |
+| Maria_Roads | ATS | 32 | 1 day ago |
+| Sam_Diesel | ATS | 28 | 3 days ago |
+| Emma_Wheeler | ATS | 62 | 30 min ago |
+| Carlos_Builder | Construction_Sim | 38 | 4 hours ago |
+| Alex_Crane | Construction_Sim | 22 | 2 days ago |
+| Sophie_Excavator | Construction_Sim | 48 | 1 hour ago |
+| Mike_Concrete | Construction_Sim | 25 | 5 days ago |
 
 ---
 
-## Technical Details
+## SQL Migration Required
 
-### Data Flow
-```text
-profiles table
-    |
-    +-- user_game_stats (total_play_time_minutes, last_played_at)
-    |
-    +-- telemetry_sessions (active session detection)
-    |
-    v
-useStudents hook --> Students.tsx --> Link to /profile/:userId
-```
-
-### Query Strategy
 ```sql
--- Fetch students with stats
-SELECT 
-  p.id,
-  p.username,
-  p.avatar_url,
-  p.employability_score,
-  p.updated_at,
-  COALESCE(SUM(ugs.total_play_time_minutes), 0) as total_minutes,
-  MAX(ugs.last_played_at) as last_active
-FROM profiles p
-LEFT JOIN user_game_stats ugs ON ugs.user_id = p.id
-WHERE p.tenant_id = :current_tenant_id
-GROUP BY p.id
-```
-
-### Navigation Implementation
-```typescript
-// Row click handler
-const handleRowClick = (studentId: string) => {
-  navigate(`/profile/${studentId}`);
-};
-
-// Or using Link component
-<Link to={`/profile/${student.id}`}>
-  View Skill Passport
-</Link>
+-- Create sample student profiles for FGN Global tenant
+INSERT INTO profiles (id, tenant_id, username, employability_score, skills)
+VALUES 
+  (gen_random_uuid(), 'efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca', 'Jake_Trucker', 85, 
+   '{"speed": 80, "safety": 88, "precision": 82, "efficiency": 85, "equipment_care": 90}'),
+  (gen_random_uuid(), 'efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca', 'Maria_Roads', 72,
+   '{"speed": 70, "safety": 75, "precision": 68, "efficiency": 72, "equipment_care": 74}'),
+  -- ... (6 more students)
+  
+-- Create game stats for each student
+INSERT INTO user_game_stats (user_id, game_title, total_play_time_minutes, last_played_at, ...)
+-- ... stats for each student
 ```
 
 ---
 
-## Files to Create/Modify
+## Implementation Steps
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/hooks/useStudents.ts` | Create | Hook to fetch real student data with stats |
-| `src/pages/Students.tsx` | Modify | Replace mock data, add navigation links |
+1. **Run database migration** to insert:
+   - 8 new profile records with tenant_id set to FGN Global
+   - 8+ user_game_stats records linking students to ATS and Construction_Sim
 
----
-
-## User Experience
-
-**Before:**
-- Static mock data
-- No way to view student profiles
-- Non-functional actions button
-
-**After:**
-- Real student data from database
-- Click any row to view that student's Skill Passport
-- Dropdown menu with "View Skill Passport" action
-- Clear visual feedback on hover
+2. **Data will appear automatically** - no code changes needed since `useStudents` hook already queries the database
 
 ---
 
-## Edge Cases Handled
+## Notes
 
-- Empty state when no students exist
-- Loading state while fetching data
-- Students without game stats (new users)
-- Graceful fallback for missing usernames/avatars
+- Profile IDs will be auto-generated UUIDs (not linked to auth.users since these are demo records)
+- The `last_played_at` timestamps will be set relative to current time for realistic "X hours ago" display
+- Students will appear in the "Top Performers" carousel based on their employability scores
+- Some students will show as "idle" or "offline" based on their last activity
