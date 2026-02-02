@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, NavLink } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,15 @@ import { GameIcon, getGameLabel } from '@/components/dashboard/GameIcon';
 import { XPRewardBadge } from '@/components/work-orders/XPRewardBadge';
 import { DifficultyIndicator, getDifficultyLabel } from '@/components/work-orders/DifficultyIndicator';
 import { ChannelSubscribeButton } from '@/components/work-orders/ChannelSubscribeButton';
+import { EvidenceCard } from '@/components/work-orders/EvidenceCard';
+import { EvidenceUploadDialog } from '@/components/work-orders/EvidenceUploadDialog';
 import { useWorkOrderById } from '@/hooks/useWorkOrders';
 import { useUserWorkOrderStatus, useStartWorkOrder, calculateWorkOrderXP } from '@/hooks/useWorkOrderCompletion';
+import { 
+  useEvidenceSubmissions, 
+  useDeleteEvidence,
+  type EvidenceRequirements,
+} from '@/hooks/useEvidenceSubmission';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -23,14 +31,47 @@ import {
   PlayCircle,
   RotateCcw,
   AlertTriangle,
+  FileUp,
+  Upload,
 } from 'lucide-react';
 
 export default function WorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
   const { data: status } = useUserWorkOrderStatus(id || '');
+  const { data: evidenceList = [], refetch: refetchEvidence } = useEvidenceSubmissions(id || '');
   const startWorkOrder = useStartWorkOrder();
+  const deleteEvidence = useDeleteEvidence();
+
+  // Parse evidence requirements from work order
+  const evidenceRequirements = workOrder?.evidence_requirements as unknown as EvidenceRequirements | null;
+  const hasEvidenceRequirement = evidenceRequirements?.required ?? false;
+  const latestCompletionId = status?.latestCompletionId;
+
+  const handleDeleteEvidence = async (evidence: { id: string; file_url: string }) => {
+    if (!id) return;
+    try {
+      await deleteEvidence.mutateAsync({
+        evidenceId: evidence.id,
+        workOrderId: id,
+        fileUrl: evidence.file_url,
+      });
+      refetchEvidence();
+      toast({
+        title: 'Evidence deleted',
+        description: 'Your evidence file has been removed.',
+      });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete evidence.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleStart = async () => {
     if (!user) {
@@ -50,7 +91,7 @@ export default function WorkOrderDetail() {
         title: 'Work Order Started',
         description: 'Good luck! Complete the objectives to earn XP.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to start work order. Please try again.',
@@ -262,8 +303,84 @@ export default function WorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Evidence Section */}
+          {hasEvidenceRequirement && status?.hasAttempted && latestCompletionId && evidenceRequirements && (
+            <Card className="lg:col-span-3">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileUp className="h-5 w-5 text-primary" />
+                  Evidence Submission
+                </CardTitle>
+                <Button 
+                  size="sm" 
+                  onClick={() => setShowUploadDialog(true)}
+                  disabled={evidenceList.length >= evidenceRequirements.max_uploads}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Evidence
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Requirements info */}
+                <div className="p-3 rounded-lg bg-muted/30 text-sm">
+                  <p className="font-medium mb-1">Requirements:</p>
+                  <p className="text-muted-foreground">
+                    {evidenceRequirements.instructions || `Upload ${evidenceRequirements.min_uploads}-${evidenceRequirements.max_uploads} files (${evidenceRequirements.allowed_types.join(', ')})`}
+                  </p>
+                </div>
+
+                {/* Progress indicator */}
+                <div className="flex items-center gap-2">
+                  <Progress 
+                    value={(evidenceList.length / evidenceRequirements.min_uploads) * 100} 
+                    className="h-2 flex-1" 
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {evidenceList.length} / {evidenceRequirements.min_uploads} min
+                  </span>
+                  {evidenceList.length >= evidenceRequirements.min_uploads && (
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+
+                {/* Evidence list */}
+                {evidenceList.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {evidenceList.map((evidence) => (
+                      <EvidenceCard
+                        key={evidence.id}
+                        evidence={evidence}
+                        onDelete={handleDeleteEvidence}
+                        isDeleting={deleteEvidence.isPending}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No evidence uploaded yet</p>
+                    <p className="text-sm">Upload files to complete this work order</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
+
+      {/* Evidence Upload Dialog */}
+      {latestCompletionId && evidenceRequirements && id && (
+        <EvidenceUploadDialog
+          open={showUploadDialog}
+          onOpenChange={setShowUploadDialog}
+          workOrderId={id}
+          completionId={latestCompletionId}
+          requirements={evidenceRequirements}
+          currentSubmissionCount={evidenceList.length}
+          onUploadComplete={() => refetchEvidence()}
+        />
+      )}
     </AppLayout>
   );
 }

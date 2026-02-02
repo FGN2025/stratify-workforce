@@ -21,6 +21,7 @@ export interface WorkOrderWithXP {
   difficulty: WorkOrderDifficulty;
   estimated_time_minutes: number | null;
   max_attempts: number | null;
+  evidence_requirements: Record<string, unknown> | null;
 }
 
 export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
@@ -69,6 +70,7 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
         difficulty: wo.difficulty,
         estimated_time_minutes: wo.estimated_time_minutes,
         max_attempts: wo.max_attempts,
+        evidence_requirements: (wo.evidence_requirements as Record<string, unknown>) || null,
       })) as WorkOrderWithXP[];
     },
   });
@@ -101,6 +103,7 @@ export function useWorkOrderById(id: string) {
         difficulty: data.difficulty,
         estimated_time_minutes: data.estimated_time_minutes,
         max_attempts: data.max_attempts,
+        evidence_requirements: (data.evidence_requirements as Record<string, unknown>) || null,
       } as WorkOrderWithXP;
     },
   });
