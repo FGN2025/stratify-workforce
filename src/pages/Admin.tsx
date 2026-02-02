@@ -12,9 +12,11 @@ import { EvidenceReviewQueue } from '@/components/admin/EvidenceReviewQueue';
 import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -30,6 +32,7 @@ interface UserWithRole {
 
 export default function Admin() {
   const { isSuperAdmin } = useUserRole();
+  const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -191,7 +194,17 @@ export default function Admin() {
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="work-orders">Work Orders</TabsTrigger>
-            <TabsTrigger value="evidence">Evidence Review</TabsTrigger>
+            <TabsTrigger value="evidence" className="relative">
+              Evidence Review
+              {pendingEvidenceCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="ml-2 h-5 min-w-5 px-1.5 text-xs"
+                >
+                  {pendingEvidenceCount > 99 ? '99+' : pendingEvidenceCount}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="games">SIM Games</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
             <TabsTrigger value="codes">Registration Codes</TabsTrigger>
