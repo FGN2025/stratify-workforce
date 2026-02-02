@@ -3,12 +3,14 @@ import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { CourseCard } from '@/components/learn/CourseCard';
 import { EnrolledCourses } from '@/components/learn/EnrolledCourses';
+import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollment';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, GraduationCap, Sparkles } from 'lucide-react';
+import { BookOpen, GraduationCap, Sparkles, Truck } from 'lucide-react';
+import { ATS_RESOURCES } from '@/config/atsResources';
 
 export default function Learn() {
   const { user } = useAuth();
@@ -95,6 +97,24 @@ export default function Learn() {
             )}
           </Tabs>
         </div>
+
+        {/* External Training Resources */}
+        <HorizontalCarousel
+          title="External Training Resources"
+          subtitle="Deep-dive curriculum for American Truck Simulator"
+          icon={<Truck className="h-5 w-5" />}
+        >
+          <div className="w-80 shrink-0 snap-start">
+            <ExternalResourceCard
+              title={ATS_RESOURCES.cdlQuest.title}
+              description="Access the full CDL curriculum with structured modules, telemetry labs, and certification tracking"
+              href={ATS_RESOURCES.cdlQuest.href}
+              icon={<GraduationCap className="h-6 w-6" />}
+              ctaLabel="Access Full Curriculum"
+              accentColor={ATS_RESOURCES.cdlQuest.accentColor}
+            />
+          </div>
+        </HorizontalCarousel>
       </div>
     </AppLayout>
   );

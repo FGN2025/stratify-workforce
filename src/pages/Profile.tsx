@@ -6,6 +6,7 @@ import { SkillRadar } from '@/components/profile/SkillRadar';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { AchievementCard } from '@/components/profile/AchievementCard';
 import { CertificationCard } from '@/components/profile/CertificationCard';
+import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTenant } from '@/contexts/TenantContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -14,9 +15,12 @@ import {
   Share2,
   Trophy,
   Award,
-  Target
+  Target,
+  BadgeCheck,
+  Briefcase
 } from 'lucide-react';
 import type { SkillSet } from '@/types/tenant';
+import { ATS_RESOURCES } from '@/config/atsResources';
 
 const defaultSkills: SkillSet = {
   safety: 50,
@@ -165,6 +169,32 @@ const Profile = () => {
           </div>
           <SkillRadar skills={skills} tenantAverage={tenantAverage} />
         </section>
+
+        {/* Credential Verification - Only show on own profile */}
+        {isOwnProfile && (
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <BadgeCheck className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="text-lg font-bold uppercase tracking-wide">Credential Verification</h2>
+                <p className="text-sm text-muted-foreground">
+                  Share your verified credentials with employers
+                </p>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <ExternalResourceCard
+                title={ATS_RESOURCES.cdlExchange.title}
+                description="Verify and share your CDL credentials with potential employers and recruiters"
+                href={ATS_RESOURCES.cdlExchange.href}
+                icon={<Briefcase className="h-6 w-6" />}
+                ctaLabel="Verify on CDL Exchange"
+                accentColor={ATS_RESOURCES.cdlExchange.accentColor}
+                variant="compact"
+              />
+            </div>
+          </section>
+        )}
       </div>
     </AppLayout>
   );
