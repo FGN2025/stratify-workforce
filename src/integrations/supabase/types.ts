@@ -685,6 +685,59 @@ export type Database = {
           },
         ]
       }
+      sim_resources: {
+        Row: {
+          accent_color: string
+          created_at: string
+          description: string | null
+          game_title: Database["public"]["Enums"]["game_title"]
+          href: string
+          icon_name: string
+          id: string
+          is_active: boolean
+          media_id: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          description?: string | null
+          game_title: Database["public"]["Enums"]["game_title"]
+          href: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          media_id?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          description?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"]
+          href?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          media_id?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sim_resources_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "site_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_media: {
         Row: {
           alt_text: string | null

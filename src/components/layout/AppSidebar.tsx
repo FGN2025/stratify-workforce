@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -13,7 +13,14 @@ import {
   CalendarDays,
   ChevronDown,
   ExternalLink,
-  Clock
+  Clock,
+  Link as LinkIcon,
+  Briefcase,
+  BookOpen,
+  Video,
+  FileText,
+  Map,
+  Target,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -32,9 +39,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useSimResources } from '@/hooks/useSimResources';
 import { cn } from '@/lib/utils';
 import { SIM_RESOURCES, hasResources } from '@/config/simResources';
 import type { GameTitle } from '@/types/tenant';
+import type { LucideIcon } from 'lucide-react';
 
 const mainNavItems = [
   { title: 'Discover', url: '/', icon: LayoutDashboard },
@@ -55,6 +64,20 @@ const adminNavItems = [
 // Order of games in the sidebar
 const GAME_ORDER: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim'];
 
+// Icon mapping for database resources
+const ICON_MAP: Record<string, LucideIcon> = {
+  'graduation-cap': GraduationCap,
+  'briefcase': Briefcase,
+  'link': LinkIcon,
+  'book-open': BookOpen,
+  'video': Video,
+  'file-text': FileText,
+  'map': Map,
+  'target': Target,
+  'users': Users,
+  'trophy': Trophy,
+};
+
 export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
@@ -62,6 +85,9 @@ export function AppSidebar() {
   const { tenant } = useTenant();
   const { isLoading: authLoading } = useAuth();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
+  
+  // Fetch database resources
+  const { data: dbResources } = useSimResources();
   
   // Track open state for each game dropdown
   const [openGames, setOpenGames] = useState<Record<GameTitle, boolean>>({
@@ -82,6 +108,31 @@ export function AppSidebar() {
   const visibleAdminItems = adminNavItems.filter(
     (item) => !('adminOnly' in item && item.adminOnly) || isLoadingAuth || isAdmin
   );
+
+  // Group database resources by game, fall back to static config
+  const resourcesByGame = useMemo(() => {
+    if (dbResources && dbResources.length > 0) {
+      const grouped: Record<GameTitle, typeof dbResources> = {
+        ATS: [],
+        Farming_Sim: [],
+        Construction_Sim: [],
+        Mechanic_Sim: [],
+      };
+      dbResources.forEach((r) => {
+        if (grouped[r.game_title]) {
+          grouped[r.game_title].push(r);
+        }
+      });
+      return grouped;
+    }
+    return null; // Will use static fallback
+  }, [dbResources]);
+
+  // Helper to get icon component
+  const getResourceIcon = (iconName: string): LucideIcon => {
+    return ICON_MAP[iconName] || LinkIcon;
+  };
+
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -146,7 +197,12 @@ export function AppSidebar() {
               {GAME_ORDER.map((gameKey) => {
                 const game = SIM_RESOURCES[gameKey];
                 const GameIcon = game.icon;
-                const gameHasResources = hasResources(gameKey);
+                
+                // Use database resources if available, otherwise fall back to static
+                const gameResources = resourcesByGame?.[gameKey] || null;
+                const hasDbResources = gameResources && gameResources.length > 0;
+                const hasStaticResources = hasResources(gameKey);
+                const gameHasResources = hasDbResources || hasStaticResources;
                 
                 return (
                   <Collapsible
@@ -180,7 +236,40 @@ export function AppSidebar() {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pl-4">
                         <SidebarMenu>
-                          {gameHasResources ? (
+                          {hasDbResources ? (
+                            // Render from database
+                            gameResources.map((resource) => {
+                              const ResourceIcon = getResourceIcon(resource.icon_name);
+                              return (
+                                <SidebarMenuItem key={resource.id}>
+                                  <SidebarMenuButton
+                                    asChild
+                                    tooltip={resource.title}
+                                    className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                  >
+                                    <a
+                                      href={resource.href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-3"
+                                    >
+                                      <ResourceIcon 
+                                        className="h-4 w-4" 
+                                        style={{ color: resource.accent_color }} 
+                                      />
+                                      {!collapsed && (
+                                        <>
+                                          <span>{resource.title}</span>
+                                          <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                                        </>
+                                      )}
+                                    </a>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              );
+                            })
+                          ) : hasStaticResources ? (
+                            // Fallback to static config
                             game.resources.map((resource) => {
                               const ResourceIcon = resource.icon;
                               return (

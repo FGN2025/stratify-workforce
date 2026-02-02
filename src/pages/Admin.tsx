@@ -6,6 +6,7 @@ import { UserManagementTable } from '@/components/admin/UserManagementTable';
 import { MediaLibrary } from '@/components/admin/MediaLibrary';
 import { WorkOrdersManager } from '@/components/admin/WorkOrdersManager';
 import { SimGamesManager } from '@/components/admin/SimGamesManager';
+import { SimResourcesManager } from '@/components/admin/SimResourcesManager';
 import { RegistrationCodeManager } from '@/components/admin/RegistrationCodeManager';
 import { EventsManager } from '@/components/admin/EventsManager';
 import { EvidenceReviewQueue } from '@/components/admin/EvidenceReviewQueue';
@@ -206,6 +207,7 @@ export default function Admin() {
               )}
             </TabsTrigger>
             <TabsTrigger value="games">SIM Games</TabsTrigger>
+            <TabsTrigger value="sim-resources">SIM Resources</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
             <TabsTrigger value="codes">Registration Codes</TabsTrigger>
             {isSuperAdmin && (
@@ -258,6 +260,14 @@ export default function Admin() {
             <Card className="border-border/50">
               <CardContent className="pt-6">
                 <SimGamesManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="sim-resources">
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <SimResourcesManager />
               </CardContent>
             </Card>
           </TabsContent>
