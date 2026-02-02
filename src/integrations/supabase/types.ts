@@ -984,6 +984,42 @@ export type Database = {
         }
         Relationships: []
       }
+      skills_taxonomy: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          game_title: Database["public"]["Enums"]["game_title"]
+          id: string
+          is_active: boolean
+          skill_key: string
+          skill_name: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          game_title: Database["public"]["Enums"]["game_title"]
+          id?: string
+          is_active?: boolean
+          skill_key: string
+          skill_name: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"]
+          id?: string
+          is_active?: boolean
+          skill_key?: string
+          skill_name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       system_audit_logs: {
         Row: {
           action: string
