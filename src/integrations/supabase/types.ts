@@ -1330,6 +1330,75 @@ export type Database = {
           },
         ]
       }
+      work_order_evidence: {
+        Row: {
+          completion_id: string
+          created_at: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id: string
+          metadata: Json | null
+          review_status: Database["public"]["Enums"]["evidence_review_status"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
+          uploaded_at: string
+          user_id: string
+          work_order_id: string
+        }
+        Insert: {
+          completion_id: string
+          created_at?: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id?: string
+          metadata?: Json | null
+          review_status?: Database["public"]["Enums"]["evidence_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          uploaded_at?: string
+          user_id: string
+          work_order_id: string
+        }
+        Update: {
+          completion_id?: string
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+          metadata?: Json | null
+          review_status?: Database["public"]["Enums"]["evidence_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          uploaded_at?: string
+          user_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_evidence_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "user_work_order_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_evidence_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_orders: {
         Row: {
           channel_id: string | null
@@ -1337,6 +1406,7 @@ export type Database = {
           description: string | null
           difficulty: Database["public"]["Enums"]["work_order_difficulty"]
           estimated_time_minutes: number | null
+          evidence_requirements: Json | null
           game_title: Database["public"]["Enums"]["game_title"]
           id: string
           is_active: boolean | null
@@ -1352,6 +1422,7 @@ export type Database = {
           description?: string | null
           difficulty?: Database["public"]["Enums"]["work_order_difficulty"]
           estimated_time_minutes?: number | null
+          evidence_requirements?: Json | null
           game_title: Database["public"]["Enums"]["game_title"]
           id?: string
           is_active?: boolean | null
@@ -1367,6 +1438,7 @@ export type Database = {
           description?: string | null
           difficulty?: Database["public"]["Enums"]["work_order_difficulty"]
           estimated_time_minutes?: number | null
+          evidence_requirements?: Json | null
           game_title?: Database["public"]["Enums"]["game_title"]
           id?: string
           is_active?: boolean | null
@@ -1485,6 +1557,11 @@ export type Database = {
         | "completed"
         | "cancelled"
       event_type: "quest" | "head_to_head"
+      evidence_review_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "needs_revision"
       game_title: "ATS" | "Farming_Sim" | "Construction_Sim" | "Mechanic_Sim"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
@@ -1677,6 +1754,12 @@ export const Constants = {
         "cancelled",
       ],
       event_type: ["quest", "head_to_head"],
+      evidence_review_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "needs_revision",
+      ],
       game_title: ["ATS", "Farming_Sim", "Construction_Sim", "Mechanic_Sim"],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
       match_status: ["pending", "in_progress", "completed"],
