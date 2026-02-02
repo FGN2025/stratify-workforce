@@ -1,226 +1,495 @@
 
 
-# Plan: SIM Resources Admin Dashboard Control
+# Plan: FGN Ecosystem Integration Architecture
 
-## Overview
+## Business Context Understanding
 
-This plan adds a new Admin Dashboard tab for managing SIM Resources - the external links and multimedia content associated with each simulator game. This will replace the current static configuration with a database-driven approach, allowing admins to add, edit, and remove resources with associated media.
-
----
-
-## Current Architecture
-
-| Component | Current State |
-|-----------|---------------|
-| Resource Data | Hardcoded in `src/config/simResources.ts` |
-| Media | Separate `site_media` table (images, videos, audio, YouTube) |
-| Game Channels | Database-driven via `game_channels` table |
-| Sidebar | Reads from static config file |
-
----
-
-## Proposed Architecture
+Based on your explanation, here's how the ecosystem is structured:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    ADMIN DASHBOARD                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Existing Tabs:                    New Tab:                      │
-│  ┌─────────────┐                  ┌─────────────────────────┐   │
-│  │ SIM Games   │                  │ SIM Resources           │   │
-│  │ (metadata)  │                  │                         │   │
-│  └─────────────┘                  │  • Add/Edit/Delete      │   │
-│  ┌─────────────┐                  │  • Link to Media        │   │
-│  │ Media       │                  │  • Per-Game Grouping    │   │
-│  │ Library     │─────────────────▶│  • Drag-to-Reorder      │   │
-│  └─────────────┘  References      │                         │   │
-│                                   └─────────────────────────┘   │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-                    ┌───────────────┐
-                    │  sim_resources │ (New Table)
-                    │  table         │
-                    │                │
-                    │  - game_title  │
-                    │  - title       │
-                    │  - description │
-                    │  - href        │
-                    │  - icon_name   │
-                    │  - media_id FK │
-                    │  - sort_order  │
-                    └───────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              FGN BUSINESS ARCHITECTURE                          │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │                         FGN.BUSINESS (Master Hub)                          │ │
+│  │         B2B Portal for Business Customers                                   │ │
+│  │         • Broadband Operators  • Workforce Agencies                        │ │
+│  │         • Employers            • Schools                                   │ │
+│  │                                                                             │ │
+│  │    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │ │
+│  │    │   Pillar 1  │  │   Pillar 2  │  │   Pillar 3  │  │   Pillar 4  │     │ │
+│  │    │  Esports    │  │  SIM Games  │  │  Workforce  │  │  Learning   │     │ │
+│  │    │  (Gaming)   │  │  (Skills)   │  │  (Careers)  │  │  (LMS)      │     │ │
+│  │    └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │ │
+│  └───────────┼────────────────┼────────────────┼────────────────┼────────────┘ │
+│              │                │                │                │               │
+│              ▼                ▼                ▼                ▼               │
+│                                                                                  │
+│  ┌────────────────┐  ┌─────────────────────────────────────────┐               │
+│  │  COMPETITIVE   │  │            SIMULATION GAMES              │               │
+│  │    GAMING      │  │            (FGN.ACADEMY)                 │               │
+│  ├────────────────┤  ├─────────────────────────────────────────┤               │
+│  │                │  │                                          │               │
+│  │ FGN.gg /       │  │  ┌─────────────────────────────────────┐│               │
+│  │ fibergaming    │  │  │     SKILL PASSPORT (Universal)      ││               │
+│  │ network.com    │  │  │  Cross-platform credential system   ││               │
+│  │                │  │  │  Shareable verification hashes      ││               │
+│  │ • Fortnite     │  │  └──────────────────┬──────────────────┘│               │
+│  │ • MarioKart    │  │                     │                   │               │
+│  │ • Esports      │  │  ┌──────────────────┼──────────────────┐│               │
+│  │ • Prizes       │  │  │                  │                  ││               │
+│  │                │  │  ▼                  ▼                  ▼│               │
+│  │                │  │ ┌────┐  ┌────────┐  ┌──────────┐  ┌────┐│               │
+│  │                │  │ │ATS │  │Farming │  │Construct.│  │Mech││               │
+│  │                │  │ │    │  │  Sim   │  │   Sim    │  │Sim ││               │
+│  │                │  │ └──┬─┘  └────────┘  └──────────┘  └────┘│               │
+│  │                │  │    │                                     │               │
+│  └────────────────┘  └────┼─────────────────────────────────────┘               │
+│                           │                                                     │
+│                           ▼                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐               │
+│  │                   ATS VERTICAL (CDL Pathway)                 │               │
+│  ├─────────────────────────────────────────────────────────────┤               │
+│  │                                                              │               │
+│  │   ┌───────────────────┐     ┌────────────────────┐          │               │
+│  │   │    CDL QUEST      │     │   CDL EXCHANGE     │          │               │
+│  │   │   (Training)      │     │   (Marketplace)    │          │               │
+│  │   │                   │     │                    │          │               │
+│  │   │ • Training Catalog│◄───►│ • CDL Passkey      │          │               │
+│  │   │ • Skill Practice  │     │ • Job Matching     │          │               │
+│  │   │ • Work Orders     │     │ • Employer Connect │          │               │
+│  │   │ • Progress Track  │     │ • Credential Verify│          │               │
+│  │   └───────────────────┘     └────────────────────┘          │               │
+│  │                                                              │               │
+│  │          ▲                           ▲                       │               │
+│  │          │    SHARED DATA LAYER      │                       │               │
+│  │          │    • CDL Passkey ═════════╪═══► Skill Passport   │               │
+│  │          │    • Skills Mapping        │                       │               │
+│  │          │    • Work Order Catalog    │                       │               │
+│  │          └────────────────────────────┘                       │               │
+│  │                                                              │               │
+│  └─────────────────────────────────────────────────────────────┘               │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Database Changes
+## Key Insight: Domain Separation is Intentional
 
-### New Table: `sim_resources`
+Your architecture correctly separates concerns:
+
+| Site | Purpose | Community | Primary Data |
+|------|---------|-----------|--------------|
+| **FGN.business** | B2B Portal | Business Customers | Account management, analytics |
+| **FGN.gg** | Competitive Gaming | Casual Gamers | Tournament standings, prizes |
+| **FGN.Academy** | Skills Development | Trainees | Skill Passport, all SIM games |
+| **CDL Quest** | CDL Training | CDL Trainees | ATS curriculum, practice |
+| **CDL Exchange** | CDL Marketplace | CDL Trainees + Employers | CDL Passkey, job matching |
+
+The sites should remain **separate** because they serve different communities with different data needs. However, they share specific **credential and skills data** that needs to flow between them.
+
+---
+
+## Proposed Integration: Selective Data Sharing via Credential API
+
+Instead of merging backends, we create a **Credential Interchange Protocol** that allows verified skills data to flow between sites while keeping each site independent.
+
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    CREDENTIAL INTERCHANGE PROTOCOL                        │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │                      FGN.ACADEMY (Source of Truth)                   │ │
+│  │                                                                      │ │
+│  │   ┌──────────────────────────────────────────────────────────────┐  │ │
+│  │   │                    SKILL PASSPORT                             │  │ │
+│  │   │                                                               │  │ │
+│  │   │   user_id + passport_hash + public_url_slug                  │  │ │
+│  │   │                       │                                       │  │ │
+│  │   │                       ▼                                       │  │ │
+│  │   │   ┌─────────────────────────────────────────────────────┐    │  │ │
+│  │   │   │              SKILL CREDENTIALS                       │    │  │ │
+│  │   │   │   • verification_hash (tamper-proof)                │    │  │ │
+│  │   │   │   • skills_verified[]                               │    │  │ │
+│  │   │   │   • credential_type (course, cert, skill_verify)    │    │  │ │
+│  │   │   │   • issuer + issued_at + expires_at                 │    │  │ │
+│  │   │   └─────────────────────────────────────────────────────┘    │  │ │
+│  │   │                       │                                       │  │ │
+│  │   └───────────────────────┼───────────────────────────────────────┘  │ │
+│  │                           │                                          │ │
+│  │                           ▼                                          │ │
+│  │   ┌──────────────────────────────────────────────────────────────┐  │ │
+│  │   │              CREDENTIAL API (Edge Function)                   │  │ │
+│  │   │                                                               │  │ │
+│  │   │   POST /credentials/verify                                   │  │ │
+│  │   │     → Verify a credential by hash                            │  │ │
+│  │   │                                                               │  │ │
+│  │   │   GET /passport/:slug                                        │  │ │
+│  │   │     → Public passport view (if is_public=true)               │  │ │
+│  │   │                                                               │  │ │
+│  │   │   GET /credentials/:user_id (authenticated)                  │  │ │
+│  │   │     → User's credentials for authorized apps                 │  │ │
+│  │   │                                                               │  │ │
+│  │   │   POST /credentials/issue (authorized apps only)             │  │ │
+│  │   │     → CDL Quest/Exchange can issue credentials               │  │ │
+│  │   │                                                               │  │ │
+│  │   └──────────────────────────────────────────────────────────────┘  │ │
+│  │                                                                      │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                          │                                 │
+│              ┌───────────────────────────┼───────────────────────────┐    │
+│              │                           │                           │    │
+│              ▼                           ▼                           ▼    │
+│  ┌─────────────────────┐   ┌─────────────────────┐   ┌─────────────────┐ │
+│  │     CDL QUEST       │   │    CDL EXCHANGE     │   │   FGN.BUSINESS  │ │
+│  │                     │   │                     │   │                 │ │
+│  │ Issues credentials  │   │ Verifies & displays │   │ Views aggregate │ │
+│  │ for ATS training    │   │ CDL Passkey         │   │ workforce data  │ │
+│  │ completion          │   │                     │   │                 │ │
+│  └─────────────────────┘   └─────────────────────┘   └─────────────────┘ │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 1: Enhanced Skill Passport & Credential System (FGN.Academy)
+
+### New Table: `authorized_apps`
+
+Register external apps that can read/write credentials:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | uuid | Primary key |
-| `game_title` | game_title enum | Which simulator (ATS, Farming_Sim, etc.) |
-| `title` | text | Resource name (e.g., "CDL Quest") |
-| `description` | text | Short description |
-| `href` | text | External URL |
-| `icon_name` | text | Lucide icon name (e.g., "graduation-cap") |
-| `accent_color` | text | Hex color for styling |
-| `media_id` | uuid (nullable) | Reference to site_media for thumbnail |
-| `sort_order` | integer | Display order within game |
-| `is_active` | boolean | Visibility toggle |
-| `created_at` | timestamp | Creation time |
-| `updated_at` | timestamp | Last update time |
+| id | uuid | Primary key |
+| app_name | text | Display name (CDL Quest, CDL Exchange) |
+| app_slug | text | Unique identifier |
+| api_key_hash | text | Hashed API key for authentication |
+| allowed_origins | text[] | CORS allowed domains |
+| can_read_credentials | boolean | Permission to read |
+| can_issue_credentials | boolean | Permission to issue |
+| credential_types_allowed | text[] | Which types app can issue |
+| is_active | boolean | Enable/disable |
+| created_at | timestamp | Registration time |
 
-### RLS Policies
+### New Table: `credential_types`
 
-- **SELECT**: Anyone can read active resources
-- **INSERT/UPDATE/DELETE**: Admin only (via `has_role` function)
+Define the types of credentials that can be issued:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| type_key | text | Unique key (e.g., "cdl_basic", "cdl_advanced") |
+| display_name | text | Human-readable name |
+| description | text | What this credential represents |
+| issuer_app_slug | text | Which app can issue this |
+| game_title | game_title enum | Which SIM game (if applicable) |
+| skills_granted | text[] | Skills this credential verifies |
+| icon_name | text | Lucide icon |
+| accent_color | text | Brand color |
+| sort_order | integer | Display order |
+| created_at | timestamp | Creation time |
+
+### Enhanced `skill_credentials` Table
+
+Add columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| issuer_app_slug | text | Which authorized app issued this |
+| external_reference_id | text | ID in the issuing app's system |
+| game_title | game_title enum | Which SIM game |
+| credential_type_key | text | Reference to credential_types |
 
 ---
 
-## Files to Create
+## Phase 2: Credential API Edge Function
+
+Create `supabase/functions/credential-api/index.ts`:
+
+### Endpoints
+
+```text
+PUBLIC ENDPOINTS (no auth required):
+────────────────────────────────────
+GET /passport/:slug
+  → Returns public passport with credentials (if is_public=true)
+  → Used by CDL Exchange to display user's CDL Passkey
+
+POST /credentials/verify
+  Body: { verification_hash: "..." }
+  → Confirms credential is valid and not tampered
+  → Used by employers to verify a candidate's credentials
+
+
+AUTHENTICATED ENDPOINTS (user JWT required):
+─────────────────────────────────────────────
+GET /credentials/mine
+  → Returns current user's credentials
+  → Used by CDL Exchange to show user their CDL Passkey
+
+POST /credentials/share
+  Body: { credential_ids: [...], recipient_email: "..." }
+  → Sends credential verification links to employer
+
+
+AUTHORIZED APP ENDPOINTS (API key required):
+────────────────────────────────────────────
+GET /credentials/user/:email
+  Headers: X-App-Key: xxx
+  → Returns credentials for a user (authorized apps only)
+  → Used by CDL Exchange to display passkey
+
+POST /credentials/issue
+  Headers: X-App-Key: xxx
+  Body: { 
+    user_email: "...",
+    credential_type_key: "cdl_basic",
+    score: 85,
+    skills_verified: ["pre_trip_inspection", "backing_maneuvers"]
+  }
+  → CDL Quest issues credential when training completed
+  → Credential appears in FGN.Academy Skill Passport AND CDL Exchange Passkey
+```
+
+### Security Model
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                      SECURITY LAYERS                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Layer 1: CORS                                                  │
+│    • Only allowed_origins in authorized_apps table              │
+│    • Blocks requests from unauthorized domains                  │
+│                                                                  │
+│  Layer 2: API Key Authentication                                │
+│    • X-App-Key header verified against api_key_hash             │
+│    • Each app has unique key with specific permissions          │
+│                                                                  │
+│  Layer 3: Permission Scoping                                    │
+│    • can_read_credentials / can_issue_credentials               │
+│    • credential_types_allowed limits what can be issued         │
+│                                                                  │
+│  Layer 4: Credential Integrity                                  │
+│    • verification_hash = SHA256(payload + secret)               │
+│    • Tamper-evident: any change invalidates hash                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 3: Training Catalog API (Extends Credential API)
+
+Add endpoints for Work Order / Learning Path sharing:
+
+```text
+PUBLIC CATALOG ENDPOINTS:
+─────────────────────────
+GET /catalog/learning-paths
+  Query: ?game=ATS&featured=true
+  → Returns published learning paths
+
+GET /catalog/work-orders
+  Query: ?game=ATS&path_id=xxx
+  → Returns active work orders
+
+GET /catalog/skills-mapping
+  Query: ?game=ATS
+  → Returns skills taxonomy for a game
+  → CDL Quest uses this to map their training to FGN.Academy skills
+```
+
+---
+
+## Phase 4: Admin Dashboard Enhancements
+
+### New Admin Tab: "Authorized Apps"
+
+Manage which external apps can access credentials:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Authorized Apps                                          [+ Add] │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  CDL Quest                                          [Active] ││
+│  │  simu-cdl-path.lovable.app                                   ││
+│  │                                                              ││
+│  │  Permissions:                                                ││
+│  │  ✓ Read credentials    ✓ Issue credentials                  ││
+│  │  Types: cdl_basic, cdl_advanced, cdl_endorsement             ││
+│  │                                                              ││
+│  │  [Regenerate Key] [Edit] [Revoke]                            ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  CDL Exchange                                       [Active] ││
+│  │  skill-truck-path.lovable.app                                ││
+│  │                                                              ││
+│  │  Permissions:                                                ││
+│  │  ✓ Read credentials    ✗ Issue credentials                  ││
+│  │                                                              ││
+│  │  [Regenerate Key] [Edit] [Revoke]                            ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### New Admin Tab: "Credential Types"
+
+Define what credentials can be issued:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Credential Types                                         [+ Add] │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│ ─── American Truck Simulator ────────────────────────────────── │
+│                                                                  │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ │
+│  │ CDL Basic        │ │ CDL Advanced     │ │ Hazmat Endorse.  │ │
+│  │ [🚛]             │ │ [🎯]             │ │ [⚠️]             │ │
+│  │                  │ │                  │ │                  │ │
+│  │ Issuer: CDL Quest│ │ Issuer: CDL Quest│ │ Issuer: CDL Quest│ │
+│  │                  │ │                  │ │                  │ │
+│  │ Skills:          │ │ Skills:          │ │ Skills:          │ │
+│  │ • Pre-trip       │ │ • All basic +    │ │ • All advanced + │ │
+│  │ • Basic driving  │ │ • Backing        │ │ • Hazmat regs    │ │
+│  │ • Parking        │ │ • Night driving  │ │ • Placarding     │ │
+│  │                  │ │ • Mountain routes│ │                  │ │
+│  │ [Edit] [Delete]  │ │ [Edit] [Delete]  │ │ [Edit] [Delete]  │ │
+│  └──────────────────┘ └──────────────────┘ └──────────────────┘ │
+│                                                                  │
+│ ─── Farming Simulator ───────────────────────────────────────── │
+│                                                                  │
+│  No credential types defined. Click Add to create one.          │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 5: CDL Passkey ↔ Skill Passport Mapping
+
+The **CDL Passkey** in CDL Exchange is a filtered view of the **Skill Passport** showing only CDL-related credentials:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    DATA RELATIONSHIP                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   FGN.ACADEMY                              CDL EXCHANGE          │
+│   Skill Passport                           CDL Passkey           │
+│   ─────────────                            ──────────            │
+│                                                                  │
+│   ┌───────────────────────┐                                      │
+│   │ All Credentials       │                                      │
+│   │                       │                                      │
+│   │  ├─ ATS Credentials ──┼────────────────► ┌────────────────┐ │
+│   │  │   • CDL Basic      │    game=ATS      │ CDL Passkey    │ │
+│   │  │   • CDL Advanced   │    filter        │                │ │
+│   │  │   • Hazmat         │                  │ Shows same     │ │
+│   │  │                    │                  │ credentials    │ │
+│   │  ├─ Farming Creds     │                  │ filtered to    │ │
+│   │  │   • Harvester Op   │                  │ ATS/CDL only   │ │
+│   │  │   • Planting       │                  │                │ │
+│   │  │                    │                  │                │ │
+│   │  └─ Construction      │                  │                │ │
+│   │      • Excavator      │                  │                │ │
+│   │      • Crane          │                  │                │ │
+│   │                       │                  │                │ │
+│   └───────────────────────┘                  └────────────────┘ │
+│                                                                  │
+│   Same data, different views based on context                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Files to Create (FGN.Academy)
 
 | File | Purpose |
 |------|---------|
-| `src/components/admin/SimResourcesManager.tsx` | Main manager component with CRUD |
-| `src/components/admin/SimResourceEditDialog.tsx` | Add/Edit dialog with form |
-| `src/hooks/useSimResources.ts` | Data fetching and mutations |
+| `supabase/functions/credential-api/index.ts` | Credential interchange API |
+| `src/components/admin/AuthorizedAppsManager.tsx` | Manage external apps |
+| `src/components/admin/AuthorizedAppEditDialog.tsx` | Add/Edit app dialog |
+| `src/components/admin/CredentialTypesManager.tsx` | Manage credential types |
+| `src/components/admin/CredentialTypeEditDialog.tsx` | Add/Edit type dialog |
+| `src/hooks/useAuthorizedApps.ts` | Data fetching for apps |
+| `src/hooks/useCredentialTypes.ts` | Data fetching for types |
 
-## Files to Modify
+## Files to Modify (FGN.Academy)
 
 | File | Changes |
 |------|---------|
-| `src/pages/Admin.tsx` | Add new "SIM Resources" tab |
-| `src/config/simResources.ts` | Optionally read from DB with static fallback |
-| `src/components/layout/AppSidebar.tsx` | Use database resources with fallback |
+| `src/pages/Admin.tsx` | Add "Authorized Apps" and "Credential Types" tabs |
+| `src/pages/Profile.tsx` | Show credentials by game/issuer |
+| `src/hooks/useProfile.ts` | Add game filtering for credentials |
+
+## Database Migrations
+
+1. Create `authorized_apps` table with RLS
+2. Create `credential_types` table with RLS
+3. Enhance `skill_credentials` with new columns
+4. Create API key generation functions
 
 ---
 
-## Component Details
+## Implementation Benefits
 
-### SimResourcesManager.tsx
-
-Features:
-- Grid/List view of resources grouped by game
-- Filter by game type (ATS, Farming Sim, etc.)
-- Search by title/description
-- Add new resource button
-- Edit/Delete/Toggle active per resource
-- Drag-and-drop reordering within game category
-- Link to associated media thumbnails
-
-### SimResourceEditDialog.tsx
-
-Form fields:
-- **Game Title**: Dropdown (required)
-- **Title**: Text input (required)
-- **Description**: Textarea (required)
-- **URL**: Text input with validation (required)
-- **Icon**: Icon picker dropdown (Lucide icons)
-- **Accent Color**: Color picker
-- **Thumbnail**: Media picker (links to Media Library)
-- **Active**: Toggle switch
-
-### useSimResources.ts Hook
-
-```text
-Exports:
-- useSimResources(gameTitle?: GameTitle) - Fetch resources, optionally filtered
-- useAllSimResources() - Fetch all for admin
-- useSimResourceMutations() - Create, update, delete, reorder
-```
+| Benefit | How It's Achieved |
+|---------|-------------------|
+| **Single Source of Truth** | Credentials live in FGN.Academy database only |
+| **Sites Stay Independent** | Each site has its own codebase, UI, community |
+| **Selective Data Sharing** | Credential API shares only what's needed |
+| **CDL Passkey = Skill Passport (filtered)** | Same data, ATS-only view |
+| **Employer Verification** | Public API with hash verification |
+| **Future Expansion** | Add new games/credential types via Admin |
+| **B2B Integration Ready** | FGN.business can query aggregate data |
 
 ---
 
-## UI Design
+## Consumer Site Updates (Separate Projects)
 
-### Resource Card Layout
+After implementing the API, update CDL Quest and CDL Exchange:
 
-```text
-┌────────────────────────────────────────┐
-│  [Thumbnail]  │  CDL Quest             │
-│               │  Complete CDL curriculum│
-│  🎓          │  with structured paths  │
-│               │                         │
-│               │  [Edit] [Delete] [Toggle]│
-└────────────────────────────────────────┘
-```
+**CDL Quest** (separate Lovable project):
+- Add API client to call FGN.Academy credential-api
+- When user completes training → POST /credentials/issue
+- Display user's earned CDL credentials from API
 
-### Grouped View by Game
-
-```text
-┌─────────────────────────────────────────────────┐
-│ American Truck Simulator                   [+Add]│
-├─────────────────────────────────────────────────┤
-│  [CDL Quest Card]  [CDL Exchange Card]          │
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│ Farming Simulator                          [+Add]│
-├─────────────────────────────────────────────────┤
-│  No resources yet. Click Add to create one.     │
-└─────────────────────────────────────────────────┘
-```
+**CDL Exchange** (separate Lovable project):
+- Add API client to call FGN.Academy credential-api
+- "CDL Passkey" page → GET /credentials/user/:email (filtered to ATS)
+- Employer verification → POST /credentials/verify
 
 ---
 
-## Integration with Existing Systems
+## SSO Consideration
 
-### Media Library Integration
+Given the business architecture, **full SSO may not be needed**. Users might:
+- Have separate accounts on FGN.gg (casual gaming) vs FGN.Academy (training)
+- Share credentials via public links rather than automatic account linking
 
-The edit dialog includes a "Select Thumbnail" button that:
-1. Opens a media picker showing existing Media Library items
-2. Filters to images only
-3. Allows selecting an existing image or uploading a new one
-4. Stores the `media_id` reference
-
-### Sidebar Dynamic Loading
-
-Update `AppSidebar.tsx` to:
-1. Call `useSimResources()` hook
-2. Fall back to static config if no database entries
-3. Group resources by game_title
-4. Render with database order
+However, if SSO is desired for CDL Quest ↔ FGN.Academy ↔ CDL Exchange, we can implement the redirect-based SSO from the previous plan as a future phase.
 
 ---
 
-## Migration Strategy
+## Implementation Order
 
-### Phase 1: Database Setup
-- Create `sim_resources` table with migration
-- Add RLS policies for admin access
-- Seed initial data from current static config
-
-### Phase 2: Admin UI
-- Build SimResourcesManager component
-- Build SimResourceEditDialog
-- Add tab to Admin page
-
-### Phase 3: Dynamic Sidebar (Optional)
-- Update sidebar to read from database
-- Keep static config as fallback for initial load
-
----
-
-## Technical Notes
-
-- Leverages existing patterns from `MediaLibrary` and `SimGamesManager`
-- Uses `@tanstack/react-query` for data fetching
-- Icon picker uses Lucide icon set (same as rest of app)
-- Accent color uses existing color picker pattern
-- Media picker reuses `site_media` infrastructure
-
----
-
-## Summary
-
-This enhancement moves SIM Resources from static configuration to a fully managed database system, enabling admins to:
-- Add new external resource links for any simulator game
-- Attach multimedia (thumbnails, preview videos) to resources
-- Control visibility and ordering
-- Manage content without code deployments
+1. Create `authorized_apps` and `credential_types` tables
+2. Enhance `skill_credentials` table
+3. Build `credential-api` edge function
+4. Create AuthorizedAppsManager admin component
+5. Create CredentialTypesManager admin component
+6. Add new tabs to Admin page
+7. Test API endpoints
+8. (Separate projects) Update CDL Quest and CDL Exchange to consume API
 
