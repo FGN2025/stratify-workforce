@@ -517,48 +517,72 @@ export function EventBracket({ eventId, eventStatus, minParticipants = 2 }: Even
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto -mx-6 px-6">
-            <div className="flex gap-4 pb-4 min-w-max">
-              {displayRounds.map((round, roundIndex) => (
-                <div key={round.round_number} className="flex flex-col">
-                  {/* Round header */}
-                  <div className="text-center mb-4">
-                    <Badge variant="outline" className="text-xs">
-                      {getRoundName(round.round_number, bracket.total_rounds)}
-                    </Badge>
-                  </div>
-
-                  {/* Matches in this round */}
-                  <div
-                    className="flex flex-col justify-around flex-1 gap-4"
-                    style={{
-                      // Spread matches evenly based on how many there are
-                      minHeight: `${round.matches.length * 120}px`,
-                    }}
-                  >
-                    {round.matches.map((match, matchIndex) => (
-                      <div key={match.id} className="flex items-center">
-                        <MatchCard
-                          match={match}
-                          roundName={getRoundName(round.round_number, bracket.total_rounds)}
-                          canEdit={canEdit}
-                          currentUserId={user?.id}
-                          onRecordResult={handleRecordResult}
-                        />
-                        {/* Connector lines to next round */}
-                        {roundIndex < displayRounds.length - 1 && (
-                          <MergingBracketConnector
-                            matchCount={round.matches.length}
-                            matchIndex={matchIndex}
-                            matchHeight={140}
-                            matchGap={16}
-                            hasWinner={!!match.winner_id}
-                          />
-                        )}
+            <div className="flex pb-4 min-w-max">
+              {displayRounds.map((round, roundIndex) => {
+                const isLastRound = roundIndex === displayRounds.length - 1;
+                const matchHeight = 140;
+                const matchGap = 24;
+                
+                return (
+                  <div key={round.round_number} className="flex">
+                    {/* Round column */}
+                    <div className="flex flex-col">
+                      {/* Round header */}
+                      <div className="text-center mb-4 px-2">
+                        <Badge variant="outline" className="text-xs">
+                          {getRoundName(round.round_number, bracket.total_rounds)}
+                        </Badge>
                       </div>
-                    ))}
+
+                      {/* Matches in this round */}
+                      <div
+                        className="flex flex-col justify-around flex-1"
+                        style={{
+                          gap: `${matchGap}px`,
+                          minHeight: `${round.matches.length * matchHeight + (round.matches.length - 1) * matchGap}px`,
+                        }}
+                      >
+                        {round.matches.map((match) => (
+                          <div key={match.id} className="flex items-center">
+                            <MatchCard
+                              match={match}
+                              roundName={getRoundName(round.round_number, bracket.total_rounds)}
+                              canEdit={canEdit}
+                              currentUserId={user?.id}
+                              onRecordResult={handleRecordResult}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Connector column between rounds */}
+                    {!isLastRound && (
+                      <div className="flex flex-col justify-around flex-1 w-16 min-w-[64px]">
+                        <div className="h-4" /> {/* Spacer for header alignment */}
+                        <div 
+                          className="flex flex-col justify-around flex-1"
+                          style={{
+                            gap: `${matchGap}px`,
+                            minHeight: `${round.matches.length * matchHeight + (round.matches.length - 1) * matchGap}px`,
+                          }}
+                        >
+                          {round.matches.map((match, matchIndex) => (
+                            <MergingBracketConnector
+                              key={`connector-${match.id}`}
+                              matchCount={round.matches.length}
+                              matchIndex={matchIndex}
+                              matchHeight={matchHeight}
+                              matchGap={matchGap}
+                              hasWinner={!!match.winner_id}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
