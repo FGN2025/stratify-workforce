@@ -7,7 +7,8 @@ import {
   Swords, 
   Target,
   ExternalLink,
-  Share2
+  Share2,
+  Trophy
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { DifficultyIndicator } from '@/components/work-orders/DifficultyIndicato
 import { EventRegistrationButton } from '@/components/events/EventRegistrationButton';
 import { EventBracket } from '@/components/events/EventBracket';
 import { ParticipantList } from '@/components/events/ParticipantList';
+import { TournamentWinner } from '@/components/events/TournamentWinner';
 import { useEventById } from '@/hooks/useEventById';
 import { cn } from '@/lib/utils';
 import type { EventStatus } from '@/types/events';
@@ -245,6 +247,14 @@ export default function EventDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Tournament Winner - show when completed */}
+            {event.status === 'completed' && event.winner && (
+              <TournamentWinner 
+                winner={event.winner} 
+                eventTitle={event.title}
+              />
+            )}
+
             {/* Registration card */}
             <Card className="sticky top-6">
               <CardContent className="pt-6">

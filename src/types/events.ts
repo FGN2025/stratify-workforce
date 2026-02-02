@@ -27,6 +27,7 @@ export interface Event {
   created_at: string;
   updated_at: string;
   google_calendar_event_id: string | null;
+  winner_id: string | null;
 }
 
 // Event with work order details for display
@@ -39,6 +40,11 @@ export interface EventWithDetails extends Event {
     difficulty: Database['public']['Enums']['work_order_difficulty'];
   } | null;
   registration_count?: number;
+  winner?: {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 // Event registration

@@ -43,6 +43,21 @@ export function useEventById(id: string | undefined) {
         .eq('event_id', id!)
         .eq('status', 'registered');
 
+      // Get winner profile if exists
+      let winnerProfile = null;
+      if (event.winner_id) {
+        const { data: profiles } = await supabase
+          .rpc('get_public_profile_data', { profile_ids: [event.winner_id] });
+        
+        if (profiles && profiles.length > 0) {
+          winnerProfile = {
+            id: profiles[0].id,
+            username: profiles[0].username,
+            avatar_url: profiles[0].avatar_url,
+          };
+        }
+      }
+
       return {
         id: event.id,
         work_order_id: event.work_order_id,
@@ -60,6 +75,7 @@ export function useEventById(id: string | undefined) {
         created_at: event.created_at,
         updated_at: event.updated_at,
         google_calendar_event_id: event.google_calendar_event_id,
+        winner_id: event.winner_id,
         work_order: event.work_orders ? {
           id: event.work_orders.id,
           title: event.work_orders.title,
@@ -68,6 +84,7 @@ export function useEventById(id: string | undefined) {
           difficulty: event.work_orders.difficulty,
         } : null,
         registration_count: count || 0,
+        winner: winnerProfile,
       } as EventWithDetails;
     },
   });

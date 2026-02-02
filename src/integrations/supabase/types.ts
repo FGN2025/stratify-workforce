@@ -336,6 +336,7 @@ export type Database = {
           tenant_id: string | null
           title: string
           updated_at: string
+          winner_id: string | null
           work_order_id: string | null
         }
         Insert: {
@@ -354,6 +355,7 @@ export type Database = {
           tenant_id?: string | null
           title: string
           updated_at?: string
+          winner_id?: string | null
           work_order_id?: string | null
         }
         Update: {
@@ -372,6 +374,7 @@ export type Database = {
           tenant_id?: string | null
           title?: string
           updated_at?: string
+          winner_id?: string | null
           work_order_id?: string | null
         }
         Relationships: [

@@ -127,17 +127,34 @@ export function useUpdateMatch() {
 
       if (error) throw error;
 
-      // Advance winner to next round
-      await advanceWinnerToNextRound(updatedMatch);
+      // Check if this is the finals match (round 1)
+      if (updatedMatch.round_number === 1) {
+        // This is the finals - complete the tournament!
+        await completeTournament(updatedMatch.event_id, winnerId);
+      } else {
+        // Advance winner to next round
+        await advanceWinnerToNextRound(updatedMatch);
+      }
 
       return updatedMatch;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['event-matches', data.event_id] });
-      toast({
-        title: 'Match updated',
-        description: 'Match result has been recorded and winner advanced.',
-      });
+      queryClient.invalidateQueries({ queryKey: ['event', data.event_id] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      
+      // Check if tournament was completed
+      if (data.round_number === 1) {
+        toast({
+          title: '🏆 Tournament Complete!',
+          description: 'The champion has been crowned!',
+        });
+      } else {
+        toast({
+          title: 'Match updated',
+          description: 'Match result has been recorded and winner advanced.',
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -147,6 +164,22 @@ export function useUpdateMatch() {
       });
     },
   });
+}
+
+// Complete the tournament when finals match is done
+async function completeTournament(eventId: string, winnerId: string) {
+  const { error } = await supabase
+    .from('events')
+    .update({
+      status: 'completed',
+      winner_id: winnerId,
+    })
+    .eq('id', eventId);
+
+  if (error) {
+    console.error('Failed to complete tournament:', error);
+    throw error;
+  }
 }
 
 // Advance the winner of a completed match to the next round
@@ -159,7 +192,7 @@ async function advanceWinnerToNextRound(completedMatch: {
 }) {
   if (!completedMatch.winner_id) return;
 
-  // Round 1 is the finals - no next round
+  // Round 1 is the finals - no next round (handled by completeTournament)
   if (completedMatch.round_number <= 1) return;
 
   const nextRoundNumber = completedMatch.round_number - 1;
