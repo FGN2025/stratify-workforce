@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
@@ -7,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -15,48 +17,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Search, 
   Filter, 
   UserPlus, 
   MoreVertical,
-  Mail,
   Clock,
   TrendingUp,
   TrendingDown,
-  Users,
   Star,
   Zap,
-  GraduationCap
+  GraduationCap,
+  ExternalLink,
+  MessageSquare,
+  Activity,
 } from 'lucide-react';
 import { GameIcon } from '@/components/dashboard/GameIcon';
 import { useTenant } from '@/contexts/TenantContext';
+import { useStudents, type Student } from '@/hooks/useStudents';
 import { cn } from '@/lib/utils';
-import type { GameTitle } from '@/types/tenant';
-
-interface Student {
-  id: string;
-  username: string;
-  email: string;
-  avatar_url: string | null;
-  employability_score: number;
-  total_hours: number;
-  last_active: string;
-  status: 'active' | 'idle' | 'offline';
-  current_game: GameTitle | null;
-  trend: number;
-}
-
-const mockStudents: Student[] = [
-  { id: '1', username: 'TruckerMike', email: 'mike@example.com', avatar_url: null, employability_score: 94.2, total_hours: 245, last_active: '2 min ago', status: 'active', current_game: 'ATS', trend: 2.4 },
-  { id: '2', username: 'SarahFields', email: 'sarah@example.com', avatar_url: null, employability_score: 91.8, total_hours: 198, last_active: '15 min ago', status: 'active', current_game: 'Mechanic_Sim', trend: 1.2 },
-  { id: '3', username: 'BuilderJohn', email: 'john@example.com', avatar_url: null, employability_score: 89.5, total_hours: 167, last_active: '1 hour ago', status: 'idle', current_game: null, trend: -0.8 },
-  { id: '4', username: 'Marcus Johnson', email: 'marcus@example.com', avatar_url: null, employability_score: 78.5, total_hours: 142, last_active: '30 min ago', status: 'active', current_game: 'ATS', trend: 4.2 },
-  { id: '5', username: 'JennyDriver', email: 'jenny@example.com', avatar_url: null, employability_score: 76.2, total_hours: 134, last_active: '3 hours ago', status: 'offline', current_game: null, trend: 0.5 },
-  { id: '6', username: 'Alex Torres', email: 'alex@example.com', avatar_url: null, employability_score: 74.8, total_hours: 128, last_active: '1 day ago', status: 'offline', current_game: null, trend: -1.2 },
-  { id: '7', username: 'Kim Chen', email: 'kim@example.com', avatar_url: null, employability_score: 72.1, total_hours: 115, last_active: '5 min ago', status: 'active', current_game: 'Construction_Sim', trend: 3.1 },
-  { id: '8', username: 'Bob Williams', email: 'bob@example.com', avatar_url: null, employability_score: 68.9, total_hours: 98, last_active: '2 days ago', status: 'offline', current_game: null, trend: -0.3 },
-];
 
 function StatusBadge({ status }: { status: Student['status'] }) {
   const config = {
@@ -74,9 +59,12 @@ function StatusBadge({ status }: { status: Student['status'] }) {
   );
 }
 
-function StudentCard({ student }: { student: Student }) {
+function StudentCard({ student, onClick }: { student: Student; onClick: () => void }) {
   return (
-    <Card className="glass-card min-w-[240px] hover:border-primary/50 transition-all">
+    <Card 
+      className="glass-card min-w-[240px] hover:border-primary/50 transition-all cursor-pointer"
+      onClick={onClick}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="relative">
@@ -116,18 +104,67 @@ function StudentCard({ student }: { student: Student }) {
   );
 }
 
+function StudentCardSkeleton() {
+  return (
+    <Card className="glass-card min-w-[240px]">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </div>
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+          <Skeleton className="h-8 w-12" />
+          <Skeleton className="h-8 w-12" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TableRowSkeleton() {
+  return (
+    <TableRow className="border-border">
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+    </TableRow>
+  );
+}
+
 const Students = () => {
+  const navigate = useNavigate();
   const { tenant } = useTenant();
+  const { data: students = [], isLoading } = useStudents();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredStudents = mockStudents.filter(student =>
-    student.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredStudents = students.filter(student =>
+    student.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const activeStudents = mockStudents.filter(s => s.status === 'active');
-  const topPerformers = [...mockStudents].sort((a, b) => b.employability_score - a.employability_score).slice(0, 4);
-  const risingStars = mockStudents.filter(s => s.trend > 2);
+  const activeStudents = students.filter(s => s.status === 'active');
+  const topPerformers = [...students].sort((a, b) => b.employability_score - a.employability_score).slice(0, 4);
+  const avgScore = students.length > 0 
+    ? (students.reduce((acc, s) => acc + s.employability_score, 0) / students.length).toFixed(1)
+    : '0';
+
+  const handleViewProfile = (studentId: string) => {
+    navigate(`/profile/${studentId}`);
+  };
 
   return (
     <AppLayout>
@@ -146,14 +183,26 @@ const Students = () => {
             icon: <Filter className="h-4 w-4" />,
           }}
           stats={[
-            { value: `${mockStudents.length}`, label: 'Total Students', highlight: true },
+            { value: `${students.length}`, label: 'Total Students', highlight: true },
             { value: `${activeStudents.length}`, label: 'Active Now' },
-            { value: `${(mockStudents.reduce((acc, s) => acc + s.employability_score, 0) / mockStudents.length).toFixed(1)}`, label: 'Avg. Score' },
+            { value: avgScore, label: 'Avg. Score' },
           ]}
         />
 
         {/* Active Now Carousel */}
-        {activeStudents.length > 0 && (
+        {isLoading ? (
+          <HorizontalCarousel
+            title="Active Now"
+            subtitle="Students currently in training sessions"
+            icon={<Zap className="h-5 w-5" />}
+          >
+            {[1, 2, 3].map((i) => (
+              <div key={`skeleton-active-${i}`} className="shrink-0 snap-start">
+                <StudentCardSkeleton />
+              </div>
+            ))}
+          </HorizontalCarousel>
+        ) : activeStudents.length > 0 ? (
           <HorizontalCarousel
             title="Active Now"
             subtitle="Students currently in training sessions"
@@ -161,24 +210,38 @@ const Students = () => {
           >
             {activeStudents.map((student) => (
               <div key={`active-${student.id}`} className="shrink-0 snap-start">
-                <StudentCard student={student} />
+                <StudentCard student={student} onClick={() => handleViewProfile(student.id)} />
               </div>
             ))}
           </HorizontalCarousel>
-        )}
+        ) : null}
 
         {/* Top Performers Carousel */}
-        <HorizontalCarousel
-          title="Top Performers"
-          subtitle="Highest scoring operators this month"
-          icon={<Star className="h-5 w-5" />}
-        >
-          {topPerformers.map((student) => (
-            <div key={`top-${student.id}`} className="shrink-0 snap-start">
-              <StudentCard student={student} />
-            </div>
-          ))}
-        </HorizontalCarousel>
+        {isLoading ? (
+          <HorizontalCarousel
+            title="Top Performers"
+            subtitle="Highest scoring operators this month"
+            icon={<Star className="h-5 w-5" />}
+          >
+            {[1, 2, 3, 4].map((i) => (
+              <div key={`skeleton-top-${i}`} className="shrink-0 snap-start">
+                <StudentCardSkeleton />
+              </div>
+            ))}
+          </HorizontalCarousel>
+        ) : topPerformers.length > 0 ? (
+          <HorizontalCarousel
+            title="Top Performers"
+            subtitle="Highest scoring operators this month"
+            icon={<Star className="h-5 w-5" />}
+          >
+            {topPerformers.map((student) => (
+              <div key={`top-${student.id}`} className="shrink-0 snap-start">
+                <StudentCard student={student} onClick={() => handleViewProfile(student.id)} />
+              </div>
+            ))}
+          </HorizontalCarousel>
+        ) : null}
 
         {/* Search & Table Section */}
         <section>
@@ -195,7 +258,7 @@ const Students = () => {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or email..."
+                placeholder="Search by name..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -222,84 +285,118 @@ const Students = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStudents.map((student) => (
-                  <TableRow 
-                    key={student.id} 
-                    className="border-border hover:bg-muted/30 cursor-pointer"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <Avatar className="h-9 w-9 border border-border">
-                            <AvatarImage src={student.avatar_url || ''} />
-                            <AvatarFallback className="text-xs bg-muted">
-                              {student.username.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          {student.status === 'active' && (
-                            <div className="absolute -bottom-0.5 -right-0.5 status-led status-led-online" />
-                          )}
+                {isLoading ? (
+                  <>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <TableRowSkeleton key={`skeleton-row-${i}`} />
+                    ))}
+                  </>
+                ) : (
+                  filteredStudents.map((student) => (
+                    <TableRow 
+                      key={student.id} 
+                      className="border-border hover:bg-muted/30 cursor-pointer group"
+                      onClick={() => handleViewProfile(student.id)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Avatar className="h-9 w-9 border border-border">
+                              <AvatarImage src={student.avatar_url || ''} />
+                              <AvatarFallback className="text-xs bg-muted">
+                                {student.username.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {student.status === 'active' && (
+                              <div className="absolute -bottom-0.5 -right-0.5 status-led status-led-online" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm group-hover:text-primary transition-colors">
+                              {student.username}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              View Skill Passport →
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{student.username}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {student.email}
-                          </p>
+                      </TableCell>
+
+                      <TableCell>
+                        <StatusBadge status={student.status} />
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="font-data text-primary">{student.employability_score}</span>
+                          {student.trend > 0 ? (
+                            <TrendingUp className="h-3 w-3 text-emerald-500" />
+                          ) : student.trend < 0 ? (
+                            <TrendingDown className="h-3 w-3 text-red-500" />
+                          ) : null}
                         </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell>
-                      <StatusBadge status={student.status} />
-                    </TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-data text-muted-foreground">{student.total_hours}h</span>
+                      </TableCell>
 
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="font-data text-primary">{student.employability_score}</span>
-                        {student.trend > 0 ? (
-                          <TrendingUp className="h-3 w-3 text-emerald-500" />
-                        ) : student.trend < 0 ? (
-                          <TrendingDown className="h-3 w-3 text-red-500" />
-                        ) : null}
-                      </div>
-                    </TableCell>
+                      <TableCell>
+                        {student.current_game ? (
+                          <div className="flex items-center gap-2">
+                            <GameIcon game={student.current_game} size="sm" />
+                            <span className="text-xs text-muted-foreground">In session</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
 
-                    <TableCell className="text-right">
-                      <span className="font-data text-muted-foreground">{student.total_hours}h</span>
-                    </TableCell>
-
-                    <TableCell>
-                      {student.current_game ? (
-                        <div className="flex items-center gap-2">
-                          <GameIcon game={student.current_game} size="sm" />
-                          <span className="text-xs text-muted-foreground">In session</span>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {student.last_active || 'Never'}
                         </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {student.last_active}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewProfile(student.id);
+                            }}>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View Skill Passport
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Send Message
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled>
+                              <Activity className="h-4 w-4 mr-2" />
+                              View Activity
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
 
-            {filteredStudents.length === 0 && (
+            {!isLoading && filteredStudents.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">
-                No students found matching "{searchQuery}"
+                {searchQuery 
+                  ? `No students found matching "${searchQuery}"`
+                  : 'No students enrolled yet'
+                }
               </div>
             )}
           </div>
