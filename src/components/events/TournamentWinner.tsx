@@ -1,8 +1,10 @@
+import { useEffect, useRef } from 'react';
 import { Trophy, Crown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { fireConfetti } from '@/hooks/useConfetti';
 
 interface TournamentWinnerProps {
   winner: {
@@ -15,6 +17,20 @@ interface TournamentWinnerProps {
 }
 
 export function TournamentWinner({ winner, eventTitle, className }: TournamentWinnerProps) {
+  const hasTriggeredConfetti = useRef(false);
+
+  useEffect(() => {
+    // Fire confetti only once when component mounts
+    if (!hasTriggeredConfetti.current) {
+      hasTriggeredConfetti.current = true;
+      // Small delay for visual impact
+      const timer = setTimeout(() => {
+        fireConfetti();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   return (
     <Card className={cn('overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10', className)}>
       <CardContent className="pt-6">
