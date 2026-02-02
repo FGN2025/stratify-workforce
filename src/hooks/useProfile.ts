@@ -39,11 +39,11 @@ export interface UserAchievement {
 }
 
 export function useProfile(userId?: string) {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const targetUserId = userId || user?.id;
 
   const profileQuery = useQuery({
-    queryKey: ['profile', targetUserId],
+    queryKey: ['profile', targetUserId, session?.access_token],
     queryFn: async () => {
       if (!targetUserId) return null;
 
@@ -86,11 +86,12 @@ export function useProfile(userId?: string) {
         skills: data.skills as unknown as SkillSet | null,
       } as ProfileData;
     },
-    enabled: !!targetUserId,
+    // Wait for both userId and session to be available
+    enabled: !!targetUserId && !!session?.access_token,
   });
 
   const credentialsQuery = useQuery({
-    queryKey: ['skill-credentials', targetUserId],
+    queryKey: ['skill-credentials', targetUserId, session?.access_token],
     queryFn: async () => {
       if (!targetUserId) return [];
 
@@ -116,11 +117,11 @@ export function useProfile(userId?: string) {
       if (error) throw error;
       return data as SkillCredential[];
     },
-    enabled: !!targetUserId,
+    enabled: !!targetUserId && !!session?.access_token,
   });
 
   const achievementsQuery = useQuery({
-    queryKey: ['user-achievements', targetUserId],
+    queryKey: ['user-achievements', targetUserId, session?.access_token],
     queryFn: async () => {
       if (!targetUserId) return [];
 
@@ -146,11 +147,11 @@ export function useProfile(userId?: string) {
       if (error) throw error;
       return data as unknown as UserAchievement[];
     },
-    enabled: !!targetUserId,
+    enabled: !!targetUserId && !!session?.access_token,
   });
 
   const statsQuery = useQuery({
-    queryKey: ['user-stats', targetUserId],
+    queryKey: ['user-stats', targetUserId, session?.access_token],
     queryFn: async () => {
       if (!targetUserId) return { totalHours: 0, totalXp: 0 };
 
@@ -171,7 +172,7 @@ export function useProfile(userId?: string) {
         totalXp: xpData || 0,
       };
     },
-    enabled: !!targetUserId,
+    enabled: !!targetUserId && !!session?.access_token,
   });
 
   const isOwnProfile = !userId || userId === user?.id;
