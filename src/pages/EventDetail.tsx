@@ -265,7 +265,11 @@ export default function EventDetail() {
 
             {/* Bracket for H2H events */}
             {event.event_type === 'head_to_head' && (
-              <EventBracket eventId={event.id} eventStatus={event.status} />
+              <EventBracket 
+                eventId={event.id} 
+                eventStatus={event.status} 
+                minParticipants={event.min_participants}
+              />
             )}
           </div>
 

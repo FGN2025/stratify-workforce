@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, User, ChevronRight } from 'lucide-react';
+import { Trophy, User, ChevronRight, Shuffle, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,11 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useEventBracket, useUpdateMatch } from '@/hooks/useEventMatches';
+import { useEventRegistrations } from '@/hooks/useEventById';
+import { useBracketGeneration } from '@/hooks/useBracketGeneration';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import type { EventMatchWithPlayers } from '@/types/events';
@@ -22,6 +26,7 @@ import type { EventMatchWithPlayers } from '@/types/events';
 interface EventBracketProps {
   eventId: string;
   eventStatus: string;
+  minParticipants?: number;
 }
 
 interface MatchCardProps {
@@ -314,18 +319,42 @@ function RecordResultDialog({
   );
 }
 
-export function EventBracket({ eventId, eventStatus }: EventBracketProps) {
+export function EventBracket({ eventId, eventStatus, minParticipants = 2 }: EventBracketProps) {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { bracket, isLoading, error } = useEventBracket(eventId);
+  const { data: registrations, isLoading: loadingRegistrations } = useEventRegistrations(eventId);
+  const bracketGeneration = useBracketGeneration();
   const [selectedMatch, setSelectedMatch] = useState<EventMatchWithPlayers | null>(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [seedRandomly, setSeedRandomly] = useState(true);
 
   const canEdit = isAdmin && ['in_progress', 'registration_open'].includes(eventStatus);
+  const canGenerate = isAdmin && ['registration_open', 'in_progress'].includes(eventStatus);
+  const registrationCount = registrations?.length || 0;
+  const hasEnoughParticipants = registrationCount >= Math.max(2, minParticipants);
 
   const handleRecordResult = (match: EventMatchWithPlayers) => {
     setSelectedMatch(match);
     setShowResultDialog(true);
+  };
+
+  const handleGenerateBracket = () => {
+    if (!registrations || registrations.length < 2) return;
+    
+    bracketGeneration.mutate(
+      {
+        eventId,
+        participants: registrations,
+        seedRandomly,
+      },
+      {
+        onSuccess: () => {
+          setShowGenerateDialog(false);
+        },
+      }
+    );
   };
 
   if (isLoading) {
@@ -366,25 +395,110 @@ export function EventBracket({ eventId, eventStatus }: EventBracketProps) {
 
   if (!bracket || bracket.rounds.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            Tournament Bracket
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <User className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">
-              Bracket not yet generated.
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The bracket will be created when registration closes.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-primary" />
+              Tournament Bracket
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <User className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">
+                Bracket not yet generated.
+              </p>
+              {!canGenerate && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  The bracket will be created when registration closes.
+                </p>
+              )}
+              
+              {/* Admin generate bracket button */}
+              {canGenerate && (
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>
+                      {loadingRegistrations ? 'Loading...' : `${registrationCount} registered`}
+                    </span>
+                    {!hasEnoughParticipants && registrationCount > 0 && (
+                      <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-400 border-amber-500/30">
+                        Need {Math.max(2, minParticipants) - registrationCount} more
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    onClick={() => setShowGenerateDialog(true)}
+                    disabled={!hasEnoughParticipants || loadingRegistrations}
+                  >
+                    <Shuffle className="h-4 w-4 mr-2" />
+                    Generate Bracket
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Generate Bracket Dialog */}
+        <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Generate Tournament Bracket</DialogTitle>
+              <DialogDescription>
+                Create a single-elimination bracket from {registrationCount} registered participants.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+                <div>
+                  <Label htmlFor="random-seed" className="font-medium">Random Seeding</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Shuffle players randomly for fair matchups
+                  </p>
+                </div>
+                <Switch
+                  id="random-seed"
+                  checked={seedRandomly}
+                  onCheckedChange={setSeedRandomly}
+                />
+              </div>
+              
+              {!seedRandomly && (
+                <p className="text-xs text-muted-foreground">
+                  Players will be seeded by registration order or bracket seed if set.
+                </p>
+              )}
+
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-sm">
+                  <strong>Participants:</strong> {registrationCount}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This will create {Math.pow(2, Math.ceil(Math.log2(registrationCount))) - registrationCount > 0 
+                    ? `${Math.pow(2, Math.ceil(Math.log2(registrationCount))) - registrationCount} bye(s) and ` 
+                    : ''
+                  }
+                  {Math.ceil(Math.log2(registrationCount))} round(s).
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleGenerateBracket} 
+                disabled={bracketGeneration.isPending}
+              >
+                {bracketGeneration.isPending ? 'Generating...' : 'Generate Bracket'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
