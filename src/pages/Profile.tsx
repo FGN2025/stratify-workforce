@@ -20,7 +20,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import type { SkillSet } from '@/types/tenant';
-import { ATS_RESOURCES } from '@/config/atsResources';
+import { ATS_RESOURCES } from '@/config/simResources';
 
 const defaultSkills: SkillSet = {
   safety: 50,

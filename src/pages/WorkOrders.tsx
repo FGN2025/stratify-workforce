@@ -24,7 +24,7 @@ import {
 import type { Tenant, GameTitle } from '@/types/tenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { ATS_RESOURCES } from '@/config/atsResources';
+import { ATS_RESOURCES } from '@/config/simResources';
 
 const WorkOrders = () => {
   const [activeFilter, setActiveFilter] = useState<WorkOrderFilter>('all');
