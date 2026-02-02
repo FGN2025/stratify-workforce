@@ -19,6 +19,7 @@ import { XPRewardBadge } from '@/components/work-orders/XPRewardBadge';
 import { GameIcon } from '@/components/dashboard/GameIcon';
 import { DifficultyIndicator } from '@/components/work-orders/DifficultyIndicator';
 import { EventRegistrationButton } from '@/components/events/EventRegistrationButton';
+import { EventBracket } from '@/components/events/EventBracket';
 import { useEventById } from '@/hooks/useEventById';
 import { cn } from '@/lib/utils';
 import type { EventStatus } from '@/types/events';
@@ -261,6 +262,11 @@ export default function EventDetail() {
                 </p>
               </CardContent>
             </Card>
+
+            {/* Bracket for H2H events */}
+            {event.event_type === 'head_to_head' && (
+              <EventBracket eventId={event.id} eventStatus={event.status} />
+            )}
           </div>
 
           {/* Sidebar */}
