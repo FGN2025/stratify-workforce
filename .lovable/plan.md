@@ -1,90 +1,108 @@
 
 
-# Plan: Integrate ATS Subsites (CDL Quest & CDL Exchange)
+# Plan: Rename "ATS Resources" to "SIM Resources" with Scalable Architecture
 
 ## Overview
 
-You have two specialized American Truck Simulator sites that serve distinct purposes in the FGN ecosystem:
-
-| Site | Purpose | Primary Audience |
-|------|---------|------------------|
-| **CDL Quest** (simu-cdl-path.lovable.app) | Training & Curriculum Engine | Students, CDL Schools |
-| **CDL Exchange** (skill-truck-path.lovable.app) | Credential Marketplace & Job Pipeline | Employers, Recruiters |
-
-These will be integrated as "deep-dive" subsites linked from FGN.Academy and FGN.Business, while remaining independently hosted and managed.
+This plan transforms the current ATS-only sidebar section into a flexible "SIM Resources" framework that can accommodate all four simulation games (and future additions) as individual dropdown menus.
 
 ---
 
-## Integration Architecture
+## Current State
+
+| Aspect | Current Implementation |
+|--------|------------------------|
+| Section Label | "ATS Resources" (hardcoded) |
+| Config File | `src/config/atsResources.ts` - ATS-only |
+| Sidebar State | Single `atsOpen` boolean |
+| Game Types | `GameTitle` type already supports: ATS, Farming_Sim, Construction_Sim, Mechanic_Sim |
+
+---
+
+## Proposed Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                         FGN ECOSYSTEM                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────┐                    ┌─────────────────┐        │
-│  │  FGN.Academy    │                    │  FGN.Business   │        │
-│  │  (Main Hub)     │                    │  (B2B Portal)   │        │
-│  │                 │                    │                 │        │
-│  │  • Competitions │                    │  • Recruitment  │        │
-│  │  • Leaderboards │                    │  • Partnerships │        │
-│  │  • Skill Tracks │                    │  • Analytics    │        │
-│  └────────┬────────┘                    └────────┬────────┘        │
-│           │                                      │                  │
-│           │    ┌─────────────────────────────────┘                  │
-│           │    │                                                    │
-│           ▼    ▼                                                    │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    ATS SUBSITES                              │   │
-│  │                                                              │   │
-│  │  ┌─────────────────────┐    ┌──────────────────────┐        │   │
-│  │  │    CDL Quest        │    │    CDL Exchange      │        │   │
-│  │  │                     │    │                      │        │   │
-│  │  │  • Training Paths   │    │  • CDL Passkey       │        │   │
-│  │  │  • Module Library   │    │  • Candidate Pool    │        │   │
-│  │  │  • School Portal    │    │  • Employer Portal   │        │   │
-│  │  │  • Telemetry Lab    │    │  • Cross-border Jobs │        │   │
-│  │  └─────────────────────┘    └──────────────────────┘        │   │
-│  │                                                              │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+SIM RESOURCES (Section Label)
+├── American Truck Sim ▼
+│   ├── CDL Quest (external)
+│   └── CDL Exchange (external)
+├── Farming Simulator ▼        [Future - disabled/empty for now]
+│   └── (Coming Soon)
+├── Construction Simulator ▼   [Future - disabled/empty for now]
+│   └── (Coming Soon)
+└── Mechanic Simulator ▼       [Future - disabled/empty for now]
+    └── (Coming Soon)
 ```
 
 ---
 
-## Changes to FGN.Academy
+## Changes Required
 
-### 1. New Component: ExternalResourceCard
-A reusable card component for linking to external subsites with consistent branding.
+### 1. Rename and Restructure Configuration File
 
-**Features:**
-- External link icon indicator
-- Opens in new tab with `rel="noopener noreferrer"`
-- Branded accent color matching the subsite
-- Description and CTA button
+**File: `src/config/atsResources.ts` → `src/config/simResources.ts`**
 
-### 2. Update Work Orders Page
-Add a new carousel section: **"Deep Dive: American Truck Simulator"** that appears when filtering by ATS or viewing ATS work orders.
+Create a scalable configuration that maps each `GameTitle` to its external resources:
 
-**Links to display:**
-- CDL Quest → "Explore CDL Training Paths"
-- CDL Exchange → "Find CDL Opportunities"
+```text
+Structure:
+{
+  ATS: {
+    title: "American Truck Sim",
+    icon: Truck,
+    accentColor: "#3B82F6",
+    resources: [
+      { key: "cdlQuest", title: "CDL Quest", ... },
+      { key: "cdlExchange", title: "CDL Exchange", ... }
+    ]
+  },
+  Farming_Sim: {
+    title: "Farming Simulator",
+    icon: Tractor,
+    accentColor: "#22C55E",
+    resources: []  // Empty = "Coming Soon" state
+  },
+  Construction_Sim: { ... },
+  Mechanic_Sim: { ... }
+}
+```
 
-### 3. Update Learn Page
-Add an **"External Training Resources"** section for ATS-specific deep content.
+### 2. Update Sidebar Component
 
-**Link:**
-- CDL Quest → "Access Full CDL Curriculum"
+**File: `src/components/layout/AppSidebar.tsx`**
 
-### 4. Update Profile/Skill Passport Page
-Add a **"Credential Verification"** link for users with ATS achievements.
+- Rename section label from "ATS Resources" to "Sim Resources"
+- Replace single `atsOpen` state with a record: `openGames: Record<GameTitle, boolean>`
+- Loop over all games from config, rendering each as a collapsible dropdown
+- Handle "Coming Soon" state for games with no resources yet
 
-**Link:**
-- CDL Exchange → "Verify on CDL Exchange" (for sharing with employers)
+### 3. Define TypeScript Interfaces
 
-### 5. Footer Links
-Add a dedicated **"ATS Resources"** section in the footer (if footer exists) or in the sidebar.
+**File: `src/config/simResources.ts`**
+
+```text
+interface SimResource {
+  key: string;
+  title: string;
+  description: string;
+  href: string;
+  accentColor: string;
+  icon: LucideIcon;
+}
+
+interface SimGameConfig {
+  title: string;
+  icon: LucideIcon;
+  accentColor: string;
+  resources: SimResource[];
+}
+
+type SimResourcesConfig = Record<GameTitle, SimGameConfig>;
+```
+
+### 4. Maintain Backward Compatibility
+
+Export a legacy `ATS_RESOURCES` constant for any existing code that imports it (Work Orders, Learn, Profile pages).
 
 ---
 
@@ -92,104 +110,117 @@ Add a dedicated **"ATS Resources"** section in the footer (if footer exists) or 
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/components/marketplace/ExternalResourceCard.tsx` | Create | Reusable card for external subsite links |
-| `src/pages/WorkOrders.tsx` | Modify | Add ATS deep-dive carousel section |
-| `src/pages/Learn.tsx` | Modify | Add external training resources section |
-| `src/pages/Profile.tsx` | Modify | Add credential verification link |
-| `src/components/layout/AppSidebar.tsx` | Modify | Add ATS Resources expandable section |
+| `src/config/atsResources.ts` | Delete | Remove old ATS-only config |
+| `src/config/simResources.ts` | Create | New scalable multi-game config |
+| `src/components/layout/AppSidebar.tsx` | Modify | Update to use new config and render all games |
+| `src/pages/WorkOrders.tsx` | Modify | Update import path |
+| `src/pages/Learn.tsx` | Modify | Update import path |
+| `src/pages/Profile.tsx` | Modify | Update import path |
+| `src/components/marketplace/ExternalResourceCard.tsx` | No change | Already generic enough |
 
 ---
 
 ## Implementation Details
 
-### ExternalResourceCard Component
+### simResources.ts Configuration
 
 ```text
-Props:
-- title: string (e.g., "CDL Quest")
-- description: string
-- href: string (external URL)
-- accentColor: string (hex color)
-- icon: ReactNode
-- ctaLabel: string (e.g., "Explore Training")
+ATS:
+  - CDL Quest (Training) - https://simu-cdl-path.lovable.app
+  - CDL Exchange (Careers) - https://skill-truck-path.lovable.app
+
+Farming_Sim:
+  - No resources yet (shows "Coming Soon")
+
+Construction_Sim:
+  - No resources yet (shows "Coming Soon")
+
+Mechanic_Sim:
+  - No resources yet (shows "Coming Soon")
 ```
 
-### Work Orders Page Addition
+### Sidebar Rendering Logic
 
-A new carousel appears when:
-1. User filters by "ATS" game type, OR
-2. There are ATS work orders visible
-
-Content:
 ```text
-Title: "Deep Dive: American Truck Simulator"
-Subtitle: "Extended training resources and career pathways"
-
-Cards:
-1. CDL Quest
-   - "Structured Learning Paths"
-   - "Complete CDL curriculum with telemetry tracking"
-   - CTA: "Start Training →"
-   - URL: https://simu-cdl-path.lovable.app
-
-2. CDL Exchange  
-   - "Career Marketplace"
-   - "Verified credentials for employers and recruiters"
-   - CTA: "View Opportunities →"
-   - URL: https://skill-truck-path.lovable.app
+For each game in SIM_RESOURCES:
+  1. Render collapsible trigger with game icon + title
+  2. If resources.length > 0:
+       Render each resource as external link
+  3. Else:
+       Render "Coming Soon" placeholder text
 ```
 
-### Sidebar Enhancement
+### State Management
 
-Add a collapsible "ATS Resources" section under the main navigation with quick links to both subsites.
+Replace:
+```typescript
+const [atsOpen, setAtsOpen] = useState(false);
+```
 
----
+With:
+```typescript
+const [openGames, setOpenGames] = useState<Record<GameTitle, boolean>>({
+  ATS: false,
+  Farming_Sim: false,
+  Construction_Sim: false,
+  Mechanic_Sim: false,
+});
 
-## Maintaining Separate Sites
-
-### Recommended Domain Structure (Future)
-
-For a professional ecosystem, consider:
-- `cdl-quest.fgn.academy` → points to simu-cdl-path.lovable.app
-- `cdl-exchange.fgn.academy` → points to skill-truck-path.lovable.app
-
-This can be achieved via:
-1. CNAME records pointing subdomains to Lovable apps
-2. Or keeping `.lovable.app` URLs and using them directly
-
-### Cross-Site Navigation
-
-Each subsite should include:
-- **Header link**: "← Back to FGN Academy" 
-- **Footer links**: FGN.Academy, FGN.Business
-- Consistent branding elements (logo, colors)
-
-### Shared Authentication (Future Enhancement)
-
-For seamless UX, consider implementing:
-- SSO token passing between sites
-- Or deep links with user context (e.g., `?from=academy&user=xxx`)
+const toggleGame = (game: GameTitle) => {
+  setOpenGames(prev => ({ ...prev, [game]: !prev[game] }));
+};
+```
 
 ---
 
-## Summary of Links
+## Adding Future Games
 
-| From | To | Location in UI | Context |
-|------|-----|----------------|---------|
-| FGN.Academy | CDL Quest | Work Orders (ATS carousel) | "Start Training" |
-| FGN.Academy | CDL Quest | Learn page | "Full CDL Curriculum" |
-| FGN.Academy | CDL Exchange | Profile page | "Verify Credentials" |
-| FGN.Academy | Both | Sidebar | "ATS Resources" section |
-| FGN.Business | CDL Exchange | Recruitment section | "Candidate Pipeline" |
-| Both Subsites | FGN.Academy | Header/Footer | "Back to Academy" |
-| Both Subsites | FGN.Business | Footer | "For Employers" |
+When you're ready to add a new sim game (e.g., Farming Simulator subsites):
+
+1. Add resources to the `Farming_Sim` entry in `simResources.ts`
+2. No code changes needed in the sidebar - it automatically renders
+
+Example addition:
+```typescript
+Farming_Sim: {
+  title: "Farming Simulator",
+  icon: Tractor,
+  accentColor: "#22C55E",
+  resources: [
+    {
+      key: "farmingAcademy",
+      title: "Farming Academy",
+      description: "Agricultural training paths",
+      href: "https://farming-academy.lovable.app",
+      accentColor: "#22C55E",
+      icon: GraduationCap,
+    }
+  ]
+}
+```
 
 ---
 
-## Technical Notes
+## Visual Design
 
-- All external links use `target="_blank"` with `rel="noopener noreferrer"` for security
-- External links are clearly marked with an icon to set user expectations
-- No backend changes required—this is purely frontend navigation integration
-- The subsites remain independently deployed Lovable projects
+The sidebar will show all four games, giving users visibility into the full FGN ecosystem:
+
+| Game | State | Display |
+|------|-------|---------|
+| American Truck Sim | Active | Blue truck icon, 2 resource links |
+| Farming Simulator | Coming Soon | Green tractor icon, grayed placeholder |
+| Construction Sim | Coming Soon | Amber hardhat icon, grayed placeholder |
+| Mechanic Sim | Coming Soon | Red wrench icon, grayed placeholder |
+
+"Coming Soon" games are still visible but clearly marked as upcoming, building anticipation while maintaining a consistent UI structure.
+
+---
+
+## Benefits
+
+1. **Single Source of Truth**: All sim resources defined in one config file
+2. **Zero-Code Expansion**: Adding new subsites requires only config changes
+3. **Type Safety**: Full TypeScript support with `GameTitle` enum
+4. **Consistent Styling**: Reuses existing game color/icon mappings from `GameIcon.tsx`
+5. **Future-Proof**: Architecture supports unlimited games and resources per game
 
