@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { Trophy, Crown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Trophy, Crown, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fireConfetti } from '@/hooks/useConfetti';
 
@@ -69,6 +71,19 @@ export function TournamentWinner({ winner, eventTitle, className }: TournamentWi
               {winner.username || 'Champion'}
             </p>
           </div>
+
+          {/* View Profile link */}
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+          >
+            <Link to={`/profile/${winner.id}`}>
+              <User className="h-4 w-4 mr-2" />
+              View Profile
+            </Link>
+          </Button>
 
           {/* Decorative elements */}
           <div className="flex items-center gap-2 text-muted-foreground">
