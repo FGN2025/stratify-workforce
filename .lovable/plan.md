@@ -1,346 +1,371 @@
 
-# Plan: Public Catalog API Edge Function
+# Plan: Comprehensive API Documentation System
 
 ## Overview
 
-Build a `public-catalog` edge function that exposes FGN.Academy's training content (courses, work orders, and skills taxonomy) to external consumer sites like CDL Quest and CDL Exchange. This API will serve as the master catalog for the ecosystem, allowing external apps to fetch and display training content without needing direct database access.
+Build a complete documentation suite for the FGN Ecosystem APIs, including markdown reference docs for internal use, an interactive developer portal at `/developers`, and OpenAPI 3.0 specifications for machine-readable integration.
 
-## Architecture
+## Documentation Architecture
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           PUBLIC CATALOG API                                     │
+│                         API DOCUMENTATION SYSTEM                                 │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
-│   FGN.ACADEMY                                                                   │
-│   ─────────────────────────────────────────────────────────────────────────     │
+│   ┌──────────────────────────────────────────────────────────────────────────┐  │
+│   │                    DOCUMENTATION LAYERS                                   │  │
+│   │                                                                           │  │
+│   │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                │  │
+│   │  │  Markdown     │  │  In-App       │  │  OpenAPI      │                │  │
+│   │  │  Reference    │  │  Developer    │  │  Specs        │                │  │
+│   │  │  Docs         │  │  Portal       │  │  (JSON/YAML)  │                │  │
+│   │  │               │  │               │  │               │                │  │
+│   │  │  /docs/api/   │  │  /developers  │  │  /docs/       │                │  │
+│   │  │               │  │               │  │  openapi/     │                │  │
+│   │  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘                │  │
+│   │          │                  │                  │                         │  │
+│   │          │                  │                  │                         │  │
+│   │          ▼                  ▼                  ▼                         │  │
+│   │  ┌─────────────────────────────────────────────────────────────────┐    │  │
+│   │  │                    TARGET AUDIENCES                              │    │  │
+│   │  │                                                                  │    │  │
+│   │  │  Internal Team    │   Partner Devs    │   SDK Generation        │    │  │
+│   │  │  GitHub/Code      │   CDL Quest       │   Postman Import        │    │  │
+│   │  │  Review           │   CDL Exchange    │   Auto-docs             │    │  │
+│   │  └─────────────────────────────────────────────────────────────────┘    │  │
+│   │                                                                           │  │
+│   └──────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                  │
-│   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐              │
-│   │    COURSES      │   │   WORK ORDERS   │   │  CREDENTIAL     │              │
-│   │    (Published)  │   │   (Active)      │   │    TYPES        │              │
-│   └────────┬────────┘   └────────┬────────┘   └────────┬────────┘              │
-│            │                     │                      │                       │
-│            └─────────────────────┼──────────────────────┘                       │
-│                                  │                                              │
-│                                  ▼                                              │
-│                    ┌─────────────────────────────┐                             │
-│                    │     public-catalog API       │                             │
-│                    │     (Edge Function)          │                             │
-│                    │                              │                             │
-│                    │  GET /courses                │                             │
-│                    │  GET /courses/:id            │                             │
-│                    │  GET /work-orders            │                             │
-│                    │  GET /work-orders/:id        │                             │
-│                    │  GET /skills                 │                             │
-│                    │  GET /games                  │                             │
-│                    └───────────────┬──────────────┘                             │
-│                                    │                                             │
-└────────────────────────────────────┼─────────────────────────────────────────────┘
-                                     │
-              ┌──────────────────────┼──────────────────────┐
-              │                      │                      │
-              ▼                      ▼                      ▼
-    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-    │   CDL QUEST     │    │  CDL EXCHANGE   │    │  FGN.BUSINESS   │
-    │                 │    │                 │    │                 │
-    │  Fetches:       │    │  Fetches:       │    │  Fetches:       │
-    │  - Courses      │    │  - Credential   │    │  - All games    │
-    │  - Work Orders  │    │    types        │    │  - Skills data  │
-    │  - ATS Skills   │    │  - Skills       │    │  - Aggregate    │
-    └─────────────────┘    └─────────────────┘    └─────────────────┘
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## API Endpoints
+## Part 1: Markdown Reference Documentation
 
-### Public Endpoints (No Authentication Required)
+Create a `/docs/api/` folder structure with comprehensive API reference files.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/courses` | GET | List all published courses |
-| `/courses/:id` | GET | Get single course with modules and lessons |
-| `/work-orders` | GET | List all active work orders |
-| `/work-orders/:id` | GET | Get single work order details |
-| `/skills` | GET | Get skills taxonomy for a game |
-| `/games` | GET | List available simulation games |
-
-### Query Parameters
-
-| Parameter | Endpoints | Description |
-|-----------|-----------|-------------|
-| `game` | `/courses`, `/work-orders`, `/skills` | Filter by game title (ATS, Farming_Sim, etc.) |
-| `difficulty` | `/courses`, `/work-orders` | Filter by difficulty level |
-| `featured` | `/courses` | Show only featured courses |
-| `limit` | All list endpoints | Limit number of results (default: 50, max: 100) |
-| `offset` | All list endpoints | Pagination offset |
-
----
-
-## Response Formats
-
-### GET /courses
-
-```json
-{
-  "courses": [
-    {
-      "id": "uuid",
-      "title": "CDL Fundamentals",
-      "description": "Learn the basics of commercial driving",
-      "cover_image_url": "https://...",
-      "difficulty_level": "beginner",
-      "estimated_hours": 10,
-      "xp_reward": 500,
-      "module_count": 5,
-      "lesson_count": 20,
-      "created_at": "2026-01-01T00:00:00Z"
-    }
-  ],
-  "total": 15,
-  "limit": 50,
-  "offset": 0
-}
-```
-
-### GET /courses/:id
-
-```json
-{
-  "course": {
-    "id": "uuid",
-    "title": "CDL Fundamentals",
-    "description": "Full description...",
-    "cover_image_url": "https://...",
-    "difficulty_level": "beginner",
-    "estimated_hours": 10,
-    "xp_reward": 500,
-    "modules": [
-      {
-        "id": "uuid",
-        "title": "Module 1: Pre-Trip Inspection",
-        "description": "Learn to perform vehicle inspections",
-        "order_index": 1,
-        "xp_reward": 100,
-        "lessons": [
-          {
-            "id": "uuid",
-            "title": "Introduction to Pre-Trip",
-            "lesson_type": "video",
-            "duration_minutes": 15,
-            "xp_reward": 25,
-            "order_index": 1
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-### GET /work-orders
-
-```json
-{
-  "work_orders": [
-    {
-      "id": "uuid",
-      "title": "Highway Delivery Challenge",
-      "description": "Complete a 500-mile delivery",
-      "game_title": "ATS",
-      "difficulty": "intermediate",
-      "xp_reward": 150,
-      "estimated_time_minutes": 30,
-      "success_criteria": {
-        "distance": 500,
-        "damage_max": 2
-      },
-      "created_at": "2026-01-01T00:00:00Z"
-    }
-  ],
-  "total": 45,
-  "limit": 50,
-  "offset": 0
-}
-```
-
-### GET /skills
-
-```json
-{
-  "game": "ATS",
-  "skills": [
-    {
-      "key": "pre_trip_inspection",
-      "name": "Pre-Trip Inspection",
-      "category": "safety",
-      "description": "Ability to perform thorough vehicle inspections"
-    },
-    {
-      "key": "backing_maneuvers",
-      "name": "Backing Maneuvers",
-      "category": "precision",
-      "description": "Skill in reverse driving and docking"
-    }
-  ]
-}
-```
-
-### GET /games
-
-```json
-{
-  "games": [
-    {
-      "key": "ATS",
-      "name": "American Truck Simulator",
-      "short_name": "ATS",
-      "accent_color": "#3B82F6",
-      "skills_count": 12,
-      "work_orders_count": 45,
-      "courses_count": 8
-    }
-  ]
-}
-```
-
----
-
-## Database Changes
-
-### New Table: `skills_taxonomy`
-
-Create a table to store the skills vocabulary for each game:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| game_title | game_title enum | Which simulation game |
-| skill_key | text | Unique identifier (snake_case) |
-| skill_name | text | Display name |
-| category | text | Grouping (safety, precision, efficiency, etc.) |
-| description | text | What this skill represents |
-| sort_order | integer | Display ordering |
-| is_active | boolean | Whether skill is in use |
-| created_at | timestamp | Creation time |
-
-### Seed Data for ATS Skills
+### File Structure
 
 ```text
-Pre-defined CDL skills for American Truck Simulator:
+docs/
+├── api/
+│   ├── README.md                    # API Overview & Quick Start
+│   ├── authentication.md            # Auth guide (API keys, JWT)
+│   ├── credential-api/
+│   │   ├── README.md                # Credential API overview
+│   │   ├── public-endpoints.md      # GET /passport/:slug, POST /verify
+│   │   ├── authenticated-endpoints.md  # GET /credentials/mine
+│   │   └── authorized-app-endpoints.md # POST /issue, GET /user/:email
+│   ├── public-catalog/
+│   │   ├── README.md                # Catalog API overview
+│   │   ├── games.md                 # GET /games
+│   │   ├── courses.md               # GET /courses, GET /courses/:id
+│   │   ├── work-orders.md           # GET /work-orders, GET /work-orders/:id
+│   │   └── skills.md                # GET /skills
+│   └── integration-guides/
+│       ├── cdl-quest.md             # CDL Quest integration example
+│       └── cdl-exchange.md          # CDL Exchange integration example
+└── openapi/
+    ├── credential-api.yaml          # OpenAPI 3.0 spec
+    └── public-catalog.yaml          # OpenAPI 3.0 spec
+```
 
-Safety Category:
-- pre_trip_inspection: Pre-Trip Inspection
-- defensive_driving: Defensive Driving
-- hazmat_handling: Hazmat Handling
+### Documentation Content
 
-Precision Category:
-- backing_maneuvers: Backing Maneuvers
-- parallel_parking: Parallel Parking
-- docking: Loading Dock Procedures
+Each markdown file will include:
+- Endpoint URL and method
+- Request headers and parameters
+- Request body schema (with TypeScript types)
+- Response schema with examples
+- Error codes and handling
+- Code examples (JavaScript/TypeScript, cURL)
 
-Efficiency Category:
-- route_planning: Route Planning
-- fuel_management: Fuel Efficiency
-- time_management: Schedule Adherence
+---
 
-Equipment Category:
-- coupling_uncoupling: Coupling/Uncoupling
-- brake_systems: Air Brake Systems
-- cargo_securement: Cargo Securement
+## Part 2: In-App Developer Portal
+
+Create a `/developers` page with interactive API documentation.
+
+### Developer Portal Layout
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         FGN.ACADEMY DEVELOPER PORTAL                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────────┐   │
+│  │ Hero Section                                                              │   │
+│  │ "Build with FGN.Academy APIs"                                            │   │
+│  │ [Get API Key] [View OpenAPI Spec]                                        │   │
+│  └──────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  ┌──────────────┬───────────────────────────────────────────────────────────┐   │
+│  │ Navigation   │  Content Area                                              │   │
+│  │              │                                                            │   │
+│  │ Overview     │  ┌────────────────────────────────────────────────────┐   │   │
+│  │ Quick Start  │  │ Authentication                                     │   │   │
+│  │ Auth Guide   │  │                                                    │   │   │
+│  │              │  │ The FGN.Academy API uses two authentication       │   │   │
+│  │ ─────────    │  │ methods depending on the endpoint type:           │   │   │
+│  │ CREDENTIAL   │  │                                                    │   │   │
+│  │ API          │  │ ┌─────────────────────────────────────────────┐   │   │   │
+│  │ • Passport   │  │ │ Public Endpoints      │ No auth required    │   │   │   │
+│  │ • Verify     │  │ │ Authenticated         │ Bearer token (JWT)  │   │   │   │
+│  │ • Issue      │  │ │ Authorized Apps       │ X-App-Key header    │   │   │   │
+│  │ • User       │  │ └─────────────────────────────────────────────┘   │   │   │
+│  │              │  │                                                    │   │   │
+│  │ ─────────    │  │ Example Request:                                  │   │   │
+│  │ PUBLIC       │  │ ┌─────────────────────────────────────────────┐   │   │   │
+│  │ CATALOG      │  │ │ curl -X POST \                              │   │   │   │
+│  │ • Games      │  │ │   https://vfzj.../credential-api/issue \   │   │   │   │
+│  │ • Courses    │  │ │   -H "X-App-Key: your_api_key" \           │   │   │   │
+│  │ • Work Ords  │  │ │   -H "Content-Type: application/json" \    │   │   │   │
+│  │ • Skills     │  │ │   -d '{"user_email": "...", ...}'          │   │   │   │
+│  │              │  │ └─────────────────────────────────────────────┘   │   │   │
+│  │ ─────────    │  │                                                    │   │   │
+│  │ API Try-It   │  └────────────────────────────────────────────────────┘   │   │
+│  │ (Live Test)  │                                                            │   │
+│  │              │                                                            │   │
+│  └──────────────┴───────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Developer Portal Components
+
+| Component | Purpose |
+|-----------|---------|
+| `DeveloperPortal.tsx` (page) | Main page layout with sidebar navigation |
+| `ApiSidebar.tsx` | Collapsible navigation for API sections |
+| `EndpointCard.tsx` | Displays single endpoint with method badge |
+| `CodeBlock.tsx` | Syntax-highlighted code with copy button |
+| `ApiTryIt.tsx` | Interactive API testing panel |
+| `ResponseViewer.tsx` | Pretty-printed JSON response display |
+| `SchemaTable.tsx` | Request/response schema documentation |
+
+### Portal Features
+
+1. **Endpoint Reference**: All endpoints listed with method badges (GET, POST)
+2. **Code Examples**: JavaScript, cURL, Python snippets with copy buttons
+3. **Schema Documentation**: Tables showing request/response fields
+4. **Live API Tester**: Send requests to public endpoints directly
+5. **Authentication Guide**: Step-by-step for getting API keys
+6. **Integration Examples**: Full code samples for CDL Quest/Exchange
+
+---
+
+## Part 3: OpenAPI 3.0 Specifications
+
+Create machine-readable API specs for tooling integration.
+
+### OpenAPI Spec Structure
+
+```yaml
+# docs/openapi/credential-api.yaml
+openapi: 3.0.3
+info:
+  title: FGN.Academy Credential API
+  version: 1.0.0
+  description: |
+    Credential management API for the FGN ecosystem.
+    Enables external apps to issue, verify, and query skill credentials.
+  contact:
+    name: FGN Academy Support
+    url: https://fgn.academy/developers
+    
+servers:
+  - url: https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/credential-api
+    description: Production
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+paths:
+  /passport/{slug}:
+    get:
+      summary: Get public passport
+      tags: [Public]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: game
+          in: query
+          schema:
+            type: string
+            enum: [ATS, Farming_Sim, Construction_Sim, Mechanic_Sim]
+      responses:
+        '200':
+          description: Passport with credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassportResponse'
+        '404':
+          description: Passport not found
+          
+  /credentials/verify:
+    post:
+      summary: Verify a credential
+      tags: [Public]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+
+  /credentials/issue:
+    post:
+      summary: Issue a credential (authorized apps only)
+      tags: [Authorized Apps]
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueRequest'
+      responses:
+        '201':
+          description: Credential issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-App-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      
+  schemas:
+    PassportResponse:
+      type: object
+      properties:
+        passport:
+          type: object
+          properties:
+            slug:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+        credentials:
+          type: array
+          items:
+            $ref: '#/components/schemas/Credential'
 ```
 
 ---
 
 ## Files to Create
 
+### Markdown Docs
+| File | Content |
+|------|---------|
+| `docs/api/README.md` | API overview, base URLs, quick start |
+| `docs/api/authentication.md` | Auth methods guide |
+| `docs/api/credential-api/README.md` | Credential API overview |
+| `docs/api/credential-api/public-endpoints.md` | Public endpoints reference |
+| `docs/api/credential-api/authenticated-endpoints.md` | JWT-protected endpoints |
+| `docs/api/credential-api/authorized-app-endpoints.md` | API key endpoints |
+| `docs/api/public-catalog/README.md` | Catalog API overview |
+| `docs/api/public-catalog/games.md` | Games endpoint reference |
+| `docs/api/public-catalog/courses.md` | Courses endpoints reference |
+| `docs/api/public-catalog/work-orders.md` | Work orders endpoints reference |
+| `docs/api/public-catalog/skills.md` | Skills endpoint reference |
+| `docs/api/integration-guides/cdl-quest.md` | CDL Quest integration guide |
+| `docs/api/integration-guides/cdl-exchange.md` | CDL Exchange integration guide |
+
+### OpenAPI Specs
+| File | Content |
+|------|---------|
+| `docs/openapi/credential-api.yaml` | Credential API OpenAPI 3.0 spec |
+| `docs/openapi/public-catalog.yaml` | Public Catalog OpenAPI 3.0 spec |
+
+### Developer Portal Components
 | File | Purpose |
 |------|---------|
-| `supabase/functions/public-catalog/index.ts` | Main edge function with all endpoints |
-| `src/hooks/useLearningPaths.ts` | Hook for admin management (future) |
+| `src/pages/Developers.tsx` | Main developer portal page |
+| `src/components/developers/ApiSidebar.tsx` | API navigation sidebar |
+| `src/components/developers/EndpointCard.tsx` | Endpoint documentation card |
+| `src/components/developers/CodeBlock.tsx` | Syntax-highlighted code block |
+| `src/components/developers/ApiTryIt.tsx` | Live API testing panel |
+| `src/components/developers/SchemaTable.tsx` | Schema documentation table |
+| `src/components/developers/ResponseViewer.tsx` | JSON response viewer |
+| `src/lib/api-docs.ts` | API documentation data structures |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `supabase/config.toml` | Add function configuration with `verify_jwt = false` |
+| `src/App.tsx` | Add `/developers` route |
+| `src/components/layout/AppSidebar.tsx` | Add "Developers" link in sidebar |
 
 ---
 
-## Implementation Details
+## Implementation Summary
 
-### Edge Function Structure
+### Phase 1: Markdown Documentation
+- Create `/docs/api/` folder structure
+- Write comprehensive endpoint references
+- Include code examples in multiple languages
+- Add integration guides for partner sites
 
-```text
-supabase/functions/public-catalog/index.ts
-├── CORS headers (allow all origins for public API)
-├── Request routing based on path
-├── Query parameter parsing
-├── Supabase client (service role for read access)
-├── Endpoint handlers:
-│   ├── handleListCourses()
-│   ├── handleGetCourse()
-│   ├── handleListWorkOrders()
-│   ├── handleGetWorkOrder()
-│   ├── handleListSkills()
-│   └── handleListGames()
-└── Error handling with proper HTTP status codes
-```
+### Phase 2: OpenAPI Specifications
+- Create YAML specs for both APIs
+- Include all schemas, security definitions
+- Add example values for all fields
+- Enable Postman/Swagger import
 
-### Security Considerations
+### Phase 3: Developer Portal
+- Build `/developers` page with tabbed navigation
+- Create reusable documentation components
+- Implement live API testing for public endpoints
+- Add copy-to-clipboard for code examples
+- Responsive design for mobile viewing
 
-- All endpoints are public (no authentication required)
-- Read-only access (no mutations)
-- Only returns published/active content
-- No sensitive data exposed (no user IDs, no internal metadata)
-- Rate limiting via Supabase Edge Functions (built-in)
-
-### Caching Headers
-
-Response includes caching headers for performance:
-
-```text
-Cache-Control: public, max-age=300, stale-while-revalidate=60
-```
-
-This allows CDL Quest/Exchange to cache responses for 5 minutes while revalidating in the background.
+### Phase 4: Integration
+- Add route to App.tsx
+- Add sidebar navigation link
+- Link from Admin > Authorized Apps to docs
+- Add "View Docs" links on API key display
 
 ---
 
-## Integration with Existing credential-api
+## Technical Approach
 
-The `public-catalog` API complements the existing `credential-api`:
+### CodeBlock Component
+- Syntax highlighting using CSS classes
+- Language detection (json, bash, typescript)
+- Copy button with toast confirmation
+- Dark theme matching site design
 
-| API | Purpose | Auth Required |
-|-----|---------|---------------|
-| **credential-api** | Issue/verify credentials, manage passports | Yes (API key or JWT) |
-| **public-catalog** | Browse training content, skills taxonomy | No |
+### ApiTryIt Component
+- Dropdown for endpoint selection
+- Form fields for path/query parameters
+- Headers editor for API keys
+- Response panel with timing info
+- Only enabled for public endpoints (security)
 
-Consumer sites use both:
-1. `public-catalog` to display available training
-2. `credential-api` to issue credentials when training is completed
-
----
-
-## Testing Plan
-
-After implementation, test endpoints using the edge function curl tool:
-
-1. `GET /games` - List all simulation games
-2. `GET /courses?game=ATS` - List ATS courses
-3. `GET /courses/:id` - Get course details with modules
-4. `GET /work-orders?game=ATS&difficulty=beginner` - Filter work orders
-5. `GET /skills?game=ATS` - Get CDL skills taxonomy
-
----
-
-## Summary
-
-This implementation creates a public read-only API that serves as the master catalog for the FGN ecosystem. External sites can:
-
-- Display the training catalog without needing database access
-- Filter content by game (ATS for CDL Quest)
-- Access the skills taxonomy for consistent skill naming
-- Integrate with the credential-api for issuing credentials
-
-The API follows the same patterns as the existing `credential-api` for consistency and maintainability.
+### Documentation Data
+- Centralized in `src/lib/api-docs.ts`
+- TypeScript types for endpoints, params, schemas
+- Enables programmatic rendering and validation
