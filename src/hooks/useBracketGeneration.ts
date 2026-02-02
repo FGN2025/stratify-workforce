@@ -24,27 +24,24 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-// Generate bracket matches for single elimination
-function generateBracketMatches(
-  eventId: string,
-  participants: EventRegistrationWithUser[],
-  seedRandomly: boolean = true
-): Array<{
+// Match data for insertion
+interface MatchInsertData {
   event_id: string;
   round_number: number;
   match_order: number;
   player1_id: string | null;
   player2_id: string | null;
+  winner_id: string | null;
   status: 'pending' | 'in_progress' | 'completed';
-}> {
-  const matches: Array<{
-    event_id: string;
-    round_number: number;
-    match_order: number;
-    player1_id: string | null;
-    player2_id: string | null;
-    status: 'pending' | 'in_progress' | 'completed';
-  }> = [];
+}
+
+// Generate bracket matches for single elimination
+function generateBracketMatches(
+  eventId: string,
+  participants: EventRegistrationWithUser[],
+  seedRandomly: boolean = true
+): MatchInsertData[] {
+  const matches: MatchInsertData[] = [];
 
   const participantCount = participants.length;
   if (participantCount < 2) {
@@ -75,18 +72,25 @@ function generateBracketMatches(
     playerSlots.push(null); // null = bye
   }
 
-  // Generate first round matches
+  // Generate first round matches - mark bye matches as already completed
   for (let i = 0; i < firstRoundMatches; i++) {
     const player1Index = i * 2;
     const player2Index = i * 2 + 1;
+    const player1 = playerSlots[player1Index] || null;
+    const player2 = playerSlots[player2Index] || null;
+    
+    // Determine if this is a bye match (one player is null)
+    const isByeMatch = (player1 && !player2) || (!player1 && player2);
+    const byeWinner = isByeMatch ? (player1 || player2) : null;
     
     matches.push({
       event_id: eventId,
       round_number: totalRounds, // First round has highest round number
       match_order: i + 1,
-      player1_id: playerSlots[player1Index] || null,
-      player2_id: playerSlots[player2Index] || null,
-      status: 'pending',
+      player1_id: player1,
+      player2_id: player2,
+      winner_id: byeWinner,
+      status: isByeMatch ? 'completed' : 'pending',
     });
   }
 
@@ -100,6 +104,7 @@ function generateBracketMatches(
         match_order: i + 1,
         player1_id: null, // Will be filled when previous round completes
         player2_id: null,
+        winner_id: null,
         status: 'pending',
       });
     }
@@ -108,37 +113,54 @@ function generateBracketMatches(
   return matches;
 }
 
-// Advance a bye winner to the next round
-async function advanceByeWinner(
+// Advance bye winners to their next round matches
+async function advanceByeWinners(
   eventId: string,
-  match: { match_order: number; player1_id: string | null; player2_id: string | null },
-  currentRoundNumber: number
+  insertedMatches: Array<{
+    id: string;
+    round_number: number;
+    match_order: number;
+    winner_id: string | null;
+    status: string;
+  }>
 ) {
-  const winnerId = match.player1_id || match.player2_id;
-  if (!winnerId || currentRoundNumber <= 1) return;
+  // Find completed bye matches (first round matches with a winner already set)
+  const firstRoundNumber = Math.max(...insertedMatches.map(m => m.round_number));
+  const byeMatches = insertedMatches.filter(
+    m => m.round_number === firstRoundNumber && m.status === 'completed' && m.winner_id
+  );
 
-  const nextRoundNumber = currentRoundNumber - 1;
-  const nextMatchOrder = Math.ceil(match.match_order / 2);
-  const isPlayer1Slot = match.match_order % 2 === 1;
+  if (byeMatches.length === 0 || firstRoundNumber <= 1) return;
 
-  const { data: nextMatch, error: findError } = await supabase
-    .from('event_matches')
-    .select('*')
-    .eq('event_id', eventId)
-    .eq('round_number', nextRoundNumber)
-    .eq('match_order', nextMatchOrder)
-    .single();
+  // Build a map of next round matches by their match_order for quick lookup
+  const nextRoundNumber = firstRoundNumber - 1;
+  const nextRoundMatches = insertedMatches.filter(m => m.round_number === nextRoundNumber);
+  const nextRoundMap = new Map(nextRoundMatches.map(m => [m.match_order, m]));
 
-  if (findError || !nextMatch) return;
+  // Prepare all updates
+  const updates: Array<{ matchId: string; updateData: { player1_id?: string; player2_id?: string } }> = [];
 
-  const updateData = isPlayer1Slot
-    ? { player1_id: winnerId }
-    : { player2_id: winnerId };
+  for (const byeMatch of byeMatches) {
+    const nextMatchOrder = Math.ceil(byeMatch.match_order / 2);
+    const isPlayer1Slot = byeMatch.match_order % 2 === 1;
+    const nextMatch = nextRoundMap.get(nextMatchOrder);
 
-  await supabase
-    .from('event_matches')
-    .update(updateData)
-    .eq('id', nextMatch.id);
+    if (nextMatch && byeMatch.winner_id) {
+      updates.push({
+        matchId: nextMatch.id,
+        updateData: isPlayer1Slot
+          ? { player1_id: byeMatch.winner_id }
+          : { player2_id: byeMatch.winner_id },
+      });
+    }
+  }
+
+  // Execute all updates in parallel
+  await Promise.all(
+    updates.map(({ matchId, updateData }) =>
+      supabase.from('event_matches').update(updateData).eq('id', matchId)
+    )
+  );
 }
 
 export function useBracketGeneration() {
@@ -164,14 +186,14 @@ export function useBracketGeneration() {
         .delete()
         .eq('event_id', eventId);
 
-      // Generate bracket matches
+      // Generate bracket matches (bye matches are already marked completed with winners)
       const matches = generateBracketMatches(eventId, participants, seedRandomly);
 
       if (matches.length === 0) {
         throw new Error('Failed to generate bracket matches');
       }
 
-      // Insert all matches
+      // Insert all matches atomically
       const { data, error } = await supabase
         .from('event_matches')
         .insert(matches)
@@ -179,36 +201,8 @@ export function useBracketGeneration() {
 
       if (error) throw error;
 
-      // Auto-advance byes in first round
-      const firstRoundNumber = Math.max(...matches.map(m => m.round_number));
-      const firstRoundMatches = data.filter(m => m.round_number === firstRoundNumber);
-      
-      for (const match of firstRoundMatches) {
-        // If one player is null (bye), the other player advances
-        if (match.player1_id && !match.player2_id) {
-          await supabase
-            .from('event_matches')
-            .update({ 
-              winner_id: match.player1_id,
-              status: 'completed',
-            })
-            .eq('id', match.id);
-          
-          // Advance to next round
-          await advanceByeWinner(eventId, match, firstRoundNumber);
-        } else if (match.player2_id && !match.player1_id) {
-          await supabase
-            .from('event_matches')
-            .update({ 
-              winner_id: match.player2_id,
-              status: 'completed',
-            })
-            .eq('id', match.id);
-          
-          // Advance to next round
-          await advanceByeWinner(eventId, match, firstRoundNumber);
-        }
-      }
+      // Advance bye winners to next round in parallel
+      await advanceByeWinners(eventId, data);
 
       return data;
     },
