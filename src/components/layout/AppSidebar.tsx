@@ -11,10 +11,9 @@ import {
   ShieldCheck,
   GraduationCap,
   CalendarDays,
-  Truck,
   ChevronDown,
   ExternalLink,
-  Briefcase
+  Clock
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,7 +33,8 @@ import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
-import { ATS_RESOURCES } from '@/config/atsResources';
+import { SIM_RESOURCES, hasResources } from '@/config/simResources';
+import type { GameTitle } from '@/types/tenant';
 
 const mainNavItems = [
   { title: 'Discover', url: '/', icon: LayoutDashboard },
@@ -52,6 +52,9 @@ const adminNavItems = [
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
+// Order of games in the sidebar
+const GAME_ORDER: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim'];
+
 export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
@@ -59,7 +62,18 @@ export function AppSidebar() {
   const { tenant } = useTenant();
   const { isLoading: authLoading } = useAuth();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
-  const [atsOpen, setAtsOpen] = useState(false);
+  
+  // Track open state for each game dropdown
+  const [openGames, setOpenGames] = useState<Record<GameTitle, boolean>>({
+    ATS: false,
+    Farming_Sim: false,
+    Construction_Sim: false,
+    Mechanic_Sim: false,
+  });
+
+  const toggleGame = (game: GameTitle) => {
+    setOpenGames(prev => ({ ...prev, [game]: !prev[game] }));
+  };
 
   const isActive = (path: string) => location.pathname === path;
   
@@ -122,79 +136,96 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* ATS Resources - External Links */}
+        {/* Sim Resources - External Links for all simulator games */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-            ATS Resources
+            Sim Resources
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <Collapsible open={atsOpen} onOpenChange={setAtsOpen}>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                  tooltip="ATS Resources"
-                  className="w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                >
-                  <div className="flex items-center gap-3">
-                    <Truck className="h-4 w-4" />
-                    {!collapsed && <span>American Truck Sim</span>}
-                  </div>
-                  {!collapsed && (
-                    <ChevronDown className={cn(
-                      "h-4 w-4 transition-transform",
-                      atsOpen && "rotate-180"
-                    )} />
-                  )}
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-4">
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip="CDL Quest - Training"
-                      className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                    >
-                      <a
-                        href={ATS_RESOURCES.cdlQuest.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3"
-                      >
-                        <GraduationCap className="h-4 w-4" style={{ color: ATS_RESOURCES.cdlQuest.accentColor }} />
-                        {!collapsed && (
-                          <>
-                            <span>CDL Quest</span>
-                            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                          </>
-                        )}
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip="CDL Exchange - Careers"
-                      className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                    >
-                      <a
-                        href={ATS_RESOURCES.cdlExchange.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3"
-                      >
-                        <Briefcase className="h-4 w-4" style={{ color: ATS_RESOURCES.cdlExchange.accentColor }} />
-                        {!collapsed && (
-                          <>
-                            <span>CDL Exchange</span>
-                            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                          </>
-                        )}
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </CollapsibleContent>
-            </Collapsible>
+            <SidebarMenu>
+              {GAME_ORDER.map((gameKey) => {
+                const game = SIM_RESOURCES[gameKey];
+                const GameIcon = game.icon;
+                const gameHasResources = hasResources(gameKey);
+                
+                return (
+                  <Collapsible
+                    key={gameKey}
+                    open={openGames[gameKey]}
+                    onOpenChange={() => toggleGame(gameKey)}
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          tooltip={game.title}
+                          className={cn(
+                            "w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent",
+                            !gameHasResources && "opacity-60"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <GameIcon 
+                              className="h-4 w-4" 
+                              style={{ color: game.accentColor }} 
+                            />
+                            {!collapsed && <span>{game.title}</span>}
+                          </div>
+                          {!collapsed && (
+                            <ChevronDown className={cn(
+                              "h-4 w-4 transition-transform",
+                              openGames[gameKey] && "rotate-180"
+                            )} />
+                          )}
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pl-4">
+                        <SidebarMenu>
+                          {gameHasResources ? (
+                            game.resources.map((resource) => {
+                              const ResourceIcon = resource.icon;
+                              return (
+                                <SidebarMenuItem key={resource.key}>
+                                  <SidebarMenuButton
+                                    asChild
+                                    tooltip={resource.title}
+                                    className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                  >
+                                    <a
+                                      href={resource.href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-3"
+                                    >
+                                      <ResourceIcon 
+                                        className="h-4 w-4" 
+                                        style={{ color: resource.accentColor }} 
+                                      />
+                                      {!collapsed && (
+                                        <>
+                                          <span>{resource.title}</span>
+                                          <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                                        </>
+                                      )}
+                                    </a>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              );
+                            })
+                          ) : (
+                            <SidebarMenuItem>
+                              <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {!collapsed && <span>Coming Soon</span>}
+                              </div>
+                            </SidebarMenuItem>
+                          )}
+                        </SidebarMenu>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                );
+              })}
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 

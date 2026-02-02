@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, GraduationCap, Sparkles, Truck } from 'lucide-react';
-import { ATS_RESOURCES } from '@/config/atsResources';
+import { ATS_RESOURCES } from '@/config/simResources';
 
 export default function Learn() {
   const { user } = useAuth();
