@@ -424,12 +424,12 @@ export function WorkOrderEditDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="channel">Game Channel</Label>
-              <Select value={channelId} onValueChange={setChannelId}>
+              <Select value={channelId || 'none'} onValueChange={(v) => setChannelId(v === 'none' ? '' : v)}>
                 <SelectTrigger id="channel">
                   <SelectValue placeholder="Select channel (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {filteredChannels.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
@@ -441,12 +441,12 @@ export function WorkOrderEditDialog({
 
             <div className="space-y-2">
               <Label htmlFor="tenant">Community</Label>
-              <Select value={tenantId} onValueChange={setTenantId}>
+              <Select value={tenantId || 'none'} onValueChange={(v) => setTenantId(v === 'none' ? '' : v)}>
                 <SelectTrigger id="tenant">
                   <SelectValue placeholder="Select community (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Global)</SelectItem>
+                  <SelectItem value="none">None (Global)</SelectItem>
                   {tenants.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
