@@ -56,6 +56,48 @@ export type Database = {
         }
         Relationships: []
       }
+      authorized_apps: {
+        Row: {
+          allowed_origins: string[]
+          api_key_hash: string
+          app_name: string
+          app_slug: string
+          can_issue_credentials: boolean
+          can_read_credentials: boolean
+          created_at: string
+          credential_types_allowed: string[]
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          allowed_origins?: string[]
+          api_key_hash: string
+          app_name: string
+          app_slug: string
+          can_issue_credentials?: boolean
+          can_read_credentials?: boolean
+          created_at?: string
+          credential_types_allowed?: string[]
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allowed_origins?: string[]
+          api_key_hash?: string
+          app_name?: string
+          app_slug?: string
+          can_issue_credentials?: boolean
+          can_read_credentials?: boolean
+          created_at?: string
+          credential_types_allowed?: string[]
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           accent_color: string
@@ -225,6 +267,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      credential_types: {
+        Row: {
+          accent_color: string
+          created_at: string
+          description: string | null
+          display_name: string
+          game_title: Database["public"]["Enums"]["game_title"] | null
+          icon_name: string
+          id: string
+          is_active: boolean
+          issuer_app_slug: string | null
+          skills_granted: string[]
+          sort_order: number
+          type_key: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          description?: string | null
+          display_name: string
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          issuer_app_slug?: string | null
+          skills_granted?: string[]
+          sort_order?: number
+          type_key: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          issuer_app_slug?: string | null
+          skills_granted?: string[]
+          sort_order?: number
+          type_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credential_types_issuer_app_slug_fkey"
+            columns: ["issuer_app_slug"]
+            isOneToOne: false
+            referencedRelation: "authorized_apps"
+            referencedColumns: ["app_slug"]
           },
         ]
       }
@@ -781,10 +879,14 @@ export type Database = {
         Row: {
           created_at: string
           credential_type: Database["public"]["Enums"]["credential_type"]
+          credential_type_key: string | null
           expires_at: string | null
+          external_reference_id: string | null
+          game_title: Database["public"]["Enums"]["game_title"] | null
           id: string
           issued_at: string
           issuer: string | null
+          issuer_app_slug: string | null
           metadata: Json | null
           passport_id: string
           score: number | null
@@ -795,10 +897,14 @@ export type Database = {
         Insert: {
           created_at?: string
           credential_type: Database["public"]["Enums"]["credential_type"]
+          credential_type_key?: string | null
           expires_at?: string | null
+          external_reference_id?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
           id?: string
           issued_at?: string
           issuer?: string | null
+          issuer_app_slug?: string | null
           metadata?: Json | null
           passport_id: string
           score?: number | null
@@ -809,10 +915,14 @@ export type Database = {
         Update: {
           created_at?: string
           credential_type?: Database["public"]["Enums"]["credential_type"]
+          credential_type_key?: string | null
           expires_at?: string | null
+          external_reference_id?: string | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
           id?: string
           issued_at?: string
           issuer?: string | null
+          issuer_app_slug?: string | null
           metadata?: Json | null
           passport_id?: string
           score?: number | null
@@ -821,6 +931,20 @@ export type Database = {
           verification_hash?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "skill_credentials_credential_type_key_fkey"
+            columns: ["credential_type_key"]
+            isOneToOne: false
+            referencedRelation: "credential_types"
+            referencedColumns: ["type_key"]
+          },
+          {
+            foreignKeyName: "skill_credentials_issuer_app_slug_fkey"
+            columns: ["issuer_app_slug"]
+            isOneToOne: false
+            referencedRelation: "authorized_apps"
+            referencedColumns: ["app_slug"]
+          },
           {
             foreignKeyName: "skill_credentials_passport_id_fkey"
             columns: ["passport_id"]
@@ -1527,6 +1651,7 @@ export type Database = {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
       }
+      generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
       get_child_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
       get_course_progress: {
         Args: { p_course_id: string; p_user_id: string }
@@ -1563,6 +1688,15 @@ export type Database = {
         Returns: boolean
       }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
+      verify_app_api_key: {
+        Args: { p_api_key: string }
+        Returns: {
+          app_slug: string
+          can_issue: boolean
+          can_read: boolean
+          types_allowed: string[]
+        }[]
+      }
     }
     Enums: {
       achievement_category: "mastery" | "streak" | "social" | "special"

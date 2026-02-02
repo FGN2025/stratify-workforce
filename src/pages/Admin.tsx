@@ -10,6 +10,8 @@ import { SimResourcesManager } from '@/components/admin/SimResourcesManager';
 import { RegistrationCodeManager } from '@/components/admin/RegistrationCodeManager';
 import { EventsManager } from '@/components/admin/EventsManager';
 import { EvidenceReviewQueue } from '@/components/admin/EvidenceReviewQueue';
+import { AuthorizedAppsManager } from '@/components/admin/AuthorizedAppsManager';
+import { CredentialTypesManager } from '@/components/admin/CredentialTypesManager';
 import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -211,9 +213,17 @@ export default function Admin() {
             <TabsTrigger value="media">Media Library</TabsTrigger>
             <TabsTrigger value="codes">Registration Codes</TabsTrigger>
             {isSuperAdmin && (
-              <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
-                Super Admin
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="authorized-apps" className="text-primary data-[state=active]:text-primary">
+                  Authorized Apps
+                </TabsTrigger>
+                <TabsTrigger value="credential-types" className="text-primary data-[state=active]:text-primary">
+                  Credential Types
+                </TabsTrigger>
+                <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
+                  Super Admin
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -289,9 +299,27 @@ export default function Admin() {
           </TabsContent>
 
           {isSuperAdmin && (
-            <TabsContent value="super-admin">
-              <SuperAdminPanel />
-            </TabsContent>
+            <>
+              <TabsContent value="authorized-apps">
+                <Card className="border-border/50">
+                  <CardContent className="pt-6">
+                    <AuthorizedAppsManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="credential-types">
+                <Card className="border-border/50">
+                  <CardContent className="pt-6">
+                    <CredentialTypesManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="super-admin">
+                <SuperAdminPanel />
+              </TabsContent>
+            </>
           )}
         </Tabs>
       </div>
