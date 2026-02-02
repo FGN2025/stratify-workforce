@@ -22,6 +22,7 @@ import AgentWidget from "./pages/AgentWidget";
 import Admin from "./pages/Admin";
 import Learn from "./pages/Learn";
 import WorkOrderDetail from "./pages/WorkOrderDetail";
+import Developers from "./pages/Developers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/admin" element={
                 <AdminRoute><Admin /></AdminRoute>
               } />
+              <Route path="/developers" element={<Developers />} />
               <Route path="/agent-widget" element={<AgentWidget />} />
               
               {/* Catch-all */}

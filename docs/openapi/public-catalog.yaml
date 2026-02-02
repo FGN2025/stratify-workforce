@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: FGN.Academy Public Catalog API
+  version: 1.0.0
+  description: |
+    Public read-only API for browsing FGN.Academy training content.
+    
+    All endpoints are public and do not require authentication.
+    Responses are cached for 5 minutes.
+    
+    ## Use Cases
+    
+    - **CDL Quest**: Fetch work orders to display as training challenges
+    - **CDL Exchange**: Show available credentials and skills taxonomy
+    - **FGN.Business**: Display course catalog to employers
+    
+  contact:
+    name: FGN Academy Support
+    url: https://fgn.academy/developers
+  license:
+    name: Proprietary
+    url: https://fgn.academy/terms
+
+servers:
+  - url: https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/public-catalog
+    description: Production
+
+tags:
+  - name: Games
+    description: Simulation game metadata
+  - name: Courses
+    description: Training course catalog
+  - name: Work Orders
+    description: Simulation challenges
+  - name: Skills
+    description: Skills taxonomy
+
+paths:
+  /games:
+    get:
+      summary: List games
+      description: Get all available simulation games with content counts
+      operationId: listGames
+      tags: [Games]
+      responses:
+        '200':
+          description: List of games
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GamesResponse'
+
+  /courses:
+    get:
+      summary: List courses
+      description: Get all published training courses
+      operationId: listCourses
+      tags: [Courses]
+      parameters:
+        - name: difficulty
+          in: query
+          description: Filter by difficulty level
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced, expert]
+        - name: limit
+          in: query
+          description: Number of results per page
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          description: Number of results to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoursesListResponse'
+
+  /courses/{id}:
+    get:
+      summary: Get course details
+      description: Get a course with its modules and lessons
+      operationId: getCourse
+      tags: [Courses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Course UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetailResponse'
+        '404':
+          description: Course not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /work-orders:
+    get:
+      summary: List work orders
+      description: Get all active simulation challenges
+      operationId: listWorkOrders
+      tags: [Work Orders]
+      parameters:
+        - name: game
+          in: query
+          description: Filter by game title
+          schema:
+            type: string
+            enum: [ATS, Farming_Sim, Construction_Sim, Mechanic_Sim]
+        - name: difficulty
+          in: query
+          description: Filter by difficulty level
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced, expert]
+        - name: limit
+          in: query
+          description: Number of results per page
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          description: Number of results to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of work orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrdersListResponse'
+
+  /work-orders/{id}:
+    get:
+      summary: Get work order details
+      description: Get detailed information about a work order
+      operationId: getWorkOrder
+      tags: [Work Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Work order UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Work order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderDetailResponse'
+        '404':
+          description: Work order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /skills:
+    get:
+      summary: Get skills taxonomy
+      description: Get the standardized skills for a simulation game
+      operationId: listSkills
+      tags: [Skills]
+      parameters:
+        - name: game
+          in: query
+          required: true
+          description: Game title (required)
+          schema:
+            type: string
+            enum: [ATS, Farming_Sim, Construction_Sim, Mechanic_Sim]
+      responses:
+        '200':
+          description: Skills taxonomy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillsResponse'
+        '400':
+          description: Missing game parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Not found
+      required:
+        - error
+
+    Game:
+      type: object
+      properties:
+        key:
+          type: string
+          example: ATS
+        name:
+          type: string
+          example: American Truck Simulator
+        short_name:
+          type: string
+          example: ATS
+        accent_color:
+          type: string
+          example: "#3B82F6"
+        skills_count:
+          type: integer
+          example: 12
+        work_orders_count:
+          type: integer
+          example: 45
+        courses_count:
+          type: integer
+          example: 8
+
+    GamesResponse:
+      type: object
+      properties:
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/Game'
+
+    CourseSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: CDL Fundamentals
+        description:
+          type: string
+          nullable: true
+        cover_image_url:
+          type: string
+          format: uri
+          nullable: true
+        difficulty_level:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+        estimated_hours:
+          type: number
+          nullable: true
+          example: 10
+        xp_reward:
+          type: integer
+          example: 500
+        module_count:
+          type: integer
+          example: 5
+        lesson_count:
+          type: integer
+          example: 20
+        created_at:
+          type: string
+          format: date-time
+
+    CoursesListResponse:
+      type: object
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Introduction to Pre-Trip
+        lesson_type:
+          type: string
+          enum: [video, article, quiz, work_order]
+        duration_minutes:
+          type: integer
+          example: 15
+        xp_reward:
+          type: integer
+          example: 25
+        order_index:
+          type: integer
+
+    Module:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "Module 1: Pre-Trip Inspection"
+        description:
+          type: string
+          nullable: true
+        order_index:
+          type: integer
+        xp_reward:
+          type: integer
+        lessons:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lesson'
+
+    CourseDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cover_image_url:
+          type: string
+          format: uri
+          nullable: true
+        difficulty_level:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+        estimated_hours:
+          type: number
+          nullable: true
+        xp_reward:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+
+    CourseDetailResponse:
+      type: object
+      properties:
+        course:
+          $ref: '#/components/schemas/CourseDetail'
+
+    WorkOrderSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Highway Delivery Challenge
+        description:
+          type: string
+          nullable: true
+        game_title:
+          type: string
+          enum: [ATS, Farming_Sim, Construction_Sim, Mechanic_Sim]
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+        xp_reward:
+          type: integer
+          example: 150
+        estimated_time_minutes:
+          type: integer
+          nullable: true
+          example: 30
+        success_criteria:
+          type: object
+          additionalProperties: true
+          example:
+            distance: 500
+            damage_max: 2
+        created_at:
+          type: string
+          format: date-time
+
+    WorkOrdersListResponse:
+      type: object
+      properties:
+        work_orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrderSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    WorkOrderDetail:
+      allOf:
+        - $ref: '#/components/schemas/WorkOrderSummary'
+        - type: object
+          properties:
+            max_attempts:
+              type: integer
+              nullable: true
+            evidence_requirements:
+              type: object
+              additionalProperties: true
+              example:
+                screenshot_required: true
+                telemetry_required: true
+
+    WorkOrderDetailResponse:
+      type: object
+      properties:
+        work_order:
+          $ref: '#/components/schemas/WorkOrderDetail'
+
+    Skill:
+      type: object
+      properties:
+        key:
+          type: string
+          example: pre_trip_inspection
+        name:
+          type: string
+          example: Pre-Trip Inspection
+        category:
+          type: string
+          example: safety
+        description:
+          type: string
+          example: Ability to perform thorough vehicle safety inspections
+
+    SkillsResponse:
+      type: object
+      properties:
+        game:
+          type: string
+          example: ATS
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
