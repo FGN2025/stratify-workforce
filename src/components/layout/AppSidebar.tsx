@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -9,7 +10,11 @@ import {
   Trophy,
   ShieldCheck,
   GraduationCap,
-  CalendarDays
+  CalendarDays,
+  Truck,
+  ChevronDown,
+  ExternalLink,
+  Briefcase
 } from 'lucide-react';
 import {
   Sidebar,
@@ -24,10 +29,12 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
+import { ATS_RESOURCES } from '@/config/atsResources';
 
 const mainNavItems = [
   { title: 'Discover', url: '/', icon: LayoutDashboard },
@@ -52,6 +59,7 @@ export function AppSidebar() {
   const { tenant } = useTenant();
   const { isLoading: authLoading } = useAuth();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
+  const [atsOpen, setAtsOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
   
@@ -111,6 +119,82 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* ATS Resources - External Links */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
+            ATS Resources
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <Collapsible open={atsOpen} onOpenChange={setAtsOpen}>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                  tooltip="ATS Resources"
+                  className="w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                >
+                  <div className="flex items-center gap-3">
+                    <Truck className="h-4 w-4" />
+                    {!collapsed && <span>American Truck Sim</span>}
+                  </div>
+                  {!collapsed && (
+                    <ChevronDown className={cn(
+                      "h-4 w-4 transition-transform",
+                      atsOpen && "rotate-180"
+                    )} />
+                  )}
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pl-4">
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip="CDL Quest - Training"
+                      className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                    >
+                      <a
+                        href={ATS_RESOURCES.cdlQuest.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3"
+                      >
+                        <GraduationCap className="h-4 w-4" style={{ color: ATS_RESOURCES.cdlQuest.accentColor }} />
+                        {!collapsed && (
+                          <>
+                            <span>CDL Quest</span>
+                            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                          </>
+                        )}
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip="CDL Exchange - Careers"
+                      className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                    >
+                      <a
+                        href={ATS_RESOURCES.cdlExchange.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3"
+                      >
+                        <Briefcase className="h-4 w-4" style={{ color: ATS_RESOURCES.cdlExchange.accentColor }} />
+                        {!collapsed && (
+                          <>
+                            <span>CDL Exchange</span>
+                            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                          </>
+                        )}
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </CollapsibleContent>
+            </Collapsible>
           </SidebarGroupContent>
         </SidebarGroup>
 

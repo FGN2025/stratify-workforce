@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { EventCard } from '@/components/marketplace/EventCard';
+import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { WorkOrderFilters, WorkOrderFilter } from '@/components/work-orders/WorkOrderFilters';
 import { useWorkOrders, WorkOrderWithXP } from '@/hooks/useWorkOrders';
 import { useChannelSubscriptions } from '@/hooks/useChannelSubscriptions';
@@ -15,11 +16,15 @@ import {
   Clock, 
   Trophy, 
   Target,
-  Zap 
+  Zap,
+  Truck,
+  GraduationCap,
+  Briefcase
 } from 'lucide-react';
 import type { Tenant, GameTitle } from '@/types/tenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { ATS_RESOURCES } from '@/config/atsResources';
 
 const WorkOrders = () => {
   const [activeFilter, setActiveFilter] = useState<WorkOrderFilter>('all');
@@ -179,6 +184,36 @@ const WorkOrders = () => {
                 />
               </div>
             ))}
+          </HorizontalCarousel>
+        )}
+
+        {/* ATS Deep Dive Resources - Shows when ATS filter active or ATS work orders exist */}
+        {(activeFilter === 'ATS' || atsWorkOrders.length > 0) && (
+          <HorizontalCarousel
+            title="Deep Dive: American Truck Simulator"
+            subtitle="Extended training resources and career pathways"
+            icon={<Truck className="h-5 w-5" />}
+          >
+            <div className="w-80 shrink-0 snap-start">
+              <ExternalResourceCard
+                title={ATS_RESOURCES.cdlQuest.title}
+                description={ATS_RESOURCES.cdlQuest.description}
+                href={ATS_RESOURCES.cdlQuest.href}
+                icon={<GraduationCap className="h-6 w-6" />}
+                ctaLabel="Start Training"
+                accentColor={ATS_RESOURCES.cdlQuest.accentColor}
+              />
+            </div>
+            <div className="w-80 shrink-0 snap-start">
+              <ExternalResourceCard
+                title={ATS_RESOURCES.cdlExchange.title}
+                description={ATS_RESOURCES.cdlExchange.description}
+                href={ATS_RESOURCES.cdlExchange.href}
+                icon={<Briefcase className="h-6 w-6" />}
+                ctaLabel="View Opportunities"
+                accentColor={ATS_RESOURCES.cdlExchange.accentColor}
+              />
+            </div>
           </HorizontalCarousel>
         )}
 
