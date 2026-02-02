@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
+import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { CommunityCard } from '@/components/marketplace/CommunityCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
@@ -92,16 +93,21 @@ const Communities = () => {
           </Button>
         </div>
 
-        {/* Communities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Communities Carousel */}
+        <HorizontalCarousel
+          title="All Communities"
+          subtitle={`${filteredCommunities.length} training organizations`}
+          icon={<Users className="h-5 w-5" />}
+        >
           {filteredCommunities.map((community, idx) => (
-            <CommunityCard 
-              key={community.id}
-              community={community}
-              featured={idx === 0}
-            />
+            <div key={community.id} className="w-72 shrink-0 snap-start">
+              <CommunityCard 
+                community={community}
+                featured={idx === 0}
+              />
+            </div>
           ))}
-        </div>
+        </HorizontalCarousel>
 
         {filteredCommunities.length === 0 && (
           <div className="glass-card p-12 text-center">

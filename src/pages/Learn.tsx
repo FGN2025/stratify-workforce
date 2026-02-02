@@ -1,5 +1,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
+import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { CourseCard } from '@/components/learn/CourseCard';
 import { EnrolledCourses } from '@/components/learn/EnrolledCourses';
 import { useCourses } from '@/hooks/useCourses';
@@ -54,9 +55,9 @@ export default function Learn() {
               </div>
 
               {coursesLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <Skeleton key={i} className="h-72 rounded-lg" />
+                <div className="flex gap-4 overflow-hidden">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-72 w-80 shrink-0 rounded-lg" />
                   ))}
                 </div>
               ) : availableCourses.length === 0 ? (
@@ -68,11 +69,17 @@ export default function Learn() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <HorizontalCarousel
+                  title="Available Courses"
+                  subtitle={`${availableCourses.length} courses to explore`}
+                  icon={<BookOpen className="h-5 w-5" />}
+                >
                   {availableCourses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
+                    <div key={course.id} className="w-80 shrink-0 snap-start">
+                      <CourseCard course={course} />
+                    </div>
                   ))}
-                </div>
+                </HorizontalCarousel>
               )}
             </TabsContent>
 

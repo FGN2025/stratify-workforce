@@ -143,25 +143,21 @@ const Index = () => {
 
         {/* Popular This Week */}
         {workOrders.length > 0 && (
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <div>
-                <h2 className="text-lg font-bold uppercase tracking-wide">Popular This Week</h2>
-                <p className="text-sm text-muted-foreground">Top-rated training scenarios based on completions</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {workOrders.slice(0, 6).map((wo) => (
+          <HorizontalCarousel
+            title="Popular This Week"
+            subtitle="Top-rated training scenarios based on completions"
+            icon={<TrendingUp className="h-5 w-5" />}
+            viewAllLink="/work-orders?sort=popular"
+          >
+            {workOrders.slice(0, 6).map((wo) => (
+              <div key={`popular-${wo.id}`} className="w-72 shrink-0 snap-start">
                 <EventCard 
-                  key={`popular-${wo.id}`}
                   workOrder={wo}
                   community={getRandomCommunity()}
                 />
-              ))}
-            </div>
-          </section>
+              </div>
+            ))}
+          </HorizontalCarousel>
         )}
       </div>
     </AppLayout>
