@@ -161,7 +161,7 @@ export function MergingBracketConnector({
   matchCount,
   matchIndex,
   matchHeight = 140,
-  matchGap = 16,
+  matchGap = 24,
   hasWinner = false,
 }: {
   matchCount: number;
@@ -171,14 +171,14 @@ export function MergingBracketConnector({
   hasWinner?: boolean;
 }) {
   const isTopOfPair = matchIndex % 2 === 0;
-  const width = 48;
+  const width = 64;
   
   // Calculate the vertical distance to the merge point
   const halfTotalHeight = (matchHeight + matchGap) / 2;
   
   // The merge point Y depends on whether this is top or bottom
   const startY = matchHeight / 2;
-  const midX = width / 2;
+  const midX = width * 0.4;
   const endX = width;
   
   // For top of pair: line goes down-right then right
@@ -187,13 +187,24 @@ export function MergingBracketConnector({
     ? startY + halfTotalHeight 
     : startY - halfTotalHeight;
   
+  // Calculate viewBox to accommodate both directions
+  const viewBoxY = isTopOfPair ? 0 : -matchGap;
+  const viewBoxHeight = matchHeight + matchGap;
+  
   return (
-    <div className="relative flex items-center" style={{ height: matchHeight }}>
+    <div 
+      className="relative flex items-center justify-center" 
+      style={{ height: matchHeight, width }}
+    >
       <svg
         width={width}
-        height={matchHeight + matchGap}
+        height={viewBoxHeight}
         className="overflow-visible"
-        viewBox={`0 ${isTopOfPair ? 0 : -matchGap} ${width} ${matchHeight + matchGap}`}
+        viewBox={`0 ${viewBoxY} ${width} ${viewBoxHeight}`}
+        style={{ 
+          position: 'absolute',
+          top: isTopOfPair ? 0 : -matchGap,
+        }}
       >
         {/* Glow layer (rendered first, behind main lines) */}
         {hasWinner && (
