@@ -1,75 +1,120 @@
 
-# Plan: Create Sample Student Data
 
-## Overview
-Insert sample student records into the database for American Truck Simulator (ATS) and Construction Simulator to populate the Students page with demo data.
+# Plan: Improve Dockerfile for Vite/React with Nginx
 
----
-
-## Data to Create
-
-### 1. Sample Profiles (8 students)
-Create student profiles assigned to the **FGN Global** tenant (`efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca`):
-
-| Username | Employability Score | Avatar | Skills Focus |
-|----------|---------------------|--------|--------------|
-| Jake_Trucker | 85 | - | ATS specialist |
-| Maria_Roads | 72 | - | ATS driver |
-| Sam_Diesel | 68 | - | ATS / mixed |
-| Emma_Wheeler | 91 | - | Top ATS performer |
-| Carlos_Builder | 78 | - | Construction specialist |
-| Alex_Crane | 65 | - | Construction operator |
-| Sophie_Excavator | 82 | - | Construction / mixed |
-| Mike_Concrete | 70 | - | Construction worker |
-
-### 2. Game Stats for Each Student
-Create `user_game_stats` records to show play time and activity:
-
-| Student | Game | Hours Played | Last Played |
-|---------|------|--------------|-------------|
-| Jake_Trucker | ATS | 45 | 2 hours ago |
-| Maria_Roads | ATS | 32 | 1 day ago |
-| Sam_Diesel | ATS | 28 | 3 days ago |
-| Emma_Wheeler | ATS | 62 | 30 min ago |
-| Carlos_Builder | Construction_Sim | 38 | 4 hours ago |
-| Alex_Crane | Construction_Sim | 22 | 2 days ago |
-| Sophie_Excavator | Construction_Sim | 48 | 1 hour ago |
-| Mike_Concrete | Construction_Sim | 25 | 5 days ago |
+## Current State
+A Dockerfile already exists in the project. However, it has two issues:
+1. The `sed` command to change nginx port from 80 to 8000 may not work reliably
+2. SPA (Single Page Application) routing is not configured - React Router routes will return 404 on page refresh
 
 ---
 
-## SQL Migration Required
+## Changes Required
 
-```sql
--- Create sample student profiles for FGN Global tenant
-INSERT INTO profiles (id, tenant_id, username, employability_score, skills)
-VALUES 
-  (gen_random_uuid(), 'efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca', 'Jake_Trucker', 85, 
-   '{"speed": 80, "safety": 88, "precision": 82, "efficiency": 85, "equipment_care": 90}'),
-  (gen_random_uuid(), 'efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca', 'Maria_Roads', 72,
-   '{"speed": 70, "safety": 75, "precision": 68, "efficiency": 72, "equipment_care": 74}'),
-  -- ... (6 more students)
-  
--- Create game stats for each student
-INSERT INTO user_game_stats (user_id, game_title, total_play_time_minutes, last_played_at, ...)
--- ... stats for each student
+### 1. Create Custom Nginx Configuration
+**New file: `nginx.conf`**
+
+A proper nginx config that:
+- Listens on port 8000
+- Serves the React app from `/usr/share/nginx/html`
+- Handles SPA routing by returning `index.html` for all routes (so React Router can handle them)
+- Sets proper caching headers for static assets
+- Enables gzip compression for better performance
+
+### 2. Update Dockerfile
+**File: `Dockerfile`**
+
+- Remove the unreliable `sed` command
+- Copy the custom `nginx.conf` into the container
+- Pass environment variables at build time using ARG/ENV for Vite
+
+### 3. Fix docker-compose.yml Indentation
+**File: `docker-compose.yml`**
+
+- Fix the indentation issue with `env_file` (currently not properly nested under the `app` service)
+
+---
+
+## Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `nginx.conf` | Create | Custom nginx config with port 8000 and SPA routing |
+| `Dockerfile` | Update | Use custom nginx config, proper build args |
+| `docker-compose.yml` | Update | Fix YAML indentation |
+
+---
+
+## Technical Details
+
+### nginx.conf
+```text
+server {
+    listen 8000;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA routing - return index.html for all routes
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript;
+}
+```
+
+### Dockerfile Updates
+```text
+# Build stage - pass VITE_ env vars as build args
+FROM node:20-alpine AS build
+WORKDIR /app
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+ARG VITE_SUPABASE_PROJECT_ID
+COPY package*.json ./
+RUN npm ci --legacy-peer-deps
+COPY . .
+RUN npm run build
+
+# Serve stage - use custom nginx config
+FROM nginx:1.27-alpine
+RUN rm -rf /usr/share/nginx/html/*
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8000
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### docker-compose.yml Fix
+```yaml
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
 ```
 
 ---
 
-## Implementation Steps
+## Deployment Instructions
 
-1. **Run database migration** to insert:
-   - 8 new profile records with tenant_id set to FGN Global
-   - 8+ user_game_stats records linking students to ATS and Construction_Sim
+After these changes, deploy to your Hostinger VPS:
 
-2. **Data will appear automatically** - no code changes needed since `useStudents` hook already queries the database
+1. Push changes to GitHub
+2. Pull on VPS: `git pull`
+3. Build and run: `docker-compose up --build -d`
+4. Access app at: `http://your-vps-ip:8000`
 
----
-
-## Notes
-
-- Profile IDs will be auto-generated UUIDs (not linked to auth.users since these are demo records)
-- The `last_played_at` timestamps will be set relative to current time for realistic "X hours ago" display
-- Students will appear in the "Top Performers" carousel based on their employability scores
-- Some students will show as "idle" or "offline" based on their last activity
