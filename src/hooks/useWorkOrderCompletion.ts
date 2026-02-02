@@ -212,7 +212,7 @@ export function useUserWorkOrderStatus(workOrderId: string) {
       if (error) throw error;
 
       const latest = data?.[0];
-      if (!latest) return { hasAttempted: false, latestStatus: null, attemptCount: 0 };
+      if (!latest) return { hasAttempted: false, latestStatus: null, attemptCount: 0, latestCompletionId: undefined };
 
       // Get total count
       const { count } = await supabase
@@ -228,6 +228,7 @@ export function useUserWorkOrderStatus(workOrderId: string) {
         attemptCount: count || 0,
         isCompleted: latest.status === 'completed',
         bestScore: latest.score, // TODO: Track best score
+        latestCompletionId: latest.id,
       };
     },
   });
