@@ -59,7 +59,8 @@ Deno.serve(async (req) => {
     // Create Supabase clients
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+    // Use SUPABASE_ANON_KEY (standard edge function secret)
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     // Client with user's token for auth verification
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
