@@ -41,6 +41,7 @@ export default function Admin() {
   const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
   const { data: pendingCommunityCount = 0 } = usePendingCommunityCount();
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [tenants, setTenants] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -115,6 +116,15 @@ export default function Admin() {
         topGame: 'ATS',
         newUsersThisWeek,
       });
+
+      // Fetch tenants for the invite dialog
+      const { data: tenantsData } = await supabase
+        .from('tenants')
+        .select('id, name, slug')
+        .eq('approval_status', 'approved')
+        .order('name');
+      
+      setTenants(tenantsData || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast({
@@ -255,6 +265,7 @@ export default function Admin() {
                   users={users}
                   isLoading={isLoading}
                   onRoleChange={handleRoleChange}
+                  tenants={tenants}
                 />
               </CardContent>
             </Card>

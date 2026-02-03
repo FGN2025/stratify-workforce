@@ -1559,6 +1559,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["invitation_status"]
+          tenant_id: string | null
+          username: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          tenant_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          tenant_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_lesson_progress: {
         Row: {
           attempts: number
@@ -1969,6 +2016,7 @@ export type Database = {
         | "Construction_Sim"
         | "Mechanic_Sim"
         | "Fiber_Tech"
+      invitation_status: "pending" | "accepted" | "expired" | "revoked"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
       membership_request_status: "pending" | "approved" | "rejected"
@@ -2180,6 +2228,7 @@ export const Constants = {
         "Mechanic_Sim",
         "Fiber_Tech",
       ],
+      invitation_status: ["pending", "accepted", "expired", "revoked"],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
       match_status: ["pending", "in_progress", "completed"],
       membership_request_status: ["pending", "approved", "rejected"],
