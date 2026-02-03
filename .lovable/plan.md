@@ -1,73 +1,43 @@
 
-
-# Plan: Per-Work-Order Cover Images with Database Schema Changes
+# Plan: Add Cover Image Editing to Work Order Detail Page
 
 ## Overview
 
-Add the ability for each work order to have its own custom cover image, replacing the current system where all work orders of the same game type share a generic game cover image. This involves a database schema change and updates to multiple components.
+The Work Order Detail page (`/work-orders/:id`) currently displays only a small `GameIcon`, missing both the cover image display and the admin editing capability that was added to `EventCard`. This plan adds a hero-style cover image section with inline editing for admins.
 
-## Current State
+## Current vs Proposed State
 
 ```text
+CURRENT STATE (WorkOrderDetail.tsx)
 ┌─────────────────────────────────────────────────────────────────┐
-│                     CURRENT IMAGE LOGIC                          │
-├─────────────────────────────────────────────────────────────────┤
+│  ← Back to Work Orders                                          │
 │                                                                  │
-│  Work Order (game_title: 'ATS')                                 │
-│         │                                                        │
-│         └──► useGameCoverImages() ──► Returns generic ATS image │
-│                                                                  │
-│  Work Order (game_title: 'ATS')  ──► Same generic ATS image     │
-│                                                                  │
-│  Work Order (game_title: 'ATS')  ──► Same generic ATS image     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  [GameIcon]   American Truck Simulator   ⭐ Beginner       │ │
+│  │               Evidence Test Work Order                      │ │
+│  │               ◎ 58 XP  ⏱ ~30 min  👥 24 completed          │ │
+│  └────────────────────────────────────────────────────────────┘ │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 
-Problem: All ATS work orders look identical in card views
-```
-
-## Proposed State
-
-```text
+PROPOSED STATE (with cover image hero)
 ┌─────────────────────────────────────────────────────────────────┐
-│                     NEW IMAGE LOGIC                              │
-├─────────────────────────────────────────────────────────────────┤
+│  ← Back to Work Orders                                          │
 │                                                                  │
-│  Work Order 1 (cover_image_url: "https://...")                  │
-│         │                                                        │
-│         └──► Uses custom cover_image_url                        │
-│                                                                  │
-│  Work Order 2 (cover_image_url: null)                           │
-│         │                                                        │
-│         └──► Falls back to game cover from useGameCoverImages() │
-│                                                                  │
-│  Work Order 3 (cover_image_url: "https://...")                  │
-│         │                                                        │
-│         └──► Uses custom cover_image_url                        │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  ┌─────────────────────────────────────────────┐           │ │
+│  │  │                                              │    [📷]  │ │
+│  │  │           [Cover Image Hero]                │  (admin) │ │
+│  │  │            or Game Fallback                 │           │ │
+│  │  │                                              │           │ │
+│  │  └─────────────────────────────────────────────┘           │ │
+│  │                                                             │ │
+│  │  American Truck Simulator   ⭐ Beginner                    │ │
+│  │  Evidence Test Work Order                                   │ │
+│  │  ◎ 58 XP  ⏱ ~30 min  👥 24 completed                       │ │
+│  └────────────────────────────────────────────────────────────┘ │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
-
-Solution: Each work order can have unique imagery while maintaining fallback
-```
-
----
-
-## Database Schema Change
-
-### New Column
-
-| Table | Column | Type | Nullable | Default |
-|-------|--------|------|----------|---------|
-| `work_orders` | `cover_image_url` | `text` | Yes | `NULL` |
-
-### Migration SQL
-
-```sql
-ALTER TABLE work_orders
-ADD COLUMN cover_image_url text;
-
-COMMENT ON COLUMN work_orders.cover_image_url IS 
-  'Optional custom cover image URL. Falls back to game-type cover if null.';
 ```
 
 ---
@@ -76,176 +46,121 @@ COMMENT ON COLUMN work_orders.cover_image_url IS
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useWorkOrders.ts` | Add `cover_image_url` to `WorkOrderWithXP` interface and query mapping |
-| `src/types/tenant.ts` | Add `cover_image_url` to `WorkOrder` type |
-| `src/components/marketplace/EventCard.tsx` | Use `workOrder.cover_image_url` with game fallback, add `EditableImageWrapper` |
-| `src/components/dashboard/WorkOrderCard.tsx` | Add cover image display with edit capability |
-| `src/components/admin/WorkOrderEditDialog.tsx` | Add cover image URL field with MediaPickerDialog integration |
+| `src/pages/WorkOrderDetail.tsx` | Add cover image hero with `EditableImageWrapper` and `MediaPickerDialog` |
 
 ---
 
 ## Implementation Details
 
-### 1. Database Migration
+### WorkOrderDetail.tsx Updates
 
-Add the `cover_image_url` column to the `work_orders` table. Nullable text field with no default - allowing each work order to optionally specify a custom cover.
+**New imports:**
+- `EditableImageWrapper` from `@/components/admin/EditableImageWrapper`
+- `MediaPickerDialog` from `@/components/admin/MediaPickerDialog`
+- `useGameCoverImages` from `@/hooks/useSiteMedia`
+- `supabase` from `@/integrations/supabase/client`
+- `useQueryClient` from `@tanstack/react-query`
 
-### 2. Type Updates
+**New state:**
+- `showMediaPicker` boolean to control dialog visibility
 
-**src/types/tenant.ts - WorkOrder interface:**
+**Cover image logic:**
 ```typescript
-export interface WorkOrder {
-  id: string;
-  tenant_id: string | null;
-  title: string;
-  description: string | null;
-  game_title: GameTitle;
-  success_criteria: Record<string, number>;
-  is_active: boolean;
-  created_at: string;
-  cover_image_url: string | null;  // NEW
-  tenant?: Tenant;
-}
-```
-
-**src/hooks/useWorkOrders.ts - WorkOrderWithXP interface:**
-```typescript
-export interface WorkOrderWithXP {
-  // ... existing fields ...
-  cover_image_url: string | null;  // NEW
-}
-```
-
-### 3. EventCard Component Updates
-
-The EventCard currently uses `useGameCoverImages()` to get a generic game cover:
-
-```typescript
-// Current logic (line 43-44)
 const { gameCoverImages } = useGameCoverImages();
-const coverImage = gameCoverImages[workOrder.game_title];
+const coverImage = workOrder.cover_image_url || gameCoverImages[workOrder.game_title];
 ```
 
-New logic with fallback:
-
+**Update handler:**
 ```typescript
-// New logic
-const { gameCoverImages } = useGameCoverImages();
-const coverImage = ('cover_image_url' in workOrder && workOrder.cover_image_url) 
-  ? workOrder.cover_image_url 
-  : gameCoverImages[workOrder.game_title];
+const handleCoverImageUpdate = async (url: string) => {
+  const { error } = await supabase
+    .from('work_orders')
+    .update({ cover_image_url: url })
+    .eq('id', workOrder.id);
+    
+  if (error) throw error;
+  
+  queryClient.invalidateQueries({ queryKey: ['work-order', id] });
+  toast({ title: 'Cover image updated' });
+};
 ```
 
-Add `EditableImageWrapper` around the cover image to enable admin editing:
+**UI changes:**
+Replace the current header layout (GameIcon + info) with a hero-style layout:
 
+1. Add a cover image section at the top of the glass-card header
+2. The cover image is ~200px tall with gradient overlay
+3. Wrap the image with `EditableImageWrapper` for admin editing
+4. Keep the `GameIcon` as a smaller element overlaid or below the hero
+5. Move action buttons to the right side (already positioned there)
+
+### Layout Options
+
+**Option A: Full-width hero above content**
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  EventCard with Admin Edit Capability                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │                                                          │    │
-│  │          [Cover Image]                        [📷]       │    │
-│  │                                             (admin)      │    │
-│  │          XP Badge                                        │    │
-│  │                                                          │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│  Community Avatar + Name                                         │
-│  Work Order Title                                                │
-│  Difficulty • ~30 min                                            │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│  [━━━━━━━━━━━━━━━ Cover Image Hero ━━━━━━━━━━━━━━━]  [📷]     │
+│                                                                 │
+│  [Icon]  Title / Description / Stats                [Actions]  │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-### 4. WorkOrderCard Component Updates
-
-The dashboard `WorkOrderCard` currently shows only a `GameIcon`, not a cover image. Two options:
-
-**Option A (Minimal):** Keep current layout, no cover image display
-**Option B (Enhanced):** Add small thumbnail image like the compact EventCard
-
-Recommended: **Option A** for now to keep dashboard compact. The EventCard handles the visual marketing view.
-
-### 5. WorkOrderEditDialog Updates
-
-Add cover image section to the admin edit dialog:
-
+**Option B: Side-by-side (image left, info right)** - Recommended
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    Edit Work Order                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Title: [_____________________________________]                  │
-│  Description: [________________________________]                 │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  Cover Image (Optional)                                  │    │
-│  │  ┌───────────────────────────────────────────────────┐  │    │
-│  │  │                                                    │  │    │
-│  │  │   [Current Preview or Placeholder]                │  │    │
-│  │  │                                                    │  │    │
-│  │  └───────────────────────────────────────────────────┘  │    │
-│  │                                                          │    │
-│  │  [Change Image]              [Remove]                   │    │
-│  │                                                          │    │
-│  │  Falls back to game cover if not set                    │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│  Game: [ATS ▼]           Difficulty: [Beginner ▼]               │
-│  ...                                                             │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│  ┌────────────┐                                                │
+│  │   Cover    │  Title                           [Start]      │
+│  │   Image    │  Description                     [Subscribe]  │
+│  │    [📷]    │  Stats                                        │
+│  └────────────┘                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-**New state and handlers:**
-- `coverImageUrl` state initialized from `workOrder.cover_image_url`
-- `showMediaPicker` state to control MediaPickerDialog
-- On save: include `cover_image_url` in the update payload
-
-### 6. WorkOrderDetail Page (Optional Enhancement)
-
-The detail page at `/work-orders/:id` could also display the cover image as a hero. Currently it only shows a `GameIcon`. This is optional but would provide visual consistency.
+I recommend **Option B** as it maintains visual consistency with EventCard while fitting the existing layout structure.
 
 ---
 
 ## Data Flow
 
 ```text
-Admin opens WorkOrderEditDialog
+Admin views WorkOrderDetail page
         │
         ▼
-Clicks "Change Image" button
+Cover image displays (custom or game fallback)
         │
         ▼
-MediaPickerDialog opens (Upload / URL / Library)
+Admin hovers on image → Edit icon appears
         │
         ▼
-Selects/uploads image ──► Returns URL
+Admin clicks edit → MediaPickerDialog opens
         │
         ▼
-coverImageUrl state updated ──► Preview shown
+Select/upload image → handleCoverImageUpdate called
         │
         ▼
-Admin clicks "Save"
-        │
-        ▼
-Supabase: UPDATE work_orders SET cover_image_url = ?
-        │
-        ▼
-React Query invalidation ──► EventCard re-renders with new image
+Supabase UPDATE → Query invalidation → UI refreshes
 ```
 
 ---
 
-## Affected Components Summary
+## Admin UX
 
-| Component | Current Behavior | New Behavior |
-|-----------|-----------------|--------------|
-| `EventCard` | Uses game-type cover | Uses `cover_image_url` with game fallback, admin edit overlay |
-| `WorkOrderCard` | GameIcon only | No change (keep minimal) |
-| `WorkOrderEditDialog` | No image field | New cover image section with MediaPickerDialog |
-| `WorkOrderDetail` | GameIcon only | Optional: hero image from cover_image_url |
+As an admin viewing the Work Order Detail page:
+
+1. The cover image appears prominently in the header section
+2. Hovering over the image reveals the camera edit icon
+3. Clicking opens the MediaPickerDialog with Upload/URL/Library tabs
+4. After selection, the image updates immediately
+5. Non-admin users see the cover image without edit controls
+
+---
+
+## Technical Notes
+
+- Reuses existing `EditableImageWrapper` and `MediaPickerDialog` from Phase 1
+- Uses `useGameCoverImages()` hook for fallback images
+- Invalidates `['work-order', id]` query to refresh the detail page
+- The `workOrder` from `useWorkOrderById` already includes `cover_image_url`
 
 ---
 
@@ -253,23 +168,22 @@ React Query invalidation ──► EventCard re-renders with new image
 
 | Task | Time |
 |------|------|
-| Database migration (add column) | 5 min |
-| Type updates (WorkOrder, WorkOrderWithXP) | 10 min |
-| useWorkOrders hook update | 10 min |
-| EventCard update with fallback + EditableImageWrapper | 30 min |
-| WorkOrderEditDialog cover image section | 45 min |
-| Testing & edge cases | 20 min |
-| **Total** | **~2 hours** |
+| Add imports and state | 5 min |
+| Add cover image logic and handler | 10 min |
+| Update header layout with image + wrapper | 15 min |
+| Add MediaPickerDialog | 5 min |
+| Testing & styling polish | 10 min |
+| **Total** | **~45 min** |
 
 ---
 
 ## Summary
 
-This implementation adds per-work-order cover images while maintaining backward compatibility:
+This enhancement adds the missing cover image editing to the Work Order Detail page:
 
-1. **Database**: New nullable `cover_image_url` column on `work_orders`
-2. **Fallback Logic**: If `cover_image_url` is null, use game-type cover image
-3. **Admin Edit**: Inline editing via `EditableImageWrapper` + `MediaPickerDialog` on EventCard
-4. **Dialog Edit**: Cover image section in `WorkOrderEditDialog` for full CRUD
-5. **Reuses Phase 1 Infrastructure**: `EditableImageWrapper` and `MediaPickerDialog` from the previous implementation
+1. **Display**: Shows custom cover image with game-type fallback
+2. **Admin Edit**: Inline editing via `EditableImageWrapper` + `MediaPickerDialog`
+3. **Consistency**: Matches the pattern used in `EventCard` for a unified experience
+4. **Reuse**: Leverages Phase 1 infrastructure components
 
+After this implementation, admins can change the cover image directly from the detail page you're currently viewing.
