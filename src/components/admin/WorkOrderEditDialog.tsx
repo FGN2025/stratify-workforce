@@ -486,12 +486,12 @@ export function WorkOrderEditDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="tenant">Community</Label>
-              <Select value={tenantId} onValueChange={setTenantId}>
+              <Select value={tenantId || 'none'} onValueChange={(v) => setTenantId(v === 'none' ? '' : v)}>
                 <SelectTrigger id="tenant">
                   <SelectValue placeholder="All communities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Communities (Global)</SelectItem>
+                  <SelectItem value="none">All Communities (Global)</SelectItem>
                   {tenants.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
