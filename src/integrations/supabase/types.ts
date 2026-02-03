@@ -1380,6 +1380,69 @@ export type Database = {
           },
         ]
       }
+      user_discord_connections: {
+        Row: {
+          access_token: string
+          connected_at: string
+          created_at: string
+          discord_accent_color: number | null
+          discord_avatar_hash: string | null
+          discord_banner_hash: string | null
+          discord_discriminator: string | null
+          discord_global_name: string | null
+          discord_id: string
+          discord_username: string
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          refresh_token: string
+          scopes: string[]
+          token_expires_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          created_at?: string
+          discord_accent_color?: number | null
+          discord_avatar_hash?: string | null
+          discord_banner_hash?: string | null
+          discord_discriminator?: string | null
+          discord_global_name?: string | null
+          discord_id: string
+          discord_username: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          refresh_token: string
+          scopes?: string[]
+          token_expires_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          created_at?: string
+          discord_accent_color?: number | null
+          discord_avatar_hash?: string | null
+          discord_banner_hash?: string | null
+          discord_discriminator?: string | null
+          discord_global_name?: string | null
+          discord_id?: string
+          discord_username?: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          refresh_token?: string
+          scopes?: string[]
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_game_stats: {
         Row: {
           best_score: number | null
