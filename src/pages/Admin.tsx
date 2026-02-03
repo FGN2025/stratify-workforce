@@ -14,6 +14,7 @@ import { AuthorizedAppsManager } from '@/components/admin/AuthorizedAppsManager'
 import { CredentialTypesManager } from '@/components/admin/CredentialTypesManager';
 import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
+import { DiscordConnectionsManager } from '@/components/admin/DiscordConnectionsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -234,6 +235,9 @@ export default function Admin() {
                 <TabsTrigger value="credential-types" className="text-primary data-[state=active]:text-primary">
                   Credential Types
                 </TabsTrigger>
+                <TabsTrigger value="discord" className="text-[#5865F2] data-[state=active]:text-[#5865F2]">
+                  Discord
+                </TabsTrigger>
                 <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
                   Super Admin
                 </TabsTrigger>
@@ -334,6 +338,14 @@ export default function Admin() {
                 <Card className="border-border/50">
                   <CardContent className="pt-6">
                     <CredentialTypesManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="discord">
+                <Card className="border-border/50">
+                  <CardContent className="pt-6">
+                    <DiscordConnectionsManager />
                   </CardContent>
                 </Card>
               </TabsContent>

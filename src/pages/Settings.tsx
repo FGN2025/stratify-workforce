@@ -3,6 +3,7 @@ import { PageHero } from '@/components/marketplace/PageHero';
 import { useTenant } from '@/contexts/TenantContext';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 import { TenantMediaSettings } from '@/components/settings/TenantMediaSettings';
+import { DiscordConnectionCard } from '@/components/settings/DiscordConnectionCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -91,6 +92,9 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Discord Integration */}
+          <DiscordConnectionCard />
 
           {/* Media Assets */}
           <TenantMediaSettings />
