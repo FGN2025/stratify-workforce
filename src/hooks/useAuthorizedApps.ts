@@ -39,12 +39,17 @@ export function useCreateAuthorizedApp() {
 
   return useMutation({
     mutationFn: async (app: AuthorizedAppInsert) => {
-      // First create with a placeholder hash
+      // Get the current user's ID for owner_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // First create with a placeholder hash and set owner_id
       const { data, error } = await supabase
         .from('authorized_apps')
         .insert({
           ...app,
           api_key_hash: 'pending', // Will be replaced by generate function
+          owner_id: user.id,
         })
         .select()
         .single();

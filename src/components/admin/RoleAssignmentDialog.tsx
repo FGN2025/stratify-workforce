@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Shield, ShieldAlert, User } from 'lucide-react';
+import { Loader2, Shield, ShieldAlert, User, Code } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -67,6 +67,8 @@ export function RoleAssignmentDialog({
         return <ShieldAlert className="h-4 w-4 text-destructive" />;
       case 'moderator':
         return <Shield className="h-4 w-4 text-amber-500" />;
+      case 'developer':
+        return <Code className="h-4 w-4 text-purple-500" />;
       default:
         return <User className="h-4 w-4 text-muted-foreground" />;
     }
@@ -116,6 +118,13 @@ export function RoleAssignmentDialog({
                   {getRoleIcon('moderator')}
                   <span>Moderator</span>
                   <span className="text-xs text-muted-foreground ml-2">Content moderation</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="developer">
+                <div className="flex items-center gap-2">
+                  {getRoleIcon('developer')}
+                  <span>Developer</span>
+                  <span className="text-xs text-muted-foreground ml-2">API credential management</span>
                 </div>
               </SelectItem>
               <SelectItem value="admin">

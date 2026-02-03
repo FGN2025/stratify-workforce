@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-import { ShieldCheck, ShieldAlert, User, Crown, Loader2 } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, User, Crown, Loader2, Code } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -46,6 +46,7 @@ const roleConfig: Record<AppRole, { label: string; icon: React.ReactNode; color:
   super_admin: { label: 'Super Admin', icon: <Crown className="h-4 w-4" />, color: 'text-amber-400' },
   admin: { label: 'Admin', icon: <ShieldCheck className="h-4 w-4" />, color: 'text-blue-400' },
   moderator: { label: 'Moderator', icon: <ShieldAlert className="h-4 w-4" />, color: 'text-green-400' },
+  developer: { label: 'Developer', icon: <Code className="h-4 w-4" />, color: 'text-purple-400' },
   user: { label: 'User', icon: <User className="h-4 w-4" />, color: 'text-muted-foreground' },
 };
 
@@ -182,7 +183,7 @@ export function RoleEscalationControls() {
       <div>
         <h3 className="text-lg font-semibold">Role Escalation Controls</h3>
         <p className="text-sm text-muted-foreground">
-          Promote or demote users to admin, moderator, or super_admin roles
+          Promote or demote users to admin, moderator, developer, or super_admin roles
         </p>
       </div>
 
@@ -261,6 +262,12 @@ export function RoleEscalationControls() {
                         <div className="flex items-center gap-2">
                           <ShieldAlert className="h-4 w-4 text-green-400" />
                           Moderator
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="developer">
+                        <div className="flex items-center gap-2">
+                          <Code className="h-4 w-4 text-purple-400" />
+                          Developer
                         </div>
                       </SelectItem>
                       <SelectItem value="user">
