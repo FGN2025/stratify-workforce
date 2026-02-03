@@ -13,6 +13,7 @@ import { EvidenceReviewQueue } from '@/components/admin/EvidenceReviewQueue';
 import { AuthorizedAppsManager } from '@/components/admin/AuthorizedAppsManager';
 import { CredentialTypesManager } from '@/components/admin/CredentialTypesManager';
 import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
+import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
+import { usePendingCommunityCount } from '@/hooks/usePendingCommunityCount';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -36,6 +38,7 @@ interface UserWithRole {
 export default function Admin() {
   const { isSuperAdmin } = useUserRole();
   const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
+  const { data: pendingCommunityCount = 0 } = usePendingCommunityCount();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -214,6 +217,17 @@ export default function Admin() {
             <TabsTrigger value="codes">Registration Codes</TabsTrigger>
             {isSuperAdmin && (
               <>
+                <TabsTrigger value="community-review" className="relative text-primary data-[state=active]:text-primary">
+                  Community Review
+                  {pendingCommunityCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-2 h-5 min-w-5 px-1.5 text-xs"
+                    >
+                      {pendingCommunityCount > 99 ? '99+' : pendingCommunityCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="authorized-apps" className="text-primary data-[state=active]:text-primary">
                   Authorized Apps
                 </TabsTrigger>
@@ -300,6 +314,14 @@ export default function Admin() {
 
           {isSuperAdmin && (
             <>
+              <TabsContent value="community-review">
+                <Card className="border-border/50">
+                  <CardContent className="pt-6">
+                    <CommunityReviewQueue />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="authorized-apps">
                 <Card className="border-border/50">
                   <CardContent className="pt-6">
