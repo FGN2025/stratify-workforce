@@ -74,6 +74,7 @@ export interface WorkOrder {
   success_criteria: Record<string, number>;
   is_active: boolean;
   created_at: string;
+  cover_image_url: string | null;
   tenant?: Tenant;
 }
 

@@ -1618,6 +1618,7 @@ export type Database = {
       work_orders: {
         Row: {
           channel_id: string | null
+          cover_image_url: string | null
           created_at: string
           description: string | null
           difficulty: Database["public"]["Enums"]["work_order_difficulty"]
@@ -1634,6 +1635,7 @@ export type Database = {
         }
         Insert: {
           channel_id?: string | null
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           difficulty?: Database["public"]["Enums"]["work_order_difficulty"]
@@ -1650,6 +1652,7 @@ export type Database = {
         }
         Update: {
           channel_id?: string | null
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           difficulty?: Database["public"]["Enums"]["work_order_difficulty"]

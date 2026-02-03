@@ -59,6 +59,7 @@ interface WorkOrder {
   tenant_id: string | null;
   created_at: string;
   evidence_requirements: EvidenceRequirements | null;
+  cover_image_url: string | null;
 }
 
 const GAME_LABELS: Record<GameTitle, string> = {

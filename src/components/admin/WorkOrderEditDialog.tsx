@@ -27,7 +27,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Loader2, ChevronDown, FileUp } from 'lucide-react';
+import { MediaPickerDialog } from './MediaPickerDialog';
+import { Loader2, ChevronDown, FileUp, ImageIcon, X } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
@@ -57,6 +58,7 @@ interface WorkOrder {
   channel_id: string | null;
   tenant_id: string | null;
   evidence_requirements: EvidenceRequirements | null;
+  cover_image_url: string | null;
 }
 
 interface GameChannel {
@@ -109,6 +111,10 @@ export function WorkOrderEditDialog({
   const [evidenceInstructions, setEvidenceInstructions] = useState('');
   const [evidenceDeadlineHours, setEvidenceDeadlineHours] = useState<string>('');
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+
+  // Cover image state
+  const [coverImageUrl, setCoverImageUrl] = useState<string>('');
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
   // Fetch channels and tenants on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -141,6 +147,7 @@ export function WorkOrderEditDialog({
         setIsActive(workOrder.is_active ?? true);
         setChannelId(workOrder.channel_id || '');
         setTenantId(workOrder.tenant_id || '');
+        setCoverImageUrl(workOrder.cover_image_url || '');
         // Evidence requirements
         const evidence = workOrder.evidence_requirements;
         if (evidence) {
@@ -174,6 +181,7 @@ export function WorkOrderEditDialog({
         setIsActive(true);
         setChannelId('');
         setTenantId('');
+        setCoverImageUrl('');
         // Reset evidence
         setEvidenceRequired(false);
         setEvidenceMinUploads('1');
@@ -233,6 +241,7 @@ export function WorkOrderEditDialog({
         channel_id: channelId || null,
         tenant_id: tenantId || null,
         evidence_requirements: evidenceRequirements as unknown as Json,
+        cover_image_url: coverImageUrl.trim() || null,
       };
 
       if (workOrder) {
@@ -310,6 +319,59 @@ export function WorkOrderEditDialog({
               placeholder="Describe the work order objectives and requirements"
               rows={3}
             />
+          </div>
+
+          {/* Cover Image */}
+          <div className="space-y-3">
+            <Label>Cover Image (Optional)</Label>
+            <div className="p-4 rounded-lg border border-border/50 bg-muted/30">
+              {coverImageUrl ? (
+                <div className="space-y-3">
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                    <img
+                      src={coverImageUrl}
+                      alt="Cover preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCoverImageUrl('')}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMediaPicker(true)}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Change Image
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center aspect-video rounded-lg border-2 border-dashed border-border bg-muted/50">
+                    <div className="text-center">
+                      <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">No cover image set</p>
+                      <p className="text-xs text-muted-foreground">Falls back to game cover</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMediaPicker(true)}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Add Cover Image
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Game and Difficulty */}
@@ -617,6 +679,17 @@ export function WorkOrderEditDialog({
             </Button>
           </DialogFooter>
         </form>
+
+        <MediaPickerDialog
+          open={showMediaPicker}
+          onOpenChange={setShowMediaPicker}
+          onSelect={(url) => {
+            setCoverImageUrl(url);
+            setShowMediaPicker(false);
+          }}
+          title="Select Cover Image"
+          currentImageUrl={coverImageUrl}
+        />
       </DialogContent>
     </Dialog>
   );
