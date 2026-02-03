@@ -131,14 +131,14 @@ export function ApiTryIt({ endpoint, baseUrl }: ApiTryItProps) {
                 </Label>
                 {param.enum ? (
                   <Select
-                    value={params[param.name] || ''}
-                    onValueChange={(value) => setParams({ ...params, [param.name]: value })}
+                    value={params[param.name] || 'none'}
+                    onValueChange={(value) => setParams({ ...params, [param.name]: value === 'none' ? '' : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={`Select ${param.name}`} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {param.enum.map((opt) => (
                         <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                       ))}
