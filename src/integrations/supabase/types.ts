@@ -195,6 +195,11 @@ export type Database = {
         Row: {
           id: string
           joined_at: string
+          request_status: Database["public"]["Enums"]["membership_request_status"]
+          requested_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
           role: Database["public"]["Enums"]["community_membership_role"]
           tenant_id: string
           user_id: string
@@ -202,6 +207,11 @@ export type Database = {
         Insert: {
           id?: string
           joined_at?: string
+          request_status?: Database["public"]["Enums"]["membership_request_status"]
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
           role?: Database["public"]["Enums"]["community_membership_role"]
           tenant_id: string
           user_id: string
@@ -209,6 +219,11 @@ export type Database = {
         Update: {
           id?: string
           joined_at?: string
+          request_status?: Database["public"]["Enums"]["membership_request_status"]
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
           role?: Database["public"]["Enums"]["community_membership_role"]
           tenant_id?: string
           user_id?: string
@@ -1814,6 +1829,7 @@ export type Database = {
       game_title: "ATS" | "Farming_Sim" | "Construction_Sim" | "Mechanic_Sim"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
+      membership_request_status: "pending" | "approved" | "rejected"
       points_type: "xp" | "credits" | "tokens"
       progress_status: "not_started" | "in_progress" | "completed" | "failed"
       registration_status: "registered" | "confirmed" | "cancelled" | "no_show"
@@ -2018,6 +2034,7 @@ export const Constants = {
       game_title: ["ATS", "Farming_Sim", "Construction_Sim", "Mechanic_Sim"],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
       match_status: ["pending", "in_progress", "completed"],
+      membership_request_status: ["pending", "approved", "rejected"],
       points_type: ["xp", "credits", "tokens"],
       progress_status: ["not_started", "in_progress", "completed", "failed"],
       registration_status: ["registered", "confirmed", "cancelled", "no_show"],

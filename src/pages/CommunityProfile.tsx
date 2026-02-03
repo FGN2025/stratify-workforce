@@ -4,11 +4,15 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { EventCard } from '@/components/marketplace/EventCard';
 import { TenantBreadcrumb } from '@/components/TenantBreadcrumb';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { JoinCommunityButton } from '@/components/communities/JoinCommunityButton';
+import { MembershipReviewQueue } from '@/components/communities/MembershipReviewQueue';
+import { useIsManager } from '@/hooks/useMembershipRequest';
+import { usePendingMembershipCount } from '@/hooks/usePendingMembershipCount';
 import { 
   Users, 
   Trophy, 
@@ -17,7 +21,8 @@ import {
   MapPin, 
   Link as LinkIcon,
   ExternalLink,
-  Clock
+  Clock,
+  UserCheck
 } from 'lucide-react';
 import type { Tenant, WorkOrder, GameTitle } from '@/types/tenant';
 
@@ -26,6 +31,10 @@ const CommunityProfile = () => {
   const [community, setCommunity] = useState<Tenant | null>(null);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Manager hooks - called unconditionally, enabled based on community.id
+  const { data: isManager } = useIsManager(community?.id);
+  const { data: pendingCount = 0 } = usePendingMembershipCount(community?.id);
 
   useEffect(() => {
     async function fetchCommunity() {
@@ -173,9 +182,10 @@ const CommunityProfile = () => {
 
             {/* Actions */}
             <div className="flex gap-2 pt-4 sm:pt-8">
-              <Button style={{ backgroundColor: community.brand_color }}>
-                Join Community
-              </Button>
+              <JoinCommunityButton 
+                tenantId={community.id} 
+                brandColor={community.brand_color} 
+              />
               <Button variant="outline" size="icon">
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -212,6 +222,20 @@ const CommunityProfile = () => {
           <TabsList className="bg-muted/50">
             <TabsTrigger value="events">Work Orders</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
+            {isManager && (
+              <TabsTrigger value="requests" className="relative">
+                <UserCheck className="h-4 w-4 mr-1" />
+                Requests
+                {pendingCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+                  >
+                    {pendingCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
@@ -243,6 +267,12 @@ const CommunityProfile = () => {
             </div>
           </TabsContent>
 
+          {isManager && (
+            <TabsContent value="requests" className="mt-6">
+              <MembershipReviewQueue tenantId={community.id} />
+            </TabsContent>
+          )}
+
           <TabsContent value="leaderboard" className="mt-6">
             <div className="glass-card p-12 text-center">
               <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50" />
@@ -254,7 +284,7 @@ const CommunityProfile = () => {
             <div className="glass-card p-6">
               <h3 className="font-semibold mb-2">About {community.name}</h3>
               <p className="text-muted-foreground">
-                {community.name} is a professional training community focused on developing skilled operators through simulation-based learning. Our members participate in realistic work scenarios to build practical skills in a safe environment.
+                {community.description || `${community.name} is a professional training community focused on developing skilled operators through simulation-based learning. Our members participate in realistic work scenarios to build practical skills in a safe environment.`}
               </p>
             </div>
           </TabsContent>
