@@ -86,14 +86,18 @@ export function useDiscordConnection(): UseDiscordConnectionReturn {
 
   const checkConfiguration = useCallback(async (): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.functions.invoke('discord-oauth/status');
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-oauth/status`,
+        { method: 'GET' }
+      );
       
-      if (error) {
-        console.error('Error checking Discord configuration:', error);
+      if (!response.ok) {
+        // Non-2xx response means not configured or error
         setIsConfigured(false);
         return false;
       }
       
+      const data = await response.json();
       const configured = data?.configured ?? false;
       setIsConfigured(configured);
       return configured;
