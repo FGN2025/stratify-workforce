@@ -1,235 +1,176 @@
 
-# Plan: Community Management System
+
+# Plan: Add Hero Image Display to Community Cards
 
 ## Problem Summary
 
-The "Create Community" button on the `/communities` page currently does nothing because no click handler is connected. Additionally, community management is restricted to the Super Admin panel, limiting accessibility for regular admins.
+The `CommunityFormDialog` already supports uploading a cover image for communities, and the `cover_image_url` field exists in both the database and the `Tenant` type. However, the `CommunityCard` component doesn't display this hero image - it only shows the logo avatar.
 
-## Solution Overview
-
-Build a complete community management system accessible to admins, with the ability to:
-- Create and edit communities directly from the Communities page
-- Assign SIM games (ATS, Farming Sim, etc.) to each community
-- Assign work orders to communities
-- Filter communities by category (Game, Employer, Broadband Provider, School)
-
----
-
-## Architecture
+## Current vs Proposed State
 
 ```text
-Communities Page (/communities)
-        │
-        ├─── [Create Community] button ──────► CommunityFormDialog
-        │                                              │
-        │                                              ├── Name, Slug, Description
-        │                                              ├── Category Type (dropdown)
-        │                                              ├── Parent Organization
-        │                                              ├── Game Titles (multi-select)
-        │                                              ├── Logo/Cover Image
-        │                                              └── Brand Color
-        │
-        └─── CommunityCard (each card)
-                    │
-                    └── [Edit] button (admin only) ──► CommunityFormDialog
+CURRENT CommunityCard Layout
+┌─────────────────────────────────────────────────────────────────┐
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  [Brand Color Border Top]                                   ││
+│  │                                                             ││
+│  │  [Logo Avatar]   Community Name          [✏ Edit]          ││
+│  │                  @community-slug                            ││
+│  │                                                             ││
+│  │  ───────────────────────────────────────────────────────── ││
+│  │  👥 Members    🏆 Events    ⭐ Rating                       ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
 
-Work Orders Manager (Admin Dashboard)
-        │
-        └─── WorkOrderEditDialog
-                    │
-                    └── Community Assignment (dropdown)
+PROPOSED CommunityCard Layout (matches EventCard pattern)
+┌─────────────────────────────────────────────────────────────────┐
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                                                             ││
+│  │          [Hero/Cover Image]                      [📷][✏]   ││
+│  │           with gradient overlay                             ││
+│  │                                                             ││
+│  │  [Logo Avatar overlay]           [Featured Badge if set]   ││
+│  │                                                             ││
+│  │  ───────────────────────────────────────────────────────── ││
+│  │                                                             ││
+│  │  Community Name                                             ││
+│  │  @community-slug                                            ││
+│  │                                                             ││
+│  │  ───────────────────────────────────────────────────────── ││
+│  │  👥 Members    🏆 Events    ⭐ Rating                       ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Database Changes
+## No Database Changes Required
 
-**No schema changes required** - All necessary columns already exist:
-
-| Table | Column | Status |
-|-------|--------|--------|
-| `tenants` | `game_titles` (array) | Exists but not used in form |
-| `tenants` | `category_type` (enum) | Exists and used |
-| `work_orders` | `tenant_id` (uuid) | Exists but no UI for assignment |
+The `cover_image_url` column already exists in the `tenants` table and is already included in the `CommunityFormDialog` form.
 
 ---
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/admin/CommunityFormDialog.tsx` | Reusable dialog for creating/editing communities (based on TenantFormDialog but simplified for admin use) |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/Communities.tsx` | Add dialog state, wire up "Create Community" button, add admin role check |
-| `src/components/marketplace/CommunityCard.tsx` | Add edit button for admins |
-| `src/components/admin/superadmin/TenantFormDialog.tsx` | Add game_titles multi-select field |
-| `src/components/admin/WorkOrderEditDialog.tsx` | Add community/tenant assignment dropdown |
-| `src/types/tenant.ts` | Update CATEGORY_LABELS to prioritize the 4 requested types |
+| `src/components/marketplace/CommunityCard.tsx` | Add hero image section with `EditableImageWrapper` |
 
 ---
 
 ## Implementation Details
 
-### 1. CommunityFormDialog Component
+### CommunityCard Updates
 
-A simplified version of `TenantFormDialog` accessible to regular admins (not just super_admin).
+**New Features:**
+1. Display `community.cover_image_url` as a hero image at the top of the card
+2. Add gradient overlay for text readability
+3. Overlay the logo avatar on the hero image (bottom-left corner)
+4. Add inline editing via `EditableImageWrapper` for the hero image (separate from logo editing)
+5. Use brand color as fallback background when no cover image is set
 
-**Form Fields:**
-- **Name** (required) - Community display name
-- **Slug** (auto-generated from name) - URL-friendly identifier
-- **Description** - Short description
-- **Category Type** - Dropdown with:
-  - Game (maps to `trade_skill`)
-  - Employer
-  - Broadband Provider (`broadband_provider`)
-  - School
-  - Other options remain available
-- **Parent Organization** - Optional parent community
-- **Game Titles** - Multi-select checkboxes:
-  - American Truck Simulator (ATS)
-  - Farming Simulator
-  - Construction Simulator
-  - Mechanic Simulator
-- **Logo** - Integration with `MediaPickerDialog`
-- **Cover Image** - Integration with `MediaPickerDialog`
-- **Brand Color** - Color picker
+**Layout Changes:**
 
-### 2. Communities Page Updates
+```text
+Before:
+├── glass-card (border-top: brand_color)
+│   └── p-5 container
+│       ├── Header (avatar + name)
+│       └── Stats grid
 
-**Add to Communities.tsx:**
+After:
+├── glass-card (no border-top, hero has brand color fallback)
+│   ├── Hero Image Section (h-32)
+│   │   ├── cover image OR brand color background
+│   │   ├── gradient overlay
+│   │   ├── logo avatar (bottom-left)
+│   │   ├── featured badge (if applicable)
+│   │   └── EditableImageWrapper for cover editing
+│   └── Content Section (p-4)
+│       ├── Name + slug
+│       └── Stats grid
+```
+
+**New State and Handlers:**
+
 ```typescript
-const { isAdmin } = useUserRole();
-const [showCreateDialog, setShowCreateDialog] = useState(false);
-const [editingCommunity, setEditingCommunity] = useState<Tenant | null>(null);
+const [showCoverPicker, setShowCoverPicker] = useState(false);
 
-// Wire up PageHero primaryAction
-primaryAction={{
-  label: 'Create Community',
-  icon: <Plus className="h-4 w-4" />,
-  onClick: () => isAdmin && setShowCreateDialog(true),
-}}
-
-// Show/hide button based on role
-// Dialog at bottom of component
+const handleCoverImageSelect = async (url: string) => {
+  const { error } = await supabase
+    .from('tenants')
+    .update({ cover_image_url: url })
+    .eq('id', community.id);
+  
+  if (error) throw error;
+  
+  queryClient.invalidateQueries({ queryKey: ['communities'] });
+  toast({ title: 'Cover image updated' });
+};
 ```
 
-**Add refetch capability** - Use React Query's `useQuery` pattern instead of `useEffect` for better cache invalidation.
-
-### 3. CommunityCard Edit Button
-
-Add an edit icon button (visible to admins only) that opens the `CommunityFormDialog` in edit mode.
-
-### 4. TenantFormDialog Game Titles Field
-
-Add a multi-select section for game titles:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  Game Titles (Optional)                                          │
-│                                                                  │
-│  ☑ American Truck Simulator                                     │
-│  ☐ Farming Simulator                                            │
-│  ☐ Construction Simulator                                       │
-│  ☐ Mechanic Simulator                                           │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-Update `TenantFormData` interface to include `game_titles: GameTitle[]`.
-
-### 5. WorkOrderEditDialog Community Assignment
-
-Add a dropdown to assign work orders to specific communities:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  Community (Optional)                                            │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  Select community...                               ▼    │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│  Assigning to a community makes this work order visible         │
-│  only to that community's members.                              │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Visual Design:**
+- Hero section height: ~128px (h-32)
+- Logo avatar positioned at bottom-left of hero, overlapping the edge
+- Gradient overlay from transparent to background color
+- If no cover image, use brand color as solid background
+- Edit button for hero in top-right corner of hero section
+- Existing logo edit via avatar (already implemented)
 
 ---
 
 ## Data Flow
 
 ```text
-Admin clicks "Create Community"
+Admin hovers on CommunityCard hero section
         │
         ▼
-CommunityFormDialog opens (empty form)
+Camera icon appears (via EditableImageWrapper)
         │
         ▼
-Admin fills form:
-  - Name: "Acme Trucking School"
-  - Category: School
-  - Games: [ATS, Construction_Sim]
-  - Logo: (uses MediaPickerDialog)
+Admin clicks → MediaPickerDialog opens
         │
         ▼
-Admin clicks "Create"
+Select/upload image → handleCoverImageSelect called
         │
         ▼
-Supabase INSERT into tenants table
+Supabase: UPDATE tenants SET cover_image_url = ?
         │
         ▼
-Invalidate 'communities' query → UI refreshes
-        │
-        ▼
-New community appears in carousel
+Invalidate 'communities' query → Card re-renders with new hero
 ```
 
 ---
 
-## Role-Based Access
+## Edit Points on Card
 
-| Action | User | Admin | Super Admin |
-|--------|------|-------|-------------|
-| View communities | Yes | Yes | Yes |
-| Create community | No | Yes | Yes |
-| Edit community | No | Yes | Yes |
-| Delete community | No | No | Yes |
-| Assign work orders | No | Yes | Yes |
+| Element | Edit Method | Handler |
+|---------|-------------|---------|
+| Hero/Cover Image | `EditableImageWrapper` on hero section | `handleCoverImageSelect` (NEW) |
+| Logo | `EditableImageWrapper` on avatar (existing) | `handleImageSelect` (existing) |
+| Full Edit | Pencil button → `CommunityFormDialog` | `onEdit` prop (existing) |
 
 ---
 
-## Category Type Simplification
+## Fallback Behavior
 
-Update the category labels to prioritize the 4 main types:
+```text
+If cover_image_url is set:
+  → Display cover image with gradient
 
-```typescript
-export const CATEGORY_LABELS: Record<CategoryType, string> = {
-  trade_skill: 'Game Community',       // Renamed for clarity
-  employer: 'Employer',
-  broadband_provider: 'Broadband Provider',
-  school: 'School',
-  // Secondary options
-  training_center: 'Training Center',
-  geography: 'Geographic Region',
-  government: 'Government',
-  nonprofit: 'Nonprofit',
-};
+If cover_image_url is null:
+  → Display brand_color as solid background
+  → Optionally show a subtle pattern or icon
 ```
 
 ---
 
 ## Technical Notes
 
-1. **React Query Migration** - Convert Communities page from `useEffect` + `useState` to `useQuery` for proper cache invalidation after CRUD operations.
-
-2. **Shared Form Logic** - `CommunityFormDialog` will share most code with `TenantFormDialog` but be accessible to admins (not just super_admin).
-
-3. **Game Titles Storage** - Uses PostgreSQL array column `game_titles game_title[]` with enum values.
-
-4. **MediaPickerDialog Reuse** - Leverage existing infrastructure for logo and cover image selection.
+1. **Consistent with EventCard**: The hero image pattern matches the work order cards
+2. **Two MediaPickerDialogs**: One for logo (existing), one for cover (new)
+3. **Brand Color Fallback**: When no cover image, use `community.brand_color` as background
+4. **Maintains Existing Features**: Logo editing, pencil edit button, and navigation all remain
 
 ---
 
@@ -237,24 +178,23 @@ export const CATEGORY_LABELS: Record<CategoryType, string> = {
 
 | Task | Time |
 |------|------|
-| CommunityFormDialog component | 45 min |
-| Communities page updates (button + dialog) | 20 min |
-| CommunityCard edit button | 15 min |
-| TenantFormDialog game_titles field | 20 min |
-| WorkOrderEditDialog tenant assignment | 20 min |
-| React Query migration for communities | 15 min |
-| Testing & polish | 25 min |
-| **Total** | **~2.5 hours** |
+| Add hero image section with gradient | 15 min |
+| Reposition logo avatar as overlay | 10 min |
+| Add cover image EditableImageWrapper | 10 min |
+| Add second MediaPickerDialog for cover | 5 min |
+| Adjust spacing and typography | 10 min |
+| Testing & polish | 10 min |
+| **Total** | **~1 hour** |
 
 ---
 
 ## Summary
 
-This implementation enables full community management:
+This enhancement displays the cover/hero image that can already be uploaded via the form:
 
-1. **Create Community Button** - Wires up the existing button with role-checking and dialog trigger
-2. **CommunityFormDialog** - Admin-accessible form for creating/editing communities
-3. **Game Assignment** - Multi-select for assigning SIM games to communities
-4. **Work Order Assignment** - Dropdown in WorkOrderEditDialog for tenant assignment
-5. **Edit from Cards** - Inline edit button on CommunityCard for admins
-6. **Proper Caching** - React Query for automatic UI refresh after changes
+1. **Hero Display**: Shows `cover_image_url` at top of card with gradient overlay
+2. **Brand Fallback**: Uses brand color when no cover is set
+3. **Inline Editing**: `EditableImageWrapper` for quick cover updates directly from the card
+4. **Logo Overlay**: Repositions avatar to overlay the hero section
+5. **Consistent UX**: Matches the EventCard visual pattern
+
