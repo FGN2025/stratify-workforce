@@ -12,70 +12,72 @@
 @layer base {
   :root {
     /* Industrial Command Center - Deep Dark Theme */
-    --background: 222 47% 6%;
+    /* Background: #080c16 = hsl(220, 50%, 6%) */
+    --background: 220 50% 6%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 8%;
+    /* Card: slightly lighter than background */
+    --card: 220 45% 8%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 8%;
+    --popover: 220 45% 8%;
     --popover-foreground: 210 40% 98%;
 
-    /* Dynamic tenant primary - defaults to FGN Green */
-    --primary: 160 84% 39%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary: FGN Amber #f49d14 = hsl(37, 91%, 52%) */
+    --primary: 37 91% 52%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 217 33% 17%;
+    --secondary: 220 40% 15%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 14%;
+    --muted: 220 35% 12%;
     --muted-foreground: 215 20% 55%;
 
-    --accent: 217 33% 17%;
+    --accent: 220 40% 15%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 160 84% 39%;
+    --border: 220 35% 15%;
+    --input: 220 35% 15%;
+    --ring: 37 91% 52%;
 
     --radius: 0.75rem;
 
     /* Custom Industrial Tokens */
-    --glass: 222 47% 11%;
-    --glass-border: 217 33% 20%;
-    --surface: 222 47% 9%;
-    --surface-elevated: 222 47% 12%;
+    --glass: 220 45% 10%;
+    --glass-border: 220 35% 18%;
+    --surface: 220 45% 8%;
+    --surface-elevated: 220 40% 11%;
     
     /* Status Colors */
     --success: 160 84% 39%;
-    --warning: 45 93% 47%;
+    --warning: 37 91% 52%;
     --error: 0 84% 60%;
     --info: 217 91% 60%;
     
     /* Data visualization */
-    --chart-1: 160 84% 39%;
+    --chart-1: 37 91% 52%;
     --chart-2: 217 91% 60%;
-    --chart-3: 45 93% 47%;
+    --chart-3: 160 84% 39%;
     --chart-4: 280 65% 60%;
     --chart-5: 0 84% 60%;
 
     /* Sidebar */
-    --sidebar-background: 222 47% 7%;
+    --sidebar-background: 220 50% 5%;
     --sidebar-foreground: 215 20% 65%;
-    --sidebar-primary: 160 84% 39%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 14%;
+    --sidebar-primary: 37 91% 52%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 220 35% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 15%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-border: 220 35% 13%;
+    --sidebar-ring: 37 91% 52%;
   }
 
   .dark {
     /* Same as root - always dark mode */
-    --background: 222 47% 6%;
+    --background: 220 50% 6%;
     --foreground: 210 40% 98%;
   }
 }
