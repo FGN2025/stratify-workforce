@@ -42,6 +42,32 @@ export function useEventRegistration(eventId: string | undefined) {
         throw new Error('Must be logged in to register');
       }
 
+      // Check if there's an existing registration (could be cancelled)
+      const { data: existing } = await supabase
+        .from('event_registrations')
+        .select('id, status')
+        .eq('event_id', eventId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        // If already registered, don't allow duplicate
+        if (existing.status === 'registered') {
+          throw new Error('You are already registered for this event');
+        }
+        // Re-activate cancelled registration
+        const { data, error } = await supabase
+          .from('event_registrations')
+          .update({ status: 'registered', registered_at: new Date().toISOString() })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+
+      // New registration
       const { data, error } = await supabase
         .from('event_registrations')
         .insert({
