@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TutorProvider } from "@/contexts/TutorContext";
+import { TutorChatButton } from "@/components/tutor/TutorChatButton";
+import { TutorChatPanel } from "@/components/tutor/TutorChatPanel";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
 import Index from "./pages/Index";
@@ -36,6 +39,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <TutorProvider>
             <Routes>
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
@@ -84,6 +88,10 @@ const App = () => (
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+              {/* Tutor Components */}
+              <TutorChatButton />
+              <TutorChatPanel />
+            </TutorProvider>
           </BrowserRouter>
         </TooltipProvider>
       </TenantProvider>
