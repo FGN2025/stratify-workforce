@@ -22,6 +22,7 @@ export interface WorkOrderWithXP {
   estimated_time_minutes: number | null;
   max_attempts: number | null;
   evidence_requirements: Record<string, unknown> | null;
+  cover_image_url: string | null;
 }
 
 export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
@@ -71,6 +72,7 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
         estimated_time_minutes: wo.estimated_time_minutes,
         max_attempts: wo.max_attempts,
         evidence_requirements: (wo.evidence_requirements as Record<string, unknown>) || null,
+        cover_image_url: wo.cover_image_url,
       })) as WorkOrderWithXP[];
     },
   });
@@ -104,6 +106,7 @@ export function useWorkOrderById(id: string) {
         estimated_time_minutes: data.estimated_time_minutes,
         max_attempts: data.max_attempts,
         evidence_requirements: (data.evidence_requirements as Record<string, unknown>) || null,
+        cover_image_url: data.cover_image_url,
       } as WorkOrderWithXP;
     },
   });

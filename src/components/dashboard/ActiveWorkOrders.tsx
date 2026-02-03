@@ -42,6 +42,7 @@ export function ActiveWorkOrders() {
         success_criteria: (wo.success_criteria as Record<string, number>) || {},
         is_active: wo.is_active ?? true,
         created_at: wo.created_at,
+        cover_image_url: wo.cover_image_url,
       }));
 
       setWorkOrders(typedWorkOrders);

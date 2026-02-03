@@ -1,10 +1,16 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GameIcon, getGameLabel } from '@/components/dashboard/GameIcon';
 import { XPRewardBadge } from '@/components/work-orders/XPRewardBadge';
 import { DifficultyIndicator } from '@/components/work-orders/DifficultyIndicator';
+import { EditableImageWrapper } from '@/components/admin/EditableImageWrapper';
+import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog';
 import { useGameCoverImages } from '@/hooks/useSiteMedia';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 import type { Tenant, WorkOrder } from '@/types/tenant';
 import type { WorkOrderWithXP } from '@/hooks/useWorkOrders';
 import type { Database } from '@/integrations/supabase/types';
@@ -35,74 +41,112 @@ export function EventCard({
   variant = 'default',
   isCompleted = false,
 }: EventCardProps) {
+  const queryClient = useQueryClient();
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  
   // Handle both old and new work order types
   const xpReward = 'xp_reward' in workOrder ? workOrder.xp_reward : 50;
   const difficulty: WorkOrderDifficulty = 'difficulty' in workOrder ? workOrder.difficulty : 'beginner';
   const estimatedTime = 'estimated_time_minutes' in workOrder ? workOrder.estimated_time_minutes : null;
+  const workOrderCoverUrl = 'cover_image_url' in workOrder ? workOrder.cover_image_url : null;
   
   const { gameCoverImages } = useGameCoverImages();
-  const coverImage = gameCoverImages[workOrder.game_title];
+  // Use work order's custom cover if available, otherwise fall back to game cover
+  const coverImage = workOrderCoverUrl || gameCoverImages[workOrder.game_title];
+
+  const handleCoverImageUpdate = async (url: string) => {
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({ cover_image_url: url })
+        .eq('id', workOrder.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order', workOrder.id] });
+      toast({ title: 'Cover image updated' });
+    } catch (error) {
+      console.error('Error updating cover image:', error);
+      toast({ title: 'Failed to update image', variant: 'destructive' });
+    }
+  };
 
   if (variant === 'compact') {
     return (
-      <NavLink 
-        to={`/work-orders/${workOrder.id}`}
-        className="group block"
-      >
-        <div className="glass-card overflow-hidden hover:border-primary/50 transition-all">
-          <div className="flex gap-4 p-4">
-            <div className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden">
-              <img 
-                src={coverImage} 
-                alt={workOrder.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-              <div className="absolute bottom-2 left-2">
-                <GameIcon game={workOrder.game_title} size="sm" />
-              </div>
-              {isCompleted && (
-                <div className="absolute top-2 right-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary fill-primary/20" />
+      <>
+        <NavLink 
+          to={`/work-orders/${workOrder.id}`}
+          className="group block"
+        >
+          <div className="glass-card overflow-hidden hover:border-primary/50 transition-all">
+            <div className="flex gap-4 p-4">
+              <EditableImageWrapper
+                onEdit={() => setShowMediaPicker(true)}
+                className="w-24 h-24 shrink-0 rounded-lg overflow-hidden"
+                position="center"
+              >
+                <div className="relative w-full h-full">
+                  <img 
+                    src={coverImage} 
+                    alt={workOrder.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                  <div className="absolute bottom-2 left-2">
+                    <GameIcon game={workOrder.game_title} size="sm" />
+                  </div>
+                  {isCompleted && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary fill-primary/20" />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              {community && (
-                <div className="flex items-center gap-2 mb-1">
-                  <Avatar className="h-4 w-4">
-                    <AvatarImage src={community.logo_url || ''} />
-                    <AvatarFallback className="text-[8px]" style={{ backgroundColor: community.brand_color }}>
-                      {community.name.slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {community.name}
+              </EditableImageWrapper>
+              
+              <div className="flex-1 min-w-0">
+                {community && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <Avatar className="h-4 w-4">
+                      <AvatarImage src={community.logo_url || ''} />
+                      <AvatarFallback className="text-[8px]" style={{ backgroundColor: community.brand_color }}>
+                        {community.name.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      {community.name}
+                    </span>
+                  </div>
+                )}
+                
+                <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+                  {workOrder.title}
+                </h3>
+                
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                  {workOrder.description}
+                </p>
+                
+                <div className="flex items-center gap-3 mt-2">
+                  <XPRewardBadge xp={xpReward} size="sm" />
+                  <DifficultyIndicator difficulty={difficulty} size="sm" />
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {participantCount}
                   </span>
                 </div>
-              )}
-              
-              <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
-                {workOrder.title}
-              </h3>
-              
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                {workOrder.description}
-              </p>
-              
-              <div className="flex items-center gap-3 mt-2">
-                <XPRewardBadge xp={xpReward} size="sm" />
-                <DifficultyIndicator difficulty={difficulty} size="sm" />
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {participantCount}
-                </span>
               </div>
             </div>
           </div>
-        </div>
-      </NavLink>
+        </NavLink>
+        <MediaPickerDialog
+          open={showMediaPicker}
+          onOpenChange={setShowMediaPicker}
+          onSelect={handleCoverImageUpdate}
+          title="Change Work Order Cover"
+          currentImageUrl={coverImage}
+        />
+      </>
     );
   }
 
@@ -113,7 +157,11 @@ export function EventCard({
     >
       <div className="glass-card overflow-hidden hover:border-primary/50 transition-all hover:glow-sm">
         {/* Cover Image */}
-        <div className="relative h-40 overflow-hidden">
+        <EditableImageWrapper
+          onEdit={() => setShowMediaPicker(true)}
+          className="relative h-40 overflow-hidden"
+          position="top-right"
+        >
           <img 
             src={coverImage} 
             alt={workOrder.title}
@@ -126,8 +174,8 @@ export function EventCard({
             <XPRewardBadge xp={xpReward} />
           </div>
           
-          {/* Game Badge Overlay */}
-          <div className="absolute top-3 right-3">
+          {/* Game Badge Overlay - moved to avoid overlap with edit button */}
+          <div className="absolute top-12 right-3">
             <Badge 
               variant="outline" 
               className="bg-background/80 backdrop-blur-sm border-border text-[10px] gap-1"
@@ -155,7 +203,7 @@ export function EventCard({
               </Badge>
             </div>
           )}
-        </div>
+        </EditableImageWrapper>
         
         {/* Content */}
         <div className="p-4">
@@ -219,6 +267,13 @@ export function EventCard({
             </div>
           </div>
         </div>
+        <MediaPickerDialog
+          open={showMediaPicker}
+          onOpenChange={setShowMediaPicker}
+          onSelect={handleCoverImageUpdate}
+          title="Change Work Order Cover"
+          currentImageUrl={coverImage}
+        />
       </div>
     </NavLink>
   );
