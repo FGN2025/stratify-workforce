@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, Trophy, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Trophy, Star, Pencil } from 'lucide-react';
 import type { Tenant } from '@/types/tenant';
 import { EditableImageWrapper } from '@/components/admin/EditableImageWrapper';
 import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog';
@@ -16,6 +17,7 @@ interface CommunityCardProps {
   eventCount?: number;
   rating?: number;
   featured?: boolean;
+  onEdit?: () => void;
 }
 
 export function CommunityCard({ 
@@ -23,7 +25,8 @@ export function CommunityCard({
   memberCount = Math.floor(Math.random() * 500) + 50,
   eventCount = Math.floor(Math.random() * 20) + 5,
   rating = parseFloat((Math.random() * 2 + 3).toFixed(1)),
-  featured = false
+  featured = false,
+  onEdit,
 }: CommunityCardProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -56,6 +59,12 @@ export function CommunityCard({
     }
   };
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onEdit?.();
+  };
+
   return (
     <>
       <NavLink 
@@ -63,9 +72,21 @@ export function CommunityCard({
         className="group block w-full"
       >
         <div 
-          className="glass-card overflow-hidden hover:border-primary/50 transition-all h-full"
+          className="glass-card overflow-hidden hover:border-primary/50 transition-all h-full relative"
           style={{ borderTopColor: community.brand_color, borderTopWidth: '3px' }}
         >
+          {/* Admin Edit Button */}
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 z-10 h-8 w-8 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleEditClick}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+
           <div className="p-5">
             {/* Header */}
             <div className="flex items-start gap-4">
