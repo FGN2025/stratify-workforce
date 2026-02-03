@@ -4,9 +4,11 @@ import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { CommunityCard } from '@/components/marketplace/CommunityCard';
 import { CommunityFormDialog } from '@/components/admin/CommunityFormDialog';
+import { MyCommunities } from '@/components/communities/MyCommunities';
 import { useCommunities } from '@/hooks/useCommunities';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +18,7 @@ import type { Tenant } from '@/types/tenant';
 const Communities = () => {
   const { communities, isLoading, refetch } = useCommunities();
   const { isAdmin } = useUserRole();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Tenant | null>(null);
@@ -27,10 +30,8 @@ const Communities = () => {
   );
 
   const handleCreateClick = () => {
-    if (isAdmin) {
-      setEditingCommunity(null);
-      setShowCreateDialog(true);
-    }
+    setEditingCommunity(null);
+    setShowCreateDialog(true);
   };
 
   const handleEditCommunity = (community: Tenant) => {
@@ -65,7 +66,7 @@ const Communities = () => {
           title="Training Communities"
           subtitle="Discover training organizations and join their simulation programs to level up your skills"
           backgroundImage={heroImageUrl}
-          primaryAction={isAdmin ? {
+          primaryAction={user ? {
             label: 'Create Community',
             icon: <Plus className="h-4 w-4" />,
             onClick: handleCreateClick,
@@ -76,6 +77,11 @@ const Communities = () => {
             { value: '180+', label: 'Work Orders' },
           ]}
         />
+
+        {/* My Communities Section (for logged-in users) */}
+        {user && (
+          <MyCommunities onCreateClick={handleCreateClick} />
+        )}
 
         {/* Search & Filter */}
         <div className="flex flex-col sm:flex-row gap-3">

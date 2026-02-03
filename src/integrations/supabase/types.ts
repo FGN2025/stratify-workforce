@@ -1096,6 +1096,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          approval_status: Database["public"]["Enums"]["community_approval_status"]
           brand_color: string
           category_type:
             | Database["public"]["Enums"]["community_category_type"]
@@ -1113,10 +1114,15 @@ export type Database = {
           name: string
           owner_id: string | null
           parent_tenant_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
           slug: string
+          submitted_at: string | null
           website_url: string | null
         }
         Insert: {
+          approval_status?: Database["public"]["Enums"]["community_approval_status"]
           brand_color?: string
           category_type?:
             | Database["public"]["Enums"]["community_category_type"]
@@ -1134,10 +1140,15 @@ export type Database = {
           name: string
           owner_id?: string | null
           parent_tenant_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
           slug: string
+          submitted_at?: string | null
           website_url?: string | null
         }
         Update: {
+          approval_status?: Database["public"]["Enums"]["community_approval_status"]
           brand_color?: string
           category_type?:
             | Database["public"]["Enums"]["community_category_type"]
@@ -1155,7 +1166,11 @@ export type Database = {
           name?: string
           owner_id?: string | null
           parent_tenant_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
           slug?: string
+          submitted_at?: string | null
           website_url?: string | null
         }
         Relationships: [
@@ -1751,6 +1766,11 @@ export type Database = {
         | "score"
         | "streak"
       app_role: "admin" | "moderator" | "user" | "super_admin" | "developer"
+      community_approval_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "needs_revision"
       community_category_type:
         | "geography"
         | "broadband_provider"
@@ -1944,6 +1964,12 @@ export const Constants = {
         "streak",
       ],
       app_role: ["admin", "moderator", "user", "super_admin", "developer"],
+      community_approval_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "needs_revision",
+      ],
       community_category_type: [
         "geography",
         "broadband_provider",

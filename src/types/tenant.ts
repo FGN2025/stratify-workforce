@@ -1,3 +1,5 @@
+export type CommunityApprovalStatus = 'pending' | 'approved' | 'rejected' | 'needs_revision';
+
 export interface Tenant {
   id: string;
   name: string;
@@ -17,6 +19,12 @@ export interface Tenant {
   website_url: string | null;
   owner_id: string | null;
   game_titles: GameTitle[] | null;
+  // Approval workflow fields
+  approval_status: CommunityApprovalStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  reviewer_notes: string | null;
+  submitted_at: string | null;
   // For tree display
   children?: Tenant[];
   parent?: Tenant;
