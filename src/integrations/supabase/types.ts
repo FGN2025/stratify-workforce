@@ -68,6 +68,7 @@ export type Database = {
           credential_types_allowed: string[]
           id: string
           is_active: boolean
+          owner_id: string | null
           updated_at: string
         }
         Insert: {
@@ -81,6 +82,7 @@ export type Database = {
           credential_types_allowed?: string[]
           id?: string
           is_active?: boolean
+          owner_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -94,6 +96,7 @@ export type Database = {
           credential_types_allowed?: string[]
           id?: string
           is_active?: boolean
+          owner_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1744,7 +1747,7 @@ export type Database = {
         | "time"
         | "score"
         | "streak"
-      app_role: "admin" | "moderator" | "user" | "super_admin"
+      app_role: "admin" | "moderator" | "user" | "super_admin" | "developer"
       community_category_type:
         | "geography"
         | "broadband_provider"
@@ -1937,7 +1940,7 @@ export const Constants = {
         "score",
         "streak",
       ],
-      app_role: ["admin", "moderator", "user", "super_admin"],
+      app_role: ["admin", "moderator", "user", "super_admin", "developer"],
       community_category_type: [
         "geography",
         "broadband_provider",

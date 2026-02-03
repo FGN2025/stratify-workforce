@@ -10,6 +10,7 @@ interface UseUserRoleReturn {
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isModerator: boolean;
+  isDeveloper: boolean;
   isLoading: boolean;
 }
 
@@ -50,6 +51,7 @@ export function useUserRole(): UseUserRoleReturn {
     isSuperAdmin: role === 'super_admin',
     isAdmin: role === 'admin' || role === 'super_admin',
     isModerator: role === 'moderator' || role === 'super_admin',
+    isDeveloper: role === 'developer' || role === 'super_admin',
     isLoading,
   };
 }

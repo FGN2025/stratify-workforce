@@ -11,12 +11,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ExternalLink, FileCode, Key, Zap, BookOpen, Settings } from 'lucide-react';
+import { ExternalLink, FileCode, Key, Zap, BookOpen } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Developers() {
+  const { user } = useAuth();
+  const { isDeveloper, isLoading: roleLoading } = useUserRole();
   const [activeTab, setActiveTab] = useState('docs');
   const [activeApi, setActiveApi] = useState(CREDENTIAL_API.id);
   const [activeEndpoint, setActiveEndpoint] = useState<string | null>(null);
+
+  // Determine if user can access the My Apps tab
+  const canAccessApps = user && isDeveloper;
 
   const currentApi = ALL_APIS.find(a => a.id === activeApi) || CREDENTIAL_API;
   const currentEndpoint = currentApi.endpoints.find(e => e.id === activeEndpoint);
@@ -48,10 +55,12 @@ export default function Developers() {
                   <BookOpen className="h-4 w-4" />
                   Documentation
                 </TabsTrigger>
-                <TabsTrigger value="apps" className="gap-2">
-                  <Key className="h-4 w-4" />
-                  My Apps
-                </TabsTrigger>
+                {canAccessApps && (
+                  <TabsTrigger value="apps" className="gap-2">
+                    <Key className="h-4 w-4" />
+                    My Apps
+                  </TabsTrigger>
+                )}
               </TabsList>
             </Tabs>
           </div>
@@ -68,10 +77,17 @@ export default function Developers() {
                     Integrate training content, credentials, and skills data into your applications.
                   </p>
                   <div className="flex gap-3 pt-4">
-                    <Button onClick={() => setActiveTab('apps')}>
-                      <Key className="mr-2 h-4 w-4" />
-                      Get API Key
-                    </Button>
+                    {canAccessApps ? (
+                      <Button onClick={() => setActiveTab('apps')}>
+                        <Key className="mr-2 h-4 w-4" />
+                        Manage API Keys
+                      </Button>
+                    ) : (
+                      <Button variant="outline" disabled>
+                        <Key className="mr-2 h-4 w-4" />
+                        Developer Access Required
+                      </Button>
+                    )}
                     <Button variant="outline" asChild>
                       <a href="#quickstart">
                         <Zap className="mr-2 h-4 w-4" />
@@ -147,13 +163,17 @@ export default function Developers() {
                       </CardContent>
                     </Card>
                     <Card 
-                      className="cursor-pointer hover:border-primary/50 transition-colors"
-                      onClick={() => setActiveTab('apps')}
+                      className={canAccessApps ? "cursor-pointer hover:border-primary/50 transition-colors" : "opacity-60"}
+                      onClick={() => canAccessApps && setActiveTab('apps')}
                     >
                       <CardHeader className="pb-2">
                         <CardTitle className="text-base flex items-center gap-2">
                           API Key
-                          <Badge variant="secondary" className="text-xs">Click to manage</Badge>
+                          {canAccessApps ? (
+                            <Badge variant="secondary" className="text-xs">Click to manage</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">Developer access required</Badge>
+                          )}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="text-sm text-muted-foreground">
@@ -280,8 +300,8 @@ export default function Developers() {
               </div>
             )}
 
-            {/* My Apps Tab */}
-            {activeTab === 'apps' && (
+            {/* My Apps Tab - only accessible to developers */}
+            {activeTab === 'apps' && canAccessApps && (
               <div className="max-w-4xl mx-auto p-8">
                 <MyAppsSection />
               </div>
