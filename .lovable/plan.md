@@ -1,371 +1,283 @@
 
-# Plan: Comprehensive API Documentation System
+# Plan: Add Developer Role to Restrict /developers Portal Access
 
 ## Overview
 
-Build a complete documentation suite for the FGN Ecosystem APIs, including markdown reference docs for internal use, an interactive developer portal at `/developers`, and OpenAPI 3.0 specifications for machine-readable integration.
+Add a `developer` role to the `app_role` enum to restrict access to the `/developers` portal. Super admins will be able to designate users as developers, and only users with the developer role (or super_admin) will be able to access the "My Apps" credential management section. The documentation section will remain public for viewing.
 
-## Documentation Architecture
+## Current State Analysis
+
+### Existing Role System
+- **Enum Values**: `admin`, `moderator`, `user`, `super_admin`
+- **Hook**: `useUserRole.ts` returns flags for `isSuperAdmin`, `isAdmin`, `isModerator`
+- **Route Protection**: `AdminRoute.tsx` pattern for role-based route guards
+- **Role Management**: `RoleEscalationControls.tsx` for super admin role assignments
+
+### Current authorized_apps RLS Policies
+| Policy | Command | Condition |
+|--------|---------|-----------|
+| Admins can view authorized apps | SELECT | `has_role(auth.uid(), 'admin')` |
+| Super admins can manage authorized apps | ALL | `has_role(auth.uid(), 'super_admin')` |
+
+### Issue with Current Setup
+- The authorized_apps table is admin-only access
+- There's no `owner_id` column on `authorized_apps` to scope apps to individual developers
+- The MyAppsSection currently fetches ALL authorized apps (admin view)
+
+---
+
+## Implementation Architecture
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         API DOCUMENTATION SYSTEM                                 │
+│                         DEVELOPER ROLE IMPLEMENTATION                            │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
-│   ┌──────────────────────────────────────────────────────────────────────────┐  │
-│   │                    DOCUMENTATION LAYERS                                   │  │
-│   │                                                                           │  │
-│   │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                │  │
-│   │  │  Markdown     │  │  In-App       │  │  OpenAPI      │                │  │
-│   │  │  Reference    │  │  Developer    │  │  Specs        │                │  │
-│   │  │  Docs         │  │  Portal       │  │  (JSON/YAML)  │                │  │
-│   │  │               │  │               │  │               │                │  │
-│   │  │  /docs/api/   │  │  /developers  │  │  /docs/       │                │  │
-│   │  │               │  │               │  │  openapi/     │                │  │
-│   │  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘                │  │
-│   │          │                  │                  │                         │  │
-│   │          │                  │                  │                         │  │
-│   │          ▼                  ▼                  ▼                         │  │
-│   │  ┌─────────────────────────────────────────────────────────────────┐    │  │
-│   │  │                    TARGET AUDIENCES                              │    │  │
-│   │  │                                                                  │    │  │
-│   │  │  Internal Team    │   Partner Devs    │   SDK Generation        │    │  │
-│   │  │  GitHub/Code      │   CDL Quest       │   Postman Import        │    │  │
-│   │  │  Review           │   CDL Exchange    │   Auto-docs             │    │  │
-│   │  └─────────────────────────────────────────────────────────────────┘    │  │
-│   │                                                                           │  │
-│   └──────────────────────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────────────────────┐     │
+│  │                           ROLE HIERARCHY                                │     │
+│  │                                                                         │     │
+│  │     super_admin  ──────►  All Permissions                              │     │
+│  │          │                (can assign developer role)                   │     │
+│  │          │                                                              │     │
+│  │          ▼                                                              │     │
+│  │       admin  ──────────►  Platform Management                          │     │
+│  │          │                                                              │     │
+│  │          │    ┌─────────────────────────────────┐                      │     │
+│  │          │    │                                 │                      │     │
+│  │          ▼    ▼                                 │                      │     │
+│  │     moderator    developer ◄───── NEW ROLE     │                      │     │
+│  │          │           │                          │                      │     │
+│  │          │           └──► API credential        │                      │     │
+│  │          │               management only        │                      │     │
+│  │          ▼                                      │                      │     │
+│  │        user  ─────────────────────────────────────►  Basic access      │     │
+│  │                                                                         │     │
+│  └────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────┐     │
+│  │                       /developers PAGE ACCESS                          │     │
+│  │                                                                         │     │
+│  │   Documentation Tab  │  Public - anyone can view                       │     │
+│  │                      │                                                  │     │
+│  │   My Apps Tab        │  Protected - requires developer or super_admin  │     │
+│  │                      │  Shows only apps owned by current user          │     │
+│  │                      │  (super_admin sees all apps)                    │     │
+│  │                                                                         │     │
+│  └────────────────────────────────────────────────────────────────────────┘     │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Part 1: Markdown Reference Documentation
+## Phase 1: Database Changes
 
-Create a `/docs/api/` folder structure with comprehensive API reference files.
+### 1.1 Add Developer to app_role Enum
 
-### File Structure
+Add the `developer` value to the existing `app_role` enum type.
+
+### 1.2 Add owner_id Column to authorized_apps Table
 
 ```text
-docs/
-├── api/
-│   ├── README.md                    # API Overview & Quick Start
-│   ├── authentication.md            # Auth guide (API keys, JWT)
-│   ├── credential-api/
-│   │   ├── README.md                # Credential API overview
-│   │   ├── public-endpoints.md      # GET /passport/:slug, POST /verify
-│   │   ├── authenticated-endpoints.md  # GET /credentials/mine
-│   │   └── authorized-app-endpoints.md # POST /issue, GET /user/:email
-│   ├── public-catalog/
-│   │   ├── README.md                # Catalog API overview
-│   │   ├── games.md                 # GET /games
-│   │   ├── courses.md               # GET /courses, GET /courses/:id
-│   │   ├── work-orders.md           # GET /work-orders, GET /work-orders/:id
-│   │   └── skills.md                # GET /skills
-│   └── integration-guides/
-│       ├── cdl-quest.md             # CDL Quest integration example
-│       └── cdl-exchange.md          # CDL Exchange integration example
-└── openapi/
-    ├── credential-api.yaml          # OpenAPI 3.0 spec
-    └── public-catalog.yaml          # OpenAPI 3.0 spec
+New Column: owner_id (uuid, references auth.users, nullable for legacy apps)
 ```
 
-### Documentation Content
+This allows developers to own their own apps, while super_admins can still see and manage all apps.
 
-Each markdown file will include:
-- Endpoint URL and method
-- Request headers and parameters
-- Request body schema (with TypeScript types)
-- Response schema with examples
-- Error codes and handling
-- Code examples (JavaScript/TypeScript, cURL)
+### 1.3 Update has_role() Function
+
+Modify the `has_role()` security definer function to support the new developer role:
+
+```text
+Current: super_admin inherits admin and moderator
+Updated: super_admin inherits admin, moderator, AND developer
+```
+
+### 1.4 Update RLS Policies for authorized_apps
+
+| Policy | Command | Condition |
+|--------|---------|-----------|
+| Developers can view their own apps | SELECT | `owner_id = auth.uid()` |
+| Developers can manage their own apps | ALL | `owner_id = auth.uid()` |
+| Super admins can manage all apps | ALL | `has_role(auth.uid(), 'super_admin')` |
+| Admins can view all apps | SELECT | `has_role(auth.uid(), 'admin')` |
 
 ---
 
-## Part 2: In-App Developer Portal
+## Phase 2: Frontend Changes
 
-Create a `/developers` page with interactive API documentation.
+### 2.1 Update useUserRole Hook
 
-### Developer Portal Layout
+Add `isDeveloper` flag to the hook return value:
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         FGN.ACADEMY DEVELOPER PORTAL                             │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                  │
-│  ┌──────────────────────────────────────────────────────────────────────────┐   │
-│  │ Hero Section                                                              │   │
-│  │ "Build with FGN.Academy APIs"                                            │   │
-│  │ [Get API Key] [View OpenAPI Spec]                                        │   │
-│  └──────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                  │
-│  ┌──────────────┬───────────────────────────────────────────────────────────┐   │
-│  │ Navigation   │  Content Area                                              │   │
-│  │              │                                                            │   │
-│  │ Overview     │  ┌────────────────────────────────────────────────────┐   │   │
-│  │ Quick Start  │  │ Authentication                                     │   │   │
-│  │ Auth Guide   │  │                                                    │   │   │
-│  │              │  │ The FGN.Academy API uses two authentication       │   │   │
-│  │ ─────────    │  │ methods depending on the endpoint type:           │   │   │
-│  │ CREDENTIAL   │  │                                                    │   │   │
-│  │ API          │  │ ┌─────────────────────────────────────────────┐   │   │   │
-│  │ • Passport   │  │ │ Public Endpoints      │ No auth required    │   │   │   │
-│  │ • Verify     │  │ │ Authenticated         │ Bearer token (JWT)  │   │   │   │
-│  │ • Issue      │  │ │ Authorized Apps       │ X-App-Key header    │   │   │   │
-│  │ • User       │  │ └─────────────────────────────────────────────┘   │   │   │
-│  │              │  │                                                    │   │   │
-│  │ ─────────    │  │ Example Request:                                  │   │   │
-│  │ PUBLIC       │  │ ┌─────────────────────────────────────────────┐   │   │   │
-│  │ CATALOG      │  │ │ curl -X POST \                              │   │   │   │
-│  │ • Games      │  │ │   https://vfzj.../credential-api/issue \   │   │   │   │
-│  │ • Courses    │  │ │   -H "X-App-Key: your_api_key" \           │   │   │   │
-│  │ • Work Ords  │  │ │   -H "Content-Type: application/json" \    │   │   │   │
-│  │ • Skills     │  │ │   -d '{"user_email": "...", ...}'          │   │   │   │
-│  │              │  │ └─────────────────────────────────────────────┘   │   │   │
-│  │ ─────────    │  │                                                    │   │   │
-│  │ API Try-It   │  └────────────────────────────────────────────────────┘   │   │
-│  │ (Live Test)  │                                                            │   │
-│  │              │                                                            │   │
-│  └──────────────┴───────────────────────────────────────────────────────────┘   │
-│                                                                                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
+File: src/hooks/useUserRole.ts
+
+Add to return object:
+  isDeveloper: role === 'developer' || role === 'super_admin'
 ```
 
-### Developer Portal Components
+### 2.2 Create DeveloperRoute Component
 
-| Component | Purpose |
-|-----------|---------|
-| `DeveloperPortal.tsx` (page) | Main page layout with sidebar navigation |
-| `ApiSidebar.tsx` | Collapsible navigation for API sections |
-| `EndpointCard.tsx` | Displays single endpoint with method badge |
-| `CodeBlock.tsx` | Syntax-highlighted code with copy button |
-| `ApiTryIt.tsx` | Interactive API testing panel |
-| `ResponseViewer.tsx` | Pretty-printed JSON response display |
-| `SchemaTable.tsx` | Request/response schema documentation |
+Following the AdminRoute.tsx pattern, create a route guard for developer-only sections:
 
-### Portal Features
+```text
+File: src/components/auth/DeveloperRoute.tsx
 
-1. **Endpoint Reference**: All endpoints listed with method badges (GET, POST)
-2. **Code Examples**: JavaScript, cURL, Python snippets with copy buttons
-3. **Schema Documentation**: Tables showing request/response fields
-4. **Live API Tester**: Send requests to public endpoints directly
-5. **Authentication Guide**: Step-by-step for getting API keys
-6. **Integration Examples**: Full code samples for CDL Quest/Exchange
+Logic:
+- If not authenticated → redirect to /auth
+- If not developer/super_admin → show access denied message
+- Otherwise → render children
+```
+
+### 2.3 Update Developers Page
+
+Modify the page to conditionally render the "My Apps" tab:
+
+```text
+File: src/pages/Developers.tsx
+
+Changes:
+- Documentation tab: Always visible (public)
+- My Apps tab: Only visible if user isDeveloper or isSuperAdmin
+- Redirect away from apps tab if user navigates directly without permission
+```
+
+### 2.4 Update MyAppsSection Component
+
+Modify to filter apps by ownership:
+
+```text
+File: src/components/developers/MyAppsSection.tsx
+
+Changes:
+- Regular developers: Only see apps where owner_id = current user
+- Super admins: See all apps (existing behavior)
+- Show "Request Developer Access" message for non-developers
+```
+
+### 2.5 Update useAuthorizedApps Hook
+
+Add optional `ownerId` filter parameter:
+
+```text
+File: src/hooks/useAuthorizedApps.ts
+
+Changes:
+- Accept optional owner filter
+- RLS will enforce access, but filter helps UX
+```
+
+### 2.6 Update useCreateAuthorizedApp Hook
+
+Automatically set owner_id when creating apps:
+
+```text
+File: src/hooks/useAuthorizedApps.ts
+
+Changes:
+- Include owner_id: auth.uid() in insert mutation
+```
 
 ---
 
-## Part 3: OpenAPI 3.0 Specifications
+## Phase 3: Admin UI Updates
 
-Create machine-readable API specs for tooling integration.
+### 3.1 Update RoleEscalationControls
 
-### OpenAPI Spec Structure
+Add developer role option to the role selector:
 
-```yaml
-# docs/openapi/credential-api.yaml
-openapi: 3.0.3
-info:
-  title: FGN.Academy Credential API
-  version: 1.0.0
-  description: |
-    Credential management API for the FGN ecosystem.
-    Enables external apps to issue, verify, and query skill credentials.
-  contact:
-    name: FGN Academy Support
-    url: https://fgn.academy/developers
-    
-servers:
-  - url: https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/credential-api
-    description: Production
+```text
+File: src/components/admin/superadmin/RoleEscalationControls.tsx
 
-security:
-  - ApiKeyAuth: []
-  - BearerAuth: []
+Changes:
+- Add developer to roleConfig with appropriate icon/color
+- Add SelectItem for developer role in dropdown
+- Update description text to mention developers
+```
 
-paths:
-  /passport/{slug}:
-    get:
-      summary: Get public passport
-      tags: [Public]
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: game
-          in: query
-          schema:
-            type: string
-            enum: [ATS, Farming_Sim, Construction_Sim, Mechanic_Sim]
-      responses:
-        '200':
-          description: Passport with credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PassportResponse'
-        '404':
-          description: Passport not found
-          
-  /credentials/verify:
-    post:
-      summary: Verify a credential
-      tags: [Public]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifyRequest'
-      responses:
-        '200':
-          description: Verification result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VerifyResponse'
+### 3.2 Update RoleAssignmentDialog
 
-  /credentials/issue:
-    post:
-      summary: Issue a credential (authorized apps only)
-      tags: [Authorized Apps]
-      security:
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IssueRequest'
-      responses:
-        '201':
-          description: Credential issued
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IssueResponse'
+Add developer role option:
 
-components:
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: X-App-Key
-    BearerAuth:
-      type: http
-      scheme: bearer
-      
-  schemas:
-    PassportResponse:
-      type: object
-      properties:
-        passport:
-          type: object
-          properties:
-            slug:
-              type: string
-            user:
-              $ref: '#/components/schemas/User'
-        credentials:
-          type: array
-          items:
-            $ref: '#/components/schemas/Credential'
+```text
+File: src/components/admin/RoleAssignmentDialog.tsx
+
+Changes:
+- Add developer SelectItem with description
+- Add icon for developer role (Code icon)
 ```
 
 ---
 
 ## Files to Create
 
-### Markdown Docs
-| File | Content |
-|------|---------|
-| `docs/api/README.md` | API overview, base URLs, quick start |
-| `docs/api/authentication.md` | Auth methods guide |
-| `docs/api/credential-api/README.md` | Credential API overview |
-| `docs/api/credential-api/public-endpoints.md` | Public endpoints reference |
-| `docs/api/credential-api/authenticated-endpoints.md` | JWT-protected endpoints |
-| `docs/api/credential-api/authorized-app-endpoints.md` | API key endpoints |
-| `docs/api/public-catalog/README.md` | Catalog API overview |
-| `docs/api/public-catalog/games.md` | Games endpoint reference |
-| `docs/api/public-catalog/courses.md` | Courses endpoints reference |
-| `docs/api/public-catalog/work-orders.md` | Work orders endpoints reference |
-| `docs/api/public-catalog/skills.md` | Skills endpoint reference |
-| `docs/api/integration-guides/cdl-quest.md` | CDL Quest integration guide |
-| `docs/api/integration-guides/cdl-exchange.md` | CDL Exchange integration guide |
-
-### OpenAPI Specs
-| File | Content |
-|------|---------|
-| `docs/openapi/credential-api.yaml` | Credential API OpenAPI 3.0 spec |
-| `docs/openapi/public-catalog.yaml` | Public Catalog OpenAPI 3.0 spec |
-
-### Developer Portal Components
 | File | Purpose |
 |------|---------|
-| `src/pages/Developers.tsx` | Main developer portal page |
-| `src/components/developers/ApiSidebar.tsx` | API navigation sidebar |
-| `src/components/developers/EndpointCard.tsx` | Endpoint documentation card |
-| `src/components/developers/CodeBlock.tsx` | Syntax-highlighted code block |
-| `src/components/developers/ApiTryIt.tsx` | Live API testing panel |
-| `src/components/developers/SchemaTable.tsx` | Schema documentation table |
-| `src/components/developers/ResponseViewer.tsx` | JSON response viewer |
-| `src/lib/api-docs.ts` | API documentation data structures |
+| `src/components/auth/DeveloperRoute.tsx` | Route guard for developer-only sections |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/App.tsx` | Add `/developers` route |
-| `src/components/layout/AppSidebar.tsx` | Add "Developers" link in sidebar |
+| Database migration | Add `developer` to `app_role` enum, add `owner_id` column, update RLS |
+| `src/hooks/useUserRole.ts` | Add `isDeveloper` flag |
+| `src/hooks/useAuthorizedApps.ts` | Add owner_id to create mutation |
+| `src/pages/Developers.tsx` | Conditional tab rendering based on role |
+| `src/components/developers/MyAppsSection.tsx` | Filter by ownership, handle non-developer state |
+| `src/components/admin/superadmin/RoleEscalationControls.tsx` | Add developer role option |
+| `src/components/admin/RoleAssignmentDialog.tsx` | Add developer role option |
 
 ---
 
-## Implementation Summary
+## Database Migration SQL Summary
 
-### Phase 1: Markdown Documentation
-- Create `/docs/api/` folder structure
-- Write comprehensive endpoint references
-- Include code examples in multiple languages
-- Add integration guides for partner sites
+```text
+1. ALTER TYPE app_role ADD VALUE 'developer'
 
-### Phase 2: OpenAPI Specifications
-- Create YAML specs for both APIs
-- Include all schemas, security definitions
-- Add example values for all fields
-- Enable Postman/Swagger import
+2. ALTER TABLE authorized_apps ADD COLUMN owner_id uuid REFERENCES auth.users(id)
 
-### Phase 3: Developer Portal
-- Build `/developers` page with tabbed navigation
-- Create reusable documentation components
-- Implement live API testing for public endpoints
-- Add copy-to-clipboard for code examples
-- Responsive design for mobile viewing
+3. UPDATE has_role() function to include developer in super_admin inheritance
 
-### Phase 4: Integration
-- Add route to App.tsx
-- Add sidebar navigation link
-- Link from Admin > Authorized Apps to docs
-- Add "View Docs" links on API key display
+4. DROP existing authorized_apps policies
+
+5. CREATE new policies:
+   - Developers can view own apps (SELECT where owner_id = auth.uid())
+   - Developers can manage own apps (ALL where owner_id = auth.uid())
+   - Admins can view all apps (SELECT with has_role admin)
+   - Super admins can manage all apps (ALL with has_role super_admin)
+```
 
 ---
 
-## Technical Approach
+## Access Control Summary
 
-### CodeBlock Component
-- Syntax highlighting using CSS classes
-- Language detection (json, bash, typescript)
-- Copy button with toast confirmation
-- Dark theme matching site design
+| User Type | View Docs | View My Apps Tab | Create Apps | Manage Own Apps | Manage All Apps |
+|-----------|-----------|------------------|-------------|-----------------|-----------------|
+| Anonymous | Yes | No | No | No | No |
+| Authenticated User | Yes | No | No | No | No |
+| Developer | Yes | Yes | Yes | Yes | No |
+| Admin | Yes | Yes (view only) | No | No | No |
+| Super Admin | Yes | Yes | Yes | Yes | Yes |
 
-### ApiTryIt Component
-- Dropdown for endpoint selection
-- Form fields for path/query parameters
-- Headers editor for API keys
-- Response panel with timing info
-- Only enabled for public endpoints (security)
+---
 
-### Documentation Data
-- Centralized in `src/lib/api-docs.ts`
-- TypeScript types for endpoints, params, schemas
-- Enables programmatic rendering and validation
+## Estimated Effort
+
+| Phase | Time Estimate |
+|-------|---------------|
+| Phase 1: Database changes | 15 min |
+| Phase 2: Frontend changes | 30 min |
+| Phase 3: Admin UI updates | 15 min |
+| **Total** | **~1 hour** |
+
+---
+
+## Security Considerations
+
+1. **RLS Enforcement**: All access control enforced at database level via RLS policies
+2. **Server-Side Validation**: The `has_role()` function runs as SECURITY DEFINER, preventing policy bypass
+3. **Ownership Scoping**: Developers can only CRUD their own apps, preventing unauthorized access
+4. **Super Admin Override**: Super admins maintain full visibility and control for platform management
+5. **Audit Trail**: Role changes are logged via existing `system_audit_logs` integration
+
