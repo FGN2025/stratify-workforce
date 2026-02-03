@@ -18,6 +18,7 @@ import Settings from "./pages/Settings";
 import Communities from "./pages/Communities";
 import CommunityProfile from "./pages/CommunityProfile";
 import Auth from "./pages/Auth";
+import AuthDiscordCallback from "./pages/AuthDiscordCallback";
 import AgentWidget from "./pages/AgentWidget";
 import Admin from "./pages/Admin";
 import Learn from "./pages/Learn";
@@ -38,6 +39,7 @@ const App = () => (
             <Routes>
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/discord/callback" element={<AuthDiscordCallback />} />
               <Route path="/" element={<Index />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/community/:slug" element={<CommunityProfile />} />
