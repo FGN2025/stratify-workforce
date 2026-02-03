@@ -1,228 +1,251 @@
 
-# Plan: Phase 1 - Editable Image Wrapper and Media Picker Dialog
+
+# Plan: Per-Work-Order Cover Images with Database Schema Changes
 
 ## Overview
 
-Build reusable infrastructure components for inline image editing across the platform, then apply them to `CourseCard` and `CommunityCard`. This establishes the pattern for all future card-level image editing.
+Add the ability for each work order to have its own custom cover image, replacing the current system where all work orders of the same game type share a generic game cover image. This involves a database schema change and updates to multiple components.
 
-## Architecture
+## Current State
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                     EDITABLE IMAGE INFRASTRUCTURE                                │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                  │
-│  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │                      EditableImageWrapper                                │    │
-│  │                                                                          │    │
-│  │   ┌──────────────────────────────────────────────────────────────────┐  │    │
-│  │   │                                                                   │  │    │
-│  │   │                   [children - any image]                         │  │    │
-│  │   │                                                                   │  │    │
-│  │   │   ┌────────────┐                                                 │  │    │
-│  │   │   │ Edit Icon  │  <-- Only visible to admins on hover           │  │    │
-│  │   │   └────────────┘                                                 │  │    │
-│  │   │                                                                   │  │    │
-│  │   └──────────────────────────────────────────────────────────────────┘  │    │
-│  │                              │                                          │    │
-│  │                              ▼                                          │    │
-│  │                    Opens MediaPickerDialog                              │    │
-│  │                                                                          │    │
-│  └─────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                  │
-│  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │                       MediaPickerDialog                                  │    │
-│  │                                                                          │    │
-│  │   ┌─────────────────┬─────────────────┬─────────────────┐               │    │
-│  │   │  Upload File    │   Enter URL     │  Media Library  │               │    │
-│  │   └─────────────────┴─────────────────┴─────────────────┘               │    │
-│  │                                                                          │    │
-│  │   Tab 1: Drag & drop upload zone                                        │    │
-│  │   Tab 2: Direct URL input with preview                                  │    │
-│  │   Tab 3: Browse existing media assets                                   │    │
-│  │                                                                          │    │
-│  │   onSelect(url: string) --> calls parent save callback                  │    │
-│  │                                                                          │    │
-│  └─────────────────────────────────────────────────────────────────────────┘    │
-│                                                                                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     CURRENT IMAGE LOGIC                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Work Order (game_title: 'ATS')                                 │
+│         │                                                        │
+│         └──► useGameCoverImages() ──► Returns generic ATS image │
+│                                                                  │
+│  Work Order (game_title: 'ATS')  ──► Same generic ATS image     │
+│                                                                  │
+│  Work Order (game_title: 'ATS')  ──► Same generic ATS image     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+Problem: All ATS work orders look identical in card views
 ```
 
-## Data Flow
+## Proposed State
 
 ```text
-Admin hovers on CourseCard image
-        │
-        ▼
-EditableImageWrapper shows edit button
-        │
-        ▼
-Admin clicks edit button
-        │
-        ▼
-MediaPickerDialog opens
-        │
-        ├─── Upload new file ────────────────────┐
-        │                                         │
-        ├─── Enter URL directly ──────────────────┤
-        │                                         │
-        └─── Select from Media Library ───────────┤
-                                                  │
-                                                  ▼
-                                    onSelect(imageUrl)
-                                                  │
-                                                  ▼
-                              onSave({ cover_image_url: imageUrl })
-                                                  │
-                                                  ▼
-                    Supabase: UPDATE courses SET cover_image_url = ?
-                                                  │
-                                                  ▼
-                            React Query invalidation --> UI refresh
+┌─────────────────────────────────────────────────────────────────┐
+│                     NEW IMAGE LOGIC                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Work Order 1 (cover_image_url: "https://...")                  │
+│         │                                                        │
+│         └──► Uses custom cover_image_url                        │
+│                                                                  │
+│  Work Order 2 (cover_image_url: null)                           │
+│         │                                                        │
+│         └──► Falls back to game cover from useGameCoverImages() │
+│                                                                  │
+│  Work Order 3 (cover_image_url: "https://...")                  │
+│         │                                                        │
+│         └──► Uses custom cover_image_url                        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+Solution: Each work order can have unique imagery while maintaining fallback
 ```
 
 ---
 
-## Files to Create
+## Database Schema Change
 
-| File | Purpose |
-|------|---------|
-| `src/components/admin/EditableImageWrapper.tsx` | Reusable wrapper that adds edit overlay to any image |
-| `src/components/admin/MediaPickerDialog.tsx` | Combined upload/URL/library picker dialog |
+### New Column
+
+| Table | Column | Type | Nullable | Default |
+|-------|--------|------|----------|---------|
+| `work_orders` | `cover_image_url` | `text` | Yes | `NULL` |
+
+### Migration SQL
+
+```sql
+ALTER TABLE work_orders
+ADD COLUMN cover_image_url text;
+
+COMMENT ON COLUMN work_orders.cover_image_url IS 
+  'Optional custom cover image URL. Falls back to game-type cover if null.';
+```
+
+---
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/learn/CourseCard.tsx` | Wrap cover image with `EditableImageWrapper`, add save handler |
-| `src/components/marketplace/CommunityCard.tsx` | Wrap avatar with `EditableImageWrapper`, add save handler |
-| `src/hooks/useCourses.ts` | Add `useUpdateCourse` hook if needed (already exists) |
+| `src/hooks/useWorkOrders.ts` | Add `cover_image_url` to `WorkOrderWithXP` interface and query mapping |
+| `src/types/tenant.ts` | Add `cover_image_url` to `WorkOrder` type |
+| `src/components/marketplace/EventCard.tsx` | Use `workOrder.cover_image_url` with game fallback, add `EditableImageWrapper` |
+| `src/components/dashboard/WorkOrderCard.tsx` | Add cover image display with edit capability |
+| `src/components/admin/WorkOrderEditDialog.tsx` | Add cover image URL field with MediaPickerDialog integration |
 
 ---
 
-## Component Specifications
+## Implementation Details
 
-### 1. EditableImageWrapper
+### 1. Database Migration
 
-A wrapper component that adds an admin-only edit overlay to any image element.
+Add the `cover_image_url` column to the `work_orders` table. Nullable text field with no default - allowing each work order to optionally specify a custom cover.
 
-**Props:**
-- `children`: The image element to wrap
-- `onEdit`: Callback when edit is triggered, opens the picker
-- `className`: Optional additional classes for positioning
+### 2. Type Updates
 
-**Behavior:**
-- Checks `isAdmin` or `isSuperAdmin` from `useUserRole` hook
-- Shows a semi-transparent overlay with edit icon on hover (admin only)
-- Clicking the overlay triggers `onEdit` callback
-- Does not interfere with parent link navigation
+**src/types/tenant.ts - WorkOrder interface:**
+```typescript
+export interface WorkOrder {
+  id: string;
+  tenant_id: string | null;
+  title: string;
+  description: string | null;
+  game_title: GameTitle;
+  success_criteria: Record<string, number>;
+  is_active: boolean;
+  created_at: string;
+  cover_image_url: string | null;  // NEW
+  tenant?: Tenant;
+}
+```
 
-**UI Design:**
-- Overlay appears only on hover with smooth fade transition
-- Small camera/pencil icon in corner with glassmorphic background
-- Prevents event propagation to avoid triggering card navigation
+**src/hooks/useWorkOrders.ts - WorkOrderWithXP interface:**
+```typescript
+export interface WorkOrderWithXP {
+  // ... existing fields ...
+  cover_image_url: string | null;  // NEW
+}
+```
 
-### 2. MediaPickerDialog
+### 3. EventCard Component Updates
 
-A combined dialog for selecting images via upload, URL, or existing library.
+The EventCard currently uses `useGameCoverImages()` to get a generic game cover:
 
-**Props:**
-- `open`: boolean
-- `onOpenChange`: (open: boolean) => void
-- `onSelect`: (url: string) => void
-- `title`: string (e.g., "Change Course Cover")
-- `currentImageUrl`: string (for showing current selection)
+```typescript
+// Current logic (line 43-44)
+const { gameCoverImages } = useGameCoverImages();
+const coverImage = gameCoverImages[workOrder.game_title];
+```
 
-**Tabs:**
-1. **Upload File**: Drag & drop zone (reuse pattern from MediaUploadDialog)
-2. **Enter URL**: Text input with live preview
-3. **Media Library**: Filterable grid of existing site_media (image type only)
+New logic with fallback:
 
-**Behavior:**
-- Upload mode: File uploads to `media-assets` bucket, returns public URL
-- URL mode: Validates URL format, shows preview
-- Library mode: Fetches from `site_media` table, shows selectable grid
-- On select: Calls `onSelect(url)`, closes dialog
+```typescript
+// New logic
+const { gameCoverImages } = useGameCoverImages();
+const coverImage = ('cover_image_url' in workOrder && workOrder.cover_image_url) 
+  ? workOrder.cover_image_url 
+  : gameCoverImages[workOrder.game_title];
+```
 
-### 3. CourseCard Updates
+Add `EditableImageWrapper` around the cover image to enable admin editing:
 
-**Changes:**
-- Import `EditableImageWrapper` and `MediaPickerDialog`
-- Import `useUpdateCourse` hook
-- Wrap the cover image div with `EditableImageWrapper`
-- Add state for picker dialog open/close
-- Add save handler that calls `updateCourse.mutateAsync({ id: course.id, cover_image_url: newUrl })`
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  EventCard with Admin Edit Capability                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                                                          │    │
+│  │          [Cover Image]                        [📷]       │    │
+│  │                                             (admin)      │    │
+│  │          XP Badge                                        │    │
+│  │                                                          │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  Community Avatar + Name                                         │
+│  Work Order Title                                                │
+│  Difficulty • ~30 min                                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-**Admin UX:**
-- When admin hovers on course cover image, edit icon appears
-- Clicking opens MediaPickerDialog
-- After selection, cover updates immediately (optimistic or refetch)
+### 4. WorkOrderCard Component Updates
 
-### 4. CommunityCard Updates
+The dashboard `WorkOrderCard` currently shows only a `GameIcon`, not a cover image. Two options:
 
-**Changes:**
-- Import `EditableImageWrapper` and `MediaPickerDialog`
-- Import Supabase client for direct tenant update
-- Wrap the Avatar component with `EditableImageWrapper`
-- Add state for picker dialog
-- Add save handler that updates `tenants.logo_url`
+**Option A (Minimal):** Keep current layout, no cover image display
+**Option B (Enhanced):** Add small thumbnail image like the compact EventCard
 
-**Admin UX:**
-- When admin hovers on community avatar, edit icon appears
-- Clicking opens MediaPickerDialog
-- After selection, logo updates immediately
+Recommended: **Option A** for now to keep dashboard compact. The EventCard handles the visual marketing view.
+
+### 5. WorkOrderEditDialog Updates
+
+Add cover image section to the admin edit dialog:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    Edit Work Order                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Title: [_____________________________________]                  │
+│  Description: [________________________________]                 │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Cover Image (Optional)                                  │    │
+│  │  ┌───────────────────────────────────────────────────┐  │    │
+│  │  │                                                    │  │    │
+│  │  │   [Current Preview or Placeholder]                │  │    │
+│  │  │                                                    │  │    │
+│  │  └───────────────────────────────────────────────────┘  │    │
+│  │                                                          │    │
+│  │  [Change Image]              [Remove]                   │    │
+│  │                                                          │    │
+│  │  Falls back to game cover if not set                    │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  Game: [ATS ▼]           Difficulty: [Beginner ▼]               │
+│  ...                                                             │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**New state and handlers:**
+- `coverImageUrl` state initialized from `workOrder.cover_image_url`
+- `showMediaPicker` state to control MediaPickerDialog
+- On save: include `cover_image_url` in the update payload
+
+### 6. WorkOrderDetail Page (Optional Enhancement)
+
+The detail page at `/work-orders/:id` could also display the cover image as a hero. Currently it only shows a `GameIcon`. This is optional but would provide visual consistency.
 
 ---
 
-## Technical Implementation Details
-
-### EditableImageWrapper Component
+## Data Flow
 
 ```text
-Structure:
-- Relative positioned container
-- Children rendered as-is
-- Absolute overlay div (only when isAdmin && hover)
-- Edit button with onClick that calls onEdit and stops propagation
+Admin opens WorkOrderEditDialog
+        │
+        ▼
+Clicks "Change Image" button
+        │
+        ▼
+MediaPickerDialog opens (Upload / URL / Library)
+        │
+        ▼
+Selects/uploads image ──► Returns URL
+        │
+        ▼
+coverImageUrl state updated ──► Preview shown
+        │
+        ▼
+Admin clicks "Save"
+        │
+        ▼
+Supabase: UPDATE work_orders SET cover_image_url = ?
+        │
+        ▼
+React Query invalidation ──► EventCard re-renders with new image
 ```
 
-Key considerations:
-- Must not break existing card layout or links
-- Event propagation must be stopped on edit click
-- Overlay should have pointer-events only on the edit button, not entire image
+---
 
-### MediaPickerDialog Component
+## Affected Components Summary
 
-```text
-Reuses:
-- Upload zone from MediaUploadDialog (drag/drop, file state, preview)
-- Upload mutation from useMediaLibrary hook
-- Media grid pattern from MediaLibrary component
-
-New:
-- Simplified 3-tab layout (Upload | URL | Library)
-- Single select mode (not multi-select)
-- No location_key assignment (just returns URL)
-- Filter to images only in library tab
-```
-
-### Database Considerations
-
-No schema changes required for Phase 1:
-- `courses.cover_image_url` already exists
-- `tenants.logo_url` already exists
-- Both are nullable text columns storing URLs
-
-### Role Check Integration
-
-Both cards will use the existing `useUserRole` hook:
-
-```text
-const { isAdmin, isSuperAdmin } = useUserRole();
-const canEdit = isAdmin || isSuperAdmin;
-```
-
-The `EditableImageWrapper` performs this check internally, so consumers don't need to conditionally render it.
+| Component | Current Behavior | New Behavior |
+|-----------|-----------------|--------------|
+| `EventCard` | Uses game-type cover | Uses `cover_image_url` with game fallback, admin edit overlay |
+| `WorkOrderCard` | GameIcon only | No change (keep minimal) |
+| `WorkOrderEditDialog` | No image field | New cover image section with MediaPickerDialog |
+| `WorkOrderDetail` | GameIcon only | Optional: hero image from cover_image_url |
 
 ---
 
@@ -230,22 +253,23 @@ The `EditableImageWrapper` performs this check internally, so consumers don't ne
 
 | Task | Time |
 |------|------|
-| EditableImageWrapper component | 30 min |
-| MediaPickerDialog component | 1 hour |
-| CourseCard integration | 30 min |
-| CommunityCard integration | 30 min |
-| Testing & polish | 30 min |
-| **Total** | **~3 hours** |
+| Database migration (add column) | 5 min |
+| Type updates (WorkOrder, WorkOrderWithXP) | 10 min |
+| useWorkOrders hook update | 10 min |
+| EventCard update with fallback + EditableImageWrapper | 30 min |
+| WorkOrderEditDialog cover image section | 45 min |
+| Testing & edge cases | 20 min |
+| **Total** | **~2 hours** |
 
 ---
 
 ## Summary
 
-Phase 1 establishes the core infrastructure for per-card image editing:
+This implementation adds per-work-order cover images while maintaining backward compatibility:
 
-1. **EditableImageWrapper**: A reusable overlay pattern for admin-only image editing
-2. **MediaPickerDialog**: A unified picker combining upload, URL, and library selection
-3. **CourseCard**: First integration - editable course cover images
-4. **CommunityCard**: Second integration - editable community logos
+1. **Database**: New nullable `cover_image_url` column on `work_orders`
+2. **Fallback Logic**: If `cover_image_url` is null, use game-type cover image
+3. **Admin Edit**: Inline editing via `EditableImageWrapper` + `MediaPickerDialog` on EventCard
+4. **Dialog Edit**: Cover image section in `WorkOrderEditDialog` for full CRUD
+5. **Reuses Phase 1 Infrastructure**: `EditableImageWrapper` and `MediaPickerDialog` from the previous implementation
 
-This pattern can then be extended to WorkOrderCard, EventCard, and other cards in Phase 2 and beyond.
