@@ -11,6 +11,7 @@ import {
   Tractor, 
   HardHat, 
   Wrench, 
+  Cable,
   Users, 
   ClipboardList,
   Edit,
@@ -27,6 +28,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Farming_Sim: <Tractor className="h-6 w-6" />,
   Construction_Sim: <HardHat className="h-6 w-6" />,
   Mechanic_Sim: <Wrench className="h-6 w-6" />,
+  Fiber_Tech: <Cable className="h-6 w-6" />,
 };
 
 const gameLabels: Record<GameTitle, string> = {
@@ -34,6 +36,7 @@ const gameLabels: Record<GameTitle, string> = {
   Farming_Sim: 'Farming Simulator',
   Construction_Sim: 'Construction Simulator',
   Mechanic_Sim: 'Mechanic Simulator',
+  Fiber_Tech: 'Fiber-Tech Simulator',
 };
 
 export function SimGamesManager() {

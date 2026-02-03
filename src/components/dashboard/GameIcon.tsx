@@ -1,4 +1,4 @@
-import { Truck, Tractor, HardHat, Wrench } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +28,11 @@ const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; co
     icon: Wrench, 
     label: 'Mechanic Simulator',
     color: 'text-red-400 bg-red-500/20'
+  },
+  Fiber_Tech: { 
+    icon: Cable, 
+    label: 'Fiber-Tech Simulator',
+    color: 'text-purple-400 bg-purple-500/20'
   },
 };
 

@@ -18,20 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Truck, Tractor, HardHat, Wrench, Upload, Link, X, Loader2 } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2 } from 'lucide-react';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameChannel = Database['public']['Tables']['game_channels']['Row'];
 type GameTitle = Database['public']['Enums']['game_title'];
 
-const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim'];
+const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech'];
 
 const gameLabels: Record<GameTitle, string> = {
   ATS: 'American Truck Simulator',
   Farming_Sim: 'Farming Simulator',
   Construction_Sim: 'Construction Simulator',
   Mechanic_Sim: 'Mechanic Simulator',
+  Fiber_Tech: 'Fiber-Tech Simulator',
 };
 
 const gameIcons: Record<GameTitle, React.ReactNode> = {
@@ -39,6 +40,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Farming_Sim: <Tractor className="h-4 w-4" />,
   Construction_Sim: <HardHat className="h-4 w-4" />,
   Mechanic_Sim: <Wrench className="h-4 w-4" />,
+  Fiber_Tech: <Cable className="h-4 w-4" />,
 };
 
 interface SimGameEditDialogProps {

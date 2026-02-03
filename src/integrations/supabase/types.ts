@@ -1889,7 +1889,12 @@ export type Database = {
         | "approved"
         | "rejected"
         | "needs_revision"
-      game_title: "ATS" | "Farming_Sim" | "Construction_Sim" | "Mechanic_Sim"
+      game_title:
+        | "ATS"
+        | "Farming_Sim"
+        | "Construction_Sim"
+        | "Mechanic_Sim"
+        | "Fiber_Tech"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
       membership_request_status: "pending" | "approved" | "rejected"
@@ -2094,7 +2099,13 @@ export const Constants = {
         "rejected",
         "needs_revision",
       ],
-      game_title: ["ATS", "Farming_Sim", "Construction_Sim", "Mechanic_Sim"],
+      game_title: [
+        "ATS",
+        "Farming_Sim",
+        "Construction_Sim",
+        "Mechanic_Sim",
+        "Fiber_Tech",
+      ],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
       match_status: ["pending", "in_progress", "completed"],
       membership_request_status: ["pending", "approved", "rejected"],

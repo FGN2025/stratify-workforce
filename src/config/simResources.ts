@@ -1,7 +1,7 @@
 // Simulation Resources Configuration
 // Scalable architecture for all simulator game external resources
 
-import { Truck, Tractor, HardHat, Wrench, GraduationCap, Briefcase } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Briefcase } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 
@@ -69,6 +69,13 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     icon: Wrench,
     accentColor: '#EF4444',
     resources: [], // Coming Soon
+  },
+  Fiber_Tech: {
+    title: 'Fiber-Tech Simulator',
+    shortTitle: 'Fiber-Tech',
+    icon: Cable,
+    accentColor: '#8B5CF6',
+    resources: [], // Admin-managed via database
   },
 };
 
