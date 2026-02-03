@@ -1,128 +1,158 @@
 
-# Plan: Community Creation & Super Admin Approval Workflow
+# Plan: Discord Account Linking via OAuth
 
 ## Overview
 
-Enable any registered user to create a community (currently limited to admins only), but require Super Admin approval before the community becomes publicly visible. This follows the pattern already established by the Evidence Review system.
+Implement a complete Discord OAuth flow allowing users to permanently link their Discord account to their FGN Academy profile. This replaces the current manual text field with a verified, token-based connection that enables rich Discord data access.
 
 ---
 
 ## Architecture
 
 ```text
-USER JOURNEY: Creating a Community
-──────────────────────────────────────────────────────────────────
+DISCORD OAUTH FLOW
+────────────────────────────────────────────────────────────────────
 
-Registered User visits /communities
+User visits Settings or Profile page
         │
         ▼
-Clicks "Create Community" button (now visible to all logged-in users)
+Clicks "Connect Discord" button
         │
         ▼
-Fills out CommunityFormDialog
+Redirected to Discord OAuth consent screen
+  • App requests scopes: identify, guilds, guilds.members.read
         │
         ▼
-On submit:
-  • Sets approval_status = 'pending'
-  • Sets owner_id = current user ID
-  • Inserts into tenants table
+User authorizes → Discord redirects to callback URL
+  • URL: /auth/discord/callback?code=xxx
         │
         ▼
-User sees confirmation: "Your community has been submitted for review"
+Frontend extracts code, calls Edge Function
+  • POST /discord-oauth with { code, redirect_uri }
         │
         ▼
-User can view their pending communities in "My Communities" section
+Edge Function exchanges code for tokens with Discord
+        │
+        ▼
+Edge Function fetches Discord user profile
+        │
+        ▼
+Stores tokens + profile in user_discord_connections table
+        │
+        ▼
+Returns success → Frontend shows connected state
 
 
-SUPER ADMIN JOURNEY: Reviewing Communities
-──────────────────────────────────────────────────────────────────
+SUBSEQUENT DATA ACCESS
+────────────────────────────────────────────────────────────────────
 
-Super Admin navigates to Admin Panel → Communities Tab (NEW)
+User profile loads
         │
         ▼
-Views CommunityReviewQueue (similar to EvidenceReviewQueue)
-        │
-        ├── Filter by: All | Pending | Approved | Rejected
+Check user_discord_connections for linked account
         │
         ▼
-Clicks "Review" on a pending community
-        │
-        ▼
-CommunityReviewDialog opens
-        │
-        ├── View community details, branding, games assigned
-        ├── Approve → Sets approval_status = 'approved', is_verified = true
-        ├── Reject → Sets approval_status = 'rejected', adds reviewer_notes
-        └── Request Changes → Sets approval_status = 'needs_revision'
-        │
-        ▼
-Community creator is notified (future: email notification)
+If connected:
+  ├── Display Discord username, avatar, discriminator
+  ├── Show "Disconnect" option
+  └── (Future) Sync guild memberships, roles
 ```
 
 ---
 
-## Database Changes
+## Database Schema
 
-### 1. Create Approval Status Enum
-
-```sql
-CREATE TYPE public.community_approval_status AS ENUM (
-  'pending',
-  'approved',
-  'rejected',
-  'needs_revision'
-);
-```
-
-### 2. Add Approval Columns to Tenants Table
+### New Table: user_discord_connections
 
 ```sql
-ALTER TABLE public.tenants
-ADD COLUMN approval_status public.community_approval_status NOT NULL DEFAULT 'approved',
-ADD COLUMN reviewed_by UUID REFERENCES auth.users(id) DEFAULT NULL,
-ADD COLUMN reviewed_at TIMESTAMPTZ DEFAULT NULL,
-ADD COLUMN reviewer_notes TEXT DEFAULT NULL,
-ADD COLUMN submitted_at TIMESTAMPTZ DEFAULT now();
+CREATE TABLE public.user_discord_connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  
+  -- Discord Identity
+  discord_id TEXT NOT NULL UNIQUE,
+  discord_username TEXT NOT NULL,
+  discord_discriminator TEXT,  -- May be '0' for new usernames
+  discord_avatar_hash TEXT,
+  discord_banner_hash TEXT,
+  discord_accent_color INTEGER,
+  discord_global_name TEXT,
+  
+  -- OAuth Tokens (encrypted at rest by Supabase)
+  access_token TEXT NOT NULL,
+  refresh_token TEXT NOT NULL,
+  token_expires_at TIMESTAMPTZ NOT NULL,
+  scopes TEXT[] NOT NULL DEFAULT ARRAY['identify'],
+  
+  -- Metadata
+  connected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_synced_at TIMESTAMPTZ DEFAULT now(),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX idx_discord_connections_user ON user_discord_connections(user_id);
+CREATE INDEX idx_discord_connections_discord_id ON user_discord_connections(discord_id);
+
+-- Updated at trigger
+CREATE TRIGGER update_discord_connections_updated_at
+  BEFORE UPDATE ON user_discord_connections
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
-**Note**: Default is `'approved'` to maintain backward compatibility for existing communities and admin-created ones.
-
-### 3. Update RLS Policies
+### RLS Policies
 
 ```sql
--- Users can view approved communities OR their own pending communities
-CREATE POLICY "Users can view approved or own communities"
-ON public.tenants FOR SELECT
-TO authenticated
-USING (
-  approval_status = 'approved'
-  OR owner_id = auth.uid()
-  OR public.has_role(auth.uid(), 'super_admin')
-  OR public.has_role(auth.uid(), 'admin')
-);
+-- Enable RLS
+ALTER TABLE user_discord_connections ENABLE ROW LEVEL SECURITY;
 
--- Authenticated users can create communities (insert as pending)
-CREATE POLICY "Authenticated users can create communities"
-ON public.tenants FOR INSERT
+-- Users can view their own connection
+CREATE POLICY "Users can view own discord connection"
+ON user_discord_connections FOR SELECT
 TO authenticated
-WITH CHECK (
-  owner_id = auth.uid()
-  AND approval_status = 'pending'
-);
+USING (user_id = auth.uid());
 
--- Users can update their own pending communities
-CREATE POLICY "Users can update own pending communities"
-ON public.tenants FOR UPDATE
+-- Users can delete their own connection (disconnect)
+CREATE POLICY "Users can disconnect own discord"
+ON user_discord_connections FOR DELETE
 TO authenticated
-USING (owner_id = auth.uid() AND approval_status IN ('pending', 'needs_revision'))
-WITH CHECK (owner_id = auth.uid());
+USING (user_id = auth.uid());
 
--- Super admins can update any community (for approval)
-CREATE POLICY "Super admins can update any community"
-ON public.tenants FOR UPDATE
-TO authenticated
-USING (public.has_role(auth.uid(), 'super_admin'));
+-- Only edge functions (service role) can insert/update
+-- No INSERT/UPDATE policies for authenticated users
 ```
+
+---
+
+## Discord OAuth Configuration
+
+### Required Secrets
+
+| Secret Name | Purpose |
+|-------------|---------|
+| `DISCORD_CLIENT_ID` | Discord application Client ID |
+| `DISCORD_CLIENT_SECRET` | Discord application Client Secret |
+
+### Discord Developer Portal Setup (User Action Required)
+
+1. Go to https://discord.com/developers/applications
+2. Create a new application (or use existing)
+3. Navigate to OAuth2 → General
+4. Add Redirect URL: `https://id-preview--bdc55f68-6a4e-4a85-ae3a-8b5181141ddf.lovable.app/auth/discord/callback`
+5. Add Redirect URL: `https://stratify-workforce.lovable.app/auth/discord/callback`
+6. Copy Client ID and Client Secret
+7. Save as secrets in Lovable
+
+### OAuth Scopes
+
+| Scope | Data Provided |
+|-------|---------------|
+| `identify` | User ID, username, avatar, banner, accent color |
+| `guilds` | List of servers user is in |
+| `guilds.members.read` | Roles/nickname in mutual servers |
 
 ---
 
@@ -130,259 +160,243 @@ USING (public.has_role(auth.uid(), 'super_admin'));
 
 | File | Purpose |
 |------|---------|
-| `src/components/admin/CommunityReviewQueue.tsx` | Admin queue for reviewing pending communities (similar to EvidenceReviewQueue) |
-| `src/components/admin/CommunityReviewDialog.tsx` | Modal for reviewing a single community with approve/reject/revision actions |
-| `src/hooks/useCommunityReview.ts` | Hook for fetching and managing community approvals |
-| `src/hooks/usePendingCommunityCount.ts` | Hook to get pending count for badge display |
-| `src/components/communities/MyCommunities.tsx` | Section showing user's own communities (pending/approved/rejected) |
+| `supabase/functions/discord-oauth/index.ts` | Edge function handling OAuth token exchange and user data fetch |
+| `src/hooks/useDiscordConnection.ts` | Hook for managing Discord connection state |
+| `src/components/settings/DiscordConnectionCard.tsx` | UI component for connect/disconnect flow |
+| `src/pages/AuthDiscordCallback.tsx` | Callback page that handles Discord redirect |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/Communities.tsx` | Show "Create Community" for all logged-in users, add "My Communities" section |
-| `src/pages/Admin.tsx` | Add "Communities" tab with pending badge for Super Admins |
-| `src/components/admin/CommunityFormDialog.tsx` | Set owner_id and approval_status on create |
-| `src/hooks/useCommunities.ts` | Filter to only show approved communities in public view |
-| `src/types/tenant.ts` | Add approval_status and related fields to Tenant type |
+| `src/App.tsx` | Add `/auth/discord/callback` route |
+| `src/pages/Settings.tsx` | Add Discord connection card to settings |
+| `src/pages/Profile.tsx` | Display Discord info if connected |
+| `src/components/profile/ProfileHeader.tsx` | Show Discord badge/link if connected |
+| `src/components/onboarding/AcademyOnboardingDialog.tsx` | Update Discord field to show "Connect via OAuth" option |
 
 ---
 
 ## Implementation Details
 
-### 1. Tenant Type Updates
+### 1. Edge Function: discord-oauth
 
 ```typescript
-// src/types/tenant.ts
-export type CommunityApprovalStatus = 'pending' | 'approved' | 'rejected' | 'needs_revision';
+// supabase/functions/discord-oauth/index.ts
 
-export interface Tenant {
-  // ... existing fields ...
-  
-  // Approval workflow fields
-  approval_status: CommunityApprovalStatus;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  reviewer_notes: string | null;
-  submitted_at: string | null;
+// Endpoints:
+// POST /connect - Exchange code for tokens, store connection
+// POST /refresh - Refresh expired access token
+// DELETE /disconnect - Remove connection
+// GET /me - Get current connection status
+
+// Token Exchange Flow:
+// 1. Receive authorization code from frontend
+// 2. Exchange code for access_token + refresh_token with Discord
+// 3. Use access_token to fetch user profile from Discord API
+// 4. Store everything in user_discord_connections
+// 5. Return success with Discord profile data
+```
+
+### 2. useDiscordConnection Hook
+
+```typescript
+interface DiscordConnection {
+  discordId: string;
+  username: string;
+  discriminator: string;
+  avatarUrl: string | null;
+  globalName: string | null;
+  connectedAt: string;
+  isActive: boolean;
+}
+
+interface UseDiscordConnectionReturn {
+  connection: DiscordConnection | null;
+  isLoading: boolean;
+  isConnecting: boolean;
+  isDisconnecting: boolean;
+  connect: () => void;  // Redirects to Discord OAuth
+  disconnect: () => Promise<void>;
+  getAvatarUrl: () => string | null;
 }
 ```
 
-### 2. Communities Page Updates
-
-**Access Control Changes:**
-- "Create Community" button visible to ALL authenticated users (not just admins)
-- Admin edit button still restricted to admins
-- Show "My Communities" section for logged-in users
-
-**New Section: "My Communities"**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  My Communities                                                 │
-│                                                                 │
-│  [Pending] Acme Trucking School          Status: ⏳ Pending    │
-│  [Rejected] Test Community               Status: ✕ Rejected    │
-│  [Approved] My Gaming Guild              Status: ✓ Approved    │
-│                                                                 │
-│  [+ Create New Community]                                       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 3. CommunityFormDialog Updates
-
-**On Create (non-admin users):**
-```typescript
-const handleSubmit = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  const insertData = {
-    ...formData,
-    owner_id: user.id,
-    approval_status: isAdmin ? 'approved' : 'pending', // Admins bypass approval
-    submitted_at: new Date().toISOString(),
-  };
-  
-  await supabase.from('tenants').insert(insertData);
-  
-  if (!isAdmin) {
-    toast({
-      title: 'Community Submitted',
-      description: 'Your community has been submitted for review. You will be notified once approved.',
-    });
-  }
-};
-```
-
-### 4. CommunityReviewQueue Component
-
-Similar to `EvidenceReviewQueue`, with:
-- Status filter (Pending, Approved, Rejected, Needs Revision)
-- Table showing: Community Name, Owner, Category, Games, Submitted Date, Status
-- "Review" action button per row
-- Pending count badge
-
-### 5. CommunityReviewDialog Component
+### 3. DiscordConnectionCard Component
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│  Review Community                                        [X]   │
-│─────────────────────────────────────────────────────────────────│
+│  [Discord Logo] Discord                                         │
 │                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  [Hero Image]                                            │   │
-│  │                                                          │   │
-│  │  [Logo] Community Name                                   │   │
-│  └─────────────────────────────────────────────────────────┘   │
+│  ┌───────────────────────────────────────────────────────────┐ │
+│  │  NOT CONNECTED                                             │ │
+│  │                                                            │ │
+│  │  Link your Discord account to access community features,  │ │
+│  │  display your Discord profile, and sync server roles.     │ │
+│  │                                                            │ │
+│  │                            [Connect Discord]               │ │
+│  └───────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  [Discord Logo] Discord                        [Connected ✓]   │
 │                                                                 │
-│  Submitted by: @username                                        │
-│  Submitted on: Feb 3, 2026                                      │
-│                                                                 │
-│  Category: School                                               │
-│  Games: ATS, Farming Simulator                                  │
-│  Website: https://example.com                                   │
-│  Location: Dallas, TX                                           │
-│                                                                 │
-│  Description:                                                   │
-│  Lorem ipsum dolor sit amet...                                  │
-│                                                                 │
-│  ─────────────────────────────────────────────────────────────  │
-│                                                                 │
-│  Review Notes (optional for approval, required for rejection):  │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                                                          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  [Request Changes]  [Reject]  [Approve]                         │
-│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐ │
+│  │  [Avatar]  @username                                       │ │
+│  │            Connected Feb 3, 2026                           │ │
+│  │                                                            │ │
+│  │  Permissions:                                              │ │
+│  │  ✓ Basic profile info                                     │ │
+│  │  ✓ Server list                                            │ │
+│  │  ✓ Server roles                                           │ │
+│  │                                                            │ │
+│  │                            [Disconnect]                    │ │
+│  └───────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 6. useCommunities Hook Updates
+### 4. AuthDiscordCallback Page
 
 ```typescript
-export function useCommunities() {
-  const { data: communities = [], isLoading, error } = useQuery({
-    queryKey: ['communities'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('approval_status', 'approved') // Only show approved in public view
-        .order('name', { ascending: true });
+// Handles: /auth/discord/callback?code=xxx&state=xxx
+// 1. Extract code and state from URL
+// 2. Validate state matches stored value (CSRF protection)
+// 3. Call edge function with code
+// 4. On success: redirect to /settings with success toast
+// 5. On error: redirect to /settings with error toast
+```
 
-      if (error) throw error;
-      return data as unknown as Tenant[];
-    },
+### 5. Profile Integration
+
+When Discord is connected:
+- Show Discord logo/badge next to username
+- Display Discord avatar as secondary avatar option
+- Show "View on Discord" link
+- Display Discord username in profile header
+
+---
+
+## OAuth URL Construction
+
+```typescript
+const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize';
+
+function buildDiscordOAuthUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: import.meta.env.VITE_DISCORD_CLIENT_ID,
+    redirect_uri: `${window.location.origin}/auth/discord/callback`,
+    response_type: 'code',
+    scope: 'identify guilds guilds.members.read',
+    state: state,  // CSRF protection
+    prompt: 'consent',  // Always show consent screen
   });
-  // ...
+  
+  return `${DISCORD_OAUTH_URL}?${params.toString()}`;
 }
 ```
 
-### 7. Admin Dashboard Updates
-
-Add "Communities" tab (for super_admin only) with pending count badge:
-
-```typescript
-// In Admin.tsx TabsList
-{isSuperAdmin && (
-  <TabsTrigger value="community-review" className="relative">
-    Community Review
-    {pendingCommunityCount > 0 && (
-      <Badge variant="destructive" className="ml-2">
-        {pendingCommunityCount}
-      </Badge>
-    )}
-  </TabsTrigger>
-)}
-```
-
 ---
 
-## Data Flow
+## Token Refresh Strategy
 
 ```text
-USER CREATES COMMUNITY
-────────────────────────────────────────────────────────────────
-1. User fills form → Submit
-2. INSERT: approval_status='pending', owner_id=user.id
-3. RLS allows: owner can view their pending community
-4. Community NOT visible in public /communities list
+ACCESS TOKEN LIFECYCLE
+────────────────────────────────────────────────────────────────────
 
-
-SUPER ADMIN APPROVES
-────────────────────────────────────────────────────────────────
-1. Super Admin views pending queue
-2. Clicks "Approve" on community
-3. UPDATE: approval_status='approved', reviewed_by, reviewed_at
-4. Community now visible in public /communities list
-5. Creator sees "Approved" status in My Communities
-
-
-SUPER ADMIN REJECTS/REQUESTS CHANGES
-────────────────────────────────────────────────────────────────
-1. Super Admin clicks "Reject" or "Request Changes"
-2. UPDATE: approval_status='rejected'/'needs_revision', reviewer_notes
-3. Creator sees status + notes in My Communities
-4. (For 'needs_revision') Creator can edit and resubmit
+Access tokens expire after ~7 days (Discord default)
+        │
+        ▼
+On any Discord API call, check token_expires_at
+        │
+        ├── If valid: proceed with request
+        │
+        └── If expired/expiring soon:
+                │
+                ▼
+            Call Discord refresh endpoint
+                │
+                ▼
+            Update tokens in database
+                │
+                ▼
+            Proceed with request
 ```
 
 ---
 
-## Status Styling (Consistent with Evidence Review)
+## Security Considerations
 
-```typescript
-const STATUS_STYLES: Record<CommunityApprovalStatus, string> = {
-  pending: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  approved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  rejected: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-  needs_revision: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-};
+| Concern | Mitigation |
+|---------|------------|
+| CSRF attacks | State parameter with crypto-random value stored in sessionStorage |
+| Token exposure | Tokens stored only in database, never exposed to frontend |
+| Unauthorized access | RLS policies prevent cross-user access |
+| Token theft | Refresh tokens allow revocation; short-lived access tokens |
+| Replay attacks | Single-use authorization codes (Discord enforces) |
+
+---
+
+## Data Available from Discord
+
+| Data Point | Scope Required | Use Case |
+|------------|----------------|----------|
+| User ID | `identify` | Unique identifier for linking |
+| Username | `identify` | Display in profile |
+| Avatar | `identify` | Alternative profile picture |
+| Banner | `identify` | Profile customization |
+| Global Name | `identify` | Display name |
+| Server List | `guilds` | Show mutual communities |
+| Server Roles | `guilds.members.read` | Auto-assign community roles |
+
+---
+
+## Future Enhancements (Not in Initial Scope)
+
+1. **Discord Embeds**: Embed community Discord servers in app
+2. **Role Sync**: Auto-assign FGN roles based on Discord roles
+3. **Notifications**: Send Discord DMs for events/achievements
+4. **Server Widget**: Display live server activity
+5. **Rich Presence**: Show FGN activity in Discord status
+
+---
+
+## Environment Variables
+
+### Frontend (.env - public)
+```
+VITE_DISCORD_CLIENT_ID=your_client_id_here
+```
+
+### Edge Function (Supabase Secrets)
+```
+DISCORD_CLIENT_ID=your_client_id_here
+DISCORD_CLIENT_SECRET=your_client_secret_here
 ```
 
 ---
 
-## Role-Based Access Summary
+## Implementation Order
 
-| Action | Guest | User | Admin | Super Admin |
-|--------|-------|------|-------|-------------|
-| View approved communities | Yes | Yes | Yes | Yes |
-| Create community (pending) | No | Yes | Yes | Yes |
-| View own pending communities | — | Yes | Yes | Yes |
-| Edit own pending community | — | Yes | Yes | Yes |
-| Approve/reject communities | No | No | No | Yes |
-| Edit any approved community | No | No | Yes | Yes |
-| Delete communities | No | No | No | Yes |
-
----
-
-## Estimated Effort
-
-| Task | Time |
-|------|------|
-| Database migration (enum + columns + RLS) | 20 min |
-| Update Tenant type | 5 min |
-| useCommunityReview hook | 25 min |
-| usePendingCommunityCount hook | 10 min |
-| CommunityReviewQueue component | 40 min |
-| CommunityReviewDialog component | 35 min |
-| MyCommunities section | 25 min |
-| Update Communities.tsx (user access + section) | 20 min |
-| Update CommunityFormDialog (owner_id, status) | 15 min |
-| Update useCommunities (filter approved) | 10 min |
-| Update Admin.tsx (new tab + badge) | 15 min |
-| Testing & polish | 30 min |
-| **Total** | **~4 hours** |
+1. **Database Migration**: Create `user_discord_connections` table with RLS
+2. **Request Secrets**: Prompt for `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`
+3. **Edge Function**: Create `discord-oauth` with connect/disconnect/refresh endpoints
+4. **Callback Page**: Create `/auth/discord/callback` route and handler
+5. **Hook**: Create `useDiscordConnection` for state management
+6. **Settings UI**: Add `DiscordConnectionCard` to Settings page
+7. **Profile Integration**: Show Discord info in ProfileHeader
+8. **Onboarding Update**: Replace manual field with OAuth prompt
+9. **Testing**: End-to-end flow verification
 
 ---
 
 ## Summary
 
-This implementation enables democratic community creation with proper oversight:
+This implementation provides:
 
-1. **User Access** - Any registered user can submit a community for creation
-2. **Pending State** - New user-created communities start as "pending" and are hidden from public view
-3. **Super Admin Review** - Dedicated review queue with approve/reject/revision actions
-4. **My Communities** - Users can track the status of their submitted communities
-5. **Admin Bypass** - Admins/Super Admins can still create immediately-approved communities
-6. **Existing Patterns** - Follows the established Evidence Review workflow architecture
-7. **Backward Compatible** - Existing communities remain approved and unchanged
+1. **Secure OAuth Flow** - Industry-standard token exchange via edge function
+2. **Permanent Linking** - Tokens stored in database with refresh capability
+3. **Rich Profile Data** - Username, avatar, banner, and server memberships
+4. **User Control** - Connect/disconnect at any time from Settings
+5. **Extensibility** - Foundation for Discord embeds, role sync, and notifications
+6. **Privacy-First** - Minimal scopes, clear consent, easy revocation
+
