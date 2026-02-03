@@ -50,6 +50,15 @@ GET /games
       "skills_count": 0,
       "work_orders_count": 0,
       "courses_count": 0
+    },
+    {
+      "key": "Fiber_Tech",
+      "name": "Fiber-Tech Simulator",
+      "short_name": "Fiber-Tech",
+      "accent_color": "#8B5CF6",
+      "skills_count": 12,
+      "work_orders_count": 0,
+      "courses_count": 0
     }
   ]
 }
@@ -111,7 +120,7 @@ document.documentElement.style.setProperty('--game-color', atsGame?.accent_color
 
 ### Notes
 
-- All four simulation games are always returned
+- All five simulation games are always returned
 - Counts reflect only active/published content
 - Games with zero content are still included (for UI completeness)
 - `courses_count` is currently global (not game-specific)

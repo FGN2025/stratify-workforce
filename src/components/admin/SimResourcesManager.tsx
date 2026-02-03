@@ -38,6 +38,7 @@ import {
   Tractor,
   HardHat,
   Wrench,
+  Cable,
   Trophy,
   Target,
   Users,
@@ -53,6 +54,7 @@ const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; c
   Farming_Sim: { title: 'Farming Simulator', icon: Tractor, color: '#22C55E' },
   Construction_Sim: { title: 'Construction Simulator', icon: HardHat, color: '#F59E0B' },
   Mechanic_Sim: { title: 'Mechanic Simulator', icon: Wrench, color: '#EF4444' },
+  Fiber_Tech: { title: 'Fiber-Tech Simulator', icon: Cable, color: '#8B5CF6' },
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {

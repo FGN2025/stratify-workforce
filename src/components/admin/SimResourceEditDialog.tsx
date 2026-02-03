@@ -62,6 +62,7 @@ const GAME_OPTIONS: { value: GameTitle; label: string }[] = [
   { value: 'Farming_Sim', label: 'Farming Simulator' },
   { value: 'Construction_Sim', label: 'Construction Simulator' },
   { value: 'Mechanic_Sim', label: 'Mechanic Simulator' },
+  { value: 'Fiber_Tech', label: 'Fiber-Tech Simulator' },
 ];
 
 const COLOR_PRESETS = [

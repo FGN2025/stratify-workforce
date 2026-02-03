@@ -97,6 +97,7 @@ export function AppSidebar() {
     Farming_Sim: false,
     Construction_Sim: false,
     Mechanic_Sim: false,
+    Fiber_Tech: false,
   });
 
   const toggleGame = (game: GameTitle) => {
@@ -119,6 +120,7 @@ export function AppSidebar() {
         Farming_Sim: [],
         Construction_Sim: [],
         Mechanic_Sim: [],
+        Fiber_Tech: [],
       };
       dbResources.forEach((r) => {
         if (grouped[r.game_title]) {

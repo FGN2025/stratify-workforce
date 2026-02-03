@@ -75,6 +75,7 @@ const GAME_LABELS: Record<GameTitle, string> = {
   Farming_Sim: 'Farming',
   Construction_Sim: 'Construction',
   Mechanic_Sim: 'Mechanic',
+  Fiber_Tech: 'Fiber-Tech',
 };
 
 export function EventsManager() {
