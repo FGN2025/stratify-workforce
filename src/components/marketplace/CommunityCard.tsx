@@ -28,10 +28,11 @@ export function CommunityCard({
   featured = false,
   onEdit,
 }: CommunityCardProps) {
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isLogoPickerOpen, setIsLogoPickerOpen] = useState(false);
+  const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const handleImageSelect = async (url: string) => {
+  const handleLogoSelect = async (url: string) => {
     try {
       const { error } = await supabase
         .from('tenants')
@@ -40,7 +41,6 @@ export function CommunityCard({
 
       if (error) throw error;
 
-      // Invalidate relevant queries to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       queryClient.invalidateQueries({ queryKey: ['communities'] });
       queryClient.invalidateQueries({ queryKey: ['tenant', community.slug] });
@@ -59,6 +59,33 @@ export function CommunityCard({
     }
   };
 
+  const handleCoverImageSelect = async (url: string) => {
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .update({ cover_image_url: url })
+        .eq('id', community.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', community.slug] });
+
+      toast({
+        title: 'Cover image updated',
+        description: 'The community cover image has been changed successfully.',
+      });
+    } catch (error) {
+      console.error('Error updating community cover image:', error);
+      toast({
+        title: 'Update failed',
+        description: 'Could not update the community cover image.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleEditClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -71,30 +98,36 @@ export function CommunityCard({
         to={`/community/${community.slug}`}
         className="group block w-full"
       >
-        <div 
-          className="glass-card overflow-hidden hover:border-primary/50 transition-all h-full relative"
-          style={{ borderTopColor: community.brand_color, borderTopWidth: '3px' }}
-        >
-          {/* Admin Edit Button */}
-          {onEdit && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 z-10 h-8 w-8 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleEditClick}
+        <div className="glass-card overflow-hidden hover:border-primary/50 transition-all h-full relative">
+          {/* Hero Image Section */}
+          <div className="relative h-32">
+            {/* Cover Image or Brand Color Fallback */}
+            <EditableImageWrapper 
+              onEdit={() => setIsCoverPickerOpen(true)}
+              position="top-right"
+              className="h-full w-full"
             >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-
-          <div className="p-5">
-            {/* Header */}
-            <div className="flex items-start gap-4">
+              <div 
+                className="h-full w-full bg-cover bg-center"
+                style={{ 
+                  backgroundColor: community.brand_color,
+                  backgroundImage: community.cover_image_url 
+                    ? `url(${community.cover_image_url})` 
+                    : undefined,
+                }}
+              />
+            </EditableImageWrapper>
+            
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent pointer-events-none" />
+            
+            {/* Logo Avatar Overlay - positioned at bottom left */}
+            <div className="absolute -bottom-6 left-4 z-10">
               <EditableImageWrapper 
-                onEdit={() => setIsPickerOpen(true)}
+                onEdit={() => setIsLogoPickerOpen(true)}
                 position="center"
               >
-                <Avatar className="h-14 w-14 border-2 border-border">
+                <Avatar className="h-14 w-14 border-2 border-background shadow-lg">
                   <AvatarImage src={community.logo_url || ''} />
                   <AvatarFallback 
                     className="text-lg font-bold text-white"
@@ -104,27 +137,43 @@ export function CommunityCard({
                   </AvatarFallback>
                 </Avatar>
               </EditableImageWrapper>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
-                    {community.name}
-                  </h3>
-                  {featured && (
-                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
-                      <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />
-                      Featured
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  @{community.slug}
-                </p>
-              </div>
+            </div>
+
+            {/* Featured Badge */}
+            {featured && (
+              <Badge className="absolute top-2 left-2 bg-primary/20 text-primary border-primary/30 text-[10px]">
+                <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />
+                Featured
+              </Badge>
+            )}
+
+            {/* Admin Edit Button */}
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 z-20 h-8 w-8 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handleEditClick}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Content Section */}
+          <div className="p-4 pt-8">
+            {/* Name and Slug */}
+            <div className="mb-4">
+              <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
+                {community.name}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                @{community.slug}
+              </p>
             </div>
             
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-border">
+            <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                   <Users className="h-3 w-3" />
@@ -153,12 +202,22 @@ export function CommunityCard({
         </div>
       </NavLink>
 
+      {/* Logo Picker Dialog */}
       <MediaPickerDialog
-        open={isPickerOpen}
-        onOpenChange={setIsPickerOpen}
-        onSelect={handleImageSelect}
+        open={isLogoPickerOpen}
+        onOpenChange={setIsLogoPickerOpen}
+        onSelect={handleLogoSelect}
         title="Change Community Logo"
         currentImageUrl={community.logo_url || undefined}
+      />
+
+      {/* Cover Image Picker Dialog */}
+      <MediaPickerDialog
+        open={isCoverPickerOpen}
+        onOpenChange={setIsCoverPickerOpen}
+        onSelect={handleCoverImageSelect}
+        title="Change Cover Image"
+        currentImageUrl={community.cover_image_url || undefined}
       />
     </>
   );
