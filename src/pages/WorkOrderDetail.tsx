@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, NavLink } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,8 @@ import { DifficultyIndicator, getDifficultyLabel } from '@/components/work-order
 import { ChannelSubscribeButton } from '@/components/work-orders/ChannelSubscribeButton';
 import { EvidenceCard } from '@/components/work-orders/EvidenceCard';
 import { EvidenceUploadDialog } from '@/components/work-orders/EvidenceUploadDialog';
+import { EditableImageWrapper } from '@/components/admin/EditableImageWrapper';
+import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog';
 import { useWorkOrderById } from '@/hooks/useWorkOrders';
 import { useUserWorkOrderStatus, useStartWorkOrder, calculateWorkOrderXP } from '@/hooks/useWorkOrderCompletion';
 import { 
@@ -19,7 +22,9 @@ import {
   useDeleteEvidence,
   type EvidenceRequirements,
 } from '@/hooks/useEvidenceSubmission';
+import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
   ArrowLeft,
@@ -38,11 +43,14 @@ import {
 export default function WorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
   
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
   const { data: status } = useUserWorkOrderStatus(id || '');
   const { data: evidenceList = [], refetch: refetchEvidence } = useEvidenceSubmissions(id || '');
+  const { gameCoverImages } = useGameCoverImages();
   const startWorkOrder = useStartWorkOrder();
   const deleteEvidence = useDeleteEvidence();
 
@@ -133,6 +141,30 @@ export default function WorkOrderDetail() {
     );
   }
 
+  // Cover image with game fallback
+  const coverImage = workOrder.cover_image_url || gameCoverImages[workOrder.game_title];
+
+  const handleCoverImageUpdate = async (url: string) => {
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({ cover_image_url: url })
+        .eq('id', workOrder.id);
+        
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['work-order', id] });
+      toast({ title: 'Cover image updated' });
+    } catch (error) {
+      console.error('Error updating cover image:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update cover image.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const criteria = workOrder.success_criteria;
   const potentialXP = calculateWorkOrderXP({
     baseXP: workOrder.xp_reward,
@@ -150,60 +182,80 @@ export default function WorkOrderDetail() {
           Back to Work Orders
         </NavLink>
 
-        {/* Header */}
-        <div className="glass-card p-6">
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Game Icon */}
-            <div className="shrink-0">
-              <GameIcon game={workOrder.game_title} size="lg" />
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2">
-                <Badge variant="outline">{getGameLabel(workOrder.game_title)}</Badge>
-                <DifficultyIndicator difficulty={workOrder.difficulty} showLabel />
-                {status?.isCompleted && (
-                  <Badge className="bg-primary/20 text-primary border-primary/30">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Completed
-                  </Badge>
-                )}
-              </div>
-
-              <h1 className="text-2xl font-bold mb-2">{workOrder.title}</h1>
-              <p className="text-muted-foreground">{workOrder.description}</p>
-
-              <div className="flex flex-wrap items-center gap-4 mt-4">
-                <XPRewardBadge xp={workOrder.xp_reward} size="lg" />
-                {workOrder.estimated_time_minutes && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    ~{workOrder.estimated_time_minutes} min
+        {/* Header with Cover Image Hero */}
+        <div className="glass-card overflow-hidden">
+          <div className="flex flex-col md:flex-row">
+            {/* Cover Image */}
+            <EditableImageWrapper 
+              onEdit={() => setShowMediaPicker(true)}
+              className="md:w-72 lg:w-80 shrink-0"
+            >
+              <div className="relative aspect-video md:aspect-[4/3] w-full h-full">
+                {coverImage ? (
+                  <img
+                    src={coverImage}
+                    alt={workOrder.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <GameIcon game={workOrder.game_title} size="lg" />
                   </div>
                 )}
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span className="font-data">24</span> completed
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:bg-gradient-to-r" />
+              </div>
+            </EditableImageWrapper>
+
+            {/* Content */}
+            <div className="flex-1 p-6 flex flex-col md:flex-row gap-6">
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <Badge variant="outline">{getGameLabel(workOrder.game_title)}</Badge>
+                  <DifficultyIndicator difficulty={workOrder.difficulty} showLabel />
+                  {status?.isCompleted && (
+                    <Badge className="bg-primary/20 text-primary border-primary/30">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Completed
+                    </Badge>
+                  )}
+                </div>
+
+                <h1 className="text-2xl font-bold mb-2">{workOrder.title}</h1>
+                <p className="text-muted-foreground">{workOrder.description}</p>
+
+                <div className="flex flex-wrap items-center gap-4 mt-4">
+                  <XPRewardBadge xp={workOrder.xp_reward} size="lg" />
+                  {workOrder.estimated_time_minutes && (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      ~{workOrder.estimated_time_minutes} min
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span className="font-data">24</span> completed
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-3 shrink-0">
-              {!status?.hasAttempted || status.latestStatus !== 'in_progress' ? (
-                <Button size="lg" onClick={handleStart} disabled={startWorkOrder.isPending}>
-                  <PlayCircle className="h-5 w-5 mr-2" />
-                  {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
-                </Button>
-              ) : (
-                <Button size="lg" variant="secondary">
-                  <RotateCcw className="h-5 w-5 mr-2" />
-                  Continue
-                </Button>
-              )}
-              
-              <ChannelSubscribeButton gameTitle={workOrder.game_title} variant="outline" />
+              {/* Actions */}
+              <div className="flex flex-col gap-3 shrink-0">
+                {!status?.hasAttempted || status.latestStatus !== 'in_progress' ? (
+                  <Button size="lg" onClick={handleStart} disabled={startWorkOrder.isPending}>
+                    <PlayCircle className="h-5 w-5 mr-2" />
+                    {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
+                  </Button>
+                ) : (
+                  <Button size="lg" variant="secondary">
+                    <RotateCcw className="h-5 w-5 mr-2" />
+                    Continue
+                  </Button>
+                )}
+                
+                <ChannelSubscribeButton gameTitle={workOrder.game_title} variant="outline" />
+              </div>
             </div>
           </div>
         </div>
@@ -381,6 +433,15 @@ export default function WorkOrderDetail() {
           onUploadComplete={() => refetchEvidence()}
         />
       )}
+
+      {/* Media Picker Dialog for Cover Image */}
+      <MediaPickerDialog
+        open={showMediaPicker}
+        onOpenChange={setShowMediaPicker}
+        onSelect={handleCoverImageUpdate}
+        title="Select Cover Image"
+        currentImageUrl={coverImage}
+      />
     </AppLayout>
   );
 }
