@@ -99,14 +99,14 @@ export interface ActiveStudent {
   status: 'active' | 'idle' | 'completed';
 }
 
-// Category display helpers
+// Category display helpers - prioritized order
 export const CATEGORY_LABELS: Record<CategoryType, string> = {
-  geography: 'Geography',
-  broadband_provider: 'Broadband Provider',
-  trade_skill: 'Trade Skill',
-  school: 'School',
+  trade_skill: 'Game Community',
   employer: 'Employer',
+  broadband_provider: 'Broadband Provider',
+  school: 'School',
   training_center: 'Training Center',
+  geography: 'Geographic Region',
   government: 'Government',
   nonprofit: 'Nonprofit',
 };

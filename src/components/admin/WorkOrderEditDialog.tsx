@@ -482,8 +482,28 @@ export function WorkOrderEditDialog({
             </div>
           </div>
 
-          {/* Channel and Tenant */}
+          {/* Community and Channel */}
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tenant">Community</Label>
+              <Select value={tenantId} onValueChange={setTenantId}>
+                <SelectTrigger id="tenant">
+                  <SelectValue placeholder="All communities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Communities (Global)</SelectItem>
+                  {tenants.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Assign to a specific community or leave global.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="channel">Game Channel</Label>
               <Select value={channelId || 'none'} onValueChange={(v) => setChannelId(v === 'none' ? '' : v)}>
@@ -495,23 +515,6 @@ export function WorkOrderEditDialog({
                   {filteredChannels.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tenant">Community</Label>
-              <Select value={tenantId || 'none'} onValueChange={(v) => setTenantId(v === 'none' ? '' : v)}>
-                <SelectTrigger id="tenant">
-                  <SelectValue placeholder="Select community (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (Global)</SelectItem>
-                  {tenants.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

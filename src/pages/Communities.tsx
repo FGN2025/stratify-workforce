@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { CommunityCard } from '@/components/marketplace/CommunityCard';
-import { supabase } from '@/integrations/supabase/client';
+import { CommunityFormDialog } from '@/components/admin/CommunityFormDialog';
+import { useCommunities } from '@/hooks/useCommunities';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,35 +14,33 @@ import { Search, Filter, Users, Plus } from 'lucide-react';
 import type { Tenant } from '@/types/tenant';
 
 const Communities = () => {
-  const [communities, setCommunities] = useState<Tenant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { communities, isLoading, refetch } = useCommunities();
+  const { isAdmin } = useUserRole();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingCommunity, setEditingCommunity] = useState<Tenant | null>(null);
   const heroImageUrl = useSiteMediaUrl('communities_hero');
-
-  useEffect(() => {
-    async function fetchCommunities() {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (data && !error) {
-        // Cast directly - Supabase returns matching shape
-        setCommunities(data as unknown as Tenant[]);
-      }
-
-      setIsLoading(false);
-    }
-
-    fetchCommunities();
-  }, []);
 
   const filteredCommunities = communities.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.slug.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleCreateClick = () => {
+    if (isAdmin) {
+      setEditingCommunity(null);
+      setShowCreateDialog(true);
+    }
+  };
+
+  const handleEditCommunity = (community: Tenant) => {
+    setEditingCommunity(community);
+    setShowCreateDialog(true);
+  };
+
+  const handleSave = () => {
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -65,10 +65,11 @@ const Communities = () => {
           title="Training Communities"
           subtitle="Discover training organizations and join their simulation programs to level up your skills"
           backgroundImage={heroImageUrl}
-          primaryAction={{
+          primaryAction={isAdmin ? {
             label: 'Create Community',
             icon: <Plus className="h-4 w-4" />,
-          }}
+            onClick: handleCreateClick,
+          } : undefined}
           stats={[
             { value: communities.length.toString(), label: 'Communities', highlight: true },
             { value: '2,500+', label: 'Active Members' },
@@ -104,6 +105,7 @@ const Communities = () => {
               <CommunityCard 
                 community={community}
                 featured={idx === 0}
+                onEdit={isAdmin ? () => handleEditCommunity(community) : undefined}
               />
             </div>
           ))}
@@ -121,6 +123,15 @@ const Communities = () => {
           </div>
         )}
       </div>
+
+      {/* Community Form Dialog */}
+      <CommunityFormDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        community={editingCommunity}
+        allCommunities={communities}
+        onSave={handleSave}
+      />
     </AppLayout>
   );
 };
