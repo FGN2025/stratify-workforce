@@ -1,133 +1,251 @@
 
-
-# Plan: Add File Upload to Media Edit Dialog
+# Plan: Phase 1 - Editable Image Wrapper and Media Picker Dialog
 
 ## Overview
 
-Enhance the `MediaEditDialog` component to allow administrators to replace existing media assets by uploading a new file, not just by changing the URL manually. This brings the edit experience in line with the create experience in `MediaUploadDialog`.
+Build reusable infrastructure components for inline image editing across the platform, then apply them to `CourseCard` and `CommunityCard`. This establishes the pattern for all future card-level image editing.
 
-## Current State
-
-| Dialog | File Upload | URL Entry | YouTube |
-|--------|-------------|-----------|---------|
-| MediaUploadDialog (Add New) | Yes | Yes | Yes |
-| MediaEditDialog (Edit Existing) | No | Yes | N/A |
-
-## Proposed Enhancement
-
-Add file upload capability to MediaEditDialog with a toggle between "Replace with File" and "Edit URL" modes.
-
-## UI Design
+## Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                        Edit Media                                │
-│  Update media details for "home_hero_image"                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │                 [Current Image Preview]                    │  │
-│  │                                                            │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  ┌─────────────────┬─────────────────┐                          │
-│  │  [Upload File]  │  [Enter URL]    │  ◄─ Mode toggle tabs    │
-│  └─────────────────┴─────────────────┘                          │
-│                                                                  │
-│  If "Upload File" selected:                                     │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │                                                            │  │
-│  │    ⬆️ Drag and drop or click to upload                    │  │
-│  │       JPG, PNG, WEBP, MP4, MP3 supported                  │  │
-│  │                                                            │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  If "Enter URL" selected:                                       │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  URL: https://example.com/new-image.jpg                   │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  Title: [Hero Background Image                              ]   │
-│  Alt Text: [Scenic industrial landscape                     ]   │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  Location Key: home_hero_image                            │  │
-│  │  Type: image                                              │  │
-│  │  Status: Active                                           │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│                            [Cancel]  [Save Changes]              │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                     EDITABLE IMAGE INFRASTRUCTURE                                │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                      EditableImageWrapper                                │    │
+│  │                                                                          │    │
+│  │   ┌──────────────────────────────────────────────────────────────────┐  │    │
+│  │   │                                                                   │  │    │
+│  │   │                   [children - any image]                         │  │    │
+│  │   │                                                                   │  │    │
+│  │   │   ┌────────────┐                                                 │  │    │
+│  │   │   │ Edit Icon  │  <-- Only visible to admins on hover           │  │    │
+│  │   │   └────────────┘                                                 │  │    │
+│  │   │                                                                   │  │    │
+│  │   └──────────────────────────────────────────────────────────────────┘  │    │
+│  │                              │                                          │    │
+│  │                              ▼                                          │    │
+│  │                    Opens MediaPickerDialog                              │    │
+│  │                                                                          │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                       MediaPickerDialog                                  │    │
+│  │                                                                          │    │
+│  │   ┌─────────────────┬─────────────────┬─────────────────┐               │    │
+│  │   │  Upload File    │   Enter URL     │  Media Library  │               │    │
+│  │   └─────────────────┴─────────────────┴─────────────────┘               │    │
+│  │                                                                          │    │
+│  │   Tab 1: Drag & drop upload zone                                        │    │
+│  │   Tab 2: Direct URL input with preview                                  │    │
+│  │   Tab 3: Browse existing media assets                                   │    │
+│  │                                                                          │    │
+│  │   onSelect(url: string) --> calls parent save callback                  │    │
+│  │                                                                          │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Implementation Details
+## Data Flow
 
-### Changes to MediaEditDialog.tsx
+```text
+Admin hovers on CourseCard image
+        │
+        ▼
+EditableImageWrapper shows edit button
+        │
+        ▼
+Admin clicks edit button
+        │
+        ▼
+MediaPickerDialog opens
+        │
+        ├─── Upload new file ────────────────────┐
+        │                                         │
+        ├─── Enter URL directly ──────────────────┤
+        │                                         │
+        └─── Select from Media Library ───────────┤
+                                                  │
+                                                  ▼
+                                    onSelect(imageUrl)
+                                                  │
+                                                  ▼
+                              onSave({ cover_image_url: imageUrl })
+                                                  │
+                                                  ▼
+                    Supabase: UPDATE courses SET cover_image_url = ?
+                                                  │
+                                                  ▼
+                            React Query invalidation --> UI refresh
+```
 
-1. **Add mode state**: Toggle between `'url'` and `'upload'` modes
-2. **Add file handling**: File state, preview URL generation, drag & drop support
-3. **Add folder selection**: When uploading, allow folder selection (same as MediaUploadDialog)
-4. **Integrate uploadFile mutation**: Use existing hook from `useMediaLibrary`
-5. **Handle submit logic**: 
-   - If mode is 'upload' and file selected: Upload file first, then update media record with new URL
-   - If mode is 'url': Update media record directly with new URL (existing behavior)
+---
 
-### File to Modify
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/admin/EditableImageWrapper.tsx` | Reusable wrapper that adds edit overlay to any image |
+| `src/components/admin/MediaPickerDialog.tsx` | Combined upload/URL/library picker dialog |
+
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/admin/MediaEditDialog.tsx` | Add upload mode with drag & drop, file preview, folder selection, and upload handling |
+| `src/components/learn/CourseCard.tsx` | Wrap cover image with `EditableImageWrapper`, add save handler |
+| `src/components/marketplace/CommunityCard.tsx` | Wrap avatar with `EditableImageWrapper`, add save handler |
+| `src/hooks/useCourses.ts` | Add `useUpdateCourse` hook if needed (already exists) |
 
-### Features
+---
 
-- **Mode Toggle**: Button group to switch between "Upload File" and "Enter URL"
-- **Drag & Drop Zone**: Same pattern as MediaUploadDialog for consistency
-- **File Preview**: Show new file preview when selected (before saving)
-- **Folder Selection**: Choose storage folder when uploading replacement file
-- **File Validation**: Size limits (20MB for media), type validation
-- **Loading States**: Show spinner during file upload and save operations
-- **Error Handling**: Toast notifications for upload failures
+## Component Specifications
 
-### Upload Flow
+### 1. EditableImageWrapper
 
-1. User clicks "Edit" on a media card
-2. Dialog opens with current preview and URL
-3. User clicks "Upload File" tab
-4. User drags/drops or selects a new file
-5. Preview updates to show the new file
-6. User selects destination folder (optional, default based on media type)
-7. User clicks "Save Changes"
-8. System uploads file to storage bucket
-9. System updates `site_media` record with new URL
-10. Success toast + dialog closes
+A wrapper component that adds an admin-only edit overlay to any image element.
 
-### Code Pattern
+**Props:**
+- `children`: The image element to wrap
+- `onEdit`: Callback when edit is triggered, opens the picker
+- `className`: Optional additional classes for positioning
 
-The implementation will reuse patterns from:
-- `MediaUploadDialog.tsx`: Drag & drop zone, file handling, preview generation
-- `TenantMediaSettings.tsx`: Simpler file upload pattern with validation
+**Behavior:**
+- Checks `isAdmin` or `isSuperAdmin` from `useUserRole` hook
+- Shows a semi-transparent overlay with edit icon on hover (admin only)
+- Clicking the overlay triggers `onEdit` callback
+- Does not interfere with parent link navigation
 
-### Validation Rules
+**UI Design:**
+- Overlay appears only on hover with smooth fade transition
+- Small camera/pencil icon in corner with glassmorphic background
+- Prevents event propagation to avoid triggering card navigation
 
-- **File size**: Max 20MB for images/videos
-- **File types**: `image/*`, `video/*`, `audio/*`
-- **Required fields**: Title must not be empty
-- **URL validation**: If URL mode, must be non-empty string
+### 2. MediaPickerDialog
 
-### Folder Options (same as MediaUploadDialog)
+A combined dialog for selecting images via upload, URL, or existing library.
 
-| Folder | Use Case |
-|--------|----------|
-| heroes | Hero background images |
-| covers | Game/course cover images |
-| cards | Card thumbnails |
-| videos | Video files |
-| audio | Audio files |
-| misc | Other files |
+**Props:**
+- `open`: boolean
+- `onOpenChange`: (open: boolean) => void
+- `onSelect`: (url: string) => void
+- `title`: string (e.g., "Change Course Cover")
+- `currentImageUrl`: string (for showing current selection)
 
-## Technical Considerations
+**Tabs:**
+1. **Upload File**: Drag & drop zone (reuse pattern from MediaUploadDialog)
+2. **Enter URL**: Text input with live preview
+3. **Media Library**: Filterable grid of existing site_media (image type only)
 
-1. **Old file cleanup**: The old file in storage will NOT be automatically deleted when replaced (storage cleanup is a separate concern)
-2. **YouTube media**: File upload mode will be hidden for YouTube media type (only URL edit makes sense)
-3. **Existing hook**: Uses the existing `uploadFile` mutation from `useMediaLibrary` - no backend changes needed
+**Behavior:**
+- Upload mode: File uploads to `media-assets` bucket, returns public URL
+- URL mode: Validates URL format, shows preview
+- Library mode: Fetches from `site_media` table, shows selectable grid
+- On select: Calls `onSelect(url)`, closes dialog
 
+### 3. CourseCard Updates
+
+**Changes:**
+- Import `EditableImageWrapper` and `MediaPickerDialog`
+- Import `useUpdateCourse` hook
+- Wrap the cover image div with `EditableImageWrapper`
+- Add state for picker dialog open/close
+- Add save handler that calls `updateCourse.mutateAsync({ id: course.id, cover_image_url: newUrl })`
+
+**Admin UX:**
+- When admin hovers on course cover image, edit icon appears
+- Clicking opens MediaPickerDialog
+- After selection, cover updates immediately (optimistic or refetch)
+
+### 4. CommunityCard Updates
+
+**Changes:**
+- Import `EditableImageWrapper` and `MediaPickerDialog`
+- Import Supabase client for direct tenant update
+- Wrap the Avatar component with `EditableImageWrapper`
+- Add state for picker dialog
+- Add save handler that updates `tenants.logo_url`
+
+**Admin UX:**
+- When admin hovers on community avatar, edit icon appears
+- Clicking opens MediaPickerDialog
+- After selection, logo updates immediately
+
+---
+
+## Technical Implementation Details
+
+### EditableImageWrapper Component
+
+```text
+Structure:
+- Relative positioned container
+- Children rendered as-is
+- Absolute overlay div (only when isAdmin && hover)
+- Edit button with onClick that calls onEdit and stops propagation
+```
+
+Key considerations:
+- Must not break existing card layout or links
+- Event propagation must be stopped on edit click
+- Overlay should have pointer-events only on the edit button, not entire image
+
+### MediaPickerDialog Component
+
+```text
+Reuses:
+- Upload zone from MediaUploadDialog (drag/drop, file state, preview)
+- Upload mutation from useMediaLibrary hook
+- Media grid pattern from MediaLibrary component
+
+New:
+- Simplified 3-tab layout (Upload | URL | Library)
+- Single select mode (not multi-select)
+- No location_key assignment (just returns URL)
+- Filter to images only in library tab
+```
+
+### Database Considerations
+
+No schema changes required for Phase 1:
+- `courses.cover_image_url` already exists
+- `tenants.logo_url` already exists
+- Both are nullable text columns storing URLs
+
+### Role Check Integration
+
+Both cards will use the existing `useUserRole` hook:
+
+```text
+const { isAdmin, isSuperAdmin } = useUserRole();
+const canEdit = isAdmin || isSuperAdmin;
+```
+
+The `EditableImageWrapper` performs this check internally, so consumers don't need to conditionally render it.
+
+---
+
+## Estimated Effort
+
+| Task | Time |
+|------|------|
+| EditableImageWrapper component | 30 min |
+| MediaPickerDialog component | 1 hour |
+| CourseCard integration | 30 min |
+| CommunityCard integration | 30 min |
+| Testing & polish | 30 min |
+| **Total** | **~3 hours** |
+
+---
+
+## Summary
+
+Phase 1 establishes the core infrastructure for per-card image editing:
+
+1. **EditableImageWrapper**: A reusable overlay pattern for admin-only image editing
+2. **MediaPickerDialog**: A unified picker combining upload, URL, and library selection
+3. **CourseCard**: First integration - editable course cover images
+4. **CommunityCard**: Second integration - editable community logos
+
+This pattern can then be extended to WorkOrderCard, EventCard, and other cards in Phase 2 and beyond.
