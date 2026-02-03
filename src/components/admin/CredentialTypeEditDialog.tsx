@@ -236,8 +236,8 @@ export function CredentialTypeEditDialog({
                   <FormItem>
                     <FormLabel>Game</FormLabel>
                     <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
+                      value={field.value || 'none'}
+                      onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -245,7 +245,7 @@ export function CredentialTypeEditDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None (General)</SelectItem>
+                        <SelectItem value="none">None (General)</SelectItem>
                         {GAME_TITLES.map((game) => (
                           <SelectItem key={game.value} value={game.value}>
                             {game.label}
@@ -265,8 +265,8 @@ export function CredentialTypeEditDialog({
                   <FormItem>
                     <FormLabel>Issuer App</FormLabel>
                     <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
+                      value={field.value || 'none'}
+                      onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -274,7 +274,7 @@ export function CredentialTypeEditDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Any App</SelectItem>
+                        <SelectItem value="none">Any App</SelectItem>
                         {apps?.map((app) => (
                           <SelectItem key={app.app_slug} value={app.app_slug}>
                             {app.app_name}
