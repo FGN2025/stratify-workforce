@@ -11,8 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Shield, ShieldAlert, User } from 'lucide-react';
+import { Search, Shield, ShieldAlert, User, UserPlus, Code } from 'lucide-react';
 import { RoleAssignmentDialog } from './RoleAssignmentDialog';
+import { InviteUserDialog } from './InviteUserDialog';
+import { PendingInvitationsTable } from './PendingInvitationsTable';
+import { useUserInvitations } from '@/hooks/useUserInvitations';
+import { useUserRole } from '@/hooks/useUserRole';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -30,16 +34,31 @@ interface UserManagementTableProps {
   users: UserWithRole[];
   isLoading?: boolean;
   onRoleChange: (userId: string, newRole: AppRole) => Promise<void>;
+  tenants?: Array<{ id: string; name: string; slug: string }>;
 }
 
 export function UserManagementTable({
   users,
   isLoading,
   onRoleChange,
+  tenants = [],
 }: UserManagementTableProps) {
+  const { isAdmin, isSuperAdmin } = useUserRole();
+  const canInvite = isAdmin || isSuperAdmin;
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+  const {
+    invitations,
+    isLoading: invitationsLoading,
+    isInviting,
+    inviteUser,
+    revokeInvitation,
+    isRevoking,
+  } = useUserInvitations();
 
   const filteredUsers = users.filter((user) =>
     user.username?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -47,6 +66,13 @@ export function UserManagementTable({
 
   const getRoleBadge = (role: AppRole | null | undefined) => {
     switch (role) {
+      case 'super_admin':
+        return (
+          <Badge variant="destructive" className="gap-1 bg-primary/20 text-primary border-primary/30">
+            <ShieldAlert className="h-3 w-3" />
+            Super Admin
+          </Badge>
+        );
       case 'admin':
         return (
           <Badge variant="destructive" className="gap-1">
@@ -56,9 +82,16 @@ export function UserManagementTable({
         );
       case 'moderator':
         return (
-          <Badge variant="secondary" className="gap-1 bg-amber-500/20 text-amber-500 border-amber-500/30">
+          <Badge variant="secondary" className="gap-1">
             <Shield className="h-3 w-3" />
             Moderator
+          </Badge>
+        );
+      case 'developer':
+        return (
+          <Badge variant="secondary" className="gap-1 bg-accent text-accent-foreground">
+            <Code className="h-3 w-3" />
+            Developer
           </Badge>
         );
       default:
@@ -88,6 +121,12 @@ export function UserManagementTable({
             className="pl-9"
           />
         </div>
+        {canInvite && (
+          <Button onClick={() => setInviteDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invite User
+          </Button>
+        )}
       </div>
 
       <div className="rounded-lg border border-border/50 overflow-hidden">
@@ -153,6 +192,16 @@ export function UserManagementTable({
         </Table>
       </div>
 
+      {/* Pending Invitations Section */}
+      {canInvite && (
+        <PendingInvitationsTable
+          invitations={invitations}
+          isLoading={invitationsLoading}
+          onRevoke={revokeInvitation}
+          isRevoking={isRevoking}
+        />
+      )}
+
       {selectedUser && (
         <RoleAssignmentDialog
           open={dialogOpen}
@@ -161,6 +210,14 @@ export function UserManagementTable({
           onRoleChange={onRoleChange}
         />
       )}
+
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onInvite={inviteUser}
+        isInviting={isInviting}
+        tenants={tenants}
+      />
     </div>
   );
 }
