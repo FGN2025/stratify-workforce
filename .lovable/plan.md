@@ -1,158 +1,76 @@
 
-# Plan: Discord Account Linking via OAuth
+# Plan: Discord OAuth Integration (Secrets Deferred)
 
 ## Overview
 
-Implement a complete Discord OAuth flow allowing users to permanently link their Discord account to their FGN Academy profile. This replaces the current manual text field with a verified, token-based connection that enables rich Discord data access.
+Continue implementing the Discord OAuth integration, deferring secrets configuration for later. This plan includes all frontend components, edge function (which will gracefully handle missing credentials), and a dedicated **Admin Discord Management** tab for super admins to view and manage all user Discord connections.
 
 ---
 
-## Architecture
+## Architecture Update
 
 ```text
-DISCORD OAUTH FLOW
+ADMIN DISCORD MANAGEMENT
 ────────────────────────────────────────────────────────────────────
 
-User visits Settings or Profile page
+Super Admin navigates to Admin → Discord Connections tab
         │
         ▼
-Clicks "Connect Discord" button
+View all linked Discord accounts across users
+  • Username, Discord ID, connection status
+  • Filter by active/inactive, search by username
         │
         ▼
-Redirected to Discord OAuth consent screen
-  • App requests scopes: identify, guilds, guilds.members.read
-        │
-        ▼
-User authorizes → Discord redirects to callback URL
-  • URL: /auth/discord/callback?code=xxx
-        │
-        ▼
-Frontend extracts code, calls Edge Function
-  • POST /discord-oauth with { code, redirect_uri }
-        │
-        ▼
-Edge Function exchanges code for tokens with Discord
-        │
-        ▼
-Edge Function fetches Discord user profile
-        │
-        ▼
-Stores tokens + profile in user_discord_connections table
-        │
-        ▼
-Returns success → Frontend shows connected state
-
-
-SUBSEQUENT DATA ACCESS
-────────────────────────────────────────────────────────────────────
-
-User profile loads
-        │
-        ▼
-Check user_discord_connections for linked account
-        │
-        ▼
-If connected:
-  ├── Display Discord username, avatar, discriminator
-  ├── Show "Disconnect" option
-  └── (Future) Sync guild memberships, roles
+Admin actions available:
+  ├── View connection details (Discord profile, scopes)
+  ├── Force disconnect a user's Discord link
+  ├── Toggle connection active/inactive status
+  └── View audit log of connection changes
 ```
 
 ---
 
-## Database Schema
+## Database Changes
 
-### New Table: user_discord_connections
-
-```sql
-CREATE TABLE public.user_discord_connections (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  
-  -- Discord Identity
-  discord_id TEXT NOT NULL UNIQUE,
-  discord_username TEXT NOT NULL,
-  discord_discriminator TEXT,  -- May be '0' for new usernames
-  discord_avatar_hash TEXT,
-  discord_banner_hash TEXT,
-  discord_accent_color INTEGER,
-  discord_global_name TEXT,
-  
-  -- OAuth Tokens (encrypted at rest by Supabase)
-  access_token TEXT NOT NULL,
-  refresh_token TEXT NOT NULL,
-  token_expires_at TIMESTAMPTZ NOT NULL,
-  scopes TEXT[] NOT NULL DEFAULT ARRAY['identify'],
-  
-  -- Metadata
-  connected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_synced_at TIMESTAMPTZ DEFAULT now(),
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Indexes
-CREATE INDEX idx_discord_connections_user ON user_discord_connections(user_id);
-CREATE INDEX idx_discord_connections_discord_id ON user_discord_connections(discord_id);
-
--- Updated at trigger
-CREATE TRIGGER update_discord_connections_updated_at
-  BEFORE UPDATE ON user_discord_connections
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-```
-
-### RLS Policies
+### Add RLS Policy for Admin Access
 
 ```sql
--- Enable RLS
-ALTER TABLE user_discord_connections ENABLE ROW LEVEL SECURITY;
-
--- Users can view their own connection
-CREATE POLICY "Users can view own discord connection"
+-- Super admins can view all Discord connections
+CREATE POLICY "Super admins can view all discord connections"
 ON user_discord_connections FOR SELECT
 TO authenticated
-USING (user_id = auth.uid());
+USING (
+  EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_roles.user_id = auth.uid()
+    AND user_roles.role = 'super_admin'
+  )
+);
 
--- Users can delete their own connection (disconnect)
-CREATE POLICY "Users can disconnect own discord"
+-- Super admins can update Discord connections (toggle active status)
+CREATE POLICY "Super admins can update discord connections"
+ON user_discord_connections FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_roles.user_id = auth.uid()
+    AND user_roles.role = 'super_admin'
+  )
+);
+
+-- Super admins can delete any Discord connection
+CREATE POLICY "Super admins can delete any discord connection"
 ON user_discord_connections FOR DELETE
 TO authenticated
-USING (user_id = auth.uid());
-
--- Only edge functions (service role) can insert/update
--- No INSERT/UPDATE policies for authenticated users
+USING (
+  user_id = auth.uid() OR EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_roles.user_id = auth.uid()
+    AND user_roles.role = 'super_admin'
+  )
+);
 ```
-
----
-
-## Discord OAuth Configuration
-
-### Required Secrets
-
-| Secret Name | Purpose |
-|-------------|---------|
-| `DISCORD_CLIENT_ID` | Discord application Client ID |
-| `DISCORD_CLIENT_SECRET` | Discord application Client Secret |
-
-### Discord Developer Portal Setup (User Action Required)
-
-1. Go to https://discord.com/developers/applications
-2. Create a new application (or use existing)
-3. Navigate to OAuth2 → General
-4. Add Redirect URL: `https://id-preview--bdc55f68-6a4e-4a85-ae3a-8b5181141ddf.lovable.app/auth/discord/callback`
-5. Add Redirect URL: `https://stratify-workforce.lovable.app/auth/discord/callback`
-6. Copy Client ID and Client Secret
-7. Save as secrets in Lovable
-
-### OAuth Scopes
-
-| Scope | Data Provided |
-|-------|---------------|
-| `identify` | User ID, username, avatar, banner, accent color |
-| `guilds` | List of servers user is in |
-| `guilds.members.read` | Roles/nickname in mutual servers |
 
 ---
 
@@ -160,20 +78,22 @@ USING (user_id = auth.uid());
 
 | File | Purpose |
 |------|---------|
-| `supabase/functions/discord-oauth/index.ts` | Edge function handling OAuth token exchange and user data fetch |
-| `src/hooks/useDiscordConnection.ts` | Hook for managing Discord connection state |
-| `src/components/settings/DiscordConnectionCard.tsx` | UI component for connect/disconnect flow |
-| `src/pages/AuthDiscordCallback.tsx` | Callback page that handles Discord redirect |
+| `supabase/functions/discord-oauth/index.ts` | Edge function for OAuth token exchange (gracefully handles missing secrets) |
+| `src/hooks/useDiscordConnection.ts` | Hook for user's own Discord connection state |
+| `src/hooks/useAdminDiscordConnections.ts` | Hook for admin to manage all Discord connections |
+| `src/components/settings/DiscordConnectionCard.tsx` | User-facing connect/disconnect UI |
+| `src/components/admin/DiscordConnectionsManager.tsx` | Admin table to view/manage all connections |
+| `src/pages/AuthDiscordCallback.tsx` | Callback page handling Discord redirect |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
 | `src/App.tsx` | Add `/auth/discord/callback` route |
-| `src/pages/Settings.tsx` | Add Discord connection card to settings |
-| `src/pages/Profile.tsx` | Display Discord info if connected |
-| `src/components/profile/ProfileHeader.tsx` | Show Discord badge/link if connected |
-| `src/components/onboarding/AcademyOnboardingDialog.tsx` | Update Discord field to show "Connect via OAuth" option |
+| `src/pages/Settings.tsx` | Add DiscordConnectionCard to settings |
+| `src/pages/Admin.tsx` | Add "Discord" tab (super admin only) |
+| `src/components/profile/ProfileHeader.tsx` | Show Discord badge if connected |
+| `src/components/onboarding/AcademyOnboardingDialog.tsx` | Replace manual input with OAuth prompt |
 
 ---
 
@@ -181,222 +101,206 @@ USING (user_id = auth.uid());
 
 ### 1. Edge Function: discord-oauth
 
+The edge function will check for credentials at runtime and return helpful error messages when secrets are not configured:
+
 ```typescript
 // supabase/functions/discord-oauth/index.ts
 
-// Endpoints:
-// POST /connect - Exchange code for tokens, store connection
-// POST /refresh - Refresh expired access token
-// DELETE /disconnect - Remove connection
-// GET /me - Get current connection status
+// Key behavior:
+// - If DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET missing → return 503 with setup instructions
+// - POST /connect → Exchange code for tokens, store connection
+// - POST /refresh → Refresh expired access token
+// - GET /status → Check if Discord integration is configured
 
-// Token Exchange Flow:
-// 1. Receive authorization code from frontend
-// 2. Exchange code for access_token + refresh_token with Discord
-// 3. Use access_token to fetch user profile from Discord API
-// 4. Store everything in user_discord_connections
-// 5. Return success with Discord profile data
+// Graceful handling example:
+const clientId = Deno.env.get('DISCORD_CLIENT_ID');
+const clientSecret = Deno.env.get('DISCORD_CLIENT_SECRET');
+
+if (!clientId || !clientSecret) {
+  return new Response(
+    JSON.stringify({ 
+      error: 'Discord integration not configured',
+      configured: false,
+      message: 'Admin needs to add Discord credentials in settings'
+    }),
+    { status: 503 }
+  );
+}
 ```
 
 ### 2. useDiscordConnection Hook
 
 ```typescript
-interface DiscordConnection {
-  discordId: string;
-  username: string;
-  discriminator: string;
-  avatarUrl: string | null;
-  globalName: string | null;
-  connectedAt: string;
-  isActive: boolean;
-}
-
 interface UseDiscordConnectionReturn {
   connection: DiscordConnection | null;
   isLoading: boolean;
+  isConfigured: boolean;  // New: checks if Discord OAuth is set up
   isConnecting: boolean;
   isDisconnecting: boolean;
-  connect: () => void;  // Redirects to Discord OAuth
+  connect: () => void;
   disconnect: () => Promise<void>;
-  getAvatarUrl: () => string | null;
+  checkConfiguration: () => Promise<boolean>;
 }
 ```
 
-### 3. DiscordConnectionCard Component
+### 3. Admin Discord Connections Manager
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  [Discord Logo] Discord                                         │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │  NOT CONNECTED                                             │ │
-│  │                                                            │ │
-│  │  Link your Discord account to access community features,  │ │
-│  │  display your Discord profile, and sync server roles.     │ │
-│  │                                                            │ │
-│  │                            [Connect Discord]               │ │
-│  └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│  [Discord Logo] Discord                        [Connected ✓]   │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │  [Avatar]  @username                                       │ │
-│  │            Connected Feb 3, 2026                           │ │
-│  │                                                            │ │
-│  │  Permissions:                                              │ │
-│  │  ✓ Basic profile info                                     │ │
-│  │  ✓ Server list                                            │ │
-│  │  ✓ Server roles                                           │ │
-│  │                                                            │ │
-│  │                            [Disconnect]                    │ │
-│  └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Discord Connections                              [X Connected] [Export CSV] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  [Search users...]                         Status: [All ▼]  Per page: [10 ▼] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  USER           │ DISCORD ACCOUNT     │ CONNECTED     │ STATUS   │ ACTIONS  │
+├─────────────────┼─────────────────────┼───────────────┼──────────┼──────────┤
+│  [Avatar] John  │ @johndoe#0          │ Jan 15, 2026  │ [Active] │ [⋮]      │
+│  [Avatar] Jane  │ @janesmith          │ Feb 1, 2026   │ [Active] │ [⋮]      │
+│  [Avatar] Bob   │ @bobgamer#1234      │ Dec 20, 2025  │ [Inactive]│ [⋮]     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                                     [< 1 2 3 ... 10 >]
 ```
 
-### 4. AuthDiscordCallback Page
+Action menu options:
+- View Details (dialog with full Discord profile)
+- Toggle Active/Inactive
+- Force Disconnect (with confirmation)
+
+### 4. DiscordConnectionCard (User Settings)
+
+Displays different states:
+- **Not Configured**: Shows message that Discord integration is pending admin setup
+- **Not Connected**: Shows "Connect Discord" button
+- **Connected**: Shows Discord profile with disconnect option
 
 ```typescript
-// Handles: /auth/discord/callback?code=xxx&state=xxx
-// 1. Extract code and state from URL
-// 2. Validate state matches stored value (CSRF protection)
-// 3. Call edge function with code
-// 4. On success: redirect to /settings with success toast
-// 5. On error: redirect to /settings with error toast
-```
-
-### 5. Profile Integration
-
-When Discord is connected:
-- Show Discord logo/badge next to username
-- Display Discord avatar as secondary avatar option
-- Show "View on Discord" link
-- Display Discord username in profile header
-
----
-
-## OAuth URL Construction
-
-```typescript
-const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize';
-
-function buildDiscordOAuthUrl(state: string): string {
-  const params = new URLSearchParams({
-    client_id: import.meta.env.VITE_DISCORD_CLIENT_ID,
-    redirect_uri: `${window.location.origin}/auth/discord/callback`,
-    response_type: 'code',
-    scope: 'identify guilds guilds.members.read',
-    state: state,  // CSRF protection
-    prompt: 'consent',  // Always show consent screen
-  });
-  
-  return `${DISCORD_OAUTH_URL}?${params.toString()}`;
+// When not configured by admin
+if (!isConfigured) {
+  return (
+    <Card>
+      <CardContent>
+        <p>Discord integration coming soon!</p>
+        <p className="text-muted-foreground">
+          This feature is being set up by administrators.
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 ```
 
----
+### 5. Profile Header Integration
 
-## Token Refresh Strategy
+When Discord is connected, show a Discord badge:
 
-```text
-ACCESS TOKEN LIFECYCLE
-────────────────────────────────────────────────────────────────────
+```typescript
+// In ProfileHeader
+{discordConnection && (
+  <Badge variant="outline" className="bg-[#5865F2]/10 border-[#5865F2]/30 text-[#5865F2]">
+    <svg className="h-3 w-3 mr-1" viewBox="0 0 24 24">
+      {/* Discord logo SVG */}
+    </svg>
+    @{discordConnection.username}
+  </Badge>
+)}
+```
 
-Access tokens expire after ~7 days (Discord default)
-        │
-        ▼
-On any Discord API call, check token_expires_at
-        │
-        ├── If valid: proceed with request
-        │
-        └── If expired/expiring soon:
-                │
-                ▼
-            Call Discord refresh endpoint
-                │
-                ▼
-            Update tokens in database
-                │
-                ▼
-            Proceed with request
+### 6. Onboarding Dialog Update
+
+Replace manual Discord ID input with OAuth prompt:
+
+```typescript
+// Before (manual)
+<Input placeholder="username#1234" />
+
+// After (OAuth-aware)
+{isDiscordConfigured ? (
+  <Button variant="outline" onClick={connectDiscord}>
+    <DiscordIcon className="mr-2" />
+    Connect Discord Account
+  </Button>
+) : (
+  <div className="text-muted-foreground text-sm">
+    Discord integration coming soon
+  </div>
+)}
 ```
 
 ---
 
-## Security Considerations
+## Admin Tab Integration
 
-| Concern | Mitigation |
-|---------|------------|
-| CSRF attacks | State parameter with crypto-random value stored in sessionStorage |
-| Token exposure | Tokens stored only in database, never exposed to frontend |
-| Unauthorized access | RLS policies prevent cross-user access |
-| Token theft | Refresh tokens allow revocation; short-lived access tokens |
-| Replay attacks | Single-use authorization codes (Discord enforces) |
+Add to Admin.tsx tabs (super admin only):
 
----
+```typescript
+{isSuperAdmin && (
+  <TabsTrigger 
+    value="discord" 
+    className="text-[#5865F2] data-[state=active]:text-[#5865F2]"
+  >
+    Discord Connections
+  </TabsTrigger>
+)}
 
-## Data Available from Discord
-
-| Data Point | Scope Required | Use Case |
-|------------|----------------|----------|
-| User ID | `identify` | Unique identifier for linking |
-| Username | `identify` | Display in profile |
-| Avatar | `identify` | Alternative profile picture |
-| Banner | `identify` | Profile customization |
-| Global Name | `identify` | Display name |
-| Server List | `guilds` | Show mutual communities |
-| Server Roles | `guilds.members.read` | Auto-assign community roles |
-
----
-
-## Future Enhancements (Not in Initial Scope)
-
-1. **Discord Embeds**: Embed community Discord servers in app
-2. **Role Sync**: Auto-assign FGN roles based on Discord roles
-3. **Notifications**: Send Discord DMs for events/achievements
-4. **Server Widget**: Display live server activity
-5. **Rich Presence**: Show FGN activity in Discord status
+<TabsContent value="discord">
+  <Card className="border-border/50">
+    <CardContent className="pt-6">
+      <DiscordConnectionsManager />
+    </CardContent>
+  </Card>
+</TabsContent>
+```
 
 ---
 
 ## Environment Variables
 
-### Frontend (.env - public)
+### Frontend (public, safe to commit)
 ```
-VITE_DISCORD_CLIENT_ID=your_client_id_here
+VITE_DISCORD_CLIENT_ID=  # Added later by admin
 ```
 
-### Edge Function (Supabase Secrets)
+### Edge Function Secrets (added later)
 ```
-DISCORD_CLIENT_ID=your_client_id_here
-DISCORD_CLIENT_SECRET=your_client_secret_here
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
 ```
+
+---
+
+## Graceful Degradation
+
+The system will work in three modes:
+
+| Mode | Behavior |
+|------|----------|
+| **Not Configured** | Edge function returns 503; UI shows "coming soon" |
+| **Partially Configured** | Edge function validates; shows appropriate errors |
+| **Fully Configured** | Complete OAuth flow works |
+
+This allows deployment without secrets while providing clear feedback to users and admins.
 
 ---
 
 ## Implementation Order
 
-1. **Database Migration**: Create `user_discord_connections` table with RLS
-2. **Request Secrets**: Prompt for `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`
-3. **Edge Function**: Create `discord-oauth` with connect/disconnect/refresh endpoints
-4. **Callback Page**: Create `/auth/discord/callback` route and handler
-5. **Hook**: Create `useDiscordConnection` for state management
-6. **Settings UI**: Add `DiscordConnectionCard` to Settings page
-7. **Profile Integration**: Show Discord info in ProfileHeader
-8. **Onboarding Update**: Replace manual field with OAuth prompt
-9. **Testing**: End-to-end flow verification
+1. **Database Migration**: Add admin RLS policies for Discord connections
+2. **Edge Function**: Create `discord-oauth` with graceful secret handling
+3. **Hooks**: Create `useDiscordConnection` and `useAdminDiscordConnections`
+4. **User UI**: Create `DiscordConnectionCard` for Settings page
+5. **Admin UI**: Create `DiscordConnectionsManager` for Admin dashboard
+6. **Callback Page**: Create `/auth/discord/callback` route
+7. **Integration**: Update Admin.tsx, Settings.tsx, ProfileHeader, and onboarding
+8. **Testing**: Verify graceful handling when secrets are missing
 
 ---
 
 ## Summary
 
-This implementation provides:
+This implementation:
 
-1. **Secure OAuth Flow** - Industry-standard token exchange via edge function
-2. **Permanent Linking** - Tokens stored in database with refresh capability
-3. **Rich Profile Data** - Username, avatar, banner, and server memberships
-4. **User Control** - Connect/disconnect at any time from Settings
-5. **Extensibility** - Foundation for Discord embeds, role sync, and notifications
-6. **Privacy-First** - Minimal scopes, clear consent, easy revocation
-
+1. **Proceeds Without Secrets** - All code deployed; works in degraded mode until configured
+2. **Admin Management** - Super admins can view/manage all Discord connections
+3. **User Self-Service** - Users can connect/disconnect from Settings when enabled
+4. **Clear Feedback** - Users see appropriate messaging based on configuration state
+5. **Security** - Admin-only policies for viewing all connections
+6. **Audit Trail** - Connection metadata tracked (connected_at, last_synced_at)
