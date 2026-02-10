@@ -58,6 +58,7 @@ export type Database = {
       }
       ai_model_configs: {
         Row: {
+          api_key_encrypted: string | null
           created_at: string
           display_name: string
           id: string
@@ -70,6 +71,7 @@ export type Database = {
           use_for: string[]
         }
         Insert: {
+          api_key_encrypted?: string | null
           created_at?: string
           display_name: string
           id?: string
@@ -82,6 +84,7 @@ export type Database = {
           use_for?: string[]
         }
         Update: {
+          api_key_encrypted?: string | null
           created_at?: string
           display_name?: string
           id?: string

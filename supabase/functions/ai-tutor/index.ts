@@ -48,6 +48,7 @@ interface ModelConfig {
   model_id: string;
   is_default: boolean;
   use_for: string[];
+  api_key_encrypted: string | null;
 }
 
 async function getPersonaFromDB(
@@ -82,37 +83,37 @@ async function getModelFromDB(
   supabaseAdmin: ReturnType<typeof createClient>,
   useFor: string,
   modelOverride?: string | null
-): Promise<string> {
+): Promise<{ modelId: string; apiKey: string | null }> {
   // If persona has a model override, use it
   if (modelOverride) {
     const { data } = await supabaseAdmin
       .from("ai_model_configs")
-      .select("model_id")
+      .select("model_id, api_key_encrypted")
       .eq("model_id", modelOverride)
       .eq("is_enabled", true)
       .single();
-    if (data) return data.model_id;
+    if (data) return { modelId: data.model_id, apiKey: data.api_key_encrypted };
   }
 
   // Find enabled models matching use_for, prefer default
   const { data: models } = await supabaseAdmin
     .from("ai_model_configs")
-    .select("model_id, is_default, use_for")
+    .select("model_id, is_default, use_for, api_key_encrypted")
     .eq("is_enabled", true);
 
-  if (!models || models.length === 0) return FALLBACK_MODEL;
+  if (!models || models.length === 0) return { modelId: FALLBACK_MODEL, apiKey: null };
 
-  // Filter by use_for
   const matching = models.filter(
     (m: ModelConfig) => m.use_for.includes(useFor) || m.use_for.includes("all")
   );
 
-  // Prefer default
   const defaultModel = matching.find((m: ModelConfig) => m.is_default);
-  if (defaultModel) return defaultModel.model_id;
+  if (defaultModel) return { modelId: defaultModel.model_id, apiKey: defaultModel.api_key_encrypted };
 
-  // Return first matching or fallback
-  return matching[0]?.model_id || FALLBACK_MODEL;
+  const first = matching[0];
+  return first
+    ? { modelId: first.model_id, apiKey: first.api_key_encrypted }
+    : { modelId: FALLBACK_MODEL, apiKey: null };
 }
 
 function buildSystemPrompt(
@@ -177,13 +178,16 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(basePrompt, context);
 
     // Get model from DB (with fallback)
-    const model = await getModelFromDB(supabaseAdmin, useFor, personaConfig?.model_override);
+    const { modelId: model, apiKey: modelApiKey } = await getModelFromDB(supabaseAdmin, useFor, personaConfig?.model_override);
+
+    // Use model-specific API key if available, otherwise fall back to LOVABLE_API_KEY
+    const effectiveApiKey = modelApiKey || LOVABLE_API_KEY;
 
     // Call AI Gateway
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${effectiveApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
