@@ -1,155 +1,110 @@
 
 
-# Plan: Fix Security Issues
+## AI Configuration and Open Notebook Integration
 
-## Overview
-
-This plan addresses two security warnings identified by the database linter, plus additional security improvements found during the audit.
+This plan adds two major capabilities: (1) an Admin panel for managing AI models and personas, and (2) integration with Open Notebook for segment-specific source-based research, alongside the existing Atlas tutor for general chat.
 
 ---
 
-## Issues to Fix
+### What You'll Get
 
-### Issue 1: Permissive RLS Policy on `system_audit_logs`
+**For Admins:**
+- A new "AI Configuration" tab in the Admin panel (super_admin only)
+- Ability to manage which AI models are available (Gemini Flash, Gemini Pro, GPT-5, etc.)
+- Editable system prompts/personas for each context (general, CDL, Fiber Tech, etc.)
+- A default model selector and per-context model overrides
+- Toggle models on/off for the platform
 
-**Current State**: The policy "System can insert audit logs" uses `WITH CHECK (true)`, allowing anyone (even unauthenticated users) to insert records into the audit log.
+**For Students:**
+- Atlas tutor dynamically uses admin-configured models and prompts (no hardcoded personas)
+- A new "Research" mode toggle in the tutor panel that switches between:
+  - **Tutor Mode** (default) -- guided learning with context-aware Atlas persona
+  - **Research Mode** -- wider, more open-ended AI chat using a model the admin has designated for research
+- An "Open Notebook" link/launcher that directs to the Open Notebook platform for deep, source-based study with uploaded documents
 
-**Risk**: Attackers could flood the audit logs with fake entries, making it harder to detect real security incidents.
+---
 
-**Fix**: Update the policy to require authentication. Since audit logs are written from edge functions using the service role, we'll keep the permissive insert but require the user to be authenticated OR allow service role inserts.
+### Technical Details
 
-```sql
-DROP POLICY IF EXISTS "System can insert audit logs" ON public.system_audit_logs;
+#### 1. Database: `ai_model_configs` table
 
-CREATE POLICY "Authenticated users can insert audit logs"
-ON public.system_audit_logs
-FOR INSERT
-TO authenticated
-WITH CHECK (true);
+Stores available models and their settings, managed by admins.
+
+```text
+ai_model_configs
++------------------+-------------------+
+| id (uuid, PK)   | model_id (text)   |
+| display_name     | provider (text)   |
+| is_enabled       | is_default (bool) |
+| use_for (text[]) | max_tokens (int)  |
+| created_at       | updated_at        |
++------------------+-------------------+
+
+use_for values: 'tutor', 'research', 'all'
 ```
 
-This ensures only authenticated users (or service role) can insert audit logs.
+RLS: read for authenticated, write for admins only.
 
----
+#### 2. Database: `ai_persona_configs` table
 
-### Issue 2: Enable Leaked Password Protection
+Stores editable system prompts per context, replacing the hardcoded `TUTOR_PERSONAS` object.
 
-**Current State**: Leaked password protection is disabled.
-
-**Risk**: Users could register with passwords that have been exposed in data breaches, making their accounts vulnerable.
-
-**Fix**: Enable leaked password protection using the configure-auth tool. This will check passwords against known breach databases during signup and password changes.
-
----
-
-### Issue 3: Public Exposure of `user_game_stats` (Bonus Fix)
-
-**Current State**: The "Users can view all game stats" policy uses `USING (true)`, exposing all player performance data publicly.
-
-**Risk**: Competitors could harvest gameplay statistics for competitive intelligence.
-
-**Fix**: Update the SELECT policy to allow users to view:
-- Their own stats
-- Stats of users in the same community/tenant
-- All stats if they're an admin
-
-```sql
-DROP POLICY IF EXISTS "Users can view all game stats" ON public.user_game_stats;
-
-CREATE POLICY "Users can view their own game stats"
-ON public.user_game_stats
-FOR SELECT
-TO authenticated
-USING (
-  auth.uid() = user_id
-  OR has_role(auth.uid(), 'admin'::app_role)
-);
+```text
+ai_persona_configs
++---------------------+----------------------+
+| id (uuid, PK)       | context_type (text)  |
+| persona_name (text)  | system_prompt (text) |
+| model_override (text)| is_active (bool)     |
+| created_at           | updated_at           |
++---------------------+----------------------+
 ```
 
----
+RLS: read for authenticated, write for admins only. Seeded with current hardcoded personas.
 
-### Issue 4: Add INSERT Policy for `user_discord_connections` (Bonus Fix)
+#### 3. Database: `ai_platform_settings` table
 
-**Current State**: No INSERT policy exists, relying on service role for all inserts.
+Simple key-value table for platform-wide AI settings (e.g., Open Notebook URL, default research model).
 
-**Risk**: If there's a misconfiguration, unauthorized inserts could occur.
-
-**Fix**: Add an explicit INSERT policy that only allows users to create their own connections:
-
-```sql
-CREATE POLICY "Users can create own discord connection"
-ON public.user_discord_connections
-FOR INSERT
-TO authenticated
-WITH CHECK (user_id = auth.uid());
+```text
+ai_platform_settings
++------------------+-------------------+
+| key (text, PK)   | value (jsonb)     |
+| updated_at       | updated_by (uuid) |
++------------------+-------------------+
 ```
 
----
+#### 4. Update `ai-tutor` Edge Function
 
-## Implementation Order
+- On each request, query `ai_persona_configs` for the matching context_type to get the system prompt
+- Query `ai_model_configs` to determine which model to use (check for persona override, then default)
+- Fall back to hardcoded defaults if no DB config exists (graceful degradation)
 
-| Step | Action | Type |
-|------|--------|------|
-| 1 | Update `system_audit_logs` INSERT policy | Database Migration |
-| 2 | Enable leaked password protection | Auth Configuration |
-| 3 | Update `user_game_stats` SELECT policy | Database Migration |
-| 4 | Add `user_discord_connections` INSERT policy | Database Migration |
+#### 5. New Admin Component: `AIConfigManager.tsx`
 
----
+Added as a new tab in Admin panel (super_admin only). Three sub-sections:
 
-## Database Migration SQL
+- **Models** -- Table of available models with toggle switches, default selector
+- **Personas** -- Editable cards for each context type with a textarea for system prompts and optional model override dropdown
+- **Platform Settings** -- Open Notebook URL field, research mode toggle
 
-```sql
--- Fix 1: Restrict audit log inserts to authenticated users
-DROP POLICY IF EXISTS "System can insert audit logs" ON public.system_audit_logs;
+#### 6. Update `TutorChatPanel.tsx`
 
-CREATE POLICY "Authenticated users can insert audit logs"
-ON public.system_audit_logs
-FOR INSERT
-TO authenticated
-WITH CHECK (true);
+- Add a mode toggle (Tutor / Research) in the header
+- When in Research mode, send `context.type = 'research'` to the edge function, which uses the research-designated model
+- Add an "Open Notebook" button that opens the configured URL (from `ai_platform_settings`) in a new tab
 
--- Fix 3: Restrict game stats visibility
-DROP POLICY IF EXISTS "Users can view all game stats" ON public.user_game_stats;
+#### 7. Seed Migration
 
-CREATE POLICY "Users can view their own game stats"
-ON public.user_game_stats
-FOR SELECT
-TO authenticated
-USING (
-  auth.uid() = user_id
-  OR has_role(auth.uid(), 'admin'::app_role)
-);
-
--- Fix 4: Add explicit INSERT policy for discord connections
-CREATE POLICY "Users can create own discord connection"
-ON public.user_discord_connections
-FOR INSERT
-TO authenticated
-WITH CHECK (user_id = auth.uid());
-```
+Insert current hardcoded personas into `ai_persona_configs` and available Lovable AI models into `ai_model_configs` so the system works immediately after deployment.
 
 ---
 
-## Auth Configuration Change
+### Implementation Sequence
 
-Enable leaked password protection to check passwords against known breach databases:
-- **Setting**: `password_leak_protection` → `enabled`
-
----
-
-## Summary
-
-| Issue | Severity | Resolution |
-|-------|----------|------------|
-| Permissive INSERT on `system_audit_logs` | WARN | Restrict to authenticated users |
-| Leaked password protection disabled | WARN | Enable via auth config |
-| Public `user_game_stats` exposure | ERROR | Restrict to own stats + admins |
-| Missing `user_discord_connections` INSERT policy | WARN | Add explicit user policy |
-
-After these changes:
-- Audit logs can only be written by authenticated sessions
-- User passwords will be checked against breach databases
-- Game stats are no longer publicly exposed
-- Discord connections have complete RLS coverage
+1. Create database tables and seed data (single migration)
+2. Update `ai-tutor` edge function to read config from DB
+3. Build `AIConfigManager` admin component
+4. Add the new tab to `Admin.tsx`
+5. Update `TutorChatPanel` with Research mode toggle and Open Notebook link
+6. Test end-to-end
 
