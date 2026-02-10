@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useState } from 'react';
 import { useTutorChat } from '@/hooks/useTutorChat';
 import type { TutorMessage } from '@/types/tutor';
 
@@ -12,15 +12,18 @@ interface TutorContextValue {
   sendMessage: (content: string) => Promise<void>;
   cancelStream: () => void;
   clearConversation: () => Promise<void>;
+  chatMode: 'tutor' | 'research';
+  setChatMode: (mode: 'tutor' | 'research') => void;
 }
 
 const TutorContext = createContext<TutorContextValue | undefined>(undefined);
 
 export function TutorProvider({ children }: { children: ReactNode }) {
-  const tutorChat = useTutorChat();
+  const [chatMode, setChatMode] = useState<'tutor' | 'research'>('tutor');
+  const tutorChat = useTutorChat(chatMode);
 
   return (
-    <TutorContext.Provider value={tutorChat}>
+    <TutorContext.Provider value={{ ...tutorChat, chatMode, setChatMode }}>
       {children}
     </TutorContext.Provider>
   );
