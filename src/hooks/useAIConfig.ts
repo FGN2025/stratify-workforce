@@ -12,6 +12,8 @@ export interface AIModelConfig {
   is_default: boolean;
   use_for: string[];
   max_tokens: number;
+  has_api_key?: boolean;
+  api_key_hint?: string;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +136,28 @@ export function useUpdateAIPlatformSetting() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-platform-settings'] });
       toast({ title: 'Setting updated' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useSetModelApiKey() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, apiKey }: { id: string; apiKey: string }) => {
+      const { error } = await supabase
+        .from('ai_model_configs' as any)
+        .update({ api_key_encrypted: apiKey || null, updated_at: new Date().toISOString() } as any)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-model-configs'] });
+      toast({ title: 'API key updated' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

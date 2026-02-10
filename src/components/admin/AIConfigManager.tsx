@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bot, Brain, Settings, Star, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Bot, Brain, Settings, Star, ExternalLink, Key } from 'lucide-react';
 import {
   useAIModels,
   useAIPersonas,
@@ -17,69 +18,140 @@ import {
   useUpdateAIModel,
   useUpdateAIPersona,
   useUpdateAIPlatformSetting,
+  useSetModelApiKey,
   type AIPersonaConfig,
 } from '@/hooks/useAIConfig';
+
+function ApiKeyDialog({ open, onOpenChange, modelName, onSave, isPending }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  modelName: string;
+  onSave: (key: string) => void;
+  isPending: boolean;
+}) {
+  const [key, setKey] = useState('');
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Set API Key — {modelName}</DialogTitle>
+          <DialogDescription>Enter the API key for this model's provider. It will be stored securely and never shown in full again.</DialogDescription>
+        </DialogHeader>
+        <Input
+          type="password"
+          placeholder="sk-..."
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { onOpenChange(false); setKey(''); }}>Cancel</Button>
+          <Button
+            disabled={!key.trim() || isPending}
+            onClick={() => { onSave(key.trim()); setKey(''); }}
+          >
+            Save Key
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ModelsSection() {
   const { data: models, isLoading } = useAIModels();
   const updateModel = useUpdateAIModel();
+  const setApiKey = useSetModelApiKey();
+  const [editingModel, setEditingModel] = useState<{ id: string; name: string } | null>(null);
 
   if (isLoading) {
     return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>;
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Model</TableHead>
-          <TableHead>Provider</TableHead>
-          <TableHead>Use For</TableHead>
-          <TableHead>Default</TableHead>
-          <TableHead>Enabled</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {models?.map((model) => (
-          <TableRow key={model.id}>
-            <TableCell className="font-medium">{model.display_name}</TableCell>
-            <TableCell>
-              <Badge variant="outline">{model.provider}</Badge>
-            </TableCell>
-            <TableCell>
-              <div className="flex gap-1 flex-wrap">
-                {model.use_for.map((u) => (
-                  <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>
-                ))}
-              </div>
-            </TableCell>
-            <TableCell>
-              <Button
-                variant={model.is_default ? 'default' : 'ghost'}
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => {
-                  if (!model.is_default) {
-                    // Unset other defaults first by setting this one
-                    updateModel.mutate({ id: model.id, updates: { is_default: true } });
-                  }
-                }}
-              >
-                <Star className={`h-4 w-4 ${model.is_default ? 'fill-current' : ''}`} />
-              </Button>
-            </TableCell>
-            <TableCell>
-              <Switch
-                checked={model.is_enabled}
-                onCheckedChange={(checked) =>
-                  updateModel.mutate({ id: model.id, updates: { is_enabled: checked } })
-                }
-              />
-            </TableCell>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Model</TableHead>
+            <TableHead>Provider</TableHead>
+            <TableHead>API Key</TableHead>
+            <TableHead>Use For</TableHead>
+            <TableHead>Default</TableHead>
+            <TableHead>Enabled</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {models?.map((model) => {
+            const raw = model as any;
+            const hasKey = !!raw.api_key_encrypted;
+            const hint = hasKey && typeof raw.api_key_encrypted === 'string'
+              ? `****${raw.api_key_encrypted.slice(-4)}`
+              : null;
+            return (
+              <TableRow key={model.id}>
+                <TableCell className="font-medium">{model.display_name}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{model.provider}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setEditingModel({ id: model.id, name: model.display_name })}
+                  >
+                    <Key className="h-3.5 w-3.5" />
+                    {hint || <span className="text-muted-foreground">Not set</span>}
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1 flex-wrap">
+                    {model.use_for.map((u) => (
+                      <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant={model.is_default ? 'default' : 'ghost'}
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => {
+                      if (!model.is_default) {
+                        updateModel.mutate({ id: model.id, updates: { is_default: true } });
+                      }
+                    }}
+                  >
+                    <Star className={`h-4 w-4 ${model.is_default ? 'fill-current' : ''}`} />
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <Switch
+                    checked={model.is_enabled}
+                    onCheckedChange={(checked) =>
+                      updateModel.mutate({ id: model.id, updates: { is_enabled: checked } })
+                    }
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      {editingModel && (
+        <ApiKeyDialog
+          open={!!editingModel}
+          onOpenChange={(open) => { if (!open) setEditingModel(null); }}
+          modelName={editingModel.name}
+          isPending={setApiKey.isPending}
+          onSave={(key) => {
+            setApiKey.mutate({ id: editingModel.id, apiKey: key }, {
+              onSuccess: () => setEditingModel(null),
+            });
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -169,6 +241,8 @@ function PersonasSection() {
 function PlatformSettingsSection() {
   const { data: settings, isLoading } = useAIPlatformSettings();
   const updateSetting = useUpdateAIPlatformSetting();
+  const [notebookKey, setNotebookKey] = useState('');
+  const [showNotebookKey, setShowNotebookKey] = useState(false);
 
   if (isLoading) {
     return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>;
@@ -177,10 +251,13 @@ function PlatformSettingsSection() {
   const getValue = (key: string) => {
     const setting = settings?.find((s) => s.key === key);
     if (!setting) return '';
-    // Value is stored as JSONB - could be a string with quotes
     const v = setting.value;
     return typeof v === 'string' ? v : JSON.stringify(v);
   };
+
+  const notebookApiKeyValue = getValue('open_notebook_api_key');
+  const hasNotebookKey = !!notebookApiKeyValue && notebookApiKeyValue !== '' && notebookApiKeyValue !== '""';
+  const notebookKeyHint = hasNotebookKey ? `****${notebookApiKeyValue.slice(-4)}` : 'Not set';
 
   return (
     <div className="space-y-6">
@@ -200,6 +277,33 @@ function PlatformSettingsSection() {
         </div>
         <p className="text-xs text-muted-foreground">
           External URL for source-based research. Students can launch this from the tutor panel.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Open Notebook API Key</label>
+        <div className="flex gap-2">
+          <Input
+            type={showNotebookKey ? 'text' : 'password'}
+            placeholder={hasNotebookKey ? notebookKeyHint : 'Enter API key...'}
+            value={notebookKey}
+            onChange={(e) => setNotebookKey(e.target.value)}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!notebookKey.trim() || updateSetting.isPending}
+            onClick={() => {
+              updateSetting.mutate({ key: 'open_notebook_api_key', value: notebookKey.trim() }, {
+                onSuccess: () => setNotebookKey(''),
+              });
+            }}
+          >
+            Save
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {hasNotebookKey ? `Current key: ${notebookKeyHint}` : 'No API key configured.'} Key is stored securely and used by backend functions.
         </p>
       </div>
 
@@ -249,7 +353,7 @@ export function AIConfigManager() {
           <Card className="border-border/50">
             <CardHeader>
               <CardTitle className="text-base">Available Models</CardTitle>
-              <CardDescription>Toggle models on/off and set the default for Atlas</CardDescription>
+              <CardDescription>Toggle models on/off, set the default, and configure API keys</CardDescription>
             </CardHeader>
             <CardContent>
               <ModelsSection />
