@@ -1,110 +1,75 @@
 
 
-## AI Configuration and Open Notebook Integration
+## Add API Key Management for AI Services
 
-This plan adds two major capabilities: (1) an Admin panel for managing AI models and personas, and (2) integration with Open Notebook for segment-specific source-based research, alongside the existing Atlas tutor for general chat.
+This plan adds an `api_key` column to the `ai_model_configs` table and an `open_notebook_api_key` setting to `ai_platform_settings`, so admins can configure API keys for each LLM provider and for Open Notebook directly from the Admin panel.
 
 ---
 
-### What You'll Get
+### What Changes
 
 **For Admins:**
-- A new "AI Configuration" tab in the Admin panel (super_admin only)
-- Ability to manage which AI models are available (Gemini Flash, Gemini Pro, GPT-5, etc.)
-- Editable system prompts/personas for each context (general, CDL, Fiber Tech, etc.)
-- A default model selector and per-context model overrides
-- Toggle models on/off for the platform
+- A new "API Key" column in the Models table where each model can have its own API key configured
+- An "API Key" field in the Platform Settings section for Open Notebook
+- API keys are masked in the UI (showing only the last 4 characters) for security
+- Keys are stored encrypted in the database and only read by backend functions
 
-**For Students:**
-- Atlas tutor dynamically uses admin-configured models and prompts (no hardcoded personas)
-- A new "Research" mode toggle in the tutor panel that switches between:
-  - **Tutor Mode** (default) -- guided learning with context-aware Atlas persona
-  - **Research Mode** -- wider, more open-ended AI chat using a model the admin has designated for research
-- An "Open Notebook" link/launcher that directs to the Open Notebook platform for deep, source-based study with uploaded documents
+**For the Backend:**
+- The `ai-tutor` edge function will check for a model-specific API key before falling back to the default `LOVABLE_API_KEY`
+- This prepares the system for connecting directly to OpenAI, Google, or other providers when their own keys are provided
 
 ---
 
 ### Technical Details
 
-#### 1. Database: `ai_model_configs` table
+#### 1. Database Migration
 
-Stores available models and their settings, managed by admins.
+- Add `api_key_encrypted` (text, nullable) column to `ai_model_configs` -- stores the API key for each model/provider
+- Insert a new `open_notebook_api_key` row into `ai_platform_settings`
+- The column is nullable so existing models continue working with the default Lovable AI gateway key
 
-```text
-ai_model_configs
-+------------------+-------------------+
-| id (uuid, PK)   | model_id (text)   |
-| display_name     | provider (text)   |
-| is_enabled       | is_default (bool) |
-| use_for (text[]) | max_tokens (int)  |
-| created_at       | updated_at        |
-+------------------+-------------------+
+#### 2. Update `ai_model_configs` RLS
 
-use_for values: 'tutor', 'research', 'all'
-```
+- The existing read policy for authenticated users should NOT return the `api_key_encrypted` column. We will handle this by only selecting it in the edge function (service role), and never exposing it to the frontend. The admin UI will use a separate "set key" flow that writes but never reads back the full key.
 
-RLS: read for authenticated, write for admins only.
+#### 3. Admin UI Updates (`AIConfigManager.tsx`)
 
-#### 2. Database: `ai_persona_configs` table
+**Models tab:**
+- Add an "API Key" column to the models table
+- Show a masked indicator (e.g., "****abcd" or "Not set")
+- Clicking opens a small dialog/input to set or update the key
+- Save writes the key to the `api_key_encrypted` column
 
-Stores editable system prompts per context, replacing the hardcoded `TUTOR_PERSONAS` object.
+**Platform Settings tab:**
+- Add an "Open Notebook API Key" field below the URL field
+- Same masked display pattern -- shows status but not the full key
 
-```text
-ai_persona_configs
-+---------------------+----------------------+
-| id (uuid, PK)       | context_type (text)  |
-| persona_name (text)  | system_prompt (text) |
-| model_override (text)| is_active (bool)     |
-| created_at           | updated_at           |
-+---------------------+----------------------+
-```
+#### 4. Hooks Update (`useAIConfig.ts`)
 
-RLS: read for authenticated, write for admins only. Seeded with current hardcoded personas.
+- Add a `useSetModelApiKey` mutation that updates only the `api_key_encrypted` column
+- Add query/mutation support for the `open_notebook_api_key` platform setting
+- The read query for models will include a `has_api_key` derived field (checking if key is non-null) rather than returning the actual key
 
-#### 3. Database: `ai_platform_settings` table
+#### 5. Edge Function Update (`ai-tutor`)
 
-Simple key-value table for platform-wide AI settings (e.g., Open Notebook URL, default research model).
+- When selecting a model, also fetch `api_key_encrypted`
+- If a model-specific key exists, use it in the Authorization header instead of `LOVABLE_API_KEY`
+- For models with their own keys, route to the appropriate provider endpoint (future consideration -- for now all go through Lovable AI gateway)
 
-```text
-ai_platform_settings
-+------------------+-------------------+
-| key (text, PK)   | value (jsonb)     |
-| updated_at       | updated_by (uuid) |
-+------------------+-------------------+
-```
+#### 6. Security Considerations
 
-#### 4. Update `ai-tutor` Edge Function
-
-- On each request, query `ai_persona_configs` for the matching context_type to get the system prompt
-- Query `ai_model_configs` to determine which model to use (check for persona override, then default)
-- Fall back to hardcoded defaults if no DB config exists (graceful degradation)
-
-#### 5. New Admin Component: `AIConfigManager.tsx`
-
-Added as a new tab in Admin panel (super_admin only). Three sub-sections:
-
-- **Models** -- Table of available models with toggle switches, default selector
-- **Personas** -- Editable cards for each context type with a textarea for system prompts and optional model override dropdown
-- **Platform Settings** -- Open Notebook URL field, research mode toggle
-
-#### 6. Update `TutorChatPanel.tsx`
-
-- Add a mode toggle (Tutor / Research) in the header
-- When in Research mode, send `context.type = 'research'` to the edge function, which uses the research-designated model
-- Add an "Open Notebook" button that opens the configured URL (from `ai_platform_settings`) in a new tab
-
-#### 7. Seed Migration
-
-Insert current hardcoded personas into `ai_persona_configs` and available Lovable AI models into `ai_model_configs` so the system works immediately after deployment.
+- API keys are never returned to the frontend in full -- only a boolean "has key" or last 4 chars
+- Only the service role (edge function) reads the actual key value
+- The admin UI writes keys but the read query excludes them
 
 ---
 
 ### Implementation Sequence
 
-1. Create database tables and seed data (single migration)
-2. Update `ai-tutor` edge function to read config from DB
-3. Build `AIConfigManager` admin component
-4. Add the new tab to `Admin.tsx`
-5. Update `TutorChatPanel` with Research mode toggle and Open Notebook link
+1. Database migration: add `api_key_encrypted` column + seed Open Notebook API key setting
+2. Update `useAIConfig.ts` with new mutation for setting keys
+3. Update `AIConfigManager.tsx` Models table with API Key column and input
+4. Update Platform Settings section with Open Notebook API Key field
+5. Update `ai-tutor` edge function to use model-specific keys when available
 6. Test end-to-end
 
