@@ -49,7 +49,7 @@ function tutorReducer(state: TutorChatState, action: TutorChatAction): TutorChat
   }
 }
 
-export function useTutorChat() {
+export function useTutorChat(chatMode: 'tutor' | 'research' = 'tutor') {
   const [state, dispatch] = useReducer(tutorReducer, initialState);
   const { user, session } = useAuth();
   const { apiContext, pageContext } = useTutorContext();
@@ -164,7 +164,9 @@ export function useTutorChat() {
         },
         body: JSON.stringify({
           messages: apiMessages,
-          context: apiContext,
+          context: chatMode === 'research'
+            ? { ...apiContext, type: 'research' }
+            : apiContext,
         }),
         signal: abortControllerRef.current.signal,
       });

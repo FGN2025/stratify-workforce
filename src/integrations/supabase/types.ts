@@ -56,6 +56,99 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_model_configs: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          is_default: boolean
+          is_enabled: boolean
+          max_tokens: number
+          model_id: string
+          provider: string
+          updated_at: string
+          use_for: string[]
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          is_default?: boolean
+          is_enabled?: boolean
+          max_tokens?: number
+          model_id: string
+          provider: string
+          updated_at?: string
+          use_for?: string[]
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_default?: boolean
+          is_enabled?: boolean
+          max_tokens?: number
+          model_id?: string
+          provider?: string
+          updated_at?: string
+          use_for?: string[]
+        }
+        Relationships: []
+      }
+      ai_persona_configs: {
+        Row: {
+          context_type: string
+          created_at: string
+          id: string
+          is_active: boolean
+          model_override: string | null
+          persona_name: string
+          system_prompt: string
+          updated_at: string
+        }
+        Insert: {
+          context_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          model_override?: string | null
+          persona_name: string
+          system_prompt: string
+          updated_at?: string
+        }
+        Update: {
+          context_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          model_override?: string | null
+          persona_name?: string
+          system_prompt?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       authorized_apps: {
         Row: {
           allowed_origins: string[]
