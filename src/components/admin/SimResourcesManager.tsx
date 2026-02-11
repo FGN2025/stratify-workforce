@@ -44,17 +44,18 @@ import {
   Users,
 } from 'lucide-react';
 import { useAllSimResources, useSimResourceMutations, type SimResource, type SimResourceInsert } from '@/hooks/useSimResources';
+import { useGameChannelColors, GAME_DEFAULT_COLORS } from '@/hooks/useGameChannelColors';
 import { SimResourceEditDialog } from './SimResourceEditDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
 
-const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; color: string }> = {
-  ATS: { title: 'American Truck Simulator', icon: Truck, color: '#3B82F6' },
-  Farming_Sim: { title: 'Farming Simulator', icon: Tractor, color: '#22C55E' },
-  Construction_Sim: { title: 'Construction Simulator', icon: HardHat, color: '#F59E0B' },
-  Mechanic_Sim: { title: 'Mechanic Simulator', icon: Wrench, color: '#EF4444' },
-  Fiber_Tech: { title: 'Fiber-Tech Simulator', icon: Cable, color: '#8B5CF6' },
+const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; defaultColor: string }> = {
+  ATS: { title: 'American Truck Simulator', icon: Truck, defaultColor: '#8B5CF6' },
+  Farming_Sim: { title: 'Farming Simulator', icon: Tractor, defaultColor: '#22C55E' },
+  Construction_Sim: { title: 'Construction Simulator', icon: HardHat, defaultColor: '#F59E0B' },
+  Mechanic_Sim: { title: 'Mechanic Simulator', icon: Wrench, defaultColor: '#EF4444' },
+  Fiber_Tech: { title: 'Fiber-Tech Simulator', icon: Cable, defaultColor: '#3B82F6' },
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -77,7 +78,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 export function SimResourcesManager() {
   const { data: resources, isLoading } = useAllSimResources();
   const { createResource, updateResource, deleteResource, toggleActive } = useSimResourceMutations();
-
+  const gameColors = useGameChannelColors();
   const [searchQuery, setSearchQuery] = useState('');
   const [gameFilter, setGameFilter] = useState<GameTitle | 'all'>('all');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -207,7 +208,8 @@ export function SimResourcesManager() {
         const game = gameKey as GameTitle;
         const gameResources = groupedResources[game] || [];
         const config = GAME_CONFIG[game];
-        const GameIcon = config.icon;
+        const GameIconComp = config.icon;
+        const color = gameColors[game] || config.defaultColor;
 
         // Skip if filtering by a different game
         if (gameFilter !== 'all' && gameFilter !== game) return null;
@@ -216,7 +218,7 @@ export function SimResourcesManager() {
           <div key={game} className="space-y-4">
             {/* Game Header */}
             <div className="flex items-center gap-3">
-              <GameIcon className="h-5 w-5" style={{ color: config.color }} />
+              <GameIconComp className="h-5 w-5" style={{ color }} />
               <h3 className="font-semibold text-lg">{config.title}</h3>
               <Badge variant="secondary" className="ml-2">
                 {gameResources.length} resource{gameResources.length !== 1 ? 's' : ''}
@@ -306,7 +308,7 @@ export function SimResourcesManager() {
               </div>
             ) : (
               <div className="border border-dashed rounded-lg p-8 text-center">
-                <GameIcon className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+              <GameIconComp className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-muted-foreground mb-3">
                   No resources added for {config.title} yet.
                 </p>
