@@ -1,61 +1,28 @@
 
+## Fix Fiber-Tech "Tech Certification" Resource Color
 
-## Swap ATS / Fiber-Tech Colors and Enable Dynamic Color Editing
+### The Problem
 
-### What Changes
+The "Tech Certification" resource under Fiber-Tech Simulator is displaying with a violet color (`#8B5CF6`) instead of blue (`#3B82F6`). This happened because:
 
-**Color Swap (immediate):**
-- ATS changes from blue to purple/violet across the app
-- Fiber-Tech changes from purple to blue across the app
+1. The resource exists in the `sim_resources` table with the old purple color hardcoded in the `accent_color` field
+2. The color swap (ATS → purple, Fiber-Tech → blue) was applied to configuration defaults, but this database record wasn't updated
+3. The sidebar (AppSidebar.tsx) reads `resource.accent_color` directly from the database, so it displays the stale violet color
 
-**Dynamic Admin Color Editing:**
-- Game icon colors throughout the app will read from the database (`game_channels.accent_color`) instead of being hardcoded
-- When an admin edits a game's "Brand Color" in the SIM Games tab, the change propagates everywhere: sidebar icons, dashboard, filters, cards, and resource displays
-- Hardcoded fallback colors remain for safety if the database hasn't been configured
+### Solution
 
----
+**Update the database record** for the Tech Certification resource to use the correct blue color for Fiber-Tech:
+- Current: `accent_color = '#8B5CF6'` (violet)
+- New: `accent_color = '#3B82F6'` (blue)
 
-### Technical Details
+This is a one-line SQL UPDATE statement that will immediately fix the sidebar display and any other places where this resource appears.
 
-#### 1. New Hook: `useGameChannelColors.ts`
+### Implementation
 
-A lightweight hook that fetches `game_title` and `accent_color` from the `game_channels` table and exposes a lookup map. This will be the single source of truth for game colors across the app.
+1. Execute a simple SQL UPDATE to change the accent_color for the Tech Certification resource
+2. The change will propagate immediately to the UI since the sidebar queries the database in real-time
 
-```text
-Returns: Record<GameTitle, string>
-e.g. { ATS: '#8B5CF6', Fiber_Tech: '#3B82F6', ... }
-```
+### Why This Happened
 
-#### 2. Update Hardcoded Colors (Swap + New Defaults)
-
-Files with hardcoded game colors that need the swap applied as new fallback defaults:
-
-- **`src/config/simResources.ts`** -- ATS accent `#3B82F6` to `#8B5CF6`, Fiber_Tech `#8B5CF6` to `#3B82F6`, CDL Quest accent updated
-- **`src/components/dashboard/GameIcon.tsx`** -- Swap Tailwind classes: ATS from `text-blue-400 bg-blue-500/20` to `text-purple-400 bg-purple-500/20`, Fiber_Tech vice versa. Also accept an optional `colorOverride` prop from the new hook.
-- **`src/components/admin/SimResourcesManager.tsx`** -- Swap hex values in `GAME_CONFIG`: ATS from `#3B82F6` to `#8B5CF6`, Fiber_Tech from `#8B5CF6` to `#3B82F6`. Then integrate the hook so colors come from the DB when available.
-
-#### 3. Update `GameIcon` Component
-
-Modify `GameIcon` to accept an optional `accentColor` prop (hex string). When provided, it uses inline `style` for color and background instead of hardcoded Tailwind classes. This allows parent components that have DB data to pass dynamic colors.
-
-#### 4. Update `SimResourcesManager`
-
-Replace the static `GAME_CONFIG` color values with colors fetched from `useGameChannelColors`, falling back to the hardcoded defaults.
-
-#### 5. Files Changed
-
-| File | Change |
-|------|--------|
-| `src/hooks/useGameChannelColors.ts` | New hook -- fetches game colors from DB |
-| `src/config/simResources.ts` | Swap ATS/Fiber-Tech hex defaults |
-| `src/components/dashboard/GameIcon.tsx` | Swap defaults, accept dynamic color prop |
-| `src/components/admin/SimResourcesManager.tsx` | Swap defaults, use DB colors via hook |
-
-#### 6. Implementation Sequence
-
-1. Create `useGameChannelColors` hook
-2. Swap hardcoded colors in all three files (simResources.ts, GameIcon.tsx, SimResourcesManager.tsx)
-3. Wire `GameIcon` to accept dynamic color override
-4. Wire `SimResourcesManager` to use hook for dynamic colors
-5. Verify end-to-end that admin color changes propagate
+When resources are admin-managed (stored in the database), their accent colors are stored as individual records. During the color swap, only the hardcoded configuration defaults were updated, but pre-existing database records retained their old values.
 
