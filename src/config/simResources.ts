@@ -29,14 +29,14 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     title: 'American Truck Sim',
     shortTitle: 'ATS',
     icon: Truck,
-    accentColor: '#3B82F6',
+    accentColor: '#8B5CF6',
     resources: [
       {
         key: 'cdlQuest',
         title: 'CDL Quest',
         description: 'Complete CDL curriculum with structured learning paths and telemetry tracking',
         href: 'https://simu-cdl-path.lovable.app',
-        accentColor: '#3B82F6',
+        accentColor: '#8B5CF6',
         icon: GraduationCap,
       },
       {
@@ -74,7 +74,7 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     title: 'Fiber-Tech Simulator',
     shortTitle: 'Fiber-Tech',
     icon: Cable,
-    accentColor: '#8B5CF6',
+    accentColor: '#3B82F6',
     resources: [], // Admin-managed via database
   },
 };

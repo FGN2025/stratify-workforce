@@ -6,13 +6,14 @@ interface GameIconProps {
   game: GameTitle;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  accentColor?: string;
 }
 
 const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; color: string }> = {
   ATS: { 
     icon: Truck, 
     label: 'American Truck Simulator',
-    color: 'text-blue-400 bg-blue-500/20'
+    color: 'text-purple-400 bg-purple-500/20'
   },
   Farming_Sim: { 
     icon: Tractor, 
@@ -32,7 +33,7 @@ const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; co
   Fiber_Tech: { 
     icon: Cable, 
     label: 'Fiber-Tech Simulator',
-    color: 'text-purple-400 bg-purple-500/20'
+    color: 'text-blue-400 bg-blue-500/20'
   },
 };
 
@@ -42,18 +43,23 @@ const sizeStyles = {
   lg: 'h-14 w-14 p-3',
 };
 
-export function GameIcon({ game, className, size = 'md' }: GameIconProps) {
+export function GameIcon({ game, className, size = 'md', accentColor }: GameIconProps) {
   const config = gameConfig[game];
   const Icon = config.icon;
+
+  const dynamicStyle = accentColor
+    ? { color: accentColor, backgroundColor: `${accentColor}20` }
+    : undefined;
 
   return (
     <div 
       className={cn(
         "rounded-lg flex items-center justify-center",
-        config.color,
+        !accentColor && config.color,
         sizeStyles[size],
         className
       )}
+      style={dynamicStyle}
       title={config.label}
     >
       <Icon className="h-full w-full" />
