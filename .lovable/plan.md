@@ -1,75 +1,61 @@
 
 
-## Add API Key Management for AI Services
-
-This plan adds an `api_key` column to the `ai_model_configs` table and an `open_notebook_api_key` setting to `ai_platform_settings`, so admins can configure API keys for each LLM provider and for Open Notebook directly from the Admin panel.
-
----
+## Swap ATS / Fiber-Tech Colors and Enable Dynamic Color Editing
 
 ### What Changes
 
-**For Admins:**
-- A new "API Key" column in the Models table where each model can have its own API key configured
-- An "API Key" field in the Platform Settings section for Open Notebook
-- API keys are masked in the UI (showing only the last 4 characters) for security
-- Keys are stored encrypted in the database and only read by backend functions
+**Color Swap (immediate):**
+- ATS changes from blue to purple/violet across the app
+- Fiber-Tech changes from purple to blue across the app
 
-**For the Backend:**
-- The `ai-tutor` edge function will check for a model-specific API key before falling back to the default `LOVABLE_API_KEY`
-- This prepares the system for connecting directly to OpenAI, Google, or other providers when their own keys are provided
+**Dynamic Admin Color Editing:**
+- Game icon colors throughout the app will read from the database (`game_channels.accent_color`) instead of being hardcoded
+- When an admin edits a game's "Brand Color" in the SIM Games tab, the change propagates everywhere: sidebar icons, dashboard, filters, cards, and resource displays
+- Hardcoded fallback colors remain for safety if the database hasn't been configured
 
 ---
 
 ### Technical Details
 
-#### 1. Database Migration
+#### 1. New Hook: `useGameChannelColors.ts`
 
-- Add `api_key_encrypted` (text, nullable) column to `ai_model_configs` -- stores the API key for each model/provider
-- Insert a new `open_notebook_api_key` row into `ai_platform_settings`
-- The column is nullable so existing models continue working with the default Lovable AI gateway key
+A lightweight hook that fetches `game_title` and `accent_color` from the `game_channels` table and exposes a lookup map. This will be the single source of truth for game colors across the app.
 
-#### 2. Update `ai_model_configs` RLS
+```text
+Returns: Record<GameTitle, string>
+e.g. { ATS: '#8B5CF6', Fiber_Tech: '#3B82F6', ... }
+```
 
-- The existing read policy for authenticated users should NOT return the `api_key_encrypted` column. We will handle this by only selecting it in the edge function (service role), and never exposing it to the frontend. The admin UI will use a separate "set key" flow that writes but never reads back the full key.
+#### 2. Update Hardcoded Colors (Swap + New Defaults)
 
-#### 3. Admin UI Updates (`AIConfigManager.tsx`)
+Files with hardcoded game colors that need the swap applied as new fallback defaults:
 
-**Models tab:**
-- Add an "API Key" column to the models table
-- Show a masked indicator (e.g., "****abcd" or "Not set")
-- Clicking opens a small dialog/input to set or update the key
-- Save writes the key to the `api_key_encrypted` column
+- **`src/config/simResources.ts`** -- ATS accent `#3B82F6` to `#8B5CF6`, Fiber_Tech `#8B5CF6` to `#3B82F6`, CDL Quest accent updated
+- **`src/components/dashboard/GameIcon.tsx`** -- Swap Tailwind classes: ATS from `text-blue-400 bg-blue-500/20` to `text-purple-400 bg-purple-500/20`, Fiber_Tech vice versa. Also accept an optional `colorOverride` prop from the new hook.
+- **`src/components/admin/SimResourcesManager.tsx`** -- Swap hex values in `GAME_CONFIG`: ATS from `#3B82F6` to `#8B5CF6`, Fiber_Tech from `#8B5CF6` to `#3B82F6`. Then integrate the hook so colors come from the DB when available.
 
-**Platform Settings tab:**
-- Add an "Open Notebook API Key" field below the URL field
-- Same masked display pattern -- shows status but not the full key
+#### 3. Update `GameIcon` Component
 
-#### 4. Hooks Update (`useAIConfig.ts`)
+Modify `GameIcon` to accept an optional `accentColor` prop (hex string). When provided, it uses inline `style` for color and background instead of hardcoded Tailwind classes. This allows parent components that have DB data to pass dynamic colors.
 
-- Add a `useSetModelApiKey` mutation that updates only the `api_key_encrypted` column
-- Add query/mutation support for the `open_notebook_api_key` platform setting
-- The read query for models will include a `has_api_key` derived field (checking if key is non-null) rather than returning the actual key
+#### 4. Update `SimResourcesManager`
 
-#### 5. Edge Function Update (`ai-tutor`)
+Replace the static `GAME_CONFIG` color values with colors fetched from `useGameChannelColors`, falling back to the hardcoded defaults.
 
-- When selecting a model, also fetch `api_key_encrypted`
-- If a model-specific key exists, use it in the Authorization header instead of `LOVABLE_API_KEY`
-- For models with their own keys, route to the appropriate provider endpoint (future consideration -- for now all go through Lovable AI gateway)
+#### 5. Files Changed
 
-#### 6. Security Considerations
+| File | Change |
+|------|--------|
+| `src/hooks/useGameChannelColors.ts` | New hook -- fetches game colors from DB |
+| `src/config/simResources.ts` | Swap ATS/Fiber-Tech hex defaults |
+| `src/components/dashboard/GameIcon.tsx` | Swap defaults, accept dynamic color prop |
+| `src/components/admin/SimResourcesManager.tsx` | Swap defaults, use DB colors via hook |
 
-- API keys are never returned to the frontend in full -- only a boolean "has key" or last 4 chars
-- Only the service role (edge function) reads the actual key value
-- The admin UI writes keys but the read query excludes them
+#### 6. Implementation Sequence
 
----
-
-### Implementation Sequence
-
-1. Database migration: add `api_key_encrypted` column + seed Open Notebook API key setting
-2. Update `useAIConfig.ts` with new mutation for setting keys
-3. Update `AIConfigManager.tsx` Models table with API Key column and input
-4. Update Platform Settings section with Open Notebook API Key field
-5. Update `ai-tutor` edge function to use model-specific keys when available
-6. Test end-to-end
+1. Create `useGameChannelColors` hook
+2. Swap hardcoded colors in all three files (simResources.ts, GameIcon.tsx, SimResourcesManager.tsx)
+3. Wire `GameIcon` to accept dynamic color override
+4. Wire `SimResourcesManager` to use hook for dynamic colors
+5. Verify end-to-end that admin color changes propagate
 
