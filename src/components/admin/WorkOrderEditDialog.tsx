@@ -246,6 +246,7 @@ export function WorkOrderEditDialog({
         tenant_id: tenantId || null,
         evidence_requirements: evidenceRequirements as unknown as Json,
         cover_image_url: coverImageUrl.trim() || null,
+        source_challenge_id: sourceChallengeId || null,
       };
 
       if (workOrder) {
@@ -284,6 +285,21 @@ export function WorkOrderEditDialog({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleImportChallenge = (data: MappedChallengeData) => {
+    setTitle(data.title);
+    setDescription(data.description);
+    setGameTitle(data.gameTitle);
+    setDifficulty(data.difficulty);
+    setXpReward(data.xpReward);
+    setEstimatedTime(data.estimatedTime?.toString() || '');
+    setCoverImageUrl(data.coverImageUrl || '');
+    setSourceChallengeId(data.sourceChallengeId);
+    toast({
+      title: 'Challenge Imported',
+      description: `"${data.title}" data loaded. Review and save to create the work order.`,
+    });
   };
 
   return (
