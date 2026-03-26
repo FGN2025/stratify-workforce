@@ -28,7 +28,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { MediaPickerDialog } from './MediaPickerDialog';
-import { Loader2, ChevronDown, FileUp, ImageIcon, X } from 'lucide-react';
+import { ImportChallengeDialog, type MappedChallengeData } from './ImportChallengeDialog';
+import { Loader2, ChevronDown, FileUp, ImageIcon, X, Download } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
@@ -115,6 +116,8 @@ export function WorkOrderEditDialog({
   // Cover image state
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [sourceChallengeId, setSourceChallengeId] = useState<string | null>(null);
   // Fetch channels and tenants on mount
   useEffect(() => {
     const fetchData = async () => {
