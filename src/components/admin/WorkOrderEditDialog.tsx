@@ -185,6 +185,7 @@ export function WorkOrderEditDialog({
         setChannelId('');
         setTenantId('');
         setCoverImageUrl('');
+        setSourceChallengeId(null);
         // Reset evidence
         setEvidenceRequired(false);
         setEvidenceMinUploads('1');
