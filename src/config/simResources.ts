@@ -26,7 +26,7 @@ export type SimResourcesConfig = Record<GameTitle, SimGameConfig>;
 
 export const SIM_RESOURCES: SimResourcesConfig = {
   ATS: {
-    title: 'American Truck Sim',
+    title: 'Trucking Simulator',
     shortTitle: 'ATS',
     icon: Truck,
     accentColor: '#8B5CF6',
