@@ -733,6 +733,12 @@ export function WorkOrderEditDialog({
           title="Select Cover Image"
           currentImageUrl={coverImageUrl}
         />
+
+        <ImportChallengeDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onSelect={handleImportChallenge}
+        />
       </DialogContent>
     </Dialog>
   );
