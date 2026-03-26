@@ -317,6 +317,26 @@ export function WorkOrderEditDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          {/* Import from FGN button (create mode only) */}
+          {!workOrder && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowImportDialog(true)}
+              className="w-full border-dashed border-primary/40 text-primary hover:bg-primary/10"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Import from FGN Challenges
+            </Button>
+          )}
+
+          {sourceChallengeId && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
+              <Download className="h-3 w-3" />
+              Linked to FGN Challenge: <code className="text-primary">{sourceChallengeId.slice(0, 8)}...</code>
+            </div>
+          )}
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
