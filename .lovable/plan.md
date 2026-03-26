@@ -1,28 +1,24 @@
 
-## Fix Fiber-Tech "Tech Certification" Resource Color
 
-### The Problem
+## Generate AI Favicon for Stratify Workforce
 
-The "Tech Certification" resource under Fiber-Tech Simulator is displaying with a violet color (`#8B5CF6`) instead of blue (`#3B82F6`). This happened because:
+### What Will Happen
 
-1. The resource exists in the `sim_resources` table with the old purple color hardcoded in the `accent_color` field
-2. The color swap (ATS → purple, Fiber-Tech → blue) was applied to configuration defaults, but this database record wasn't updated
-3. The sidebar (AppSidebar.tsx) reads `resource.accent_color` directly from the database, so it displays the stale violet color
+1. **Generate a favicon image** using AI (Gemini flash-image model) with a prompt emphasizing:
+   - Learning/education iconography (book, graduation cap, or brain)
+   - Simulation/gaming elements (controller, joystick, or circuit patterns)
+   - Skills development theme
+   - The app's dark industrial color palette with FGN Amber (#f49d14) as the primary accent
+   - Clean, simple design suitable for a 64x64 favicon
 
-### Solution
+2. **QA the generated image** to ensure it reads well at small sizes
 
-**Update the database record** for the Tech Certification resource to use the correct blue color for Fiber-Tech:
-- Current: `accent_color = '#8B5CF6'` (violet)
-- New: `accent_color = '#3B82F6'` (blue)
+3. **Copy the favicon to `public/favicon.png`** and update `index.html` with a `<link rel="icon">` reference
 
-This is a one-line SQL UPDATE statement that will immediately fix the sidebar display and any other places where this resource appears.
+### Technical Details
 
-### Implementation
-
-1. Execute a simple SQL UPDATE to change the accent_color for the Tech Certification resource
-2. The change will propagate immediately to the UI since the sidebar queries the database in real-time
-
-### Why This Happened
-
-When resources are admin-managed (stored in the database), their accent colors are stored as individual records. During the color swap, only the hardcoded configuration defaults were updated, but pre-existing database records retained their old values.
+- Model: `google/gemini-3-pro-image-preview` (higher quality)
+- Output: 64×64 PNG optimized for favicon use
+- Color palette: Dark background (#080c16) with amber (#f49d14) accent
+- Update `index.html` to add `<link rel="icon" href="/favicon.png" type="image/png">`
 
