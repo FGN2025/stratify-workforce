@@ -1938,6 +1938,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           max_attempts: number | null
+          source_challenge_id: string | null
           success_criteria: Json | null
           tenant_id: string | null
           title: string
@@ -1955,6 +1956,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_attempts?: number | null
+          source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null
           title: string
@@ -1972,6 +1974,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_attempts?: number | null
+          source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null
           title?: string

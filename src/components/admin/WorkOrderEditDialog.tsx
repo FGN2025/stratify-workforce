@@ -28,7 +28,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { MediaPickerDialog } from './MediaPickerDialog';
-import { Loader2, ChevronDown, FileUp, ImageIcon, X } from 'lucide-react';
+import { ImportChallengeDialog, type MappedChallengeData } from './ImportChallengeDialog';
+import { Loader2, ChevronDown, FileUp, ImageIcon, X, Download } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
@@ -115,6 +116,8 @@ export function WorkOrderEditDialog({
   // Cover image state
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [sourceChallengeId, setSourceChallengeId] = useState<string | null>(null);
   // Fetch channels and tenants on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -182,6 +185,7 @@ export function WorkOrderEditDialog({
         setChannelId('');
         setTenantId('');
         setCoverImageUrl('');
+        setSourceChallengeId(null);
         // Reset evidence
         setEvidenceRequired(false);
         setEvidenceMinUploads('1');
@@ -242,6 +246,7 @@ export function WorkOrderEditDialog({
         tenant_id: tenantId || null,
         evidence_requirements: evidenceRequirements as unknown as Json,
         cover_image_url: coverImageUrl.trim() || null,
+        source_challenge_id: sourceChallengeId || null,
       };
 
       if (workOrder) {
@@ -282,6 +287,21 @@ export function WorkOrderEditDialog({
     }
   };
 
+  const handleImportChallenge = (data: MappedChallengeData) => {
+    setTitle(data.title);
+    setDescription(data.description);
+    setGameTitle(data.gameTitle);
+    setDifficulty(data.difficulty);
+    setXpReward(data.xpReward);
+    setEstimatedTime(data.estimatedTime?.toString() || '');
+    setCoverImageUrl(data.coverImageUrl || '');
+    setSourceChallengeId(data.sourceChallengeId);
+    toast({
+      title: 'Challenge Imported',
+      description: `"${data.title}" data loaded. Review and save to create the work order.`,
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -297,6 +317,26 @@ export function WorkOrderEditDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          {/* Import from FGN button (create mode only) */}
+          {!workOrder && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowImportDialog(true)}
+              className="w-full border-dashed border-primary/40 text-primary hover:bg-primary/10"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Import from FGN Challenges
+            </Button>
+          )}
+
+          {sourceChallengeId && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
+              <Download className="h-3 w-3" />
+              Linked to FGN Challenge: <code className="text-primary">{sourceChallengeId.slice(0, 8)}...</code>
+            </div>
+          )}
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
@@ -692,6 +732,12 @@ export function WorkOrderEditDialog({
           }}
           title="Select Cover Image"
           currentImageUrl={coverImageUrl}
+        />
+
+        <ImportChallengeDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onSelect={handleImportChallenge}
         />
       </DialogContent>
     </Dialog>
