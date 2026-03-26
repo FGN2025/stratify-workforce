@@ -45,10 +45,12 @@ export function HeroSection() {
               Join FGN Academy
               <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="lg" className="gap-2 h-12 px-6">
-              <Play className="h-4 w-4" />
-              Watch Demo
-            </Button>
+            <a href="https://youtu.be/CaahdKITpEs" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="lg" className="gap-2 h-12 px-6">
+                <Play className="h-4 w-4" />
+                Watch Demo
+              </Button>
+            </a>
           </div>
           
           {/* Stats ticker */}
