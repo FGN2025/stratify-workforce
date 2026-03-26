@@ -16,6 +16,7 @@ import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
 import { DiscordConnectionsManager } from '@/components/admin/DiscordConnectionsManager';
 import { AIConfigManager } from '@/components/admin/AIConfigManager';
+import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -252,6 +253,9 @@ export default function Admin() {
                 <TabsTrigger value="ai-config" className="text-emerald-400 data-[state=active]:text-emerald-400">
                   AI Config
                 </TabsTrigger>
+                <TabsTrigger value="sync-tester" className="text-amber-400 data-[state=active]:text-amber-400">
+                  Sync Tester
+                </TabsTrigger>
                 <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
                   Super Admin
                 </TabsTrigger>
@@ -369,6 +373,14 @@ export default function Admin() {
                 <Card className="border-border/50">
                   <CardContent className="pt-6">
                     <AIConfigManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="sync-tester">
+                <Card className="border-border/50">
+                  <CardContent className="pt-6">
+                    <ChallengeSyncTester />
                   </CardContent>
                 </Card>
               </TabsContent>
