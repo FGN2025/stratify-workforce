@@ -115,7 +115,7 @@ const Leaderboard = () => {
       <div className="space-y-10">
         <PageHero
           title="Leaderboard"
-          subtitle="Compete with operators worldwide. Track your progress, climb the ranks, and prove your expertise in industrial simulation."
+          subtitle={`Compete with operators worldwide. ${gameFilter !== 'all' ? getGameLabel(gameFilter) + ' rankings.' : 'Track your progress across all games.'}`}
           backgroundImage="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1600&h=600&fit=crop"
           stats={[
             { value: `${entries.length}`, label: 'Total Players', highlight: true },
@@ -123,6 +123,37 @@ const Leaderboard = () => {
             { value: currentUserEntry ? `${currentUserEntry.score}` : '—', label: 'Your Score' },
           ]}
         />
+
+        {/* Game Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => setGameFilter('all')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap border",
+              gameFilter === 'all'
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            All Games
+          </button>
+          {GAME_TITLES.map((game) => (
+            <button
+              key={game}
+              onClick={() => setGameFilter(game)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap border",
+                gameFilter === game
+                  ? "border-primary/50 bg-primary/10 text-foreground"
+                  : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <GameIcon game={game} size="sm" className="h-5 w-5 p-0.5" />
+              {SIM_RESOURCES[game].shortTitle}
+            </button>
+          ))}
+        </div>
 
         {isLoading ? (
           <LeaderboardSkeleton />
