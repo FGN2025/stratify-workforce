@@ -18,6 +18,7 @@ import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog';
 import { useWorkOrderById } from '@/hooks/useWorkOrders';
 import { useUserWorkOrderStatus, useStartWorkOrder, calculateWorkOrderXP } from '@/hooks/useWorkOrderCompletion';
 import { useWorkOrderTasks, useUserTaskProgress } from '@/hooks/useWorkOrderTasks';
+import { UserProgressCard } from '@/components/work-orders/UserProgressCard';
 import { 
   useEvidenceSubmissions, 
   useDeleteEvidence,
@@ -400,33 +401,19 @@ export default function WorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Your Progress */}
+          {/* Your Progress with Credential */}
           {status?.hasAttempted && (
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Your Progress</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <p className="text-3xl font-data font-bold">{status.attemptCount}</p>
-                    <p className="text-xs text-muted-foreground">Attempts</p>
-                  </div>
-                  {status.bestScore !== undefined && status.bestScore !== null && (
-                    <div className="text-center">
-                      <p className="text-3xl font-data font-bold text-primary">{status.bestScore}%</p>
-                      <p className="text-xs text-muted-foreground">Best Score</p>
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <Progress value={status.isCompleted ? 100 : 50} className="h-2" />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {status.isCompleted ? 'Completed!' : 'In Progress'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <UserProgressCard
+              workOrderId={id!}
+              sourceChalllengeId={workOrder.source_challenge_id}
+              status={{
+                hasAttempted: status.hasAttempted,
+                attemptCount: status.attemptCount,
+                bestScore: status.bestScore,
+                isCompleted: status.isCompleted,
+                latestStatus: status.latestStatus,
+              }}
+            />
           )}
 
           {/* Evidence Section */}
