@@ -69,6 +69,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Fetch challenge_tasks from play.fgn.gg
+    const challengeIds = (challenges || []).map((c: Record<string, unknown>) => c.id);
+    let tasksMap: Record<string, Array<Record<string, unknown>>> = {};
+    
+    if (challengeIds.length > 0) {
+      const { data: tasks, error: tasksError } = await playClient
+        .from('challenge_tasks')
+        .select('*')
+        .in('challenge_id', challengeIds)
+        .order('order_index', { ascending: true });
+
+      if (!tasksError && tasks) {
+        // Group tasks by challenge_id
+        for (const task of tasks) {
+          const cid = String(task.challenge_id);
+          if (!tasksMap[cid]) tasksMap[cid] = [];
+          tasksMap[cid].push(task);
+        }
+      } else if (tasksError) {
+        // challenge_tasks table may not exist — log but don't fail
+        console.warn('Could not fetch challenge_tasks:', tasksError.message);
+      }
+    }
+
     // Also fetch which challenges are already imported
     const { data: existingWorkOrders } = await localSupabase
       .from('work_orders')
@@ -82,6 +106,7 @@ Deno.serve(async (req) => {
     const enrichedChallenges = (challenges || []).map((c: Record<string, unknown>) => ({
       ...c,
       already_imported: importedIds.has(String(c.id)),
+      tasks: tasksMap[String(c.id)] || [],
     }));
 
     return new Response(JSON.stringify({ challenges: enrichedChallenges }), {
