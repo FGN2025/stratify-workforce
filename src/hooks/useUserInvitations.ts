@@ -55,6 +55,10 @@ export function useUserInvitations() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        // Non-admin users get 403 — return empty list instead of throwing
+        if (response.status === 403) {
+          return [] as Invitation[];
+        }
         throw new Error(errorData.error || 'Failed to fetch invitations');
       }
 
