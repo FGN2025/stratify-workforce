@@ -60,8 +60,36 @@ function ProfileSkeleton() {
 const Profile = () => {
   const { userId } = useParams<{ userId?: string }>();
   const { tenant } = useTenant();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { profile, credentials, achievements, stats, isLoading, isOwnProfile, error } = useProfile(userId);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!session?.access_token) return;
+    setExporting(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const res = await fetch(`${supabaseUrl}/functions/v1/passport-pdf`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `skill-passport-${(profile?.username || 'student').toLowerCase().replace(/\s+/g, '-')}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Passport exported!', description: 'Open the file and use Print → Save as PDF for a polished document.' });
+    } catch {
+      toast({ title: 'Export failed', description: 'Could not generate your Skill Passport.', variant: 'destructive' });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleShare = async () => {
     if (!user) return;
