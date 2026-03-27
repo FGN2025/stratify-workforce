@@ -20,8 +20,10 @@ import {
   Award,
   Target,
   BadgeCheck,
-  Briefcase
+  Briefcase,
+  Loader2
 } from 'lucide-react';
+import { useState } from 'react';
 import type { SkillSet } from '@/types/tenant';
 import { ATS_RESOURCES } from '@/config/simResources';
 
