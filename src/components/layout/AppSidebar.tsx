@@ -54,13 +54,13 @@ const mainNavItems = [
   { title: 'Communities', url: '/communities', icon: Users },
   { title: 'Skill Passport', url: '/profile', icon: User },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
-  { title: 'Developers', url: '/developers', icon: Code },
 ];
 
 const adminNavItems = [
   { title: 'Admin Dashboard', url: '/admin', icon: ShieldCheck, adminOnly: true },
-  { title: 'Students', url: '/students', icon: Users },
-  { title: 'Settings', url: '/settings', icon: Settings },
+  { title: 'Students', url: '/students', icon: Users, adminOnly: true },
+  { title: 'Settings', url: '/settings', icon: Settings, adminOnly: true },
+  { title: 'Developers', url: '/developers', icon: Code, developerOnly: true },
 ];
 
 // Order of games in the sidebar

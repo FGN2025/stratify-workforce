@@ -10,6 +10,7 @@ import { TutorChatButton } from "@/components/tutor/TutorChatButton";
 import { TutorChatPanel } from "@/components/tutor/TutorChatPanel";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
+import { DeveloperRoute } from "@/components/auth/DeveloperRoute";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import WorkOrders from "./pages/WorkOrders";
