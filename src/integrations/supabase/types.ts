@@ -2101,17 +2101,29 @@ export type Database = {
         Args: { p_course_id: string; p_user_id: string }
         Returns: number
       }
-      get_leaderboard_data: {
-        Args: never
-        Returns: {
-          avatar_url: string
-          employability_score: number
-          total_play_time_hours: number
-          total_xp: number
-          user_id: string
-          username: string
-        }[]
-      }
+      get_leaderboard_data:
+        | {
+            Args: never
+            Returns: {
+              avatar_url: string
+              employability_score: number
+              total_play_time_hours: number
+              total_xp: number
+              user_id: string
+              username: string
+            }[]
+          }
+        | {
+            Args: { _game_title?: string }
+            Returns: {
+              avatar_url: string
+              employability_score: number
+              total_play_time_hours: number
+              total_xp: number
+              user_id: string
+              username: string
+            }[]
+          }
       get_parent_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
       get_public_profile_data: {
         Args: { profile_ids?: string[] }
