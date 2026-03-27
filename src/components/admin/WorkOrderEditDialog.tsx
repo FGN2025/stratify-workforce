@@ -28,7 +28,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { MediaPickerDialog } from './MediaPickerDialog';
-import { ImportChallengeDialog, type MappedChallengeData } from './ImportChallengeDialog';
+import { ImportChallengeDialog, type MappedChallengeData, type ExternalTask } from './ImportChallengeDialog';
 import { Loader2, ChevronDown, FileUp, ImageIcon, X, Download } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -118,6 +118,7 @@ export function WorkOrderEditDialog({
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [sourceChallengeId, setSourceChallengeId] = useState<string | null>(null);
+  const [pendingTasks, setPendingTasks] = useState<ExternalTask[]>([]);
   // Fetch channels and tenants on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -186,6 +187,7 @@ export function WorkOrderEditDialog({
         setTenantId('');
         setCoverImageUrl('');
         setSourceChallengeId(null);
+        setPendingTasks([]);
         // Reset evidence
         setEvidenceRequired(false);
         setEvidenceMinUploads('1');
@@ -264,13 +266,37 @@ export function WorkOrderEditDialog({
         });
       } else {
         // Create new
-        const { error } = await supabase.from('work_orders').insert(data);
+        const { data: newWO, error } = await supabase.from('work_orders').insert(data).select('id').single();
 
         if (error) throw error;
 
+        // Insert tasks if imported from FGN challenge
+        if (newWO && pendingTasks.length > 0) {
+          const taskRows = pendingTasks.map((t, idx) => ({
+            work_order_id: newWO.id,
+            title: t.title,
+            description: t.description || null,
+            order_index: t.order_index ?? idx,
+            source_task_id: t.id,
+          }));
+
+          const { error: taskError } = await supabase
+            .from('work_order_tasks')
+            .insert(taskRows);
+
+          if (taskError) {
+            console.error('Error inserting tasks:', taskError);
+            toast({
+              title: 'Warning',
+              description: 'Work order created but tasks failed to import.',
+              variant: 'destructive',
+            });
+          }
+        }
+
         toast({
           title: 'Created',
-          description: 'New work order has been created.',
+          description: `New work order created${pendingTasks.length > 0 ? ` with ${pendingTasks.length} tasks` : ''}.`,
         });
       }
 
@@ -296,9 +322,10 @@ export function WorkOrderEditDialog({
     setEstimatedTime(data.estimatedTime?.toString() || '');
     setCoverImageUrl(data.coverImageUrl || '');
     setSourceChallengeId(data.sourceChallengeId);
+    setPendingTasks(data.tasks || []);
     toast({
       title: 'Challenge Imported',
-      description: `"${data.title}" data loaded. Review and save to create the work order.`,
+      description: `"${data.title}" data loaded${data.tasks.length > 0 ? ` with ${data.tasks.length} tasks` : ''}. Review and save to create the work order.`,
     });
   };
 
