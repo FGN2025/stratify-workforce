@@ -9,7 +9,10 @@ import { CertificationCard } from '@/components/profile/CertificationCard';
 import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { 
   Download,
   Share2,
@@ -55,7 +58,42 @@ function ProfileSkeleton() {
 const Profile = () => {
   const { userId } = useParams<{ userId?: string }>();
   const { tenant } = useTenant();
+  const { user } = useAuth();
   const { profile, credentials, achievements, stats, isLoading, isOwnProfile, error } = useProfile(userId);
+
+  const handleShare = async () => {
+    if (!user) return;
+    try {
+      // Check if passport exists
+      const { data: passport, error: passErr } = await supabase
+        .from('skill_passport')
+        .select('id, public_url_slug, is_public')
+        .eq('user_id', user.id)
+        .single();
+
+      if (passErr || !passport) {
+        toast({ title: 'No Skill Passport found', description: 'Complete some work orders to create your passport.', variant: 'destructive' });
+        return;
+      }
+
+      let slug = passport.public_url_slug;
+
+      // Generate slug if missing or not public
+      if (!slug || !passport.is_public) {
+        slug = slug || `${(profile?.username || 'operator').toLowerCase().replace(/\s+/g, '-')}-${Date.now().toString(36)}`;
+        await supabase
+          .from('skill_passport')
+          .update({ is_public: true, public_url_slug: slug })
+          .eq('id', passport.id);
+      }
+
+      const shareUrl = `${window.location.origin}/passport/${slug}`;
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title: 'Link copied!', description: 'Your public Skill Passport link has been copied to clipboard.' });
+    } catch {
+      toast({ title: 'Error', description: 'Could not generate share link.', variant: 'destructive' });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -92,10 +130,12 @@ const Profile = () => {
           primaryAction={isOwnProfile ? {
             label: 'Export PDF',
             icon: <Download className="h-4 w-4" />,
+            onClick: () => toast({ title: 'Coming Soon', description: 'PDF export is under development.' }),
           } : undefined}
           secondaryAction={isOwnProfile ? {
             label: 'Share',
             icon: <Share2 className="h-4 w-4" />,
+            onClick: handleShare,
           } : undefined}
           stats={[
             { value: `${profile.employability_score?.toFixed(1) || '50.0'}`, label: 'Employability Score', highlight: true },
