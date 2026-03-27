@@ -1,35 +1,37 @@
 
 
-## Fix: Import from FGN Challenges — Invalid API Key
+# Add Health Check Endpoint for FGN Play Integration
 
-### Problem
+## Overview
 
-The `fetch-challenges` edge function is failing with **"Invalid API key"** when trying to connect to play.fgn.gg's database. The anon key hardcoded in the function is no longer valid — it was likely rotated on the play.fgn.gg Supabase project.
+Create a new edge function and admin UI component that validates both API keys are working:
+1. **PLAY_FGN_ANON_KEY** — can we still read challenges from play.fgn.gg?
+2. **Authorized App API Key** — is the sync-challenge-completion endpoint reachable and authenticating?
 
-### What You Need
+## Changes
 
-The **current anon key** from the play.fgn.gg Supabase project. Someone on the play.fgn.gg team needs to provide it (found in their Supabase dashboard under Settings → API → `anon` `public` key).
+### 1. New Edge Function: `supabase/functions/health-check-play/index.ts`
 
-### Fix Plan
+- Admin-only (verify JWT + `has_role` check)
+- **Test 1**: Connect to play.fgn.gg using `PLAY_FGN_ANON_KEY`, run a lightweight query (`SELECT count(*) FROM challenges LIMIT 1`). Return pass/fail + latency.
+- **Test 2**: Call `sync-challenge-completion` with a dry-run/invalid payload and confirm we get a structured error (not a 401/403 from bad API key). Accept an optional `api_key` parameter from the admin to test the authorized app key.
+- Return JSON: `{ play_fgn_connection: { status, latency_ms, error? }, sync_endpoint: { status, latency_ms, error? } }`
 
-1. **Store the play.fgn.gg anon key as a secret** instead of hardcoding it — this way it can be updated without redeploying code
-2. **Update `fetch-challenges` edge function** to read `PLAY_FGN_ANON_KEY` from environment variables via `Deno.env.get()`
-3. **Redeploy** the edge function
+### 2. New Admin Component: `src/components/admin/IntegrationHealthCheck.tsx`
 
-### Technical Detail
+- Card with "Check Connection Health" button
+- Displays status indicators (green/red) for each check with latency
+- Optional API key input field for testing the sync endpoint key
+- Place it in the existing **Sync Tester** tab in the Admin panel, above the `ChallengeSyncTester`
 
-**`supabase/functions/fetch-challenges/index.ts`** — Replace the hardcoded key:
-```typescript
-// Before (broken):
-const PLAY_FGN_ANON_KEY = 'eyJhbGci...';
+### 3. Update Admin Page
 
-// After:
-const PLAY_FGN_ANON_KEY = Deno.env.get('PLAY_FGN_ANON_KEY')!;
-```
+- Import and render `IntegrationHealthCheck` inside the `sync-tester` TabsContent, before `ChallengeSyncTester`
 
-Add a secret named `PLAY_FGN_ANON_KEY` with the current valid key from the play.fgn.gg team.
+## Technical Details
 
-### What This Means for You
-
-Once you provide the updated anon key from play.fgn.gg, the "Import from FGN Challenges" dialog will load and display all active challenges, letting you select and import them as work orders — including the Champion Challenge (`ac1cb8c7-aec5-44e8-942b-f13ffb307b4d`).
+- Edge function uses `PLAY_FGN_ANON_KEY` from env (already stored as secret)
+- For the sync endpoint test, the function calls itself via fetch to `SUPABASE_URL/functions/v1/sync-challenge-completion` with an intentionally invalid email, expecting a 404 "User not found" (proves auth passed)
+- A 401/403 response means the API key is invalid — flagged as failure
+- No database migrations needed
 
