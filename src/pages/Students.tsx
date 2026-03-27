@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
+import { useUserInvitations } from '@/hooks/useUserInvitations';
+import { useCommunities } from '@/hooks/useCommunities';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
