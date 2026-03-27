@@ -17,6 +17,7 @@ import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
 import { DiscordConnectionsManager } from '@/components/admin/DiscordConnectionsManager';
 import { AIConfigManager } from '@/components/admin/AIConfigManager';
 import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
+import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -378,11 +379,14 @@ export default function Admin() {
               </TabsContent>
 
               <TabsContent value="sync-tester">
-                <Card className="border-border/50">
-                  <CardContent className="pt-6">
-                    <ChallengeSyncTester />
-                  </CardContent>
-                </Card>
+                <div className="space-y-6">
+                  <IntegrationHealthCheck />
+                  <Card className="border-border/50">
+                    <CardContent className="pt-6">
+                      <ChallengeSyncTester />
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="super-admin">
