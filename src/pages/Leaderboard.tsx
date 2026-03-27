@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
@@ -10,6 +11,9 @@ import { cn } from '@/lib/utils';
 import { useTenant } from '@/contexts/TenantContext';
 import { useLeaderboard, type LeaderboardEntry } from '@/hooks/useLeaderboard';
 import { useAuth } from '@/contexts/AuthContext';
+import { GameIcon, getGameLabel } from '@/components/dashboard/GameIcon';
+import { SIM_RESOURCES } from '@/config/simResources';
+import type { GameTitle } from '@/types/tenant';
 
 function TopThreeCard({ entry, position, isCurrentUser }: { entry: LeaderboardEntry; position: 1 | 2 | 3; isCurrentUser: boolean }) {
   const config = {
@@ -96,10 +100,13 @@ function LeaderboardSkeleton() {
   );
 }
 
+const GAME_TITLES: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech'];
+
 const Leaderboard = () => {
   const { tenant } = useTenant();
   const { user } = useAuth();
-  const { entries, currentUserEntry, isLoading } = useLeaderboard();
+  const [gameFilter, setGameFilter] = useState<GameTitle | 'all'>('all');
+  const { entries, currentUserEntry, isLoading } = useLeaderboard(gameFilter);
 
   const topThree = entries.slice(0, 3);
 
@@ -108,7 +115,7 @@ const Leaderboard = () => {
       <div className="space-y-10">
         <PageHero
           title="Leaderboard"
-          subtitle="Compete with operators worldwide. Track your progress, climb the ranks, and prove your expertise in industrial simulation."
+          subtitle={`Compete with operators worldwide. ${gameFilter !== 'all' ? getGameLabel(gameFilter) + ' rankings.' : 'Track your progress across all games.'}`}
           backgroundImage="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1600&h=600&fit=crop"
           stats={[
             { value: `${entries.length}`, label: 'Total Players', highlight: true },
@@ -116,6 +123,37 @@ const Leaderboard = () => {
             { value: currentUserEntry ? `${currentUserEntry.score}` : '—', label: 'Your Score' },
           ]}
         />
+
+        {/* Game Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => setGameFilter('all')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap border",
+              gameFilter === 'all'
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            All Games
+          </button>
+          {GAME_TITLES.map((game) => (
+            <button
+              key={game}
+              onClick={() => setGameFilter(game)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap border",
+                gameFilter === game
+                  ? "border-primary/50 bg-primary/10 text-foreground"
+                  : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <GameIcon game={game} size="sm" className="h-5 w-5 p-0.5" />
+              {SIM_RESOURCES[game].shortTitle}
+            </button>
+          ))}
+        </div>
 
         {isLoading ? (
           <LeaderboardSkeleton />

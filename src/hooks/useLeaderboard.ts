@@ -13,13 +13,16 @@ export interface LeaderboardEntry {
   change: number; // stub — no historical data yet
 }
 
-export function useLeaderboard() {
+export function useLeaderboard(gameFilter: string = 'all') {
   const { user, session } = useAuth();
 
   const query = useQuery({
-    queryKey: ['leaderboard', session?.access_token],
+    queryKey: ['leaderboard', gameFilter, session?.access_token],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_leaderboard_data');
+      const filterValue = gameFilter === 'all' ? null : gameFilter;
+      const { data, error } = await supabase.rpc('get_leaderboard_data', {
+        _game_title: filterValue,
+      } as any);
       if (error) throw error;
 
       const entries: LeaderboardEntry[] = (data || []).map((row: any, index: number) => ({
