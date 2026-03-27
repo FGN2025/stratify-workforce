@@ -364,6 +364,24 @@ export function WorkOrderEditDialog({
             </div>
           )}
 
+          {pendingTasks.length > 0 && (
+            <div className="rounded-md border border-border/50 bg-muted/20 p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} will be imported:
+              </p>
+              <ul className="space-y-1">
+                {pendingTasks.map((t, i) => (
+                  <li key={t.id || i} className="text-xs text-muted-foreground flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium shrink-0">
+                      {i + 1}
+                    </span>
+                    {t.title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
