@@ -28,6 +28,7 @@ export function ChallengeSyncTester() {
   const [challengeId, setChallengeId] = useState('');
   const [score, setScore] = useState(85);
   const [skills, setSkills] = useState('');
+  const [completedAt, setCompletedAt] = useState(new Date().toISOString());
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<SyncResponse | null>(null);
@@ -58,6 +59,7 @@ export function ChallengeSyncTester() {
           user_email: email,
           challenge_id: challengeId,
           score,
+          completed_at: completedAt,
           skills_verified: skills ? skills.split(',').map(s => s.trim()).filter(Boolean) : [],
           metadata: { source: 'admin-test-panel', tested_at: new Date().toISOString() },
         }),
@@ -139,6 +141,15 @@ export function ChallengeSyncTester() {
               placeholder="route_planning, fuel_management"
               value={skills}
               onChange={e => setSkills(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="completed-at">Completed At (ISO 8601)</Label>
+            <Input
+              id="completed-at"
+              placeholder="2026-03-27T15:30:00.000Z"
+              value={completedAt}
+              onChange={e => setCompletedAt(e.target.value)}
             />
           </div>
           <Button onClick={handleTest} disabled={isLoading} className="w-full">
