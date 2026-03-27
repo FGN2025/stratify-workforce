@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
@@ -10,6 +11,9 @@ import { cn } from '@/lib/utils';
 import { useTenant } from '@/contexts/TenantContext';
 import { useLeaderboard, type LeaderboardEntry } from '@/hooks/useLeaderboard';
 import { useAuth } from '@/contexts/AuthContext';
+import { GameIcon, getGameLabel } from '@/components/dashboard/GameIcon';
+import { SIM_RESOURCES } from '@/config/simResources';
+import type { GameTitle } from '@/types/tenant';
 
 function TopThreeCard({ entry, position, isCurrentUser }: { entry: LeaderboardEntry; position: 1 | 2 | 3; isCurrentUser: boolean }) {
   const config = {
