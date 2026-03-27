@@ -8,17 +8,75 @@ const corsHeaders = {
 
 interface TaskProgress {
   task_id: string;
-  completed: boolean;
-  completed_at?: string;
+  completed?: boolean;
+  status?: string;
+  title?: string;
+  completed_at?: string | null;
 }
 
 interface CompletionPayload {
   user_email: string;
   challenge_id: string;
   score?: number;
+  completed_at?: string;
   skills_verified?: string[];
   task_progress?: TaskProgress[];
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * Normalize a potentially nested payload into the flat format.
+ * Handles: player.email → user_email, challenge.id → challenge_id, etc.
+ */
+function normalizePayload(raw: Record<string, unknown>): CompletionPayload {
+  let userEmail = raw.user_email as string | undefined;
+  let challengeId = raw.challenge_id as string | undefined;
+  const metadata = (raw.metadata as Record<string, unknown>) || {};
+
+  // Flatten nested player object
+  if (!userEmail && raw.player && typeof raw.player === 'object') {
+    const player = raw.player as Record<string, unknown>;
+    userEmail = player.email as string | undefined;
+    if (player.display_name) metadata.display_name = player.display_name;
+    if (player.external_id) metadata.external_user_id = player.external_id;
+  }
+
+  // Flatten nested challenge object
+  if (!challengeId && raw.challenge && typeof raw.challenge === 'object') {
+    const challenge = raw.challenge as Record<string, unknown>;
+    challengeId = challenge.id as string | undefined;
+  }
+
+  // Score fallback: compute from metadata if missing
+  let score = raw.score as number | undefined;
+  if (score === undefined || score === null) {
+    const awarded = (metadata.awarded_points ?? raw.awarded_points) as number | undefined;
+    const max = (metadata.max_points ?? raw.max_points) as number | undefined;
+    if (awarded !== undefined && max !== undefined) {
+      if (max === 0) {
+        score = awarded > 0 ? 100 : 0;
+      } else {
+        score = Math.round((awarded / max) * 100);
+      }
+    }
+  }
+
+  return {
+    user_email: userEmail || '',
+    challenge_id: challengeId || '',
+    score,
+    completed_at: raw.completed_at as string | undefined,
+    skills_verified: raw.skills_verified as string[] | undefined,
+    task_progress: raw.task_progress as TaskProgress[] | undefined,
+    metadata,
+  };
+}
+
+/** Resolve task completion from either `completed` boolean or `status` string */
+function isTaskCompleted(tp: TaskProgress): boolean {
+  if (typeof tp.completed === 'boolean') return tp.completed;
+  if (typeof tp.status === 'string') return tp.status.toLowerCase() === 'completed';
+  return false;
 }
 
 Deno.serve(async (req) => {
@@ -38,7 +96,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify API key (same pattern as credential-api)
+    // Verify API key
     const apiKey = req.headers.get('x-app-key');
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'Missing X-App-Key header' }), {
@@ -60,8 +118,10 @@ Deno.serve(async (req) => {
 
     const app = appData[0];
 
-    const body: CompletionPayload = await req.json();
-    const { user_email, challenge_id, score, skills_verified, task_progress, metadata } = body;
+    // Parse and normalize the payload
+    const rawBody = await req.json();
+    const body = normalizePayload(rawBody);
+    const { user_email, challenge_id, score, completed_at, skills_verified, task_progress, metadata } = body;
 
     if (!user_email || !challenge_id) {
       return new Response(JSON.stringify({ error: 'user_email and challenge_id are required' }), {
@@ -99,7 +159,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Get current attempt count for this user + work order
+    // 3. Get current attempt count
     const { count: attemptCount } = await supabase
       .from('user_work_order_completions')
       .select('*', { count: 'exact', head: true })
@@ -108,6 +168,9 @@ Deno.serve(async (req) => {
 
     const attemptNumber = (attemptCount || 0) + 1;
     const completionStatus = (score !== undefined && score >= 70) ? 'completed' : 'failed';
+
+    // Use completed_at from payload if provided, otherwise server time
+    const completionTimestamp = completed_at || new Date().toISOString();
 
     // 4. Create work order completion record
     const { data: completion, error: completionError } = await supabase
@@ -119,7 +182,7 @@ Deno.serve(async (req) => {
         score: score ?? null,
         xp_awarded: completionStatus === 'completed' ? workOrder.xp_reward : 0,
         attempt_number: attemptNumber,
-        completed_at: new Date().toISOString(),
+        completed_at: completionTimestamp,
         metadata: metadata || {},
       })
       .select()
@@ -142,7 +205,6 @@ Deno.serve(async (req) => {
     // 6. Process task-level progress if provided
     let taskResults: Array<{ task_id: string; status: string }> = [];
     if (task_progress && task_progress.length > 0) {
-      // Fetch work_order_tasks mapped to this work order via source_task_id
       const sourceTaskIds = task_progress.map(tp => tp.task_id);
       const { data: woTasks } = await supabase
         .from('work_order_tasks')
@@ -160,14 +222,20 @@ Deno.serve(async (req) => {
             continue;
           }
 
+          const completed = isTaskCompleted(tp);
+          const taskMeta: Record<string, unknown> = {};
+          if (tp.title) taskMeta.title = tp.title;
+          if (tp.status) taskMeta.original_status = tp.status;
+
           const { error: upsertError } = await supabase
             .from('user_task_progress')
             .upsert({
               user_id: user.id,
               work_order_task_id: woTaskId,
               work_order_id: workOrder.id,
-              is_completed: tp.completed,
-              completed_at: tp.completed ? (tp.completed_at || new Date().toISOString()) : null,
+              is_completed: completed,
+              completed_at: completed ? (tp.completed_at || completionTimestamp) : null,
+              metadata: taskMeta,
               updated_at: new Date().toISOString(),
             }, { onConflict: 'user_id,work_order_task_id' });
 
@@ -182,7 +250,6 @@ Deno.serve(async (req) => {
     // 7. Issue credential to Skill Passport if app has permission
     let credential = null;
     if (app.can_issue && completionStatus === 'completed') {
-      // Find or create skill passport
       let { data: passport } = await supabase
         .from('skill_passport')
         .select('id')
@@ -201,10 +268,7 @@ Deno.serve(async (req) => {
 
         const { data: newPassport } = await supabase
           .from('skill_passport')
-          .insert({
-            user_id: user.id,
-            passport_hash: passportHash,
-          })
+          .insert({ user_id: user.id, passport_hash: passportHash })
           .select('id')
           .single();
 
@@ -212,7 +276,6 @@ Deno.serve(async (req) => {
       }
 
       if (passport) {
-        // Generate verification hash
         const encoder = new TextEncoder();
         const credentialData = `${passport.id}-${workOrder.title}-${app.app_slug}-${Date.now()}`;
         const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(credentialData));
@@ -220,7 +283,6 @@ Deno.serve(async (req) => {
           .map(b => b.toString(16).padStart(2, '0'))
           .join('');
 
-        // Build task completion summary for credential metadata
         const taskSummary = taskResults.length > 0
           ? { tasks_synced: taskResults.filter(t => t.status === 'synced').length, tasks_total: taskResults.length }
           : undefined;
@@ -241,6 +303,7 @@ Deno.serve(async (req) => {
             metadata: {
               challenge_id,
               attempt_number: attemptNumber,
+              completed_at: completionTimestamp,
               ...(taskSummary || {}),
               ...(metadata || {}),
             },

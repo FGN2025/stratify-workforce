@@ -28,6 +28,7 @@ export function ChallengeSyncTester() {
   const [challengeId, setChallengeId] = useState('');
   const [score, setScore] = useState(85);
   const [skills, setSkills] = useState('');
+  const [completedAt, setCompletedAt] = useState(new Date().toISOString());
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<SyncResponse | null>(null);
