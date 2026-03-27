@@ -1,57 +1,36 @@
 
 
-# Set Password for Test User darcylorincz@gmail.com
+# Lock Down Admin-Only Routes and Navigation for Students
 
-## Problem
-The user `darcylorincz@gmail.com` was auto-created by the system and no password was set/known. Passwords are hashed and cannot be retrieved.
+## Problems Found
 
-## Solution
+1. **`/students` route** — wrapped in `ProtectedRoute` (auth-only), not `AdminRoute`. Any logged-in user can access the full student roster.
+2. **`/settings` route** — same issue; settings page exposes tenant config, branding, and data exports to all authenticated users.
+3. **`/developers` route** — no route guard at all (fully public). The "My Apps" tab has a role check inside the component, but the page itself including API docs is open to everyone.
+4. **Sidebar** — "Students" and "Settings" links appear under the "Admin" group label for all users. Only "Admin Dashboard" is filtered by role. "Developers" appears in the main nav for everyone.
 
-Use the `supabase--curl_edge_functions` tool (or a quick one-off edge function call) to reset the password via the Supabase Admin API. Specifically, we'll call `auth.admin.updateUserById()` to set a known password.
+## Plan
 
-### Approach: Add a `/reset-password` route to the existing `admin-users` edge function
+### 1. Protect `/students` with AdminRoute (App.tsx)
 
-Add a new `POST /reset-password` handler that accepts `{ user_id, new_password }` — restricted to super_admins only. This is also useful long-term for admin user management.
+Change the `/students` route from `ProtectedRoute` to `AdminRoute` so only admins/super_admins can access it.
 
-### Changes
+### 2. Protect `/settings` with AdminRoute (App.tsx)
 
-**File: `supabase/functions/admin-users/index.ts`**
+Same change — wrap `/settings` in `AdminRoute` instead of `ProtectedRoute`.
 
-Add a new route handler:
+### 3. Guard `/developers` route (App.tsx)
 
-```typescript
-if (req.method === "POST" && path === "/reset-password") {
-  // Super admin only
-  if (!isSuperAdmin) {
-    return new Response(JSON.stringify({ error: "Super admin required" }), {
-      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-  }
-  const { user_id, new_password } = await req.json();
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, { password: new_password });
-  if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-  }
-  // Audit log
-  await supabaseAdmin.from("system_audit_logs").insert({
-    actor_id: user.id, action: "password_reset_by_admin",
-    resource_type: "user", resource_id: user_id,
-    details: { target_user_id: user_id }
-  });
-  return new Response(JSON.stringify({ success: true }), {
-    status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
-  });
-}
-```
+Wrap `/developers` in the existing `DeveloperRoute` component so only developer/super_admin roles can access it. API docs being public is acceptable per existing design, but credential management and the full portal should require the developer role.
 
-After deploying, we'll call it from the admin session (logged in as darcy@fgn.gg) to set a known password for darcylorincz@gmail.com, then log in as that user to verify the Work Order progress card.
+### 4. Hide non-admin sidebar items (AppSidebar.tsx)
 
-### Test Steps
-1. Deploy the updated edge function
-2. Log in as darcy@fgn.gg (super admin) in the preview
-3. Call the reset-password endpoint for user darcylorincz@gmail.com with a test password
-4. Log out, log in as darcylorincz@gmail.com with the new password
-5. Navigate to the ATS Gold Challenge work order to verify progress card
+Move "Students" and "Settings" into the `adminOnly` filter so they are hidden from non-admin users, matching the existing "Admin Dashboard" behavior. Move "Developers" out of mainNavItems and into a role-gated section (visible to developer + admin roles only).
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Wrap `/students` and `/settings` in `AdminRoute`; wrap `/developers` in `DeveloperRoute` |
+| `src/components/layout/AppSidebar.tsx` | Add `adminOnly: true` to Students and Settings nav items; conditionally show Developers link based on role |
 
