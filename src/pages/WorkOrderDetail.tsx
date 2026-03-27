@@ -17,6 +17,7 @@ import { EditableImageWrapper } from '@/components/admin/EditableImageWrapper';
 import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog';
 import { useWorkOrderById } from '@/hooks/useWorkOrders';
 import { useUserWorkOrderStatus, useStartWorkOrder, calculateWorkOrderXP } from '@/hooks/useWorkOrderCompletion';
+import { useWorkOrderTasks, useUserTaskProgress } from '@/hooks/useWorkOrderTasks';
 import { 
   useEvidenceSubmissions, 
   useDeleteEvidence,
@@ -38,6 +39,7 @@ import {
   AlertTriangle,
   FileUp,
   Upload,
+  ListChecks,
 } from 'lucide-react';
 
 export default function WorkOrderDetail() {
@@ -50,6 +52,8 @@ export default function WorkOrderDetail() {
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
   const { data: status } = useUserWorkOrderStatus(id || '');
   const { data: evidenceList = [], refetch: refetchEvidence } = useEvidenceSubmissions(id || '');
+  const { data: tasks = [] } = useWorkOrderTasks(id);
+  const { data: taskProgress = [] } = useUserTaskProgress(id);
   const { gameCoverImages } = useGameCoverImages();
   const startWorkOrder = useStartWorkOrder();
   const deleteEvidence = useDeleteEvidence();
