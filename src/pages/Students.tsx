@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
+import { useUserInvitations } from '@/hooks/useUserInvitations';
+import { useCommunities } from '@/hooks/useCommunities';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
@@ -151,6 +154,9 @@ const Students = () => {
   const { tenant } = useTenant();
   const { data: students = [], isLoading } = useStudents();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const { inviteUser, isInviting } = useUserInvitations();
+  const { communities } = useCommunities();
 
   const filteredStudents = students.filter(student =>
     student.username.toLowerCase().includes(searchQuery.toLowerCase())
@@ -177,6 +183,7 @@ const Students = () => {
           primaryAction={{
             label: 'Add Student',
             icon: <UserPlus className="h-4 w-4" />,
+            onClick: () => setShowInviteDialog(true),
           }}
           secondaryAction={{
             label: 'Filter',
@@ -401,6 +408,14 @@ const Students = () => {
             )}
           </div>
         </section>
+
+        <InviteUserDialog
+          open={showInviteDialog}
+          onOpenChange={setShowInviteDialog}
+          onInvite={inviteUser}
+          isInviting={isInviting}
+          tenants={communities.map(c => ({ id: c.id, name: c.name, slug: c.slug }))}
+        />
       </div>
     </AppLayout>
   );
