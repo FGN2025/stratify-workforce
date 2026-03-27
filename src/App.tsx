@@ -10,6 +10,7 @@ import { TutorChatButton } from "@/components/tutor/TutorChatButton";
 import { TutorChatPanel } from "@/components/tutor/TutorChatPanel";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
+import { DeveloperRoute } from "@/components/auth/DeveloperRoute";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import WorkOrders from "./pages/WorkOrders";
@@ -75,15 +76,17 @@ const App = () => (
                 <ProtectedRoute><Leaderboard /></ProtectedRoute>
               } />
               <Route path="/students" element={
-                <ProtectedRoute><Students /></ProtectedRoute>
+                <AdminRoute><Students /></AdminRoute>
               } />
               <Route path="/settings" element={
-                <ProtectedRoute><Settings /></ProtectedRoute>
+                <AdminRoute><Settings /></AdminRoute>
               } />
               <Route path="/admin" element={
                 <AdminRoute><Admin /></AdminRoute>
               } />
-              <Route path="/developers" element={<Developers />} />
+              <Route path="/developers" element={
+                <DeveloperRoute><Developers /></DeveloperRoute>
+              } />
               <Route path="/agent-widget" element={<AgentWidget />} />
               <Route path="/ai-test" element={<AITest />} />
               

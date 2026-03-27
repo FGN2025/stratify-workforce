@@ -54,13 +54,13 @@ const mainNavItems = [
   { title: 'Communities', url: '/communities', icon: Users },
   { title: 'Skill Passport', url: '/profile', icon: User },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
-  { title: 'Developers', url: '/developers', icon: Code },
 ];
 
 const adminNavItems = [
   { title: 'Admin Dashboard', url: '/admin', icon: ShieldCheck, adminOnly: true },
-  { title: 'Students', url: '/students', icon: Users },
-  { title: 'Settings', url: '/settings', icon: Settings },
+  { title: 'Students', url: '/students', icon: Users, adminOnly: true },
+  { title: 'Settings', url: '/settings', icon: Settings, adminOnly: true },
+  { title: 'Developers', url: '/developers', icon: Code, developerOnly: true },
 ];
 
 // Order of games in the sidebar
@@ -86,7 +86,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { tenant } = useTenant();
   const { isLoading: authLoading } = useAuth();
-  const { isAdmin, isLoading: roleLoading } = useUserRole();
+  const { isAdmin, isDeveloper, isLoading: roleLoading } = useUserRole();
   
   // Fetch database resources
   const { data: dbResources } = useSimResources();
@@ -108,9 +108,15 @@ export function AppSidebar() {
   
   // Show admin items while loading (optimistic) to prevent race condition
   const isLoadingAuth = authLoading || roleLoading;
-  const visibleAdminItems = adminNavItems.filter(
-    (item) => !('adminOnly' in item && item.adminOnly) || isLoadingAuth || isAdmin
-  );
+  const visibleAdminItems = adminNavItems.filter((item) => {
+    if ('adminOnly' in item && item.adminOnly) {
+      return isLoadingAuth || isAdmin;
+    }
+    if ('developerOnly' in item && (item as any).developerOnly) {
+      return isLoadingAuth || isDeveloper || isAdmin;
+    }
+    return true;
+  });
 
   // Group database resources by game, fall back to static config
   const resourcesByGame = useMemo(() => {
