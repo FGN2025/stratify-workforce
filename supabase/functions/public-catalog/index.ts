@@ -33,6 +33,11 @@ const GAME_CONFIG = {
     short_name: "Mechanic",
     accent_color: "#EF4444",
   },
+  Fiber_Tech: {
+    name: "Fiber-Tech Simulator",
+    short_name: "Fiber-Tech",
+    accent_color: "#3B82F6",
+  },
 };
 
 type GameTitle = keyof typeof GAME_CONFIG;
