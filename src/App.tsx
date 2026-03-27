@@ -29,6 +29,8 @@ import Learn from "./pages/Learn";
 import WorkOrderDetail from "./pages/WorkOrderDetail";
 import Developers from "./pages/Developers";
 import AITest from "./pages/AITest";
+import HelpAdmin from "./pages/HelpAdmin";
+import HelpStudent from "./pages/HelpStudent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -88,6 +90,12 @@ const App = () => (
                 <DeveloperRoute><Developers /></DeveloperRoute>
               } />
               <Route path="/agent-widget" element={<AgentWidget />} />
+              <Route path="/help/admin" element={
+                <AdminRoute><HelpAdmin /></AdminRoute>
+              } />
+              <Route path="/help/student" element={
+                <ProtectedRoute><HelpStudent /></ProtectedRoute>
+              } />
               <Route path="/ai-test" element={<AITest />} />
               
               {/* Catch-all */}
