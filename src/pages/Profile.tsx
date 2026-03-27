@@ -158,9 +158,9 @@ const Profile = () => {
           }
           backgroundImage="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=1600&h=600&fit=crop"
           primaryAction={isOwnProfile ? {
-            label: 'Export PDF',
-            icon: <Download className="h-4 w-4" />,
-            onClick: () => toast({ title: 'Coming Soon', description: 'PDF export is under development.' }),
+            label: exporting ? 'Exporting…' : 'Export PDF',
+            icon: exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />,
+            onClick: handleExportPDF,
           } : undefined}
           secondaryAction={isOwnProfile ? {
             label: 'Share',
