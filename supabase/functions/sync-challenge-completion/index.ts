@@ -63,20 +63,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Find the user by email
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    // 1. Find the user by email using database function (avoids listUsers pagination limits)
+    const { data: userId, error: userError } = await supabase
+      .rpc('get_user_id_by_email', { p_email: user_email });
+
     if (userError) throw userError;
 
-    const user = userData.users.find(
-      (u: { email?: string }) => u.email?.toLowerCase() === user_email.toLowerCase()
-    );
-
-    if (!user) {
+    if (!userId) {
       return new Response(
         JSON.stringify({ error: 'User not found. User must be registered on fgn.academy.' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const user = { id: userId };
 
     // 2. Find the work order linked to this challenge
     const { data: workOrder, error: woError } = await supabase
