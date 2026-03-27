@@ -154,6 +154,9 @@ const Students = () => {
   const { tenant } = useTenant();
   const { data: students = [], isLoading } = useStudents();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const { inviteUser, isInviting } = useUserInvitations();
+  const { communities } = useCommunities();
 
   const filteredStudents = students.filter(student =>
     student.username.toLowerCase().includes(searchQuery.toLowerCase())
