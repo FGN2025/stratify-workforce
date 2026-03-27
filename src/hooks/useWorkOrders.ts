@@ -23,6 +23,7 @@ export interface WorkOrderWithXP {
   max_attempts: number | null;
   evidence_requirements: Record<string, unknown> | null;
   cover_image_url: string | null;
+  source_challenge_id: string | null;
 }
 
 export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
