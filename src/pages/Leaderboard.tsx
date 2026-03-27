@@ -100,10 +100,13 @@ function LeaderboardSkeleton() {
   );
 }
 
+const GAME_TITLES: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech'];
+
 const Leaderboard = () => {
   const { tenant } = useTenant();
   const { user } = useAuth();
-  const { entries, currentUserEntry, isLoading } = useLeaderboard();
+  const [gameFilter, setGameFilter] = useState<GameTitle | 'all'>('all');
+  const { entries, currentUserEntry, isLoading } = useLeaderboard(gameFilter);
 
   const topThree = entries.slice(0, 3);
 
