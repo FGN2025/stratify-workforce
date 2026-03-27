@@ -1,52 +1,38 @@
 
 
-# Wire Leaderboard to Real Database Data
+# Add Game Filter to Leaderboard
 
-## Current State
-The leaderboard uses a hardcoded `mockLeaderboard` array with fake names and scores. Meanwhile, the database has **8 real profiles** with `employability_score`, `user_game_stats` (play time, best scores, sessions), and `user_points` (XP) data.
+## Overview
+Add a tab-based game filter to the leaderboard so students can view rankings for "All Games" or a specific simulation game (Trucking, Farming, Construction, Mechanic, Fiber-Tech). The filter uses the existing `game_title` column in `user_game_stats`.
 
-## Plan
+## Changes
 
-### 1. Create a `useLeaderboard` hook
+### 1. Update the database function to accept an optional game filter
+**Migration: new `get_leaderboard_data` with `_game_title` parameter**
+
+Replace the existing RPC with one that accepts an optional `text` parameter. When `NULL` or `'all'`, it returns the global leaderboard (current behavior). When a specific game title is passed, it filters `user_game_stats` to only that game's hours/scores and only returns users who have stats for that game.
+
+### 2. Update `useLeaderboard` hook to accept a game filter
 **File: `src/hooks/useLeaderboard.ts`**
 
-Query profiles joined with aggregated `user_game_stats` and `user_points` to build the leaderboard:
-- Fetch all profiles with `employability_score`
-- Fetch `user_game_stats` aggregated per user (total hours, best score)
-- Fetch total XP per user via `get_user_total_xp` RPC
-- Rank by `employability_score` descending
-- Identify the current logged-in user via `useAuth()`
-- No "change" column for now (requires historical snapshots we don't have) — show a dash instead
+- Accept an optional `gameFilter: GameTitle | 'all'` parameter
+- Pass it to the RPC call
+- Include the filter in the `queryKey` so React Query caches per-game results separately
 
-### 2. Update `Leaderboard.tsx` to use real data
+### 3. Add game filter tabs to `Leaderboard.tsx`
 **File: `src/pages/Leaderboard.tsx`**
 
-- Remove the `mockLeaderboard` constant
-- Call `useLeaderboard()` hook
-- Update the `LeaderboardEntry` interface to include `userId` and `avatarUrl`
-- Replace hardcoded `'Marcus Johnson'` checks with `entry.userId === user?.id`
-- Update hero stats to show actual user rank and score
-- Add loading skeleton while data fetches
-- Add `avatar_url` to the Avatar components
-
-### 3. Add `change` field stub
-Since we have no historical rank data, set `change: 0` for all entries. The UI will show a neutral dash. This can be enhanced later with weekly snapshots.
-
-## Data Mapping
-
-| UI Field | DB Source |
-|----------|-----------|
-| Username | `profiles.username` |
-| Score | `profiles.employability_score` |
-| Hours | `SUM(user_game_stats.total_play_time_minutes) / 60` |
-| Avatar | `profiles.avatar_url` |
-| Rank | Computed from score ordering |
-| "You" label | `entry.userId === auth.uid()` |
+- Add a row of filter tabs above the Top Operators section: "All Games" + one tab per game (using `GameIcon` component for visual consistency with the rest of the app)
+- Store selected game in local state, default to `'all'`
+- Pass selected game to `useLeaderboard(gameFilter)`
+- Update the hero stats subtitle to reflect the active filter
+- Import `GameIcon` and `SIM_RESOURCES` config for game labels/colors
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useLeaderboard.ts` | New hook — queries profiles + game stats |
-| `src/pages/Leaderboard.tsx` | Replace mock data with hook, add loading state |
+| Migration SQL | `CREATE OR REPLACE FUNCTION get_leaderboard_data(_game_title text DEFAULT NULL)` |
+| `src/hooks/useLeaderboard.ts` | Add `gameFilter` parameter, pass to RPC |
+| `src/pages/Leaderboard.tsx` | Add game filter tabs UI, wire to hook |
 
