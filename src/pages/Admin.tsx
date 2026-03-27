@@ -255,7 +255,7 @@ export default function Admin() {
                   AI Config
                 </TabsTrigger>
                 <TabsTrigger value="sync-tester" className="text-amber-400 data-[state=active]:text-amber-400">
-                  Sync Tester
+                  FGN Play
                 </TabsTrigger>
                 <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
                   Super Admin
