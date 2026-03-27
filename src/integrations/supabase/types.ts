@@ -2021,6 +2021,7 @@ export type Database = {
           username: string
         }[]
       }
+      get_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_user_level: { Args: { p_user_id: string }; Returns: number }
       get_user_total_xp: { Args: { p_user_id: string }; Returns: number }
       has_role: {
