@@ -408,6 +408,14 @@ const Students = () => {
             )}
           </div>
         </section>
+
+        <InviteUserDialog
+          open={showInviteDialog}
+          onOpenChange={setShowInviteDialog}
+          onInvite={inviteUser}
+          isInviting={isInviting}
+          tenants={communities.map(c => ({ id: c.id, name: c.name, slug: c.slug }))}
+        />
       </div>
     </AppLayout>
   );
