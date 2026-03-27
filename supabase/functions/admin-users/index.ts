@@ -72,6 +72,40 @@ Deno.serve(async (req) => {
     const isSuperAdmin = userRole === "super_admin";
 
     // Route handling
+    if (req.method === "POST" && path === "/reset-password") {
+      if (!isSuperAdmin) {
+        return new Response(JSON.stringify({ error: "Super admin required" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { user_id, new_password } = await req.json();
+      if (!user_id || !new_password) {
+        return new Response(JSON.stringify({ error: "user_id and new_password are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(user_id, { password: new_password });
+      if (resetError) {
+        return new Response(JSON.stringify({ error: resetError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      await supabaseAdmin.from("system_audit_logs").insert({
+        actor_id: user.id,
+        action: "password_reset_by_admin",
+        resource_type: "user",
+        resource_id: user_id,
+        details: { target_user_id: user_id },
+      });
+      return new Response(JSON.stringify({ success: true, message: "Password reset successfully" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (req.method === "POST" && path === "/invite") {
       return handleInvite(req, supabaseAdmin, user.id, isSuperAdmin);
     }
