@@ -74,6 +74,7 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
         max_attempts: wo.max_attempts,
         evidence_requirements: (wo.evidence_requirements as Record<string, unknown>) || null,
         cover_image_url: wo.cover_image_url,
+        source_challenge_id: wo.source_challenge_id,
       })) as WorkOrderWithXP[];
     },
   });
@@ -108,6 +109,7 @@ export function useWorkOrderById(id: string) {
         max_attempts: data.max_attempts,
         evidence_requirements: (data.evidence_requirements as Record<string, unknown>) || null,
         cover_image_url: data.cover_image_url,
+        source_challenge_id: data.source_challenge_id,
       } as WorkOrderWithXP;
     },
   });
