@@ -7,7 +7,7 @@ const corsHeaders = {
 
 // play.fgn.gg's public Supabase config
 const PLAY_FGN_URL = 'https://yrhwzmkenjgiujhofucx.supabase.co';
-const PLAY_FGN_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyaHd6bWtlbmpnaXVqaG9mdWN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY5MDMwMjUsImV4cCI6MjA1MjQ3OTAyNX0.X8N-0mEW0JCCm2pFGid1f4eO3SnhNM8MjSK-sDH3RPo';
+const PLAY_FGN_ANON_KEY = Deno.env.get('PLAY_FGN_ANON_KEY')!;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
