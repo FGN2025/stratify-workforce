@@ -183,6 +183,7 @@ const Students = () => {
           primaryAction={{
             label: 'Add Student',
             icon: <UserPlus className="h-4 w-4" />,
+            onClick: () => setShowInviteDialog(true),
           }}
           secondaryAction={{
             label: 'Filter',
