@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Download, CheckCircle, Trophy, Clock, Gamepad2 } from 'lucide-react';
+import { Search, Download, CheckCircle, Trophy, Clock, Gamepad2, Target } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
