@@ -55,6 +55,7 @@ const mainNavItems = [
   { title: 'Communities', url: '/communities', icon: Users },
   { title: 'Skill Passport', url: '/profile', icon: User },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
+  { title: 'Careers', url: '/careers', icon: Target },
   { title: 'Help', url: '/help/student', icon: HelpCircle },
 ];
 
