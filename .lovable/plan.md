@@ -1,62 +1,57 @@
 
 
-# User Journey: play.fgn.gg Player → fgn.academy Progress
+# Set Password for Test User darcylorincz@gmail.com
 
-## How It Works Today
+## Problem
+The user `darcylorincz@gmail.com` was auto-created by the system and no password was set/known. Passwords are hashed and cannot be retrieved.
 
-The sync is **automatic and server-to-server**. Here's the flow:
+## Solution
 
-```text
-┌─────────────────────┐         ┌──────────────────────────┐
-│   play.fgn.gg       │         │   fgn.academy            │
-│                     │         │                          │
-│ 1. Player completes │  POST   │ 3. Edge function:        │
-│    a challenge      │────────►│    - Finds user by email  │
-│                     │         │    - Matches work order   │
-│ 2. Server calls     │         │    - Records completion   │
-│    sync-challenge-  │         │    - Awards XP            │
-│    completion with  │         │    - Issues credential    │
-│    X-App-Key header │         │    - Syncs task progress  │
-└─────────────────────┘         └──────────────────────────┘
+Use the `supabase--curl_edge_functions` tool (or a quick one-off edge function call) to reset the password via the Supabase Admin API. Specifically, we'll call `auth.admin.updateUserById()` to set a known password.
+
+### Approach: Add a `/reset-password` route to the existing `admin-users` edge function
+
+Add a new `POST /reset-password` handler that accepts `{ user_id, new_password }` — restricted to super_admins only. This is also useful long-term for admin user management.
+
+### Changes
+
+**File: `supabase/functions/admin-users/index.ts`**
+
+Add a new route handler:
+
+```typescript
+if (req.method === "POST" && path === "/reset-password") {
+  // Super admin only
+  if (!isSuperAdmin) {
+    return new Response(JSON.stringify({ error: "Super admin required" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+  const { user_id, new_password } = await req.json();
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, { password: new_password });
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+  // Audit log
+  await supabaseAdmin.from("system_audit_logs").insert({
+    actor_id: user.id, action: "password_reset_by_admin",
+    resource_type: "user", resource_id: user_id,
+    details: { target_user_id: user_id }
+  });
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+}
 ```
 
-### What the player experiences:
+After deploying, we'll call it from the admin session (logged in as darcy@fgn.gg) to set a known password for darcylorincz@gmail.com, then log in as that user to verify the Work Order progress card.
 
-1. **Plays on play.fgn.gg** — completes a challenge (e.g., Gold Challenge)
-2. **play.fgn.gg's server automatically calls** the sync endpoint with the player's email, challenge ID, score, and task progress
-3. **Player logs into fgn.academy** (same email) and sees:
-   - Work order marked as completed
-   - XP awarded
-   - Task-level progress recorded
-   - Credential in their Skill Passport
-
-**No API keys, no challenge IDs, no manual input from the user.** The API key (`X-App-Key`) is stored on play.fgn.gg's server and used for every sync call automatically.
-
-## What's Needed from play.fgn.gg
-
-The only requirement is that **play.fgn.gg implements the webhook call** on their side. When a player completes a challenge, their server must POST to the sync endpoint. This is a one-time development task for their team — the integration guide we created documents exactly what to send.
-
-## Current Gaps for the Player Experience
-
-### Gap 1: No player-facing progress view on Work Order Detail
-When Darcy visits a work order page on fgn.academy, she can't yet see her task-level progress. The completion record exists in the database but the UI doesn't display it.
-
-**Fix:** Add a "Your Progress" section to the Work Order Detail page showing:
-- Overall completion status and score
-- Individual task checkmarks (from `user_task_progress`)
-- Credential link if issued
-
-### Gap 2: No prompt to register on fgn.academy
-If a player on play.fgn.gg hasn't registered on fgn.academy, the sync returns a 404 "User not found." There's no mechanism to notify the player they should sign up.
-
-**Fix (play.fgn.gg side):** Their UI should show a message like "Sign up at fgn.academy with the same email to track your skills."
-
-### Gap 3: No notification when progress syncs
-When a sync happens, nothing alerts the user on fgn.academy.
-
-**Fix (future):** Add a notification/activity feed showing "Your Gold Challenge completion was recorded!"
-
-## Recommendation
-
-The highest-impact change is **Gap 1** — showing Darcy her progress on the Work Order Detail page. The data is already there from the test we just ran. Should I plan that UI?
+### Test Steps
+1. Deploy the updated edge function
+2. Log in as darcy@fgn.gg (super admin) in the preview
+3. Call the reset-password endpoint for user darcylorincz@gmail.com with a test password
+4. Log out, log in as darcylorincz@gmail.com with the new password
+5. Navigate to the ATS Gold Challenge work order to verify progress card
 
