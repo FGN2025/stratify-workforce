@@ -6,11 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+interface TaskProgress {
+  task_id: string;
+  completed: boolean;
+  completed_at?: string;
+}
+
 interface CompletionPayload {
   user_email: string;
   challenge_id: string;
   score?: number;
   skills_verified?: string[];
+  task_progress?: TaskProgress[];
   metadata?: Record<string, unknown>;
 }
 
@@ -54,7 +61,7 @@ Deno.serve(async (req) => {
     const app = appData[0];
 
     const body: CompletionPayload = await req.json();
-    const { user_email, challenge_id, score, skills_verified, metadata } = body;
+    const { user_email, challenge_id, score, skills_verified, task_progress, metadata } = body;
 
     if (!user_email || !challenge_id) {
       return new Response(JSON.stringify({ error: 'user_email and challenge_id are required' }), {
@@ -63,7 +70,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Find the user by email using database function (avoids listUsers pagination limits)
+    // 1. Find the user by email
     const { data: userId, error: userError } = await supabase
       .rpc('get_user_id_by_email', { p_email: user_email });
 
@@ -132,7 +139,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 6. Issue credential to Skill Passport if app has permission
+    // 6. Process task-level progress if provided
+    let taskResults: Array<{ task_id: string; status: string }> = [];
+    if (task_progress && task_progress.length > 0) {
+      // Fetch work_order_tasks mapped to this work order via source_task_id
+      const sourceTaskIds = task_progress.map(tp => tp.task_id);
+      const { data: woTasks } = await supabase
+        .from('work_order_tasks')
+        .select('id, source_task_id')
+        .eq('work_order_id', workOrder.id)
+        .in('source_task_id', sourceTaskIds);
+
+      if (woTasks && woTasks.length > 0) {
+        const taskMap = new Map(woTasks.map(t => [t.source_task_id, t.id]));
+
+        for (const tp of task_progress) {
+          const woTaskId = taskMap.get(tp.task_id);
+          if (!woTaskId) {
+            taskResults.push({ task_id: tp.task_id, status: 'not_found' });
+            continue;
+          }
+
+          const { error: upsertError } = await supabase
+            .from('user_task_progress')
+            .upsert({
+              user_id: user.id,
+              work_order_task_id: woTaskId,
+              work_order_id: workOrder.id,
+              is_completed: tp.completed,
+              completed_at: tp.completed ? (tp.completed_at || new Date().toISOString()) : null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id,work_order_task_id' });
+
+          taskResults.push({
+            task_id: tp.task_id,
+            status: upsertError ? 'error' : 'synced',
+          });
+        }
+      }
+    }
+
+    // 7. Issue credential to Skill Passport if app has permission
     let credential = null;
     if (app.can_issue && completionStatus === 'completed') {
       // Find or create skill passport
@@ -173,6 +220,11 @@ Deno.serve(async (req) => {
           .map(b => b.toString(16).padStart(2, '0'))
           .join('');
 
+        // Build task completion summary for credential metadata
+        const taskSummary = taskResults.length > 0
+          ? { tasks_synced: taskResults.filter(t => t.status === 'synced').length, tasks_total: taskResults.length }
+          : undefined;
+
         const { data: issuedCredential } = await supabase
           .from('skill_credentials')
           .insert({
@@ -186,6 +238,12 @@ Deno.serve(async (req) => {
             skills_verified: skills_verified || [],
             verification_hash: verificationHash,
             external_reference_id: challenge_id,
+            metadata: {
+              challenge_id,
+              attempt_number: attemptNumber,
+              ...(taskSummary || {}),
+              ...(metadata || {}),
+            },
           })
           .select()
           .single();
@@ -204,6 +262,7 @@ Deno.serve(async (req) => {
           xp_awarded: completionStatus === 'completed' ? workOrder.xp_reward : 0,
           attempt_number: attemptNumber,
         },
+        task_progress: taskResults.length > 0 ? taskResults : undefined,
         credential: credential ? { id: credential.id, title: credential.title } : null,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

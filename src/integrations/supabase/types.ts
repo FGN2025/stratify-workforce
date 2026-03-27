@@ -1806,6 +1806,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_task_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_completed: boolean
+          metadata: Json | null
+          updated_at: string
+          user_id: string
+          work_order_id: string
+          work_order_task_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          metadata?: Json | null
+          updated_at?: string
+          user_id: string
+          work_order_id: string
+          work_order_task_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          metadata?: Json | null
+          updated_at?: string
+          user_id?: string
+          work_order_id?: string
+          work_order_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_task_progress_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_task_progress_work_order_task_id_fkey"
+            columns: ["work_order_task_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_work_order_completions: {
         Row: {
           attempt_number: number
@@ -1918,6 +1969,44 @@ export type Database = {
           },
           {
             foreignKeyName: "work_order_evidence_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number
+          source_task_id: string | null
+          title: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          source_task_id?: string | null
+          title: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          source_task_id?: string | null
+          title?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_tasks_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"

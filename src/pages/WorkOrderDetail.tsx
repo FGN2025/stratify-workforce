@@ -17,6 +17,7 @@ import { EditableImageWrapper } from '@/components/admin/EditableImageWrapper';
 import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog';
 import { useWorkOrderById } from '@/hooks/useWorkOrders';
 import { useUserWorkOrderStatus, useStartWorkOrder, calculateWorkOrderXP } from '@/hooks/useWorkOrderCompletion';
+import { useWorkOrderTasks, useUserTaskProgress } from '@/hooks/useWorkOrderTasks';
 import { 
   useEvidenceSubmissions, 
   useDeleteEvidence,
@@ -38,6 +39,7 @@ import {
   AlertTriangle,
   FileUp,
   Upload,
+  ListChecks,
 } from 'lucide-react';
 
 export default function WorkOrderDetail() {
@@ -50,6 +52,8 @@ export default function WorkOrderDetail() {
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
   const { data: status } = useUserWorkOrderStatus(id || '');
   const { data: evidenceList = [], refetch: refetchEvidence } = useEvidenceSubmissions(id || '');
+  const { data: tasks = [] } = useWorkOrderTasks(id);
+  const { data: taskProgress = [] } = useUserTaskProgress(id);
   const { gameCoverImages } = useGameCoverImages();
   const startWorkOrder = useStartWorkOrder();
   const deleteEvidence = useDeleteEvidence();
@@ -262,26 +266,95 @@ export default function WorkOrderDetail() {
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Success Criteria */}
+          {/* Tasks / Success Criteria */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                Success Criteria
+                {tasks.length > 0 ? (
+                  <>
+                    <ListChecks className="h-5 w-5 text-primary" />
+                    Challenge Tasks
+                    <Badge variant="outline" className="ml-auto font-data text-xs">
+                      {taskProgress.filter(tp => tp.is_completed).length}/{tasks.length}
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-5 w-5 text-primary" />
+                    Success Criteria
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(criteria).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className="capitalize">{key.replace(/_/g, ' ')}</span>
-                  <Badge variant="outline" className="font-data">
-                    {typeof value === 'number' && key.includes('score') ? `${value}%` : value}
-                  </Badge>
-                </div>
-              ))}
-              
-              {Object.keys(criteria).length === 0 && (
-                <p className="text-muted-foreground text-sm">No specific criteria defined.</p>
+            <CardContent className="space-y-3">
+              {tasks.length > 0 ? (
+                <>
+                  {/* Progress bar */}
+                  <div className="space-y-1">
+                    <Progress
+                      value={tasks.length > 0 ? (taskProgress.filter(tp => tp.is_completed).length / tasks.length) * 100 : 0}
+                      className="h-2"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {taskProgress.filter(tp => tp.is_completed).length} of {tasks.length} tasks completed
+                    </p>
+                  </div>
+
+                  {/* Task list */}
+                  <div className="space-y-2">
+                    {tasks.map((task) => {
+                      const progress = taskProgress.find(tp => tp.work_order_task_id === task.id);
+                      const completed = progress?.is_completed ?? false;
+
+                      return (
+                        <div
+                          key={task.id}
+                          className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                            completed
+                              ? 'bg-primary/10 border border-primary/20'
+                              : 'bg-muted/30 border border-transparent'
+                          }`}
+                        >
+                          <div className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${
+                            completed
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted border border-border'
+                          }`}>
+                            {completed && <CheckCircle2 className="h-3 w-3" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${completed ? 'line-through text-muted-foreground' : ''}`}>
+                              {task.title}
+                            </p>
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
+                            )}
+                          </div>
+                          {completed && progress?.completed_at && (
+                            <span className="text-xs text-muted-foreground shrink-0">
+                              {new Date(progress.completed_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {Object.entries(criteria).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                      <Badge variant="outline" className="font-data">
+                        {typeof value === 'number' && key.includes('score') ? `${value}%` : value}
+                      </Badge>
+                    </div>
+                  ))}
+                  
+                  {Object.keys(criteria).length === 0 && (
+                    <p className="text-muted-foreground text-sm">No specific criteria defined.</p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

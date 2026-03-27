@@ -20,11 +20,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Download, CheckCircle, Trophy, Clock, Gamepad2 } from 'lucide-react';
+import { Search, Download, CheckCircle, Trophy, Clock, Gamepad2, Target } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
 type WorkOrderDifficulty = Database['public']['Enums']['work_order_difficulty'];
+
+export interface ExternalTask {
+  id: string;
+  challenge_id: string;
+  title: string;
+  description: string | null;
+  order_index: number;
+}
 
 export interface ExternalChallenge {
   id: string;
@@ -37,6 +45,7 @@ export interface ExternalChallenge {
   is_active: boolean;
   already_imported: boolean;
   games?: { name: string } | null;
+  tasks?: ExternalTask[];
 }
 
 // Map play.fgn.gg game names to our enum values
@@ -67,6 +76,7 @@ export interface MappedChallengeData {
   estimatedTime: number | null;
   coverImageUrl: string | null;
   sourceChallengeId: string;
+  tasks: ExternalTask[];
 }
 
 interface ImportChallengeDialogProps {
@@ -154,6 +164,7 @@ export function ImportChallengeDialog({
       estimatedTime: challenge.estimated_time_minutes,
       coverImageUrl: challenge.cover_image_url,
       sourceChallengeId: challenge.id,
+      tasks: challenge.tasks || [],
     });
 
     onOpenChange(false);
@@ -269,6 +280,12 @@ export function ImportChallengeDialog({
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             {challenge.estimated_time_minutes}m
+                          </span>
+                        )}
+                        {challenge.tasks && challenge.tasks.length > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Target className="h-3 w-3" />
+                            {challenge.tasks.length} task{challenge.tasks.length !== 1 ? 's' : ''}
                           </span>
                         )}
                       </div>
