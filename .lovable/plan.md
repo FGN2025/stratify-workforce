@@ -1,36 +1,32 @@
 
 
-# Filter Career Readiness to Active Paths Only
+# Fix: Wire "New Work Order" Button (Admin-Only)
 
-## Problem
-The Career Readiness section on the Skill Passport shows ALL five career paths (CDL, Fiber, Heavy Equipment, Ag Equipment, Diesel Mechanic) at 0% — even when the user has no engagement with most of them. Users should only see paths they are actively pursuing.
+## Summary
+Add `onClick` to the "New Work Order" button on `/work-orders`, opening the existing `ImportChallengeDialog` → `WorkOrderEditDialog` flow. The button only renders for admin/super_admin users.
 
-## What "participating" means
-A user is participating in a career path if they have **at least one** of:
-- A credential (`skill_credentials`) linked to that path's game track
-- Work order progress (`user_progress`) on a work order in that path's game track
-- A channel subscription (`channel_subscriptions`) for that path's game track
+## Changes — `src/pages/WorkOrders.tsx`
 
-## Changes
+1. **Add imports**: `useUserRole`, `ImportChallengeDialog`, `WorkOrderEditDialog`, `useQueryClient`, `MappedChallengeData`
+2. **Add state**:
+   - `showImportDialog` (boolean)
+   - `showEditDialog` (boolean)
+   - `importedData` (mapped challenge data for pre-filling the edit form)
+3. **Admin guard**: Use `useUserRole()` — only include the `primaryAction` prop when `isAdmin` is true
+4. **Wire `onClick`**: `primaryAction.onClick` opens the import dialog
+5. **Import → Edit flow**: When a challenge is selected from `ImportChallengeDialog`, store the mapped data and open `WorkOrderEditDialog` with a synthetic work order object pre-filled from the import
+6. **Refresh on save**: Call `queryClient.invalidateQueries({ queryKey: ['work-orders'] })` from the `onSave` callback
+7. **Render dialogs**: Add both dialog components at the bottom of the JSX (inside `<AppLayout>`)
 
-### 1. Add `game_title` column to `career_path_requirements`
-Each career path already maps to a game track on the frontend (`CAREER_PATHS[].gameTrack`). Store this relationship in the database so the SQL function can filter by it.
+## Technical Detail
 
-Migration:
-- `ALTER TABLE career_path_requirements ADD COLUMN game_title text;`
-- Update existing rows: `cdl-class-a` → `ATS`, `fiber-technician` → `Fiber_Tech`, `heavy-equipment-operator` → `Construction_Sim`, `ag-equipment-tech` → `Farming_Sim`, `diesel-mechanic` → `Mechanic_Sim`
+```text
+Button click (admin only)
+  → ImportChallengeDialog opens
+  → User selects challenge
+  → WorkOrderEditDialog opens (pre-filled)
+  → Save → invalidate work-orders query → list refreshes
+```
 
-### 2. Update `calculate_readiness` function
-Add a CTE that finds the user's active game tracks (from `user_progress` joined to `work_orders`, or from `skill_credentials`). Then filter `career_path_requirements` to only those game tracks.
-
-### 3. Frontend — hide 0% paths as fallback
-In both `Profile.tsx` and `Careers.tsx`, filter the readiness map to only show paths where `readinessPct > 0` OR the user has activity. Since the SQL now handles this, the frontend just renders what it gets — but add a guard to skip rendering empty results.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| Migration SQL | Add `game_title` to `career_path_requirements`, update seed data, rewrite `calculate_readiness` to filter by user's active game tracks |
-| `src/pages/Profile.tsx` | No change needed if SQL filters correctly; optionally hide section when map is empty |
-| `src/pages/Careers.tsx` | Same — relies on filtered hook data |
+Only one file changes: `src/pages/WorkOrders.tsx`.
 
