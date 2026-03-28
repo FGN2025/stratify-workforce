@@ -35,6 +35,7 @@ import PublicPassport from "./pages/PublicPassport";
 import Careers from "./pages/Careers";
 import EmbedPassport from "./pages/EmbedPassport";
 import Activity from "./pages/Activity";
+import VerifyCredential from "./pages/VerifyCredential";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/communities" element={<Communities />} />
               <Route path="/community/:slug" element={<CommunityProfile />} />
               <Route path="/careers" element={<Careers />} />
+              <Route path="/verify" element={<VerifyCredential />} />
               
               {/* Learning routes */}
               <Route path="/learn" element={<Learn />} />

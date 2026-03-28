@@ -159,12 +159,17 @@ export default function PublicPassport() {
         )}
 
         {/* Verification footer */}
-        <div className="border-t pt-6 mt-8 text-center text-xs text-muted-foreground">
+        <div className="border-t pt-6 mt-8 text-center text-xs text-muted-foreground space-y-2">
           <p>This Skill Passport is cryptographically verified by FGN Academy.</p>
-          <p className="mt-1">Hash: <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{data.passportHash?.slice(0, 16)}…</code></p>
-          <a href="https://stratify-workforce.lovable.app" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline mt-2">
-            Learn more about FGN Academy <ExternalLink className="h-3 w-3" />
-          </a>
+          <p>Hash: <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{data.passportHash?.slice(0, 16)}…</code></p>
+          <div className="flex items-center justify-center gap-4">
+            <a href="/verify" className="inline-flex items-center gap-1 text-primary hover:underline">
+              Verify a credential <ExternalLink className="h-3 w-3" />
+            </a>
+            <a href="https://stratify-workforce.lovable.app" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+              Learn more about FGN Academy <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
         </div>
       </div>
     </div>
