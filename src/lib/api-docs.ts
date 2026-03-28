@@ -144,7 +144,87 @@ export const CREDENTIAL_API: ApiSection = {
       ],
     },
     {
-      id: 'get-my-credentials',
+      id: 'list-career-paths',
+      method: 'GET',
+      path: '/career-paths',
+      title: 'List Career Paths',
+      description: 'Get all career paths with their credential requirements. Optionally include readiness scores for a specific user by passing user_id or passport_slug.',
+      auth: 'none',
+      tags: ['Public', 'Career Mapping'],
+      parameters: [
+        {
+          name: 'user_id',
+          location: 'query',
+          type: 'string',
+          required: false,
+          description: 'User UUID to calculate readiness scores for',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        },
+        {
+          name: 'passport_slug',
+          location: 'query',
+          type: 'string',
+          required: false,
+          description: 'Public passport slug to resolve user and calculate readiness',
+          example: 'john-doe-cdl',
+        },
+      ],
+      responses: [
+        {
+          status: 200,
+          description: 'Career paths with requirements and optional readiness',
+          example: {
+            career_paths: [
+              {
+                career_path_id: 'cdl-class-a',
+                requirements: [],
+                readiness: { matched_count: 2, total_count: 4, readiness_pct: 50, matched_labels: [] },
+              },
+            ],
+            user_id: null,
+          },
+        },
+      ],
+    },
+    {
+      id: 'get-career-readiness',
+      method: 'GET',
+      path: '/career-paths/{career_path_id}/readiness/{user_id}',
+      title: 'Get Career Readiness',
+      description: 'Get apprenticeship readiness score for a specific user and career path.',
+      auth: 'none',
+      tags: ['Public', 'Career Mapping'],
+      parameters: [
+        {
+          name: 'career_path_id',
+          location: 'path',
+          type: 'string',
+          required: true,
+          description: 'Career path identifier (e.g. cdl-class-a, fiber-technician)',
+          example: 'cdl-class-a',
+        },
+        {
+          name: 'user_id',
+          location: 'path',
+          type: 'string',
+          required: true,
+          description: 'User UUID',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        },
+      ],
+      responses: [
+        {
+          status: 200,
+          description: 'Readiness score',
+          example: {
+            career_path_id: 'cdl-class-a',
+            user_id: '550e8400-...',
+            readiness: { matched_count: 3, total_count: 4, readiness_pct: 75, matched_labels: [] },
+          },
+        },
+      ],
+    },
+    {
       method: 'GET',
       path: '/credentials/mine',
       title: 'Get My Credentials',
