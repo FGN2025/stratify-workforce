@@ -21,7 +21,10 @@ import {
   Target,
   BadgeCheck,
   Briefcase,
-  Loader2
+  Loader2,
+  Code,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useState } from 'react';
 import type { SkillSet } from '@/types/tenant';
@@ -265,9 +268,111 @@ const Profile = () => {
             </div>
           </section>
         )}
+
+        {/* Embed Widget Snippet */}
+        {isOwnProfile && <EmbedSnippetSection username={profile.username} userId={user?.id} />}
       </div>
     </AppLayout>
   );
 };
+
+function EmbedSnippetSection({ username, userId }: { username?: string | null; userId?: string }) {
+  const [copied, setCopied] = useState(false);
+  const [slug, setSlug] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchSlug = async () => {
+    if (slug || !userId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('skill_passport')
+      .select('public_url_slug, is_public')
+      .eq('user_id', userId)
+      .single();
+    if (data?.is_public && data?.public_url_slug) {
+      setSlug(data.public_url_slug);
+    }
+    setLoading(false);
+  };
+
+  // Lazy-load slug on first render
+  useState(() => { fetchSlug(); });
+
+  if (!slug) {
+    return (
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <Code className="h-5 w-5 text-primary" />
+          <div>
+            <h2 className="text-lg font-bold uppercase tracking-wide">Embed Widget</h2>
+            <p className="text-sm text-muted-foreground">
+              Share your passport first to enable embedding on partner sites
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const baseUrl = window.location.origin;
+  const embedUrl = `${baseUrl}/embed/passport/${slug}`;
+  const iframeSnippet = `<iframe src="${embedUrl}" width="400" height="500" frameborder="0" style="border-radius:12px;border:1px solid #e2e8f0;"></iframe>`;
+  const darkSnippet = `<iframe src="${embedUrl}?theme=dark" width="400" height="500" frameborder="0" style="border-radius:12px;border:1px solid #334155;"></iframe>`;
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast({ title: 'Copied!', description: 'Embed code copied to clipboard.' });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <section>
+      <div className="flex items-center gap-3 mb-4">
+        <Code className="h-5 w-5 text-primary" />
+        <div>
+          <h2 className="text-lg font-bold uppercase tracking-wide">Embed Widget</h2>
+          <p className="text-sm text-muted-foreground">
+            Drop this code into partner sites to display your verified credentials
+          </p>
+        </div>
+      </div>
+      <div className="glass-card p-5 space-y-4">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Light Theme</span>
+            <button
+              onClick={() => handleCopy(iframeSnippet)}
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          <pre className="bg-muted/50 rounded-lg p-3 text-xs overflow-x-auto font-mono text-foreground">
+            {iframeSnippet}
+          </pre>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dark Theme</span>
+            <button
+              onClick={() => handleCopy(darkSnippet)}
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+            >
+              <Copy className="h-3 w-3" /> Copy
+            </button>
+          </div>
+          <pre className="bg-muted/50 rounded-lg p-3 text-xs overflow-x-auto font-mono text-foreground">
+            {darkSnippet}
+          </pre>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Options: add <code className="bg-muted px-1 rounded">?game=ATS</code> to filter by game, or <code className="bg-muted px-1 rounded">?compact=true</code> to show top 5 only.
+        </p>
+      </div>
+    </section>
+  );
+}
 
 export default Profile;

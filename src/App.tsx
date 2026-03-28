@@ -33,6 +33,7 @@ import HelpAdmin from "./pages/HelpAdmin";
 import HelpStudent from "./pages/HelpStudent";
 import PublicPassport from "./pages/PublicPassport";
 import Careers from "./pages/Careers";
+import EmbedPassport from "./pages/EmbedPassport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/auth/discord/callback" element={<AuthDiscordCallback />} />
               <Route path="/" element={<Index />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
+              <Route path="/embed/passport/:slug" element={<EmbedPassport />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/community/:slug" element={<CommunityProfile />} />
               <Route path="/careers" element={<Careers />} />
