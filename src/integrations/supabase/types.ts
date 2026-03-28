@@ -236,6 +236,39 @@ export type Database = {
         }
         Relationships: []
       }
+      career_path_requirements: {
+        Row: {
+          career_path_id: string
+          created_at: string
+          credential_match_type: string
+          display_label: string
+          id: string
+          match_value: string
+          sort_order: number
+          weight: number
+        }
+        Insert: {
+          career_path_id: string
+          created_at?: string
+          credential_match_type: string
+          display_label: string
+          id?: string
+          match_value: string
+          sort_order?: number
+          weight?: number
+        }
+        Update: {
+          career_path_id?: string
+          created_at?: string
+          credential_match_type?: string
+          display_label?: string
+          id?: string
+          match_value?: string
+          sort_order?: number
+          weight?: number
+        }
+        Relationships: []
+      }
       channel_posts: {
         Row: {
           channel_game: Database["public"]["Enums"]["game_title"]
@@ -2133,6 +2166,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_readiness: {
+        Args: { p_career_path_id?: string; p_user_id: string }
+        Returns: {
+          career_path_id: string
+          matched_count: number
+          matched_labels: string[]
+          readiness_pct: number
+          total_count: number
+        }[]
+      }
       can_view_profile: {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean

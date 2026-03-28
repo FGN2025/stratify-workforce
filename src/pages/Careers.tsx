@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ExternalLink, Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Award, ArrowRight } from 'lucide-react';
+import { ExternalLink, Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Award, ArrowRight, CheckCircle2, Circle } from 'lucide-react';
 import { SIM_RESOURCES } from '@/config/simResources';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
+import { useCareerReadiness } from '@/hooks/useCareerReadiness';
 
 const CAREER_PATHS = [
   {
@@ -18,7 +18,6 @@ const CAREER_PATHS = [
     accentColor: 'hsl(var(--primary))',
     gameTrack: 'ATS' as const,
     description: 'Operate commercial motor vehicles over 26,001 lbs. The trucking industry is the backbone of American commerce.',
-    requiredCredentials: ['CDL Permit Knowledge', 'Pre-Trip Inspection', 'Vehicle Control Skills', 'Road Safety Fundamentals'],
     avgSalary: '$55,000 – $80,000',
     demandLevel: 'Very High',
     apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/tractor-trailer-truck-drivers',
@@ -35,7 +34,6 @@ const CAREER_PATHS = [
     accentColor: '#3B82F6',
     gameTrack: 'Fiber_Tech' as const,
     description: 'Install, maintain, and repair fiber optic communication systems. Critical for bridging the digital divide in rural America.',
-    requiredCredentials: ['Fiber Safety Certification', 'Splicing Fundamentals', 'OTDR Testing', 'Aerial Installation'],
     avgSalary: '$45,000 – $75,000',
     demandLevel: 'Very High',
     apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/telecommunications-technicians',
@@ -51,7 +49,6 @@ const CAREER_PATHS = [
     accentColor: '#F59E0B',
     gameTrack: 'Construction_Sim' as const,
     description: 'Operate bulldozers, cranes, excavators, and other heavy machinery for infrastructure and building projects.',
-    requiredCredentials: ['Equipment Safety', 'Excavation Fundamentals', 'Grade Reading', 'Load Calculations'],
     avgSalary: '$50,000 – $85,000',
     demandLevel: 'High',
     apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/operating-engineers',
@@ -65,7 +62,6 @@ const CAREER_PATHS = [
     accentColor: '#22C55E',
     gameTrack: 'Farming_Sim' as const,
     description: 'Maintain and operate precision agricultural equipment. Modern agriculture is increasingly technology-driven.',
-    requiredCredentials: ['Precision Agriculture', 'Equipment Maintenance', 'GPS & Guidance Systems', 'Harvest Operations'],
     avgSalary: '$40,000 – $65,000',
     demandLevel: 'High',
     apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/farm-equipment-mechanics',
@@ -79,7 +75,6 @@ const CAREER_PATHS = [
     accentColor: '#EF4444',
     gameTrack: 'Mechanic_Sim' as const,
     description: 'Diagnose, repair, and maintain diesel engines and heavy-duty vehicles critical to transportation and agriculture.',
-    requiredCredentials: ['Diesel Fundamentals', 'Diagnostic Systems', 'Brake Systems', 'Electrical Systems'],
     avgSalary: '$48,000 – $72,000',
     demandLevel: 'High',
     apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/bus-truck-mechanics-diesel-engine-specialists',
@@ -87,9 +82,19 @@ const CAREER_PATHS = [
   },
 ];
 
+function readinessColor(pct: number) {
+  if (pct >= 75) return 'text-green-500';
+  if (pct >= 50) return 'text-yellow-500';
+  if (pct >= 25) return 'text-orange-500';
+  return 'text-muted-foreground';
+}
+
 export default function Careers() {
   const { user } = useAuth();
-  const { credentials } = useProfile();
+  const { data: readinessMap } = useCareerReadiness();
+
+  // Fetch requirements from DB for display
+  const { data: requirements } = useRequirements();
 
   return (
     <AppLayout>
@@ -155,12 +160,10 @@ export default function Careers() {
           {CAREER_PATHS.map((career) => {
             const Icon = career.icon;
             const gameConfig = SIM_RESOURCES[career.gameTrack];
-            const earnedCount = credentials.filter(c => 
-              career.requiredCredentials.some(req => 
-                c.title.toLowerCase().includes(req.toLowerCase().split(' ')[0])
-              )
-            ).length;
-            const readiness = Math.min(Math.round((earnedCount / career.requiredCredentials.length) * 100), 100);
+            const readiness = readinessMap?.[career.id];
+            const pct = readiness?.readinessPct ?? 0;
+            const matchedLabels = readiness?.matchedLabels ?? [];
+            const pathReqs = requirements?.filter(r => r.career_path_id === career.id) ?? [];
 
             return (
               <Card key={career.id} className="overflow-hidden hover:border-primary/30 transition-colors">
@@ -199,19 +202,36 @@ export default function Careers() {
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Apprenticeship Readiness</span>
-                        <span className="font-medium">{readiness}%</span>
+                        <span className={`font-semibold ${readinessColor(pct)}`}>{pct}%</span>
                       </div>
-                      <Progress value={readiness} className="h-2" />
+                      <Progress value={pct} className="h-2" />
                     </div>
                   )}
 
-                  {/* Required Credentials */}
+                  {/* Required Credentials with match status */}
                   <div>
                     <p className="text-xs font-medium mb-2">Required Credentials:</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {career.requiredCredentials.map((cred) => (
-                        <Badge key={cred} variant="outline" className="text-[10px]">{cred}</Badge>
-                      ))}
+                      {pathReqs.length > 0
+                        ? pathReqs.map((req) => {
+                            const earned = matchedLabels.includes(req.display_label);
+                            return (
+                              <Badge
+                                key={req.id}
+                                variant={earned ? 'default' : 'outline'}
+                                className="text-[10px] gap-1"
+                              >
+                                {earned
+                                  ? <CheckCircle2 className="h-3 w-3" />
+                                  : <Circle className="h-3 w-3 text-muted-foreground" />
+                                }
+                                {req.display_label}
+                              </Badge>
+                            );
+                          })
+                        : /* Fallback if requirements haven't loaded */
+                          null
+                      }
                     </div>
                   </div>
 
@@ -238,4 +258,29 @@ export default function Careers() {
       </div>
     </AppLayout>
   );
+}
+
+// Hook to fetch requirements for display labels
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Requirement {
+  id: string;
+  career_path_id: string;
+  display_label: string;
+  sort_order: number;
+}
+
+function useRequirements() {
+  return useQuery({
+    queryKey: ['career-path-requirements'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('career_path_requirements')
+        .select('id, career_path_id, display_label, sort_order')
+        .order('sort_order');
+      if (error) throw error;
+      return data as Requirement[];
+    },
+  });
 }
