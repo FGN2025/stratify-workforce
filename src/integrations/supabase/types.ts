@@ -242,6 +242,7 @@ export type Database = {
           created_at: string
           credential_match_type: string
           display_label: string
+          game_title: string | null
           id: string
           match_value: string
           sort_order: number
@@ -252,6 +253,7 @@ export type Database = {
           created_at?: string
           credential_match_type: string
           display_label: string
+          game_title?: string | null
           id?: string
           match_value: string
           sort_order?: number
@@ -262,6 +264,7 @@ export type Database = {
           created_at?: string
           credential_match_type?: string
           display_label?: string
+          game_title?: string | null
           id?: string
           match_value?: string
           sort_order?: number
