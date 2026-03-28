@@ -35,7 +35,7 @@ export default function EmbedPassport() {
         .order('issued_at', { ascending: false });
 
       if (gameFilter) {
-        credQuery = credQuery.eq('game_title', gameFilter);
+        credQuery = credQuery.eq('game_title', gameFilter as any);
       }
 
       const { data: credentials } = await credQuery;

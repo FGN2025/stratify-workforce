@@ -33,6 +33,7 @@ import HelpAdmin from "./pages/HelpAdmin";
 import HelpStudent from "./pages/HelpStudent";
 import PublicPassport from "./pages/PublicPassport";
 import Careers from "./pages/Careers";
+import EmbedPassport from "./pages/EmbedPassport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
