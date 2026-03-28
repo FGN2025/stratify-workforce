@@ -7,6 +7,9 @@ import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceC
 import { WorkOrderFilters, WorkOrderFilter } from '@/components/work-orders/WorkOrderFilters';
 import { useWorkOrders, WorkOrderWithXP } from '@/hooks/useWorkOrders';
 import { useChannelSubscriptions } from '@/hooks/useChannelSubscriptions';
+import { useUserRole } from '@/hooks/useUserRole';
+import { ImportChallengeDialog, type MappedChallengeData } from '@/components/admin/ImportChallengeDialog';
+import { WorkOrderEditDialog } from '@/components/admin/WorkOrderEditDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { 
@@ -23,12 +26,17 @@ import {
 } from 'lucide-react';
 import type { Tenant, GameTitle } from '@/types/tenant';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ATS_RESOURCES } from '@/config/simResources';
 
 const WorkOrders = () => {
   const [activeFilter, setActiveFilter] = useState<WorkOrderFilter>('all');
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [importedData, setImportedData] = useState<MappedChallengeData | null>(null);
   const { subscribedGames } = useChannelSubscriptions();
+  const { isAdmin } = useUserRole();
+  const queryClient = useQueryClient();
   
   // Fetch all work orders
   const { data: allWorkOrders = [], isLoading: loadingWorkOrders } = useWorkOrders('all');
@@ -109,10 +117,13 @@ const WorkOrders = () => {
           title="Work Orders"
           subtitle="Browse and manage training scenarios. Complete challenges, earn XP, and track your progress across all simulation platforms."
           backgroundImage="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1600&h=600&fit=crop"
-          primaryAction={{
-            label: 'New Work Order',
-            icon: <Plus className="h-4 w-4" />,
-          }}
+          {...(isAdmin ? {
+            primaryAction: {
+              label: 'New Work Order',
+              icon: <Plus className="h-4 w-4" />,
+              onClick: () => setShowImportDialog(true),
+            },
+          } : {})}
           secondaryAction={{
             label: 'Filter',
             icon: <Filter className="h-4 w-4" />,
@@ -261,6 +272,45 @@ const WorkOrders = () => {
           </p>
           <Button variant="outline">Enable Notifications</Button>
         </section>
+
+        {/* Admin Dialogs */}
+        {isAdmin && (
+          <>
+            <ImportChallengeDialog
+              open={showImportDialog}
+              onOpenChange={setShowImportDialog}
+              onSelect={(data) => {
+                setImportedData(data);
+                setShowEditDialog(true);
+              }}
+            />
+            <WorkOrderEditDialog
+              open={showEditDialog}
+              onOpenChange={setShowEditDialog}
+              workOrder={importedData ? {
+                id: '',
+                title: importedData.title,
+                description: importedData.description,
+                game_title: importedData.gameTitle,
+                difficulty: importedData.difficulty,
+                xp_reward: importedData.xpReward,
+                estimated_time_minutes: importedData.estimatedTime,
+                max_attempts: null,
+                success_criteria: null,
+                is_active: true,
+                channel_id: null,
+                tenant_id: null,
+                evidence_requirements: null,
+                cover_image_url: importedData.coverImageUrl,
+              } : null}
+              onSave={() => {
+                setShowEditDialog(false);
+                setImportedData(null);
+                queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+              }}
+            />
+          </>
+        )}
       </div>
     </AppLayout>
   );
