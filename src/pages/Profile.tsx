@@ -68,6 +68,8 @@ const Profile = () => {
   const { tenant } = useTenant();
   const { user, session } = useAuth();
   const { profile, credentials, achievements, stats, isLoading, isOwnProfile, error } = useProfile(userId);
+  const { data: readinessMap } = useCareerReadiness(userId);
+  const [exporting, setExporting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const handleExportPDF = async () => {
@@ -246,7 +248,46 @@ const Profile = () => {
           <SkillRadar skills={skills} tenantAverage={tenantAverage} />
         </section>
 
-        {/* Credential Verification - Only show on own profile */}
+        {/* Career Readiness */}
+        {readinessMap && Object.keys(readinessMap).length > 0 && (
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="text-lg font-bold uppercase tracking-wide">Career Readiness</h2>
+                <p className="text-sm text-muted-foreground">
+                  Apprenticeship readiness based on your earned credentials
+                </p>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.values(readinessMap)
+                .sort((a, b) => b.readinessPct - a.readinessPct)
+                .map((r) => (
+                  <div key={r.careerPathId} className="glass-card p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-semibold capitalize">
+                        {r.careerPathId.replace(/-/g, ' ')}
+                      </span>
+                      <span className={`text-sm font-bold ${
+                        r.readinessPct >= 75 ? 'text-green-500' :
+                        r.readinessPct >= 50 ? 'text-yellow-500' :
+                        'text-muted-foreground'
+                      }`}>
+                        {r.readinessPct}%
+                      </span>
+                    </div>
+                    <Progress value={r.readinessPct} className="h-2" />
+                    <p className="text-[10px] text-muted-foreground">
+                      {r.matchedCount}/{r.totalCount} requirements met
+                    </p>
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
+
+
         {isOwnProfile && (
           <section>
             <div className="flex items-center gap-3 mb-4">
