@@ -195,6 +195,114 @@ Deno.serve(async (req) => {
       );
     }
 
+    // GET /career-paths - Public career path requirements and optional readiness for a user
+    // Query params: ?user_id=xxx (optional) or ?passport_slug=xxx (optional)
+    if (req.method === 'GET' && path[0] === 'career-paths') {
+      const specificPath = path[1]; // optional: filter by career_path_id
+      const userId = url.searchParams.get('user_id');
+      const passportSlug = url.searchParams.get('passport_slug');
+
+      // 1. Get career path requirements
+      let reqQuery = supabase
+        .from('career_path_requirements')
+        .select('*')
+        .order('career_path_id')
+        .order('sort_order');
+
+      if (specificPath) {
+        reqQuery = reqQuery.eq('career_path_id', specificPath);
+      }
+
+      const { data: requirements, error: reqError } = await reqQuery;
+      if (reqError) throw reqError;
+
+      // Group requirements by career path
+      const pathMap: Record<string, {
+        career_path_id: string;
+        requirements: typeof requirements;
+        readiness?: { matched_count: number; total_count: number; readiness_pct: number; matched_labels: string[] };
+      }> = {};
+
+      for (const req of requirements || []) {
+        if (!pathMap[req.career_path_id]) {
+          pathMap[req.career_path_id] = { career_path_id: req.career_path_id, requirements: [] };
+        }
+        pathMap[req.career_path_id].requirements.push(req);
+      }
+
+      // 2. If user context provided, calculate readiness
+      let resolvedUserId = userId;
+
+      if (!resolvedUserId && passportSlug) {
+        const { data: passport } = await supabase
+          .from('skill_passport')
+          .select('user_id')
+          .eq('public_url_slug', passportSlug)
+          .eq('is_public', true)
+          .single();
+        resolvedUserId = passport?.user_id ?? null;
+      }
+
+      if (resolvedUserId) {
+        const { data: readiness, error: readErr } = await supabase
+          .rpc('calculate_readiness', {
+            p_user_id: resolvedUserId,
+            p_career_path_id: specificPath || null,
+          });
+
+        if (!readErr && readiness) {
+          for (const row of readiness) {
+            if (pathMap[row.career_path_id]) {
+              pathMap[row.career_path_id].readiness = {
+                matched_count: Number(row.matched_count),
+                total_count: Number(row.total_count),
+                readiness_pct: Number(row.readiness_pct),
+                matched_labels: row.matched_labels || [],
+              };
+            }
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          career_paths: Object.values(pathMap),
+          user_id: resolvedUserId || null,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // GET /career-paths/:id/readiness/:user_id - Specific readiness check
+    if (req.method === 'GET' && path[0] === 'career-paths' && path[2] === 'readiness' && path[3]) {
+      const careerPathId = path[1];
+      const targetUserId = path[3];
+
+      const { data: readiness, error: readErr } = await supabase
+        .rpc('calculate_readiness', {
+          p_user_id: targetUserId,
+          p_career_path_id: careerPathId,
+        });
+
+      if (readErr) throw readErr;
+
+      const result = readiness?.[0];
+
+      return new Response(
+        JSON.stringify({
+          career_path_id: careerPathId,
+          user_id: targetUserId,
+          readiness: result ? {
+            matched_count: Number(result.matched_count),
+            total_count: Number(result.total_count),
+            readiness_pct: Number(result.readiness_pct),
+            matched_labels: result.matched_labels || [],
+          } : { matched_count: 0, total_count: 0, readiness_pct: 0, matched_labels: [] },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // ==========================================
     // AUTHENTICATED ENDPOINTS (user JWT required)
     // ==========================================
