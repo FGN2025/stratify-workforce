@@ -225,6 +225,7 @@ export const CREDENTIAL_API: ApiSection = {
       ],
     },
     {
+      id: 'get-my-credentials',
       method: 'GET',
       path: '/credentials/mine',
       title: 'Get My Credentials',
