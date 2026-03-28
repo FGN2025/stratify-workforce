@@ -1985,6 +1985,91 @@ export type Database = {
           },
         ]
       }
+      webhook_delivery_log: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          delivered_at: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          status_code: number | null
+          subscription_id: string
+        }
+        Insert: {
+          attempt_number?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          status_code?: number | null
+          subscription_id: string
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          status_code?: number | null
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_delivery_log_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_subscriptions: {
+        Row: {
+          app_slug: string
+          created_at: string
+          events: string[]
+          id: string
+          is_active: boolean
+          secret: string
+          updated_at: string
+          webhook_url: string
+        }
+        Insert: {
+          app_slug: string
+          created_at?: string
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          secret: string
+          updated_at?: string
+          webhook_url: string
+        }
+        Update: {
+          app_slug?: string
+          created_at?: string
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          secret?: string
+          updated_at?: string
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_subscriptions_app_slug_fkey"
+            columns: ["app_slug"]
+            isOneToOne: false
+            referencedRelation: "authorized_apps"
+            referencedColumns: ["app_slug"]
+          },
+        ]
+      }
       work_order_evidence: {
         Row: {
           completion_id: string

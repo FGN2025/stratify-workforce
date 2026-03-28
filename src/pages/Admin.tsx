@@ -11,6 +11,7 @@ import { RegistrationCodeManager } from '@/components/admin/RegistrationCodeMana
 import { EventsManager } from '@/components/admin/EventsManager';
 import { EvidenceReviewQueue } from '@/components/admin/EvidenceReviewQueue';
 import { AuthorizedAppsManager } from '@/components/admin/AuthorizedAppsManager';
+import { WebhookManager } from '@/components/admin/WebhookManager';
 import { CredentialTypesManager } from '@/components/admin/CredentialTypesManager';
 import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
@@ -245,6 +246,9 @@ export default function Admin() {
                 <TabsTrigger value="authorized-apps" className="text-primary data-[state=active]:text-primary">
                   Authorized Apps
                 </TabsTrigger>
+                <TabsTrigger value="webhooks" className="text-primary data-[state=active]:text-primary">
+                  Webhooks
+                </TabsTrigger>
                 <TabsTrigger value="credential-types" className="text-primary data-[state=active]:text-primary">
                   Credential Types
                 </TabsTrigger>
@@ -350,6 +354,14 @@ export default function Admin() {
                 <Card className="border-border/50">
                   <CardContent className="pt-6">
                     <AuthorizedAppsManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="webhooks">
+                <Card className="border-border/50">
+                  <CardContent className="pt-6">
+                    <WebhookManager />
                   </CardContent>
                 </Card>
               </TabsContent>
