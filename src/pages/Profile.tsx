@@ -21,7 +21,10 @@ import {
   Target,
   BadgeCheck,
   Briefcase,
-  Loader2
+  Loader2,
+  Code,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useState } from 'react';
 import type { SkillSet } from '@/types/tenant';
