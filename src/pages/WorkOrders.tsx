@@ -272,6 +272,45 @@ const WorkOrders = () => {
           </p>
           <Button variant="outline">Enable Notifications</Button>
         </section>
+
+        {/* Admin Dialogs */}
+        {isAdmin && (
+          <>
+            <ImportChallengeDialog
+              open={showImportDialog}
+              onOpenChange={setShowImportDialog}
+              onSelect={(data) => {
+                setImportedData(data);
+                setShowEditDialog(true);
+              }}
+            />
+            <WorkOrderEditDialog
+              open={showEditDialog}
+              onOpenChange={setShowEditDialog}
+              workOrder={importedData ? {
+                id: '',
+                title: importedData.title,
+                description: importedData.description,
+                game_title: importedData.gameTitle,
+                difficulty: importedData.difficulty,
+                xp_reward: importedData.xpReward,
+                estimated_time_minutes: importedData.estimatedTime,
+                max_attempts: null,
+                success_criteria: null,
+                is_active: true,
+                channel_id: null,
+                tenant_id: null,
+                evidence_requirements: null,
+                cover_image_url: importedData.coverImageUrl,
+              } : null}
+              onSave={() => {
+                setShowEditDialog(false);
+                setImportedData(null);
+                queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+              }}
+            />
+          </>
+        )}
       </div>
     </AppLayout>
   );
