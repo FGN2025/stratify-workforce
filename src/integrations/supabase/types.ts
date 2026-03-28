@@ -2181,6 +2181,22 @@ export type Database = {
         Returns: boolean
       }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
+      get_ai_model_configs_safe: {
+        Args: never
+        Returns: {
+          created_at: string
+          display_name: string
+          has_api_key: boolean
+          id: string
+          is_default: boolean
+          is_enabled: boolean
+          max_tokens: number
+          model_id: string
+          provider: string
+          updated_at: string
+          use_for: string[]
+        }[]
+      }
       get_child_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
       get_course_progress: {
         Args: { p_course_id: string; p_user_id: string }

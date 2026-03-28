@@ -40,12 +40,13 @@ export function useAIModels() {
   return useQuery({
     queryKey: ['ai-model-configs'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ai_model_configs' as any)
-        .select('*')
-        .order('provider', { ascending: true });
+      const { data, error } = await supabase.rpc('get_ai_model_configs_safe' as any);
       if (error) throw error;
-      return data as unknown as AIModelConfig[];
+      // Sort by provider for consistent display
+      const sorted = (data as unknown as AIModelConfig[]).sort((a, b) =>
+        a.provider.localeCompare(b.provider)
+      );
+      return sorted;
     },
   });
 }
