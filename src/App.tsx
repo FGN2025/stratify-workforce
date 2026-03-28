@@ -53,6 +53,7 @@ const App = () => (
               <Route path="/auth/discord/callback" element={<AuthDiscordCallback />} />
               <Route path="/" element={<Index />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
+              <Route path="/embed/passport/:slug" element={<EmbedPassport />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/community/:slug" element={<CommunityProfile />} />
               <Route path="/careers" element={<Careers />} />
