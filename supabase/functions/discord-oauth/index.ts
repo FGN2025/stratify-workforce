@@ -146,6 +146,12 @@ serve(async (req) => {
       // Calculate token expiration
       const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
+      // Encrypt tokens before storage
+      const [encryptedAccess, encryptedRefresh] = await Promise.all([
+        encrypt(tokens.access_token),
+        encrypt(tokens.refresh_token),
+      ]);
+
       // Upsert Discord connection
       const { error: upsertError } = await supabase
         .from("user_discord_connections")
@@ -158,8 +164,8 @@ serve(async (req) => {
           discord_banner_hash: discordUser.banner,
           discord_accent_color: discordUser.accent_color,
           discord_global_name: discordUser.global_name,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
+          access_token: encryptedAccess,
+          refresh_token: encryptedRefresh,
           token_expires_at: tokenExpiresAt,
           scopes: tokens.scope.split(" "),
           connected_at: new Date().toISOString(),
