@@ -1752,6 +1752,48 @@ export type Database = {
           },
         ]
       }
+      user_notifications: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          icon_name: string | null
+          id: string
+          is_read: boolean
+          link_url: string | null
+          message: string | null
+          metadata: Json | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message?: string | null
+          metadata?: Json | null
+          title: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message?: string | null
+          metadata?: Json | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_points: {
         Row: {
           amount: number
@@ -2232,6 +2274,14 @@ export type Database = {
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
       membership_request_status: "pending" | "approved" | "rejected"
+      notification_type:
+        | "challenge_completed"
+        | "credential_issued"
+        | "xp_earned"
+        | "work_order_graded"
+        | "community_approved"
+        | "achievement_earned"
+        | "system"
       points_type: "xp" | "credits" | "tokens"
       progress_status: "not_started" | "in_progress" | "completed" | "failed"
       registration_status: "registered" | "confirmed" | "cancelled" | "no_show"
@@ -2444,6 +2494,15 @@ export const Constants = {
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
       match_status: ["pending", "in_progress", "completed"],
       membership_request_status: ["pending", "approved", "rejected"],
+      notification_type: [
+        "challenge_completed",
+        "credential_issued",
+        "xp_earned",
+        "work_order_graded",
+        "community_approved",
+        "achievement_earned",
+        "system",
+      ],
       points_type: ["xp", "credits", "tokens"],
       progress_status: ["not_started", "in_progress", "completed", "failed"],
       registration_status: ["registered", "confirmed", "cancelled", "no_show"],

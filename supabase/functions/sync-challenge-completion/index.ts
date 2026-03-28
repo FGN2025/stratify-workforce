@@ -315,6 +315,67 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 8. Insert user notifications
+    const notifications: Array<{
+      user_id: string;
+      type: string;
+      title: string;
+      message: string;
+      icon_name: string;
+      accent_color: string;
+      link_url: string;
+      metadata: Record<string, unknown>;
+    }> = [];
+
+    // Challenge completion notification
+    notifications.push({
+      user_id: user.id,
+      type: completionStatus === 'completed' ? 'challenge_completed' : 'system',
+      title: completionStatus === 'completed'
+        ? `Challenge Completed: ${workOrder.title}`
+        : `Challenge Attempted: ${workOrder.title}`,
+      message: completionStatus === 'completed'
+        ? `You scored ${score ?? 0}% and earned ${workOrder.xp_reward} XP!`
+        : `You scored ${score ?? 0}%. Keep practicing — 70% required to pass.`,
+      icon_name: completionStatus === 'completed' ? 'trophy' : 'target',
+      accent_color: completionStatus === 'completed' ? '#10b981' : '#f59e0b',
+      link_url: `/work-orders/${workOrder.id}`,
+      metadata: { challenge_id, score, attempt_number: attemptNumber },
+    });
+
+    // XP earned notification (separate from completion)
+    if (completionStatus === 'completed' && workOrder.xp_reward > 0) {
+      notifications.push({
+        user_id: user.id,
+        type: 'xp_earned',
+        title: `+${workOrder.xp_reward} XP Earned`,
+        message: `Awarded for completing ${workOrder.title}`,
+        icon_name: 'zap',
+        accent_color: '#8b5cf6',
+        link_url: '/profile',
+        metadata: { xp: workOrder.xp_reward, source: 'challenge_completion' },
+      });
+    }
+
+    // Credential issued notification
+    if (credential) {
+      notifications.push({
+        user_id: user.id,
+        type: 'credential_issued',
+        title: 'New Credential Issued',
+        message: `"${credential.title}" has been added to your Skill Passport.`,
+        icon_name: 'award',
+        accent_color: '#3b82f6',
+        link_url: '/profile',
+        metadata: { credential_id: credential.id },
+      });
+    }
+
+    // Batch insert all notifications
+    if (notifications.length > 0) {
+      await supabase.from('user_notifications').insert(notifications);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

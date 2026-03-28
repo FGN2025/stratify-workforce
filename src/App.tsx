@@ -34,6 +34,7 @@ import HelpStudent from "./pages/HelpStudent";
 import PublicPassport from "./pages/PublicPassport";
 import Careers from "./pages/Careers";
 import EmbedPassport from "./pages/EmbedPassport";
+import Activity from "./pages/Activity";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -102,7 +103,10 @@ const App = () => (
               <Route path="/help/student" element={
                 <ProtectedRoute><HelpStudent /></ProtectedRoute>
               } />
-              <Route path="/ai-test" element={<AITest />} />
+               <Route path="/ai-test" element={<AITest />} />
+              <Route path="/activity" element={
+                <ProtectedRoute><Activity /></ProtectedRoute>
+              } />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

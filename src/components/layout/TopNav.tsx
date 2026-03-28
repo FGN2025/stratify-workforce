@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { Bell, Search, Menu, LogOut, User } from 'lucide-react';
+import { Search, Menu, LogOut, User } from 'lucide-react';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TenantSwitcher } from '@/components/TenantSwitcher';
@@ -49,10 +50,7 @@ export function TopNav() {
         <div className="flex items-center gap-3">
           {user ? (
             <>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />
-              </Button>
+              <NotificationBell />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
