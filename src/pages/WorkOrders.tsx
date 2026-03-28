@@ -31,7 +31,12 @@ import { ATS_RESOURCES } from '@/config/simResources';
 
 const WorkOrders = () => {
   const [activeFilter, setActiveFilter] = useState<WorkOrderFilter>('all');
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [importedData, setImportedData] = useState<MappedChallengeData | null>(null);
   const { subscribedGames } = useChannelSubscriptions();
+  const { isAdmin } = useUserRole();
+  const queryClient = useQueryClient();
   
   // Fetch all work orders
   const { data: allWorkOrders = [], isLoading: loadingWorkOrders } = useWorkOrders('all');
