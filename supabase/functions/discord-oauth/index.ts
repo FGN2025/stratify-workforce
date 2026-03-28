@@ -214,6 +214,9 @@ serve(async (req) => {
         );
       }
 
+      // Decrypt the stored refresh token
+      const decryptedRefreshToken = await decrypt(connection.refresh_token);
+
       // Refresh the token
       const tokenResponse = await fetch(`${DISCORD_API_BASE}/oauth2/token`, {
         method: "POST",
@@ -222,7 +225,7 @@ serve(async (req) => {
           client_id: clientId,
           client_secret: clientSecret,
           grant_type: "refresh_token",
-          refresh_token: connection.refresh_token,
+          refresh_token: decryptedRefreshToken,
         }),
       });
 
@@ -242,12 +245,18 @@ serve(async (req) => {
       const tokens: DiscordTokenResponse = await tokenResponse.json();
       const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
+      // Encrypt new tokens before storage
+      const [encryptedAccess, encryptedRefresh] = await Promise.all([
+        encrypt(tokens.access_token),
+        encrypt(tokens.refresh_token),
+      ]);
+
       // Update tokens
       await supabase
         .from("user_discord_connections")
         .update({
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
+          access_token: encryptedAccess,
+          refresh_token: encryptedRefresh,
           token_expires_at: tokenExpiresAt,
           last_synced_at: new Date().toISOString(),
         })
