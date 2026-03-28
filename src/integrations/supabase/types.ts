@@ -2163,7 +2163,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_model_configs_safe: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          has_api_key: boolean | null
+          id: string | null
+          is_default: boolean | null
+          is_enabled: boolean | null
+          max_tokens: number | null
+          model_id: string | null
+          provider: string | null
+          updated_at: string | null
+          use_for: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: string | null
+          has_api_key?: never
+          id?: string | null
+          is_default?: boolean | null
+          is_enabled?: boolean | null
+          max_tokens?: number | null
+          model_id?: string | null
+          provider?: string | null
+          updated_at?: string | null
+          use_for?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string | null
+          has_api_key?: never
+          id?: string | null
+          is_default?: boolean | null
+          is_enabled?: boolean | null
+          max_tokens?: number | null
+          model_id?: string | null
+          provider?: string | null
+          updated_at?: string | null
+          use_for?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_readiness: {
