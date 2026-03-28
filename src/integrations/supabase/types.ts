@@ -2163,48 +2163,7 @@ export type Database = {
       }
     }
     Views: {
-      ai_model_configs_safe: {
-        Row: {
-          created_at: string | null
-          display_name: string | null
-          has_api_key: boolean | null
-          id: string | null
-          is_default: boolean | null
-          is_enabled: boolean | null
-          max_tokens: number | null
-          model_id: string | null
-          provider: string | null
-          updated_at: string | null
-          use_for: string[] | null
-        }
-        Insert: {
-          created_at?: string | null
-          display_name?: string | null
-          has_api_key?: never
-          id?: string | null
-          is_default?: boolean | null
-          is_enabled?: boolean | null
-          max_tokens?: number | null
-          model_id?: string | null
-          provider?: string | null
-          updated_at?: string | null
-          use_for?: string[] | null
-        }
-        Update: {
-          created_at?: string | null
-          display_name?: string | null
-          has_api_key?: never
-          id?: string | null
-          is_default?: boolean | null
-          is_enabled?: boolean | null
-          max_tokens?: number | null
-          model_id?: string | null
-          provider?: string | null
-          updated_at?: string | null
-          use_for?: string[] | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       calculate_readiness: {
@@ -2222,6 +2181,22 @@ export type Database = {
         Returns: boolean
       }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
+      get_ai_model_configs_safe: {
+        Args: never
+        Returns: {
+          created_at: string
+          display_name: string
+          has_api_key: boolean
+          id: string
+          is_default: boolean
+          is_enabled: boolean
+          max_tokens: number
+          model_id: string
+          provider: string
+          updated_at: string
+          use_for: string[]
+        }[]
+      }
       get_child_tenants: { Args: { p_tenant_id: string }; Returns: string[] }
       get_course_progress: {
         Args: { p_course_id: string; p_user_id: string }
