@@ -117,10 +117,13 @@ const WorkOrders = () => {
           title="Work Orders"
           subtitle="Browse and manage training scenarios. Complete challenges, earn XP, and track your progress across all simulation platforms."
           backgroundImage="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1600&h=600&fit=crop"
-          primaryAction={{
-            label: 'New Work Order',
-            icon: <Plus className="h-4 w-4" />,
-          }}
+          {...(isAdmin ? {
+            primaryAction: {
+              label: 'New Work Order',
+              icon: <Plus className="h-4 w-4" />,
+              onClick: () => setShowImportDialog(true),
+            },
+          } : {})}
           secondaryAction={{
             label: 'Filter',
             icon: <Filter className="h-4 w-4" />,
