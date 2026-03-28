@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app-key',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
 };
 
 interface CredentialIssueRequest {
@@ -18,16 +18,27 @@ interface VerifyRequest {
   verification_hash: string;
 }
 
+interface WebhookRegisterRequest {
+  webhook_url: string;
+  events: string[];
+  secret?: string;
+}
+
+const VALID_WEBHOOK_EVENTS = ['credential.issued', 'readiness.threshold', 'work_order.completed'];
+
+function generateWebhookSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   const url = new URL(req.url);
   const pathParts = url.pathname.split('/').filter(Boolean);
-  
-  // Remove 'credential-api' from path if present (edge function routing)
   const path = pathParts[0] === 'credential-api' ? pathParts.slice(1) : pathParts;
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -39,7 +50,7 @@ Deno.serve(async (req) => {
     // PUBLIC ENDPOINTS (no auth required)
     // ==========================================
 
-    // GET /passport/:slug - Public passport view
+    // GET /passport/:slug
     if (req.method === 'GET' && path[0] === 'passport' && path[1]) {
       const slug = path[1];
       
@@ -57,24 +68,11 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get credentials with game filter if provided
       const gameFilter = url.searchParams.get('game');
       
       let credentialsQuery = supabase
         .from('skill_credentials')
-        .select(`
-          id,
-          title,
-          credential_type,
-          issued_at,
-          expires_at,
-          score,
-          issuer,
-          skills_verified,
-          game_title,
-          credential_type_key,
-          verification_hash
-        `)
+        .select(`id, title, credential_type, issued_at, expires_at, score, issuer, skills_verified, game_title, credential_type_key, verification_hash`)
         .eq('passport_id', passport.id);
 
       if (gameFilter) {
@@ -82,10 +80,8 @@ Deno.serve(async (req) => {
       }
 
       const { data: credentials, error: credError } = await credentialsQuery;
-
       if (credError) throw credError;
 
-      // Get profile info
       const { data: profile } = await supabase
         .from('profiles')
         .select('username, avatar_url, employability_score')
@@ -93,18 +89,12 @@ Deno.serve(async (req) => {
         .single();
 
       return new Response(
-        JSON.stringify({
-          passport: {
-            slug: passport.public_url_slug,
-            user: profile,
-          },
-          credentials: credentials || [],
-        }),
+        JSON.stringify({ passport: { slug: passport.public_url_slug, user: profile }, credentials: credentials || [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // POST /credentials/verify - Verify credential by hash
+    // POST /credentials/verify
     if (req.method === 'POST' && path[0] === 'credentials' && path[1] === 'verify') {
       const body: VerifyRequest = await req.json();
       
@@ -117,18 +107,7 @@ Deno.serve(async (req) => {
 
       const { data: credential, error } = await supabase
         .from('skill_credentials')
-        .select(`
-          id,
-          title,
-          credential_type,
-          issued_at,
-          expires_at,
-          score,
-          issuer,
-          skills_verified,
-          game_title,
-          passport_id
-        `)
+        .select(`id, title, credential_type, issued_at, expires_at, score, issuer, skills_verified, game_title, passport_id`)
         .eq('verification_hash', body.verification_hash)
         .single();
 
@@ -139,10 +118,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Check expiration
       const isExpired = credential.expires_at && new Date(credential.expires_at) < new Date();
 
-      // Get user info from passport
       const { data: passport } = await supabase
         .from('skill_passport')
         .select('user_id')
@@ -160,31 +137,17 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({
-          valid: !isExpired,
-          expired: isExpired,
-          credential: {
-            ...credential,
-            holder_username: username,
-          },
-        }),
+        JSON.stringify({ valid: !isExpired, expired: isExpired, credential: { ...credential, holder_username: username } }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // GET /catalog/credential-types - Public catalog of credential types
+    // GET /catalog/credential-types
     if (req.method === 'GET' && path[0] === 'catalog' && path[1] === 'credential-types') {
       const gameFilter = url.searchParams.get('game');
       
-      let query = supabase
-        .from('credential_types')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
-
-      if (gameFilter) {
-        query = query.eq('game_title', gameFilter);
-      }
+      let query = supabase.from('credential_types').select('*').eq('is_active', true).order('sort_order');
+      if (gameFilter) query = query.eq('game_title', gameFilter);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -195,109 +158,60 @@ Deno.serve(async (req) => {
       );
     }
 
-    // GET /career-paths - Public career path requirements and optional readiness for a user
-    // Query params: ?user_id=xxx (optional) or ?passport_slug=xxx (optional)
-    if (req.method === 'GET' && path[0] === 'career-paths') {
-      const specificPath = path[1]; // optional: filter by career_path_id
+    // GET /career-paths
+    if (req.method === 'GET' && path[0] === 'career-paths' && !(path[2] === 'readiness')) {
+      const specificPath = path[1];
       const userId = url.searchParams.get('user_id');
       const passportSlug = url.searchParams.get('passport_slug');
 
-      // 1. Get career path requirements
-      let reqQuery = supabase
-        .from('career_path_requirements')
-        .select('*')
-        .order('career_path_id')
-        .order('sort_order');
-
-      if (specificPath) {
-        reqQuery = reqQuery.eq('career_path_id', specificPath);
-      }
+      let reqQuery = supabase.from('career_path_requirements').select('*').order('career_path_id').order('sort_order');
+      if (specificPath) reqQuery = reqQuery.eq('career_path_id', specificPath);
 
       const { data: requirements, error: reqError } = await reqQuery;
       if (reqError) throw reqError;
 
-      // Group requirements by career path
-      const pathMap: Record<string, {
-        career_path_id: string;
-        requirements: typeof requirements;
-        readiness?: { matched_count: number; total_count: number; readiness_pct: number; matched_labels: string[] };
-      }> = {};
-
-      for (const req of requirements || []) {
-        if (!pathMap[req.career_path_id]) {
-          pathMap[req.career_path_id] = { career_path_id: req.career_path_id, requirements: [] };
-        }
-        pathMap[req.career_path_id].requirements.push(req);
+      const pathMap: Record<string, { career_path_id: string; requirements: typeof requirements; readiness?: any }> = {};
+      for (const r of requirements || []) {
+        if (!pathMap[r.career_path_id]) pathMap[r.career_path_id] = { career_path_id: r.career_path_id, requirements: [] };
+        pathMap[r.career_path_id].requirements.push(r);
       }
 
-      // 2. If user context provided, calculate readiness
       let resolvedUserId = userId;
-
       if (!resolvedUserId && passportSlug) {
-        const { data: passport } = await supabase
-          .from('skill_passport')
-          .select('user_id')
-          .eq('public_url_slug', passportSlug)
-          .eq('is_public', true)
-          .single();
+        const { data: passport } = await supabase.from('skill_passport').select('user_id').eq('public_url_slug', passportSlug).eq('is_public', true).single();
         resolvedUserId = passport?.user_id ?? null;
       }
 
       if (resolvedUserId) {
-        const { data: readiness, error: readErr } = await supabase
-          .rpc('calculate_readiness', {
-            p_user_id: resolvedUserId,
-            p_career_path_id: specificPath || null,
-          });
-
+        const { data: readiness, error: readErr } = await supabase.rpc('calculate_readiness', { p_user_id: resolvedUserId, p_career_path_id: specificPath || null });
         if (!readErr && readiness) {
           for (const row of readiness) {
             if (pathMap[row.career_path_id]) {
-              pathMap[row.career_path_id].readiness = {
-                matched_count: Number(row.matched_count),
-                total_count: Number(row.total_count),
-                readiness_pct: Number(row.readiness_pct),
-                matched_labels: row.matched_labels || [],
-              };
+              pathMap[row.career_path_id].readiness = { matched_count: Number(row.matched_count), total_count: Number(row.total_count), readiness_pct: Number(row.readiness_pct), matched_labels: row.matched_labels || [] };
             }
           }
         }
       }
 
       return new Response(
-        JSON.stringify({
-          career_paths: Object.values(pathMap),
-          user_id: resolvedUserId || null,
-        }),
+        JSON.stringify({ career_paths: Object.values(pathMap), user_id: resolvedUserId || null }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // GET /career-paths/:id/readiness/:user_id - Specific readiness check
+    // GET /career-paths/:id/readiness/:user_id
     if (req.method === 'GET' && path[0] === 'career-paths' && path[2] === 'readiness' && path[3]) {
       const careerPathId = path[1];
       const targetUserId = path[3];
 
-      const { data: readiness, error: readErr } = await supabase
-        .rpc('calculate_readiness', {
-          p_user_id: targetUserId,
-          p_career_path_id: careerPathId,
-        });
-
+      const { data: readiness, error: readErr } = await supabase.rpc('calculate_readiness', { p_user_id: targetUserId, p_career_path_id: careerPathId });
       if (readErr) throw readErr;
 
       const result = readiness?.[0];
-
       return new Response(
         JSON.stringify({
-          career_path_id: careerPathId,
-          user_id: targetUserId,
-          readiness: result ? {
-            matched_count: Number(result.matched_count),
-            total_count: Number(result.total_count),
-            readiness_pct: Number(result.readiness_pct),
-            matched_labels: result.matched_labels || [],
-          } : { matched_count: 0, total_count: 0, readiness_pct: 0, matched_labels: [] },
+          career_path_id: careerPathId, user_id: targetUserId,
+          readiness: result ? { matched_count: Number(result.matched_count), total_count: Number(result.total_count), readiness_pct: Number(result.readiness_pct), matched_labels: result.matched_labels || [] } : { matched_count: 0, total_count: 0, readiness_pct: 0, matched_labels: [] },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -310,57 +224,31 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     const appKey = req.headers.get('X-App-Key');
 
-    // GET /credentials/mine - Current user's credentials
+    // GET /credentials/mine
     if (req.method === 'GET' && path[0] === 'credentials' && path[1] === 'mine') {
       if (!authHeader) {
-        return new Response(
-          JSON.stringify({ error: 'Authorization required' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Authorization required' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      
       if (authError || !user) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid token' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const gameFilter = url.searchParams.get('game');
-
-      // Get user's passport
-      const { data: passport } = await supabase
-        .from('skill_passport')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
+      const { data: passport } = await supabase.from('skill_passport').select('id').eq('user_id', user.id).single();
       if (!passport) {
-        return new Response(
-          JSON.stringify({ credentials: [] }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ credentials: [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      let credQuery = supabase
-        .from('skill_credentials')
-        .select('*')
-        .eq('passport_id', passport.id);
-
-      if (gameFilter) {
-        credQuery = credQuery.eq('game_title', gameFilter);
-      }
+      let credQuery = supabase.from('skill_credentials').select('*').eq('passport_id', passport.id);
+      if (gameFilter) credQuery = credQuery.eq('game_title', gameFilter);
 
       const { data: credentials, error } = await credQuery;
       if (error) throw error;
 
-      return new Response(
-        JSON.stringify({ credentials: credentials || [] }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ credentials: credentials || [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ==========================================
@@ -368,191 +256,162 @@ Deno.serve(async (req) => {
     // ==========================================
 
     if (appKey) {
-      // Verify API key
-      const { data: appAuth, error: appError } = await supabase
-        .rpc('verify_app_api_key', { p_api_key: appKey });
+      const { data: appAuth, error: appError } = await supabase.rpc('verify_app_api_key', { p_api_key: appKey });
 
       if (appError || !appAuth || appAuth.length === 0) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid API key' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Invalid API key' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const app = appAuth[0];
 
-      // GET /credentials/user/:email - Get credentials for a user
-      if (req.method === 'GET' && path[0] === 'credentials' && path[1] === 'user' && path[2]) {
+      // GET /credentials/search - Search/filter credentials with pagination
+      if (req.method === 'GET' && path[0] === 'credentials' && path[1] === 'search') {
         if (!app.can_read) {
-          return new Response(
-            JSON.stringify({ error: 'App does not have read permission' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: 'App does not have read permission' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        const email = decodeURIComponent(path[2]);
-        const gameFilter = url.searchParams.get('game');
+        const gameTitle = url.searchParams.get('game_title');
+        const credType = url.searchParams.get('type');
+        const issuedAfter = url.searchParams.get('issued_after');
+        const issuedBefore = url.searchParams.get('issued_before');
+        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+        const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page_size') || '50')));
+        const offset = (page - 1) * pageSize;
 
-        // Find user by email using profiles table
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('username', email)
-          .maybeSingle();
-
-        // Also try to find by looking up auth users list (limited approach)
-        // Since we can't getUserByEmail, we look up profiles by username which often matches email
-        if (!profile) {
-          return new Response(
-            JSON.stringify({ error: 'User not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        const userId = profile.id;
-
-        // Get passport
-        const { data: passport } = await supabase
-          .from('skill_passport')
-          .select('id')
-          .eq('user_id', userId)
-          .single();
-
-        if (!passport) {
-          return new Response(
-            JSON.stringify({ credentials: [] }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        let credQuery = supabase
+        let query = supabase
           .from('skill_credentials')
-          .select('*')
-          .eq('passport_id', passport.id);
+          .select(`
+            id, title, credential_type, credential_type_key, issued_at, expires_at,
+            score, issuer, issuer_app_slug, skills_verified, game_title,
+            verification_hash, external_reference_id,
+            skill_passport!inner(user_id, public_url_slug, is_public)
+          `, { count: 'exact' });
 
-        if (gameFilter) {
-          credQuery = credQuery.eq('game_title', gameFilter);
+        if (gameTitle) query = query.eq('game_title', gameTitle);
+        if (credType) query = query.eq('credential_type_key', credType);
+        if (issuedAfter) query = query.gte('issued_at', issuedAfter);
+        if (issuedBefore) query = query.lte('issued_at', issuedBefore);
+
+        query = query.order('issued_at', { ascending: false }).range(offset, offset + pageSize - 1);
+
+        const { data: credentials, error: credErr, count } = await query;
+        if (credErr) throw credErr;
+
+        // Collect user IDs for profile enrichment
+        const userIds = [...new Set((credentials || []).map((c: any) => c.skill_passport?.user_id).filter(Boolean))];
+        let profileMap: Record<string, any> = {};
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url').in('id', userIds);
+          for (const p of profiles || []) profileMap[p.id] = p;
         }
 
-        const { data: credentials, error } = await credQuery;
-        if (error) throw error;
-
-        // Get profile info
-        const { data: profileInfo } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', userId)
-          .single();
+        const results = (credentials || []).map((c: any) => {
+          const userId = c.skill_passport?.user_id;
+          const profile = profileMap[userId];
+          const { skill_passport, ...cred } = c;
+          return {
+            ...cred,
+            user: profile ? { id: userId, username: profile.username, avatar_url: profile.avatar_url } : { id: userId },
+          };
+        });
 
         return new Response(
-          JSON.stringify({ 
-            user: profileInfo,
-            credentials: credentials || [] 
+          JSON.stringify({
+            credentials: results,
+            pagination: { page, page_size: pageSize, total: count || 0, total_pages: Math.ceil((count || 0) / pageSize) },
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // POST /credentials/issue - Issue a credential
+      // GET /credentials/user/:email
+      if (req.method === 'GET' && path[0] === 'credentials' && path[1] === 'user' && path[2]) {
+        if (!app.can_read) {
+          return new Response(JSON.stringify({ error: 'App does not have read permission' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const email = decodeURIComponent(path[2]);
+        const gameFilter = url.searchParams.get('game');
+
+        const { data: profile } = await supabase.from('profiles').select('id').eq('username', email).maybeSingle();
+        if (!profile) {
+          return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const { data: passport } = await supabase.from('skill_passport').select('id').eq('user_id', profile.id).single();
+        if (!passport) {
+          return new Response(JSON.stringify({ credentials: [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        let credQuery = supabase.from('skill_credentials').select('*').eq('passport_id', passport.id);
+        if (gameFilter) credQuery = credQuery.eq('game_title', gameFilter);
+
+        const { data: credentials, error } = await credQuery;
+        if (error) throw error;
+
+        const { data: profileInfo } = await supabase.from('profiles').select('username, avatar_url').eq('id', profile.id).single();
+
+        return new Response(
+          JSON.stringify({ user: profileInfo, credentials: credentials || [] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // POST /credentials/issue
       if (req.method === 'POST' && path[0] === 'credentials' && path[1] === 'issue') {
         if (!app.can_issue) {
-          return new Response(
-            JSON.stringify({ error: 'App does not have issue permission' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: 'App does not have issue permission' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const body: CredentialIssueRequest = await req.json();
 
-        // Validate credential type is allowed for this app
         if (!app.types_allowed.includes(body.credential_type_key)) {
-          return new Response(
-            JSON.stringify({ error: `App cannot issue credential type: ${body.credential_type_key}` }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: `App cannot issue credential type: ${body.credential_type_key}` }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // Get credential type details
-        const { data: credType, error: typeError } = await supabase
-          .from('credential_types')
-          .select('*')
-          .eq('type_key', body.credential_type_key)
-          .single();
-
-        if (typeError || !credType) {
-          return new Response(
-            JSON.stringify({ error: 'Invalid credential type' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+        const { data: credTypeData, error: typeError } = await supabase.from('credential_types').select('*').eq('type_key', body.credential_type_key).single();
+        if (typeError || !credTypeData) {
+          return new Response(JSON.stringify({ error: 'Invalid credential type' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // Find user by looking up profiles (we use username which often contains email)
-        const { data: userProfile, error: profileErr } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('username', body.user_email)
-          .maybeSingle();
-
+        const { data: userProfile } = await supabase.from('profiles').select('id').eq('username', body.user_email).maybeSingle();
         if (!userProfile) {
-          return new Response(
-            JSON.stringify({ error: 'User not found. User must be registered in FGN.Academy first.' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: 'User not found. User must be registered in FGN.Academy first.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const targetUserId = userProfile.id;
 
-        // Get or create passport
-        let { data: passport } = await supabase
-          .from('skill_passport')
-          .select('id')
-          .eq('user_id', targetUserId)
-          .single();
-
+        let { data: passport } = await supabase.from('skill_passport').select('id').eq('user_id', targetUserId).single();
         if (!passport) {
-          // Create passport
           const passportHash = crypto.randomUUID();
           const { data: newPassport, error: createError } = await supabase
             .from('skill_passport')
-            .insert({
-              user_id: targetUserId,
-              passport_hash: passportHash,
-              is_public: false,
-            })
+            .insert({ user_id: targetUserId, passport_hash: passportHash, is_public: false })
             .select('id')
             .single();
-
           if (createError) throw createError;
           passport = newPassport;
         }
 
-        // Generate verification hash
-        const payload = JSON.stringify({
-          type: body.credential_type_key,
-          user: targetUserId,
-          issued: new Date().toISOString(),
-          score: body.score,
-          random: crypto.randomUUID(),
-        });
+        const payload = JSON.stringify({ type: body.credential_type_key, user: targetUserId, issued: new Date().toISOString(), score: body.score, random: crypto.randomUUID() });
         const encoder = new TextEncoder();
         const data = encoder.encode(payload);
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const verificationHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-        // Create credential
         const { data: credential, error: credError } = await supabase
           .from('skill_credentials')
           .insert({
-            passport_id: passport.id,
-            title: credType.display_name,
-            credential_type: credType.id ? 'skill_verification' : 'certification',
+            passport_id: passport!.id,
+            title: credTypeData.display_name,
+            credential_type: credTypeData.id ? 'skill_verification' : 'certification',
             issuer: app.app_slug,
             issuer_app_slug: app.app_slug,
-            game_title: credType.game_title,
+            game_title: credTypeData.game_title,
             credential_type_key: body.credential_type_key,
             score: body.score,
-            skills_verified: body.skills_verified || credType.skills_granted,
+            skills_verified: body.skills_verified || credTypeData.skills_granted,
             external_reference_id: body.external_reference_id,
             verification_hash: verificationHash,
           })
@@ -561,20 +420,143 @@ Deno.serve(async (req) => {
 
         if (credError) throw credError;
 
+        // Fire webhook asynchronously
+        dispatchWebhook(supabase, 'credential.issued', {
+          credential_id: credential.id,
+          user_id: targetUserId,
+          credential_type_key: body.credential_type_key,
+          game_title: credTypeData.game_title,
+          score: body.score,
+          issued_at: credential.issued_at,
+        }).catch(err => console.error('Webhook dispatch error:', err));
+
         return new Response(
-          JSON.stringify({ 
-            success: true,
-            credential,
-            verification_url: `${supabaseUrl}/functions/v1/credential-api/credentials/verify`,
-          }),
+          JSON.stringify({ success: true, credential, verification_url: `${supabaseUrl}/functions/v1/credential-api/credentials/verify` }),
           { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // ==========================================
+      // WEBHOOK MANAGEMENT ENDPOINTS
+      // ==========================================
+
+      // POST /webhooks - Register a webhook
+      if (req.method === 'POST' && path[0] === 'webhooks') {
+        const body: WebhookRegisterRequest = await req.json();
+
+        if (!body.webhook_url || !body.events?.length) {
+          return new Response(JSON.stringify({ error: 'webhook_url and events[] are required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        // Validate URL
+        try { new URL(body.webhook_url); } catch {
+          return new Response(JSON.stringify({ error: 'Invalid webhook_url' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        // Validate events
+        const invalidEvents = body.events.filter(e => !VALID_WEBHOOK_EVENTS.includes(e));
+        if (invalidEvents.length > 0) {
+          return new Response(
+            JSON.stringify({ error: `Invalid events: ${invalidEvents.join(', ')}. Valid events: ${VALID_WEBHOOK_EVENTS.join(', ')}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const secret = body.secret || generateWebhookSecret();
+
+        const { data: sub, error: subErr } = await supabase
+          .from('webhook_subscriptions')
+          .upsert({
+            app_slug: app.app_slug,
+            webhook_url: body.webhook_url,
+            secret,
+            events: body.events,
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'app_slug,webhook_url' })
+          .select('id, app_slug, webhook_url, events, is_active, created_at')
+          .single();
+
+        if (subErr) throw subErr;
+
+        return new Response(
+          JSON.stringify({ webhook: sub, secret, note: 'Store this secret securely. It will be used to sign webhook payloads via HMAC-SHA256 in the X-Webhook-Signature header.' }),
+          { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // GET /webhooks - List webhooks for this app
+      if (req.method === 'GET' && path[0] === 'webhooks' && !path[1]) {
+        const { data: subs, error: subErr } = await supabase
+          .from('webhook_subscriptions')
+          .select('id, app_slug, webhook_url, events, is_active, created_at, updated_at')
+          .eq('app_slug', app.app_slug)
+          .order('created_at', { ascending: false });
+
+        if (subErr) throw subErr;
+
+        return new Response(
+          JSON.stringify({ webhooks: subs || [] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // DELETE /webhooks/:id - Delete a webhook
+      if (req.method === 'DELETE' && path[0] === 'webhooks' && path[1]) {
+        const webhookId = path[1];
+
+        const { error: delErr } = await supabase
+          .from('webhook_subscriptions')
+          .delete()
+          .eq('id', webhookId)
+          .eq('app_slug', app.app_slug);
+
+        if (delErr) throw delErr;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // GET /webhooks/:id/deliveries - View delivery log
+      if (req.method === 'GET' && path[0] === 'webhooks' && path[2] === 'deliveries') {
+        const webhookId = path[1];
+        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+        const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page_size') || '20')));
+
+        // Verify ownership
+        const { data: sub } = await supabase.from('webhook_subscriptions').select('id').eq('id', webhookId).eq('app_slug', app.app_slug).single();
+        if (!sub) {
+          return new Response(JSON.stringify({ error: 'Webhook not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const { data: logs, error: logErr, count } = await supabase
+          .from('webhook_delivery_log')
+          .select('*', { count: 'exact' })
+          .eq('subscription_id', webhookId)
+          .order('created_at', { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1);
+
+        if (logErr) throw logErr;
+
+        return new Response(
+          JSON.stringify({ deliveries: logs || [], pagination: { page, page_size: pageSize, total: count || 0 } }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
     // No matching route
     return new Response(
-      JSON.stringify({ error: 'Not found' }),
+      JSON.stringify({ error: 'Not found', available_endpoints: [
+        'GET /passport/:slug', 'POST /credentials/verify', 'GET /catalog/credential-types',
+        'GET /career-paths', 'GET /career-paths/:id/readiness/:user_id',
+        'GET /credentials/mine (JWT)', 'GET /credentials/search (API key)',
+        'GET /credentials/user/:email (API key)', 'POST /credentials/issue (API key)',
+        'POST /webhooks (API key)', 'GET /webhooks (API key)', 'DELETE /webhooks/:id (API key)',
+        'GET /webhooks/:id/deliveries (API key)',
+      ] }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -587,3 +569,53 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+// ==========================================
+// WEBHOOK DISPATCH HELPER
+// ==========================================
+
+async function dispatchWebhook(supabase: any, eventType: string, payload: Record<string, any>) {
+  // Find all active subscriptions for this event type
+  const { data: subs, error } = await supabase
+    .from('webhook_subscriptions')
+    .select('id, webhook_url, secret')
+    .filter('events', 'cs', `{${eventType}}`)
+    .eq('is_active', true);
+
+  if (error || !subs?.length) return;
+
+  const body = JSON.stringify({ event: eventType, timestamp: new Date().toISOString(), data: payload });
+
+  for (const sub of subs) {
+    try {
+      // HMAC-SHA256 signature
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey('raw', encoder.encode(sub.secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+      const signature = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      const resp = await fetch(sub.webhook_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Webhook-Signature': signature, 'X-Webhook-Event': eventType },
+        body,
+      });
+
+      await supabase.from('webhook_delivery_log').insert({
+        subscription_id: sub.id,
+        event_type: eventType,
+        payload,
+        status_code: resp.status,
+        response_body: (await resp.text()).substring(0, 1000),
+        delivered_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      await supabase.from('webhook_delivery_log').insert({
+        subscription_id: sub.id,
+        event_type: eventType,
+        payload,
+        status_code: 0,
+        response_body: err instanceof Error ? err.message : 'Delivery failed',
+      });
+    }
+  }
+}
