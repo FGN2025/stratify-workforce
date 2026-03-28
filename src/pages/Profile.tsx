@@ -24,8 +24,11 @@ import {
   Loader2,
   Code,
   Copy,
-  Check
+  Check,
+  TrendingUp
 } from 'lucide-react';
+import { useCareerReadiness } from '@/hooks/useCareerReadiness';
+import { Progress } from '@/components/ui/progress';
 import { useState } from 'react';
 import type { SkillSet } from '@/types/tenant';
 import { ATS_RESOURCES } from '@/config/simResources';
