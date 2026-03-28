@@ -7,6 +7,9 @@ import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceC
 import { WorkOrderFilters, WorkOrderFilter } from '@/components/work-orders/WorkOrderFilters';
 import { useWorkOrders, WorkOrderWithXP } from '@/hooks/useWorkOrders';
 import { useChannelSubscriptions } from '@/hooks/useChannelSubscriptions';
+import { useUserRole } from '@/hooks/useUserRole';
+import { ImportChallengeDialog, type MappedChallengeData } from '@/components/admin/ImportChallengeDialog';
+import { WorkOrderEditDialog } from '@/components/admin/WorkOrderEditDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { 
@@ -23,7 +26,7 @@ import {
 } from 'lucide-react';
 import type { Tenant, GameTitle } from '@/types/tenant';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ATS_RESOURCES } from '@/config/simResources';
 
 const WorkOrders = () => {
