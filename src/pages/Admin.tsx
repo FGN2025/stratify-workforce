@@ -231,6 +231,7 @@ export default function Admin() {
             <TabsTrigger value="sim-resources">SIM Resources</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
             <TabsTrigger value="codes">Registration Codes</TabsTrigger>
+            <TabsTrigger value="career-paths">Career Paths</TabsTrigger>
             {isSuperAdmin && (
               <>
                 <TabsTrigger value="community-review" className="relative text-primary data-[state=active]:text-primary">
