@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ExternalLink, Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Award, ArrowRight, CheckCircle2, Circle } from 'lucide-react';
+import { ExternalLink, Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Award, ArrowRight, CheckCircle2, Circle, ShieldCheck, BookOpen } from 'lucide-react';
 import { SIM_RESOURCES } from '@/config/simResources';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCareerReadiness } from '@/hooks/useCareerReadiness';
+import { useCareerPaths } from '@/hooks/useCareerPaths';
 
 const CAREER_PATHS = [
   {
