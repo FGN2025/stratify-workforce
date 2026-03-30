@@ -83,16 +83,17 @@ const CAREER_PATHS = [
   },
 ];
 
-function readinessColor(pct: number) {
-  if (pct >= 75) return 'text-green-500';
-  if (pct >= 50) return 'text-yellow-500';
-  if (pct >= 25) return 'text-orange-500';
+function readinessColor(pct: number, threshold: number) {
+  if (pct >= threshold) return 'text-green-500';
+  if (pct >= threshold * 0.66) return 'text-yellow-500';
+  if (pct >= threshold * 0.33) return 'text-orange-500';
   return 'text-muted-foreground';
 }
 
 export default function Careers() {
   const { user } = useAuth();
   const { data: readinessMap } = useCareerReadiness();
+  const { data: careerPathsMap } = useCareerPaths();
 
   // Fetch requirements from DB for display
   const { data: requirements } = useRequirements();
