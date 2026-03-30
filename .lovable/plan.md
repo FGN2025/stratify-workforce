@@ -1,29 +1,54 @@
 
 
-# Activate Farming Simulator & Construction Simulator SIM Resources
+# Configurable Career Readiness Thresholds
 
 ## Summary
-The sidebar already dynamically renders resources from the `sim_resources` database table, showing "Coming Soon" only when no records exist. To activate these two games, we simply need to seed placeholder resources that will appear in the sidebar and can be managed by admins going forward.
+Replace the hardcoded 75% readiness threshold with a per-career-path configurable value stored in the database. Users below the threshold see training bridge recommendations. Users at or above it are flagged as "advancement ready."
 
-## Approach
-Create a database migration that inserts initial SIM Resource records for **Farming Simulator** and **Construction Simulator**. Each will get a starter "Training Hub" resource pointing to `play.fgn.gg` as a placeholder URL (admins can update the URLs later via the SIM Resources tab when the play.fgn.gg integrations are ready).
+## Database Change
 
-## What Changes
+Add a `min_readiness_pct` column to the existing `career_path_requirements` grouping. Since requirements are per-path but there's no `career_paths` table, we need a small lookup table:
 
-| Item | Detail |
+**New table: `career_paths`**
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| id | text (PK) | — | e.g. `cdl-class-a`, `fiber-technician` |
+| min_readiness_pct | integer | 75 | Configurable threshold per path |
+| training_bridge_url | text (nullable) | — | External training link (e.g. broadbandworkforce.com) |
+| training_bridge_label | text (nullable) | — | Display name for the link |
+
+This gives admins a single place to tune each path's gate and associated training link.
+
+**RLS**: Public SELECT, admin ALL.
+
+## Frontend Changes
+
+### `src/pages/Careers.tsx`
+- Fetch `career_paths` table alongside requirements
+- Use `min_readiness_pct` from DB instead of hardcoded 75%
+- Show "Recommended Training" card when user's readiness is **below** the path's threshold
+- Show "Ready to Advance" badge when user's readiness is **at or above** the threshold
+
+### `src/pages/Profile.tsx`
+- Same logic for the Career Readiness section on the Skill Passport — use per-path thresholds
+
+### Admin (optional future)
+- The `career_paths` table is admin-editable, so thresholds can be adjusted without code changes
+
+## Logic
+
+```text
+For each career path the user is active in:
+  if readiness_pct >= career_path.min_readiness_pct → show "Ready to Advance" badge
+  if readiness_pct < career_path.min_readiness_pct  → show training bridge link
+```
+
+## Files Changed
+
+| File | Change |
 |------|--------|
-| **Migration SQL** | Insert 2 `sim_resources` rows — one for `Farming_Sim`, one for `Construction_Sim` — with title, description, placeholder href (`https://play.fgn.gg`), appropriate icon, and the game's brand accent color |
-| **No code changes** | The sidebar, admin manager, and hooks already support dynamic database-driven resources for all games — no frontend modifications needed |
-
-## Seed Data
-
-| Game | Title | Description | Icon | Color |
-|------|-------|-------------|------|-------|
-| Farming_Sim | Farming Training Hub | Skills development and challenge gateway for Farming Simulator | `tractor` | `#22C55E` |
-| Construction_Sim | Construction Training Hub | Skills development and challenge gateway for Construction Simulator | `hard-hat` | `#F59E0B` |
-
-## What Happens Next
-- Both games will immediately show their resource links in the sidebar (replacing "Coming Soon")
-- Admins can edit titles, URLs, descriptions, and add more resources via the **SIM Resources** tab
-- When the play.fgn.gg chain-gate integration specs arrive, the URLs and additional resources can be updated without any code changes
+| Migration SQL | Create `career_paths` table, seed rows with default 75% threshold and training URLs |
+| `src/pages/Careers.tsx` | Fetch thresholds from `career_paths`, replace hardcoded 75%, render training bridge cards |
+| `src/hooks/useCareerReadiness.ts` | No change — readiness calculation stays the same, threshold comparison is UI-side |
 
