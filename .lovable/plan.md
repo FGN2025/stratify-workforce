@@ -1,54 +1,20 @@
 
 
-# Configurable Career Readiness Thresholds
+# Add Fiber-Tech to Work Order Game Assignment & Fix Missing Option
 
-## Summary
-Replace the hardcoded 75% readiness threshold with a per-career-path configurable value stored in the database. Users below the threshold see training bridge recommendations. Users at or above it are flagged as "advancement ready."
+## Problem
+The Work Order creation/edit dialog is missing **Fiber-Tech Simulator** from the Game dropdown (lines 470-475 of `WorkOrderEditDialog.tsx`). Similarly, the `WorkOrdersManager.tsx` filter dropdown is missing it. All five simulation tracks should be selectable.
 
-## Database Change
-
-Add a `min_readiness_pct` column to the existing `career_path_requirements` grouping. Since requirements are per-path but there's no `career_paths` table, we need a small lookup table:
-
-**New table: `career_paths`**
-
-| Column | Type | Default | Notes |
-|--------|------|---------|-------|
-| id | text (PK) | — | e.g. `cdl-class-a`, `fiber-technician` |
-| min_readiness_pct | integer | 75 | Configurable threshold per path |
-| training_bridge_url | text (nullable) | — | External training link (e.g. broadbandworkforce.com) |
-| training_bridge_label | text (nullable) | — | Display name for the link |
-
-This gives admins a single place to tune each path's gate and associated training link.
-
-**RLS**: Public SELECT, admin ALL.
-
-## Frontend Changes
-
-### `src/pages/Careers.tsx`
-- Fetch `career_paths` table alongside requirements
-- Use `min_readiness_pct` from DB instead of hardcoded 75%
-- Show "Recommended Training" card when user's readiness is **below** the path's threshold
-- Show "Ready to Advance" badge when user's readiness is **at or above** the threshold
-
-### `src/pages/Profile.tsx`
-- Same logic for the Career Readiness section on the Skill Passport — use per-path thresholds
-
-### Admin (optional future)
-- The `career_paths` table is admin-editable, so thresholds can be adjusted without code changes
-
-## Logic
-
-```text
-For each career path the user is active in:
-  if readiness_pct >= career_path.min_readiness_pct → show "Ready to Advance" badge
-  if readiness_pct < career_path.min_readiness_pct  → show training bridge link
-```
-
-## Files Changed
+## What Changes
 
 | File | Change |
 |------|--------|
-| Migration SQL | Create `career_paths` table, seed rows with default 75% threshold and training URLs |
-| `src/pages/Careers.tsx` | Fetch thresholds from `career_paths`, replace hardcoded 75%, render training bridge cards |
-| `src/hooks/useCareerReadiness.ts` | No change — readiness calculation stays the same, threshold comparison is UI-side |
+| `src/components/admin/WorkOrderEditDialog.tsx` | Add `<SelectItem value="Fiber_Tech">Fiber-Tech Simulator</SelectItem>` to the Game select (after line 474) |
+| `src/components/admin/WorkOrdersManager.tsx` | Add `<SelectItem value="Fiber_Tech">Fiber-Tech Simulator</SelectItem>` to the game filter select, and add `Fiber_Tech` entry to the `GAME_LABELS` map |
+
+## Detail
+The `game_title` enum already includes `Fiber_Tech` — it's just not rendered as an option in these two components. No database or backend changes needed. The label "Simulation Resource" language in the UI can stay as "Game" since that's the existing convention across the app.
+
+## Also Fixing
+The `BookOpen` runtime error on Profile.tsx — will verify if the import exists and fix if missing.
 
