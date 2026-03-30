@@ -18,6 +18,7 @@ import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
 import { DiscordConnectionsManager } from '@/components/admin/DiscordConnectionsManager';
 import { AIConfigManager } from '@/components/admin/AIConfigManager';
 import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
+import { CareerPathsManager } from '@/components/admin/CareerPathsManager';
 import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -230,6 +231,7 @@ export default function Admin() {
             <TabsTrigger value="sim-resources">SIM Resources</TabsTrigger>
             <TabsTrigger value="media">Media Library</TabsTrigger>
             <TabsTrigger value="codes">Registration Codes</TabsTrigger>
+            <TabsTrigger value="career-paths">Career Paths</TabsTrigger>
             {isSuperAdmin && (
               <>
                 <TabsTrigger value="community-review" className="relative text-primary data-[state=active]:text-primary">
@@ -336,6 +338,14 @@ export default function Admin() {
             <Card className="border-border/50">
               <CardContent className="pt-6">
                 <RegistrationCodeManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="career-paths">
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <CareerPathsManager />
               </CardContent>
             </Card>
           </TabsContent>
