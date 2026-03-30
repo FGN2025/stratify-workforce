@@ -342,6 +342,14 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="career-paths">
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <CareerPathsManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {isSuperAdmin && (
             <>
               <TabsContent value="community-review">
