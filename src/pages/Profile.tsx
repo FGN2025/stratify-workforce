@@ -264,26 +264,51 @@ const Profile = () => {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.values(readinessMap)
                 .sort((a, b) => b.readinessPct - a.readinessPct)
-                .map((r) => (
-                  <div key={r.careerPathId} className="glass-card p-4 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-semibold capitalize">
-                        {r.careerPathId.replace(/-/g, ' ')}
-                      </span>
-                      <span className={`text-sm font-bold ${
-                        r.readinessPct >= 75 ? 'text-green-500' :
-                        r.readinessPct >= 50 ? 'text-yellow-500' :
-                        'text-muted-foreground'
-                      }`}>
-                        {r.readinessPct}%
-                      </span>
+                .map((r) => {
+                  const pathConfig = careerPathsMap?.[r.careerPathId];
+                  const threshold = pathConfig?.min_readiness_pct ?? 75;
+                  const isReady = r.readinessPct >= threshold;
+
+                  return (
+                    <div key={r.careerPathId} className="glass-card p-4 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold capitalize">
+                          {r.careerPathId.replace(/-/g, ' ')}
+                        </span>
+                        {isReady ? (
+                          <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 text-[10px]">
+                            <ShieldCheck className="h-3 w-3" />
+                            Ready
+                          </Badge>
+                        ) : (
+                          <span className={`text-sm font-bold ${
+                            r.readinessPct >= threshold * 0.66 ? 'text-yellow-500' :
+                            'text-muted-foreground'
+                          }`}>
+                            {r.readinessPct}%
+                          </span>
+                        )}
+                      </div>
+                      <Progress value={r.readinessPct} className="h-2" />
+                      <div className="flex justify-between items-center">
+                        <p className="text-[10px] text-muted-foreground">
+                          {r.matchedCount}/{r.totalCount} requirements met (min {threshold}%)
+                        </p>
+                        {!isReady && pathConfig?.training_bridge_url && (
+                          <a
+                            href={pathConfig.training_bridge_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-primary hover:underline flex items-center gap-1"
+                          >
+                            <BookOpen className="h-3 w-3" />
+                            {pathConfig.training_bridge_label || 'Training'}
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    <Progress value={r.readinessPct} className="h-2" />
-                    <p className="text-[10px] text-muted-foreground">
-                      {r.matchedCount}/{r.totalCount} requirements met
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </section>
         )}
