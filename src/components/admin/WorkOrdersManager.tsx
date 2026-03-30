@@ -242,6 +242,7 @@ export function WorkOrdersManager() {
             <SelectItem value="Farming_Sim">Farming Simulator</SelectItem>
             <SelectItem value="Construction_Sim">Construction Simulator</SelectItem>
             <SelectItem value="Mechanic_Sim">Mechanic Simulator</SelectItem>
+            <SelectItem value="Fiber_Tech">Fiber-Tech Simulator</SelectItem>
           </SelectContent>
         </Select>
 
