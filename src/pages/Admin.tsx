@@ -18,6 +18,7 @@ import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
 import { DiscordConnectionsManager } from '@/components/admin/DiscordConnectionsManager';
 import { AIConfigManager } from '@/components/admin/AIConfigManager';
 import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
+import { CareerPathsManager } from '@/components/admin/CareerPathsManager';
 import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
