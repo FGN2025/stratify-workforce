@@ -8,6 +8,7 @@ import { AchievementCard } from '@/components/profile/AchievementCard';
 import { CertificationCard } from '@/components/profile/CertificationCard';
 import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
