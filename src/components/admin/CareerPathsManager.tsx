@@ -125,7 +125,7 @@ export function CareerPathsManager() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <GraduationCap className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Career Path Thresholds</h3>
+          <h3 className="text-lg font-semibold">Skills Path Thresholds</h3>
         </div>
         <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4 mr-1" /> Add Path
