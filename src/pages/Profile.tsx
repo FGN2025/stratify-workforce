@@ -70,6 +70,7 @@ const Profile = () => {
   const { user, session } = useAuth();
   const { profile, credentials, achievements, stats, isLoading, isOwnProfile, error } = useProfile(userId);
   const { data: readinessMap } = useCareerReadiness(userId);
+  const { data: careerPathsMap } = useCareerPaths();
   const [exporting, setExporting] = useState(false);
 
   const handleExportPDF = async () => {
