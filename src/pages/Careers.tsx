@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ExternalLink, Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Award, ArrowRight, CheckCircle2, Circle } from 'lucide-react';
+import { ExternalLink, Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Award, ArrowRight, CheckCircle2, Circle, ShieldCheck, BookOpen } from 'lucide-react';
 import { SIM_RESOURCES } from '@/config/simResources';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCareerReadiness } from '@/hooks/useCareerReadiness';
+import { useCareerPaths } from '@/hooks/useCareerPaths';
 
 const CAREER_PATHS = [
   {
@@ -82,16 +83,17 @@ const CAREER_PATHS = [
   },
 ];
 
-function readinessColor(pct: number) {
-  if (pct >= 75) return 'text-green-500';
-  if (pct >= 50) return 'text-yellow-500';
-  if (pct >= 25) return 'text-orange-500';
+function readinessColor(pct: number, threshold: number) {
+  if (pct >= threshold) return 'text-green-500';
+  if (pct >= threshold * 0.66) return 'text-yellow-500';
+  if (pct >= threshold * 0.33) return 'text-orange-500';
   return 'text-muted-foreground';
 }
 
 export default function Careers() {
   const { user } = useAuth();
   const { data: readinessMap } = useCareerReadiness();
+  const { data: careerPathsMap } = useCareerPaths();
 
   // Fetch requirements from DB for display
   const { data: requirements } = useRequirements();
@@ -164,6 +166,9 @@ export default function Careers() {
             const pct = readiness?.readinessPct ?? 0;
             const matchedLabels = readiness?.matchedLabels ?? [];
             const pathReqs = requirements?.filter(r => r.career_path_id === career.id) ?? [];
+            const pathConfig = careerPathsMap?.[career.id];
+            const threshold = pathConfig?.min_readiness_pct ?? 75;
+            const isReady = pct >= threshold;
 
             return (
               <Card key={career.id} className="overflow-hidden hover:border-primary/30 transition-colors">
@@ -201,10 +206,33 @@ export default function Careers() {
                   {user && (
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Apprenticeship Readiness</span>
-                        <span className={`font-semibold ${readinessColor(pct)}`}>{pct}%</span>
+                        <span className="text-muted-foreground">Apprenticeship Readiness (min {threshold}%)</span>
+                        <span className={`font-semibold ${readinessColor(pct, threshold)}`}>{pct}%</span>
                       </div>
                       <Progress value={pct} className="h-2" />
+
+                      {/* Ready to Advance or Training Bridge */}
+                      {pct > 0 && (
+                        <div className="pt-1">
+                          {isReady ? (
+                            <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+                              <ShieldCheck className="h-3 w-3" />
+                              Ready to Advance
+                            </Badge>
+                          ) : pathConfig?.training_bridge_url ? (
+                            <a
+                              href={pathConfig.training_bridge_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                            >
+                              <BookOpen className="h-3 w-3" />
+                              {pathConfig.training_bridge_label || 'Recommended Training'}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -229,8 +257,7 @@ export default function Careers() {
                               </Badge>
                             );
                           })
-                        : /* Fallback if requirements haven't loaded */
-                          null
+                        : null
                       }
                     </div>
                   </div>
