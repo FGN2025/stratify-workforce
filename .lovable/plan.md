@@ -1,32 +1,29 @@
 
 
-# Fix: Wire "New Work Order" Button (Admin-Only)
+# Activate Farming Simulator & Construction Simulator SIM Resources
 
 ## Summary
-Add `onClick` to the "New Work Order" button on `/work-orders`, opening the existing `ImportChallengeDialog` → `WorkOrderEditDialog` flow. The button only renders for admin/super_admin users.
+The sidebar already dynamically renders resources from the `sim_resources` database table, showing "Coming Soon" only when no records exist. To activate these two games, we simply need to seed placeholder resources that will appear in the sidebar and can be managed by admins going forward.
 
-## Changes — `src/pages/WorkOrders.tsx`
+## Approach
+Create a database migration that inserts initial SIM Resource records for **Farming Simulator** and **Construction Simulator**. Each will get a starter "Training Hub" resource pointing to `play.fgn.gg` as a placeholder URL (admins can update the URLs later via the SIM Resources tab when the play.fgn.gg integrations are ready).
 
-1. **Add imports**: `useUserRole`, `ImportChallengeDialog`, `WorkOrderEditDialog`, `useQueryClient`, `MappedChallengeData`
-2. **Add state**:
-   - `showImportDialog` (boolean)
-   - `showEditDialog` (boolean)
-   - `importedData` (mapped challenge data for pre-filling the edit form)
-3. **Admin guard**: Use `useUserRole()` — only include the `primaryAction` prop when `isAdmin` is true
-4. **Wire `onClick`**: `primaryAction.onClick` opens the import dialog
-5. **Import → Edit flow**: When a challenge is selected from `ImportChallengeDialog`, store the mapped data and open `WorkOrderEditDialog` with a synthetic work order object pre-filled from the import
-6. **Refresh on save**: Call `queryClient.invalidateQueries({ queryKey: ['work-orders'] })` from the `onSave` callback
-7. **Render dialogs**: Add both dialog components at the bottom of the JSX (inside `<AppLayout>`)
+## What Changes
 
-## Technical Detail
+| Item | Detail |
+|------|--------|
+| **Migration SQL** | Insert 2 `sim_resources` rows — one for `Farming_Sim`, one for `Construction_Sim` — with title, description, placeholder href (`https://play.fgn.gg`), appropriate icon, and the game's brand accent color |
+| **No code changes** | The sidebar, admin manager, and hooks already support dynamic database-driven resources for all games — no frontend modifications needed |
 
-```text
-Button click (admin only)
-  → ImportChallengeDialog opens
-  → User selects challenge
-  → WorkOrderEditDialog opens (pre-filled)
-  → Save → invalidate work-orders query → list refreshes
-```
+## Seed Data
 
-Only one file changes: `src/pages/WorkOrders.tsx`.
+| Game | Title | Description | Icon | Color |
+|------|-------|-------------|------|-------|
+| Farming_Sim | Farming Training Hub | Skills development and challenge gateway for Farming Simulator | `tractor` | `#22C55E` |
+| Construction_Sim | Construction Training Hub | Skills development and challenge gateway for Construction Simulator | `hard-hat` | `#F59E0B` |
+
+## What Happens Next
+- Both games will immediately show their resource links in the sidebar (replacing "Coming Soon")
+- Admins can edit titles, URLs, descriptions, and add more resources via the **SIM Resources** tab
+- When the play.fgn.gg chain-gate integration specs arrive, the URLs and additional resources can be updated without any code changes
 
