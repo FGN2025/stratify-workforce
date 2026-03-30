@@ -272,6 +272,33 @@ export type Database = {
         }
         Relationships: []
       }
+      career_paths: {
+        Row: {
+          created_at: string
+          id: string
+          min_readiness_pct: number
+          training_bridge_label: string | null
+          training_bridge_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          min_readiness_pct?: number
+          training_bridge_label?: string | null
+          training_bridge_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          min_readiness_pct?: number
+          training_bridge_label?: string | null
+          training_bridge_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       channel_posts: {
         Row: {
           channel_game: Database["public"]["Enums"]["game_title"]
