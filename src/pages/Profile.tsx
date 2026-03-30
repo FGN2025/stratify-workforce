@@ -26,7 +26,9 @@ import {
   Code,
   Copy,
   Check,
-  TrendingUp
+  TrendingUp,
+  ShieldCheck,
+  BookOpen
 } from 'lucide-react';
 import { useCareerReadiness } from '@/hooks/useCareerReadiness';
 import { useCareerPaths } from '@/hooks/useCareerPaths';
