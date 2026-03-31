@@ -95,6 +95,9 @@ const App = () => (
               <Route path="/admin" element={
                 <AdminRoute><Admin /></AdminRoute>
               } />
+              <Route path="/admin/:section" element={
+                <AdminRoute><Admin /></AdminRoute>
+              } />
               <Route path="/developers" element={
                 <DeveloperRoute><Developers /></DeveloperRoute>
               } />

@@ -6,7 +6,6 @@ import {
   User, 
   Users, 
   Settings,
-  Gauge,
   Trophy,
   ShieldCheck,
   GraduationCap,
@@ -23,6 +22,21 @@ import {
   Target,
   Code,
   HelpCircle,
+  FileCheck,
+  Gamepad2,
+  Box,
+  Image,
+  KeyRound,
+  Route,
+  MessageSquare,
+  AppWindow,
+  Webhook,
+  Award,
+  MessageCircle,
+  Bot,
+  Zap,
+  Shield,
+  Calendar,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -38,10 +52,13 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSimResources } from '@/hooks/useSimResources';
+import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
+import { usePendingCommunityCount } from '@/hooks/usePendingCommunityCount';
 import { cn } from '@/lib/utils';
 import { SIM_RESOURCES, hasResources } from '@/config/simResources';
 import type { GameTitle } from '@/types/tenant';
@@ -59,8 +76,30 @@ const mainNavItems = [
   { title: 'Help', url: '/help/student', icon: HelpCircle },
 ];
 
-const adminNavItems = [
-  { title: 'Admin Dashboard', url: '/admin', icon: ShieldCheck, adminOnly: true },
+const adminSubItems = [
+  { title: 'Users', url: '/admin/users', icon: Users },
+  { title: 'Events', url: '/admin/events', icon: Calendar },
+  { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
+  { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const },
+  { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
+  { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
+  { title: 'Media Library', url: '/admin/media', icon: Image },
+  { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
+  { title: 'Skills Paths', url: '/admin/career-paths', icon: Route },
+];
+
+const superAdminSubItems = [
+  { title: 'Community Review', url: '/admin/community-review', icon: MessageSquare, badgeKey: 'community' as const },
+  { title: 'Authorized Apps', url: '/admin/authorized-apps', icon: AppWindow },
+  { title: 'Webhooks', url: '/admin/webhooks', icon: Webhook },
+  { title: 'Credential Types', url: '/admin/credential-types', icon: Award },
+  { title: 'Discord', url: '/admin/discord', icon: MessageCircle },
+  { title: 'AI Config', url: '/admin/ai-config', icon: Bot },
+  { title: 'FGN Play', url: '/admin/sync-tester', icon: Zap },
+  { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
+];
+
+const standaloneAdminItems = [
   { title: 'Students', url: '/students', icon: Users, adminOnly: true },
   { title: 'Settings', url: '/settings', icon: Settings, adminOnly: true },
   { title: 'Developers', url: '/developers', icon: Code, developerOnly: true },
@@ -89,10 +128,19 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { tenant } = useTenant();
   const { isLoading: authLoading } = useAuth();
-  const { isAdmin, isDeveloper, isLoading: roleLoading } = useUserRole();
+  const { isAdmin, isDeveloper, isSuperAdmin, isLoading: roleLoading } = useUserRole();
   
   // Fetch database resources
   const { data: dbResources } = useSimResources();
+
+  // Pending counts for badges
+  const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
+  const { data: pendingCommunityCount = 0 } = usePendingCommunityCount();
+
+  const badgeCounts: Record<string, number> = {
+    evidence: pendingEvidenceCount,
+    community: pendingCommunityCount,
+  };
   
   // Track open state for each game dropdown
   const [openGames, setOpenGames] = useState<Record<GameTitle, boolean>>({
@@ -103,6 +151,9 @@ export function AppSidebar() {
     Fiber_Tech: false,
   });
 
+  const isOnAdminPage = location.pathname.startsWith('/admin');
+  const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
+
   const toggleGame = (game: GameTitle) => {
     setOpenGames(prev => ({ ...prev, [game]: !prev[game] }));
   };
@@ -111,13 +162,13 @@ export function AppSidebar() {
   
   // Show admin items while loading (optimistic) to prevent race condition
   const isLoadingAuth = authLoading || roleLoading;
-  const visibleAdminItems = adminNavItems.filter((item) => {
-    if ('adminOnly' in item && item.adminOnly) {
-      return isLoadingAuth || isAdmin;
-    }
-    if ('developerOnly' in item && (item as any).developerOnly) {
-      return isLoadingAuth || isDeveloper || isAdmin;
-    }
+  const showAdmin = isLoadingAuth || isAdmin;
+  const showSuperAdmin = isLoadingAuth || isSuperAdmin;
+  const showDeveloper = isLoadingAuth || isDeveloper || isAdmin;
+
+  const visibleStandaloneItems = standaloneAdminItems.filter((item) => {
+    if ('adminOnly' in item && item.adminOnly) return showAdmin;
+    if ('developerOnly' in item && (item as any).developerOnly) return showDeveloper;
     return true;
   });
 
@@ -138,14 +189,12 @@ export function AppSidebar() {
       });
       return grouped;
     }
-    return null; // Will use static fallback
+    return null;
   }, [dbResources]);
 
-  // Helper to get icon component
   const getResourceIcon = (iconName: string): LucideIcon => {
     return ICON_MAP[iconName] || LinkIcon;
   };
-
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -165,6 +214,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="scrollbar-dark">
+        {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
             Operations
@@ -197,7 +247,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Sim Resources - External Links for all simulator games */}
+        {/* Sim Resources */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
             Sim Resources
@@ -207,8 +257,6 @@ export function AppSidebar() {
               {GAME_ORDER.map((gameKey) => {
                 const game = SIM_RESOURCES[gameKey];
                 const GameIcon = game.icon;
-                
-                // Use database resources if available, otherwise fall back to static
                 const gameResources = resourcesByGame?.[gameKey] || null;
                 const hasDbResources = gameResources && gameResources.length > 0;
                 const hasStaticResources = hasResources(gameKey);
@@ -247,7 +295,6 @@ export function AppSidebar() {
                       <CollapsibleContent className="pl-4">
                         <SidebarMenu>
                           {hasDbResources ? (
-                            // Render from database
                             gameResources.map((resource) => {
                               const ResourceIcon = getResourceIcon(resource.icon_name);
                               return (
@@ -279,7 +326,6 @@ export function AppSidebar() {
                               );
                             })
                           ) : hasStaticResources ? (
-                            // Fallback to static config
                             game.resources.map((resource) => {
                               const ResourceIcon = resource.icon;
                               return (
@@ -328,37 +374,150 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-            Admin
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleAdminItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <NavLink
-                      to={item.url}
-                      className={cn(
-                        "flex items-center gap-3 transition-colors",
-                        isActive(item.url) 
-                          ? "text-primary bg-primary/10" 
-                          : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                      )}
+        {/* Admin Section */}
+        {showAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
+              Admin
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {/* Admin Dashboard collapsible */}
+                <Collapsible open={adminOpen} onOpenChange={setAdminOpen}>
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        tooltip="Admin Dashboard"
+                        className={cn(
+                          "w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent",
+                          isOnAdminPage && "text-primary bg-primary/10"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <ShieldCheck className="h-4 w-4" />
+                          {!collapsed && <span>Admin Dashboard</span>}
+                        </div>
+                        {!collapsed && (
+                          <ChevronDown className={cn(
+                            "h-4 w-4 transition-transform",
+                            adminOpen && "rotate-180"
+                          )} />
+                        )}
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pl-4">
+                      <SidebarMenu>
+                        {adminSubItems.map((item) => {
+                          const count = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
+                          return (
+                            <SidebarMenuItem key={item.url}>
+                              <SidebarMenuButton
+                                asChild
+                                isActive={isActive(item.url)}
+                                tooltip={item.title}
+                              >
+                                <NavLink
+                                  to={item.url}
+                                  className={cn(
+                                    "flex items-center gap-3 transition-colors",
+                                    isActive(item.url)
+                                      ? "text-primary bg-primary/10"
+                                      : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                  )}
+                                >
+                                  <item.icon className="h-4 w-4" />
+                                  {!collapsed && (
+                                    <>
+                                      <span>{item.title}</span>
+                                      {count > 0 && (
+                                        <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs ml-auto">
+                                          {count > 99 ? '99+' : count}
+                                        </Badge>
+                                      )}
+                                    </>
+                                  )}
+                                </NavLink>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          );
+                        })}
+
+                        {/* Super Admin sub-items */}
+                        {showSuperAdmin && (
+                          <>
+                            {!collapsed && (
+                              <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-primary/70 font-semibold">
+                                Super Admin
+                              </div>
+                            )}
+                            {superAdminSubItems.map((item) => {
+                              const count = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
+                              return (
+                                <SidebarMenuItem key={item.url}>
+                                  <SidebarMenuButton
+                                    asChild
+                                    isActive={isActive(item.url)}
+                                    tooltip={item.title}
+                                  >
+                                    <NavLink
+                                      to={item.url}
+                                      className={cn(
+                                        "flex items-center gap-3 transition-colors",
+                                        isActive(item.url)
+                                          ? "text-primary bg-primary/10"
+                                          : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                      )}
+                                    >
+                                      <item.icon className="h-4 w-4" />
+                                      {!collapsed && (
+                                        <>
+                                          <span>{item.title}</span>
+                                          {count > 0 && (
+                                            <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs ml-auto">
+                                              {count > 99 ? '99+' : count}
+                                            </Badge>
+                                          )}
+                                        </>
+                                      )}
+                                    </NavLink>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              );
+                            })}
+                          </>
+                        )}
+                      </SidebarMenu>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+
+                {/* Standalone admin items (Students, Settings, Developers) */}
+                {visibleStandaloneItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      tooltip={item.title}
                     >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                      <NavLink
+                        to={item.url}
+                        className={cn(
+                          "flex items-center gap-3 transition-colors",
+                          isActive(item.url) 
+                            ? "text-primary bg-primary/10" 
+                            : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
