@@ -1,62 +1,67 @@
 
 
-# Review: Approved Plan vs. Developer Brief v2
+# Move Admin Sections to Sidebar Sub-Menu
 
-## Alignment Summary
+## Summary
+Replace the current "Admin Dashboard" single link in the sidebar with an expandable collapsible group. Each admin section (Users, Events, Work Orders, etc.) becomes a sidebar sub-link navigating to `/admin/:section`. The `/admin` page renders the correct section based on the URL parameter, removing the on-page accordion.
 
-The previously approved plan and the v2 brief are **well-aligned**. Both specify the same three items, same scope boundary (academy project only), and same architecture. Key confirmations:
+## Changes
 
-| Requirement | Plan Status |
-|-------------|-------------|
-| Hardcoded TRACK3/TRACK4 challenge ID arrays in edge function | **V2 uses hardcoded arrays** — the plan proposed a `track_quiz_map` table instead. **The brief explicitly wants inline constants, not a lookup table.** Adjust to match. |
-| Tenant lookup via `profiles.tenant_id` | ✅ Aligned — brief says "reuse existing profile lookup pattern" and `profiles` has `tenant_id` FK |
-| No `tenant_id` in payload | ✅ Aligned — derive from user profile |
-| 10 quiz questions in `lessons` table as JSONB | ✅ Aligned — `lesson_type = 'quiz'`, `content.questions: QuizQuestion[]` |
-| `correct_index` values (0-based) | ✅ Aligned — T3: 1,2,3,2,1 / T4: 1,2,2,1,1 |
-| 80% pass threshold (4/5) | ✅ Aligned — `passing_score = 80` |
-| Notification strings | ✅ Aligned — same wording |
-| No new tables, no new quiz table | **Gap** — plan proposed `track_quiz_map` table. Brief says NO new tables. |
-| Staging validation before prod | ✅ Aligned |
+### 1. Add routes for each admin section
+**File: `src/App.tsx`**
+- Add route: `/admin/:section` pointing to the same `<AdminRoute><Admin /></AdminRoute>` component
+- The existing `/admin` route stays as the default (redirects to `/admin/users` or shows overview)
 
-## Required Adjustments to the Plan
+### 2. Expand sidebar Admin group into collapsible sub-menu
+**File: `src/components/layout/AppSidebar.tsx`**
+- Replace the single "Admin Dashboard" link with a `Collapsible` group (same pattern as SIM Resources)
+- Admin sub-items: Users, Events, Work Orders, Evidence Review, SIM Games, SIM Resources, Media Library, Registration Codes, Skills Paths
+- Super Admin sub-items (visible to super admins): Community Review, Authorized Apps, Webhooks, Credential Types, Discord, AI Config, FGN Play, Super Admin
+- Each links to `/admin/users`, `/admin/events`, etc.
+- Show pending count badges on Evidence Review and Community Review
+- Import `usePendingEvidenceCount` and `usePendingCommunityCount` hooks
+- Auto-open the collapsible when the current path starts with `/admin`
 
-### 1. Drop the `track_quiz_map` table
-The v2 brief explicitly states: "No new quiz table", "No new notification infrastructure." Track detection should use **hardcoded constants** inside the edge function, not a database lookup table. This is simpler and matches the brief's pseudocode exactly.
+### 3. Simplify Admin page to render section from URL param
+**File: `src/pages/Admin.tsx`**
+- Read `section` from `useParams()` (default to `'overview'` or `'users'`)
+- Keep AdminHero and AdminStatsGrid at the top (only when section is overview/users or always as a compact header)
+- Render the matching section component directly — no accordion wrapper
+- Remove all accordion UI code
 
-### 2. Use inline constants for challenge IDs
-The brief provides exact UUIDs:
+## Sidebar Structure (Admin Group)
 
-**TRACK3 (OSHA Safety — 4 challenges):**
-- `bcb4a446-d0b7-4432-bedb-4f7ce42ff557`
-- `452f8199-9e08-484c-bf8c-887cb24ad3ce`
-- `7c7ae072-81a1-4dac-8307-268266a786e6`
-- `d098fcac-09a6-41b3-b196-97b98e4435e1`
+```text
+ADMIN
+▾ Admin Dashboard        (collapsible trigger → /admin)
+    Users                 /admin/users
+    Events                /admin/events
+    Work Orders           /admin/work-orders
+    Evidence Review [3]   /admin/evidence
+    SIM Games             /admin/games
+    SIM Resources         /admin/sim-resources
+    Media Library         /admin/media
+    Registration Codes    /admin/codes
+    Skills Paths          /admin/career-paths
+  ── Super Admin ──       (only if isSuperAdmin)
+    Community Review [2]  /admin/community-review
+    Authorized Apps       /admin/authorized-apps
+    Webhooks              /admin/webhooks
+    Credential Types      /admin/credential-types
+    Discord               /admin/discord
+    AI Config             /admin/ai-config
+    FGN Play              /admin/sync-tester
+    Super Admin           /admin/super-admin
+  Students                /students
+  Settings                /settings
+  Developers              /developers
+```
 
-**TRACK4 (Fiber Optics — 7 challenges):**
-- `02481a75-383c-485a-bdff-f0a4dd2b9121`
-- `1c899b1a-a527-4023-aeb4-43d387993578`
-- `260d4700-7f7a-431f-9768-097284293cd6`
-- `e18786a7-043f-4900-8a07-c892c36af1b9`
-- `ae4c4228-f107-4f31-ae3d-ec819b0b6863`
-- `2a7c0a85-8f05-4c15-965b-e94f72f3672f`
-- `858d2e0d-6d78-4d7f-8377-0dc40ab269dd`
+## Files Changed
 
-### 3. Quiz lesson seeding still needed
-The brief still requires inserting 2 lesson rows into `lessons` (via a migration or insert). A parent course and module are needed since `lessons` references `module_id`. This is a data insert, not a schema change.
-
-### 4. Track detection logic placement
-Add after step 8 (notifications) in `sync-challenge-completion/index.ts`:
-- Check if `challenge_id` is in TRACK3 or TRACK4
-- Query `user_work_order_completions` for all challenge IDs in that track (joined via `work_orders.source_challenge_id`)
-- If all completed → look up `profiles.tenant_id` for the user → insert `knowledge_check_available` notification
-
-## Revised Implementation Plan
-
-| Step | What |
-|------|------|
-| 1 | Insert course → module → 2 quiz lessons with all 10 questions into `lessons` table (data insert, not schema migration) |
-| 2 | Update `sync-challenge-completion/index.ts`: add TRACK3/TRACK4 constants, completion check helper, tenant lookup from `profiles`, and notification insert after step 8 |
-| 3 | Test via `ChallengeSyncTester` in staging before production deploy |
-
-**No new tables. No schema changes. Two files touched: migration SQL (data seed) and the edge function.**
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Add `/admin/:section` route |
+| `src/components/layout/AppSidebar.tsx` | Replace single Admin link with collapsible sub-menu listing all sections |
+| `src/pages/Admin.tsx` | Read URL param, render single section directly (no accordion) |
 
