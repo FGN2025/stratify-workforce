@@ -371,6 +371,74 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 9. Track completion detection — hardcoded per developer brief v2
+    const TRACK3_CHALLENGES = [
+      'bcb4a446-d0b7-4432-bedb-4f7ce42ff557',
+      '452f8199-9e08-484c-bf8c-887cb24ad3ce',
+      '7c7ae072-81a1-4dac-8307-268266a786e6',
+      'd098fcac-09a6-41b3-b196-97b98e4435e1',
+    ];
+    const TRACK4_CHALLENGES = [
+      '02481a75-383c-485a-bdff-f0a4dd2b9121',
+      '1c899b1a-a527-4023-aeb4-43d387993578',
+      '260d4700-7f7a-431f-9768-097284293cd6',
+      'e18786a7-043f-4900-8a07-c892c36af1b9',
+      'ae4c4228-f107-4f31-ae3d-ec819b0b6863',
+      '2a7c0a85-8f05-4c15-965b-e94f72f3672f',
+      '858d2e0d-6d78-4d7f-8377-0dc40ab269dd',
+    ];
+
+    const TRACK3_LESSON_ID = 'a1b2c3d4-0003-4000-8000-000000000001';
+    const TRACK4_LESSON_ID = 'a1b2c3d4-0004-4000-8000-000000000001';
+
+    let trackCompletion: { track: string; lesson_id: string } | null = null;
+
+    const isTrack3 = TRACK3_CHALLENGES.includes(challenge_id);
+    const isTrack4 = TRACK4_CHALLENGES.includes(challenge_id);
+
+    if (completionStatus === 'completed' && (isTrack3 || isTrack4)) {
+      const trackChallenges = isTrack3 ? TRACK3_CHALLENGES : TRACK4_CHALLENGES;
+      const trackName = isTrack3 ? 'OSHA Safety Overlay' : 'Fiber Optics Construction';
+      const lessonId = isTrack3 ? TRACK3_LESSON_ID : TRACK4_LESSON_ID;
+
+      // Find all work orders linked to this track's challenges
+      const { data: trackWOs } = await supabase
+        .from('work_orders')
+        .select('id, source_challenge_id')
+        .in('source_challenge_id', trackChallenges);
+
+      if (trackWOs && trackWOs.length === trackChallenges.length) {
+        const trackWOIds = trackWOs.map(wo => wo.id);
+
+        // Count how many this user has completed (status = 'completed')
+        const { count: completedCount } = await supabase
+          .from('user_work_order_completions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .in('work_order_id', trackWOIds);
+
+        if (completedCount && completedCount >= trackChallenges.length) {
+          trackCompletion = { track: trackName, lesson_id: lessonId };
+
+          const notifMessage = isTrack3
+            ? 'You have completed the OSHA Safety Overlay track. Continue your skills development at fgn.academy to earn your credential.'
+            : 'You have completed the Fiber Optics Construction track. Continue to fgn.academy to begin your TIRAP UUIT credential pathway.';
+
+          notifications.push({
+            user_id: user.id,
+            type: 'knowledge_check_available',
+            title: `Track Complete: ${trackName}`,
+            message: notifMessage,
+            icon_name: 'graduation-cap',
+            accent_color: '#6366f1',
+            link_url: '/learn',
+            metadata: { track: trackName, lesson_id: lessonId },
+          });
+        }
+      }
+    }
+
     // Batch insert all notifications
     if (notifications.length > 0) {
       await supabase.from('user_notifications').insert(notifications);
