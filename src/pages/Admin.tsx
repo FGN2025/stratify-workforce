@@ -21,13 +21,14 @@ import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
 import { CareerPathsManager } from '@/components/admin/CareerPathsManager';
 import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
 import { usePendingCommunityCount } from '@/hooks/usePendingCommunityCount';
+import { Users, Calendar, ClipboardList, FileCheck, Gamepad2, Box, Image, KeyRound, Route, MessageSquare, AppWindow, Webhook, Award, MessageCircle, Bot, Zap, Shield } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -66,7 +67,6 @@ export default function Admin() {
     setIsLoading(true);
 
     try {
-      // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -74,14 +74,12 @@ export default function Admin() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all roles
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Map roles to users
       const roleMap = new Map(roles?.map((r) => [r.user_id, r.role]) || []);
       const usersWithRoles: UserWithRole[] = (profiles || []).map((p) => ({
         ...p,
@@ -90,22 +88,18 @@ export default function Admin() {
 
       setUsers(usersWithRoles);
 
-      // Fetch work orders count
       const { count: workOrdersCount } = await supabase
         .from('work_orders')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch sessions count
       const { count: sessionsCount } = await supabase
         .from('telemetry_sessions')
         .select('*', { count: 'exact', head: true });
 
-      // Calculate average score
       const avgScore =
         usersWithRoles.reduce((acc, u) => acc + (u.employability_score || 0), 0) /
         (usersWithRoles.length || 1);
 
-      // Calculate new users this week
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       const newUsersThisWeek = (profiles || []).filter(
@@ -122,7 +116,6 @@ export default function Admin() {
         newUsersThisWeek,
       });
 
-      // Fetch tenants for the invite dialog
       const { data: tenantsData } = await supabase
         .from('tenants')
         .select('id, name, slug')
@@ -144,7 +137,6 @@ export default function Admin() {
 
   const handleRoleChange = async (userId: string, newRole: AppRole) => {
     try {
-      // Check if user already has a role
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('id')
@@ -152,7 +144,6 @@ export default function Admin() {
         .maybeSingle();
 
       if (existingRole) {
-        // Update existing role
         const { error } = await supabase
           .from('user_roles')
           .update({ role: newRole })
@@ -160,7 +151,6 @@ export default function Admin() {
 
         if (error) throw error;
       } else {
-        // Insert new role
         const { error } = await supabase
           .from('user_roles')
           .insert({ user_id: userId, role: newRole });
@@ -168,7 +158,6 @@ export default function Admin() {
         if (error) throw error;
       }
 
-      // Update local state
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
       );
@@ -188,10 +177,135 @@ export default function Admin() {
     }
   };
 
+  const adminSections = [
+    {
+      value: 'users',
+      label: 'User Management',
+      icon: Users,
+      content: (
+        <UserManagementTable
+          users={users}
+          isLoading={isLoading}
+          onRoleChange={handleRoleChange}
+          tenants={tenants}
+        />
+      ),
+    },
+    {
+      value: 'events',
+      label: 'Events',
+      icon: Calendar,
+      content: <EventsManager />,
+    },
+    {
+      value: 'work-orders',
+      label: 'Work Orders',
+      icon: ClipboardList,
+      content: <WorkOrdersManager />,
+    },
+    {
+      value: 'evidence',
+      label: 'Evidence Review',
+      icon: FileCheck,
+      badge: pendingEvidenceCount > 0 ? (pendingEvidenceCount > 99 ? '99+' : String(pendingEvidenceCount)) : undefined,
+      content: <EvidenceReviewQueue />,
+    },
+    {
+      value: 'games',
+      label: 'SIM Games',
+      icon: Gamepad2,
+      content: <SimGamesManager />,
+    },
+    {
+      value: 'sim-resources',
+      label: 'SIM Resources',
+      icon: Box,
+      content: <SimResourcesManager />,
+    },
+    {
+      value: 'media',
+      label: 'Media Library',
+      icon: Image,
+      content: <MediaLibrary />,
+    },
+    {
+      value: 'codes',
+      label: 'Registration Codes',
+      icon: KeyRound,
+      content: <RegistrationCodeManager />,
+    },
+    {
+      value: 'career-paths',
+      label: 'Skills Paths',
+      icon: Route,
+      content: <CareerPathsManager />,
+    },
+  ];
+
+  const superAdminSections = [
+    {
+      value: 'community-review',
+      label: 'Community Review',
+      icon: MessageSquare,
+      badge: pendingCommunityCount > 0 ? (pendingCommunityCount > 99 ? '99+' : String(pendingCommunityCount)) : undefined,
+      content: <CommunityReviewQueue />,
+    },
+    {
+      value: 'authorized-apps',
+      label: 'Authorized Apps',
+      icon: AppWindow,
+      content: <AuthorizedAppsManager />,
+    },
+    {
+      value: 'webhooks',
+      label: 'Webhooks',
+      icon: Webhook,
+      content: <WebhookManager />,
+    },
+    {
+      value: 'credential-types',
+      label: 'Credential Types',
+      icon: Award,
+      content: <CredentialTypesManager />,
+    },
+    {
+      value: 'discord',
+      label: 'Discord',
+      icon: MessageCircle,
+      colorClass: 'text-[#5865F2]',
+      content: <DiscordConnectionsManager />,
+    },
+    {
+      value: 'ai-config',
+      label: 'AI Config',
+      icon: Bot,
+      colorClass: 'text-emerald-400',
+      content: <AIConfigManager />,
+    },
+    {
+      value: 'sync-tester',
+      label: 'FGN Play',
+      icon: Zap,
+      colorClass: 'text-amber-400',
+      content: (
+        <div className="space-y-6">
+          <IntegrationHealthCheck />
+          <ChallengeSyncTester />
+        </div>
+      ),
+    },
+    {
+      value: 'super-admin',
+      label: 'Super Admin',
+      icon: Shield,
+      colorClass: 'text-amber-400',
+      content: <SuperAdminPanel />,
+    },
+  ];
+
   return (
     <AppLayout>
       <div className="container py-8 space-y-8">
-        {/* Hero Section */}
         <AdminHero
           stats={{
             totalUsers: stats.totalUsers,
@@ -201,7 +315,6 @@ export default function Admin() {
           isLoading={isLoading}
         />
 
-        {/* Stats Grid */}
         <AdminStatsGrid
           averageScore={stats.averageScore}
           sessionsThisWeek={stats.sessionsThisWeek}
@@ -210,213 +323,71 @@ export default function Admin() {
           isLoading={isLoading}
         />
 
-        {/* Tabbed Content */}
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="events">Events</TabsTrigger>
-            <TabsTrigger value="work-orders">Work Orders</TabsTrigger>
-            <TabsTrigger value="evidence" className="relative">
-              Evidence Review
-              {pendingEvidenceCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="ml-2 h-5 min-w-5 px-1.5 text-xs"
+        {/* Admin Sections */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Administration</h2>
+          <Accordion type="single" collapsible className="space-y-2">
+            {adminSections.map((section) => {
+              const Icon = section.icon;
+              return (
+                <AccordionItem
+                  key={section.value}
+                  value={section.value}
+                  className="border border-border/50 rounded-lg bg-card px-1 data-[state=open]:bg-card"
                 >
-                  {pendingEvidenceCount > 99 ? '99+' : pendingEvidenceCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="games">SIM Games</TabsTrigger>
-            <TabsTrigger value="sim-resources">SIM Resources</TabsTrigger>
-            <TabsTrigger value="media">Media Library</TabsTrigger>
-            <TabsTrigger value="codes">Registration Codes</TabsTrigger>
-            <TabsTrigger value="career-paths">Skills Paths</TabsTrigger>
-            {isSuperAdmin && (
-              <>
-                <TabsTrigger value="community-review" className="relative text-primary data-[state=active]:text-primary">
-                  Community Review
-                  {pendingCommunityCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="ml-2 h-5 min-w-5 px-1.5 text-xs"
-                    >
-                      {pendingCommunityCount > 99 ? '99+' : pendingCommunityCount}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="authorized-apps" className="text-primary data-[state=active]:text-primary">
-                  Authorized Apps
-                </TabsTrigger>
-                <TabsTrigger value="webhooks" className="text-primary data-[state=active]:text-primary">
-                  Webhooks
-                </TabsTrigger>
-                <TabsTrigger value="credential-types" className="text-primary data-[state=active]:text-primary">
-                  Credential Types
-                </TabsTrigger>
-                <TabsTrigger value="discord" className="text-[#5865F2] data-[state=active]:text-[#5865F2]">
-                  Discord
-                </TabsTrigger>
-                <TabsTrigger value="ai-config" className="text-emerald-400 data-[state=active]:text-emerald-400">
-                  AI Config
-                </TabsTrigger>
-                <TabsTrigger value="sync-tester" className="text-amber-400 data-[state=active]:text-amber-400">
-                  FGN Play
-                </TabsTrigger>
-                <TabsTrigger value="super-admin" className="text-amber-400 data-[state=active]:text-amber-400">
-                  Super Admin
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList>
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{section.label}</span>
+                      {section.badge && (
+                        <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                          {section.badge}
+                        </Badge>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    {section.content}
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </div>
 
-          <TabsContent value="users">
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <UserManagementTable
-                  users={users}
-                  isLoading={isLoading}
-                  onRoleChange={handleRoleChange}
-                  tenants={tenants}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="events">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <EventsManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="work-orders">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <WorkOrdersManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="evidence">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <EvidenceReviewQueue />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="games">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <SimGamesManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="sim-resources">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <SimResourcesManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="media">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <MediaLibrary />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="codes">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <RegistrationCodeManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="career-paths">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <CareerPathsManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {isSuperAdmin && (
-            <>
-              <TabsContent value="community-review">
-                <Card className="border-border/50">
-                  <CardContent className="pt-6">
-                    <CommunityReviewQueue />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="authorized-apps">
-                <Card className="border-border/50">
-                  <CardContent className="pt-6">
-                    <AuthorizedAppsManager />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="webhooks">
-                <Card className="border-border/50">
-                  <CardContent className="pt-6">
-                    <WebhookManager />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="credential-types">
-                <Card className="border-border/50">
-                  <CardContent className="pt-6">
-                    <CredentialTypesManager />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="discord">
-                <Card className="border-border/50">
-                  <CardContent className="pt-6">
-                    <DiscordConnectionsManager />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="ai-config">
-                <Card className="border-border/50">
-                  <CardContent className="pt-6">
-                    <AIConfigManager />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="sync-tester">
-                <div className="space-y-6">
-                  <IntegrationHealthCheck />
-                  <Card className="border-border/50">
-                    <CardContent className="pt-6">
-                      <ChallengeSyncTester />
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="super-admin">
-                <SuperAdminPanel />
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
+        {/* Super Admin Sections */}
+        {isSuperAdmin && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-primary">Super Admin</h2>
+            <Accordion type="single" collapsible className="space-y-2">
+              {superAdminSections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <AccordionItem
+                    key={section.value}
+                    value={section.value}
+                    className="border border-primary/20 rounded-lg bg-card px-1 data-[state=open]:bg-card"
+                  >
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex items-center gap-3">
+                        <Icon className={`h-4 w-4 ${section.colorClass || 'text-primary'}`} />
+                        <span className={`font-medium ${section.colorClass || 'text-primary'}`}>{section.label}</span>
+                        {section.badge && (
+                          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                            {section.badge}
+                          </Badge>
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      {section.content}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
