@@ -456,6 +456,7 @@ Deno.serve(async (req) => {
         },
         task_progress: taskResults.length > 0 ? taskResults : undefined,
         credential: credential ? { id: credential.id, title: credential.title } : null,
+        track_completion: trackCompletion || undefined,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
