@@ -2317,6 +2317,20 @@ export type Database = {
         Args: { p_course_id: string; p_user_id: string }
         Returns: number
       }
+      get_embed_config: {
+        Args: { p_token: string }
+        Returns: {
+          display_count: number
+          game_title: string
+          id: string
+          show_avatars: boolean
+          show_change: boolean
+          tenant_id: string
+          theme: string
+          title: string
+          work_order_id: string
+        }[]
+      }
       get_leaderboard_data:
         | {
             Args: never
