@@ -61,8 +61,6 @@ export function WorkOrderCard({ workOrder, tenantColor }: WorkOrderCardProps) {
             )}
             <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
               <Users className="h-3.5 w-3.5" />
-              <span className="font-data">24</span>
-              <span>active</span>
             </div>
           </div>
         </div>

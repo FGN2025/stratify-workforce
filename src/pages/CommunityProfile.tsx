@@ -110,12 +110,9 @@ const CommunityProfile = () => {
     );
   }
 
-  // Mock stats
   const stats = {
-    members: Math.floor(Math.random() * 500) + 100,
-    events: workOrders.length || Math.floor(Math.random() * 20) + 5,
-    rating: parseFloat((Math.random() * 1 + 4).toFixed(1)),
-    completions: Math.floor(Math.random() * 5000) + 1000,
+    members: community.member_count ?? 0,
+    events: workOrders.length,
   };
 
   return (

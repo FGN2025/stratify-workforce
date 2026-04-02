@@ -249,17 +249,12 @@ export function EventCard({
           
           {/* Stats Row */}
           <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border">
-            <div className="flex items-center gap-1">
-              <span className="font-data text-sm text-primary">{participantCount}</span>
-              <span className="text-[10px] text-muted-foreground">enrolled</span>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <svg className="h-3 w-3 text-primary" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-              </svg>
-              <span className="font-data text-xs text-muted-foreground">{rating.toLocaleString()}</span>
-            </div>
+            {participantCount != null && (
+              <div className="flex items-center gap-1">
+                <span className="font-data text-sm text-primary">{participantCount}</span>
+                <span className="text-[10px] text-muted-foreground">enrolled</span>
+              </div>
+            )}
             
             <div className="flex items-center gap-1 ml-auto text-xs text-muted-foreground">
               <GameIcon game={workOrder.game_title} size="sm" />

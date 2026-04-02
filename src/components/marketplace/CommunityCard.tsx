@@ -194,7 +194,7 @@ export function CommunityCard({
                 <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                   <Star className="h-3 w-3" />
                 </div>
-                <p className="font-data text-lg text-foreground">{rating}</p>
+                <p className="font-data text-lg text-foreground">{rating ?? '—'}</p>
                 <p className="text-[10px] text-muted-foreground">Rating</p>
               </div>
             </div>
