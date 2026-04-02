@@ -73,8 +73,7 @@ const Communities = () => {
           } : undefined}
           stats={[
             { value: communities.length.toString(), label: 'Communities', highlight: true },
-            { value: '2,500+', label: 'Active Members' },
-            { value: '180+', label: 'Work Orders' },
+            { value: communities.reduce((sum, c) => sum + (c.member_count ?? 0), 0).toLocaleString(), label: 'Total Members' },
           ]}
         />
 

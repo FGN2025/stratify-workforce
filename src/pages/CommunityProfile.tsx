@@ -123,9 +123,14 @@ const CommunityProfile = () => {
 
         {/* Cover Banner */}
         <div 
-          className="relative h-48 rounded-xl overflow-hidden"
+          className="relative h-48 rounded-xl overflow-hidden bg-cover bg-center"
           style={{ 
-            background: `linear-gradient(135deg, ${community.brand_color}40 0%, ${community.brand_color}10 100%)` 
+            backgroundImage: community.cover_image_url
+              ? `url(${community.cover_image_url})`
+              : undefined,
+            background: !community.cover_image_url
+              ? `linear-gradient(135deg, ${community.brand_color}40 0%, ${community.brand_color}10 100%)`
+              : undefined,
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
@@ -149,31 +154,39 @@ const CommunityProfile = () => {
             <div className="flex-1 pt-4 sm:pt-8">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl sm:text-3xl font-bold">{community.name}</h1>
-                <Badge 
-                  variant="outline" 
-                  className="text-[10px]"
-                  style={{ borderColor: community.brand_color, color: community.brand_color }}
-                >
-                  <Star className="h-3 w-3 mr-1 fill-current" />
-                  Verified
-                </Badge>
+                {community.is_verified && (
+                  <Badge 
+                    variant="outline" 
+                    className="text-[10px]"
+                    style={{ borderColor: community.brand_color, color: community.brand_color }}
+                  >
+                    <Star className="h-3 w-3 mr-1 fill-current" />
+                    Verified
+                  </Badge>
+                )}
               </div>
               
               <p className="text-muted-foreground mt-1">@{community.slug}</p>
               
               <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  United States
-                </span>
+                {community.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {community.location}
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
                   Joined {new Date(community.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                 </span>
-                <span className="flex items-center gap-1">
-                  <LinkIcon className="h-4 w-4" />
-                  <a href="#" className="text-primary hover:underline">website.com</a>
-                </span>
+                {community.website_url && (
+                  <span className="flex items-center gap-1">
+                    <LinkIcon className="h-4 w-4" />
+                    <a href={community.website_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {community.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                    </a>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -183,9 +196,15 @@ const CommunityProfile = () => {
                 tenantId={community.id} 
                 brandColor={community.brand_color} 
               />
-              <Button variant="outline" size="icon">
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+              {community.website_url && (
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => window.open(community.website_url!, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
