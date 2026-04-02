@@ -134,7 +134,7 @@ export default function Careers() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-sm">TIRAP</p>
-                  <p className="text-xs text-muted-foreground">Trucking Industry RAP</p>
+                  <p className="text-xs text-muted-foreground">Telecommunications Industry Registered Apprenticeship Program</p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
