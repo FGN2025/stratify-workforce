@@ -14,13 +14,13 @@ const Index = () => {
   const { tenant } = useTenant();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [communities, setCommunities] = useState<Tenant[]>([]);
+  const [communityMap, setCommunityMap] = useState<Record<string, Tenant>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
       
-      // Fetch work orders and tenants in parallel
       const [workOrdersRes, tenantsRes] = await Promise.all([
         supabase
           .from('work_orders')
@@ -30,6 +30,7 @@ const Index = () => {
         supabase
           .from('tenants')
           .select('*')
+          .eq('approval_status', 'approved')
           .order('name', { ascending: true })
       ]);
 
@@ -49,8 +50,12 @@ const Index = () => {
       }
 
       if (tenantsRes.data) {
-        // Cast directly - Supabase returns matching shape
-        setCommunities(tenantsRes.data as unknown as Tenant[]);
+        const typed = tenantsRes.data as unknown as Tenant[];
+        setCommunities(typed);
+        // Build lookup map by id for O(1) access
+        const map: Record<string, Tenant> = {};
+        typed.forEach(t => { map[t.id] = t; });
+        setCommunityMap(map);
       }
 
       setIsLoading(false);
@@ -58,12 +63,6 @@ const Index = () => {
 
     fetchData();
   }, []);
-
-  // Get random community for each work order
-  const getRandomCommunity = () => {
-    if (communities.length === 0) return undefined;
-    return communities[Math.floor(Math.random() * communities.length)];
-  };
 
   if (isLoading) {
     return (
@@ -86,7 +85,6 @@ const Index = () => {
   return (
     <AppLayout>
       <div className="space-y-10">
-        {/* Hero Section */}
         <HeroSection />
 
         {/* Trending Work Orders */}
@@ -100,7 +98,7 @@ const Index = () => {
             <div key={wo.id} className="w-72 shrink-0 snap-start">
               <EventCard 
                 workOrder={wo}
-                community={getRandomCommunity()}
+                community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
                 variant={idx === 0 ? 'featured' : 'default'}
               />
             </div>
@@ -135,7 +133,7 @@ const Index = () => {
             <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
               <EventCard 
                 workOrder={wo}
-                community={getRandomCommunity()}
+                community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
                 variant="compact"
               />
             </div>
@@ -154,7 +152,7 @@ const Index = () => {
               <div key={`popular-${wo.id}`} className="w-72 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
-                  community={getRandomCommunity()}
+                  community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
                 />
               </div>
             ))}

@@ -80,7 +80,7 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
         <div>
           <CardTitle className="text-lg">My Communities</CardTitle>
           <CardDescription>
-            Communities you've created or are managing
+            Communities you've created or joined
           </CardDescription>
         </div>
         <Button size="sm" onClick={onCreateClick}>

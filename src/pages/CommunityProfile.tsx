@@ -196,9 +196,15 @@ const CommunityProfile = () => {
                 tenantId={community.id} 
                 brandColor={community.brand_color} 
               />
-              <Button variant="outline" size="icon">
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+              {community.website_url && (
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => window.open(community.website_url!, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
