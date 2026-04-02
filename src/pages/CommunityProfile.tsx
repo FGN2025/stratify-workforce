@@ -154,14 +154,16 @@ const CommunityProfile = () => {
             <div className="flex-1 pt-4 sm:pt-8">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl sm:text-3xl font-bold">{community.name}</h1>
-                <Badge 
-                  variant="outline" 
-                  className="text-[10px]"
-                  style={{ borderColor: community.brand_color, color: community.brand_color }}
-                >
-                  <Star className="h-3 w-3 mr-1 fill-current" />
-                  Verified
-                </Badge>
+                {community.is_verified && (
+                  <Badge 
+                    variant="outline" 
+                    className="text-[10px]"
+                    style={{ borderColor: community.brand_color, color: community.brand_color }}
+                  >
+                    <Star className="h-3 w-3 mr-1 fill-current" />
+                    Verified
+                  </Badge>
+                )}
               </div>
               
               <p className="text-muted-foreground mt-1">@{community.slug}</p>
