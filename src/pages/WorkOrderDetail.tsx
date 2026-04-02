@@ -471,7 +471,7 @@ export default function WorkOrderDetail() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {simResources.map((resource) => {
-                  const IconComponent = (LucideIcons as Record<string, LucideIcons.LucideIcon>)[resource.icon_name] || BookOpen;
+                  const IconComponent = ((LucideIcons as unknown) as Record<string, LucideIcons.LucideIcon>)[resource.icon_name] || BookOpen;
                   return (
                     <a
                       key={resource.id}
