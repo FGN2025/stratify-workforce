@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, NavLink } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
