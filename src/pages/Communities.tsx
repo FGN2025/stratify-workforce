@@ -64,7 +64,7 @@ const Communities = () => {
         {/* Hero Section */}
         <PageHero
           title="Skills Communities"
-          subtitle="Discover skills communities and join their simulation programs to level up your skills"
+          subtitle="Discover communities and request to join their simulation programs to level up your skills"
           backgroundImage={heroImageUrl}
           primaryAction={user ? {
             label: 'Create Community',
