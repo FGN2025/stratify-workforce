@@ -287,6 +287,14 @@ const CommunityProfile = () => {
             </TabsContent>
           )}
 
+          {isManager && (
+            <TabsContent value="assignments" className="mt-6">
+              <div className="glass-card p-6">
+                <WorkOrderAssignmentManager tenantId={community.id} />
+              </div>
+            </TabsContent>
+          )}
+
           <TabsContent value="leaderboard" className="mt-6">
             <div className="glass-card p-12 text-center">
               <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50" />
