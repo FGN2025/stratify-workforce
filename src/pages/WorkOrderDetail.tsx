@@ -28,6 +28,7 @@ import {
 import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { toast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import {
