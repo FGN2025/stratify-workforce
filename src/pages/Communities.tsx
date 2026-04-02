@@ -63,8 +63,8 @@ const Communities = () => {
       <div className="space-y-6">
         {/* Hero Section */}
         <PageHero
-          title="Training Communities"
-          subtitle="Discover training organizations and join their simulation programs to level up your skills"
+          title="Skills Communities"
+          subtitle="Discover skills communities and join their simulation programs to level up your skills"
           backgroundImage={heroImageUrl}
           primaryAction={user ? {
             label: 'Create Community',
