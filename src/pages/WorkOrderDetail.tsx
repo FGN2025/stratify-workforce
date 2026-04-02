@@ -60,9 +60,8 @@ export default function WorkOrderDetail() {
   // Register game title for tutor context
   useEffect(() => {
     if (workOrder?.game_title) {
-      const { setCurrentGameTitle } = require('@/hooks/useTutorContext');
       setCurrentGameTitle(workOrder.game_title);
-      return () => setCurrentGameTitle(null);
+      return () => { setCurrentGameTitle(null); };
     }
   }, [workOrder?.game_title]);
   const { data: status } = useUserWorkOrderStatus(id || '');
