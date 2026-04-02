@@ -22,9 +22,9 @@ interface CommunityCardProps {
 
 export function CommunityCard({ 
   community, 
-  memberCount = Math.floor(Math.random() * 500) + 50,
-  eventCount = Math.floor(Math.random() * 20) + 5,
-  rating = parseFloat((Math.random() * 2 + 3).toFixed(1)),
+  memberCount,
+  eventCount,
+  rating,
   featured = false,
   onEdit,
 }: CommunityCardProps) {
