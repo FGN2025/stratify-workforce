@@ -56,6 +56,15 @@ export default function WorkOrderDetail() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
+
+  // Register game title for tutor context
+  useEffect(() => {
+    if (workOrder?.game_title) {
+      const { setCurrentGameTitle } = require('@/hooks/useTutorContext');
+      setCurrentGameTitle(workOrder.game_title);
+      return () => setCurrentGameTitle(null);
+    }
+  }, [workOrder?.game_title]);
   const { data: status } = useUserWorkOrderStatus(id || '');
   const { data: completionCountData } = useQuery({
     queryKey: ['work-order-completion-count', id],
