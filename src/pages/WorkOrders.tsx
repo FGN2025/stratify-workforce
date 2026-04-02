@@ -8,6 +8,7 @@ import { WorkOrderFilters, WorkOrderFilter } from '@/components/work-orders/Work
 import { useWorkOrders, WorkOrderWithXP } from '@/hooks/useWorkOrders';
 import { useChannelSubscriptions } from '@/hooks/useChannelSubscriptions';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useWorkOrderCompletions } from '@/hooks/useWorkOrderCompletion';
 import { ImportChallengeDialog, type MappedChallengeData } from '@/components/admin/ImportChallengeDialog';
 import { WorkOrderEditDialog } from '@/components/admin/WorkOrderEditDialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,6 +41,16 @@ const WorkOrders = () => {
   
   // Fetch all work orders
   const { data: allWorkOrders = [], isLoading: loadingWorkOrders } = useWorkOrders('all');
+  const { data: completions = [] } = useWorkOrderCompletions();
+  
+  // Set of work order IDs the user has completed
+  const completedWorkOrderIds = useMemo(() => {
+    return new Set(
+      completions
+        .filter(c => c.status === 'completed')
+        .map(c => c.work_order_id)
+    );
+  }, [completions]);
   
   // Fetch communities for display
   const { data: communities = [] } = useQuery({
@@ -153,6 +164,7 @@ const WorkOrders = () => {
               <div key={wo.id} className="w-72 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                   variant={idx === 0 ? 'featured' : 'default'}
                 />
@@ -172,6 +184,7 @@ const WorkOrders = () => {
               <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                   variant="compact"
                 />
@@ -191,6 +204,7 @@ const WorkOrders = () => {
               <div key={`ats-${wo.id}`} className="w-72 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                 />
               </div>
@@ -240,6 +254,7 @@ const WorkOrders = () => {
               <div key={`competition-${wo.id}`} className="w-72 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                 />
               </div>

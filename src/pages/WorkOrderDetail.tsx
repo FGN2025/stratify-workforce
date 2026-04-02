@@ -285,10 +285,14 @@ export default function WorkOrderDetail() {
                   if (playUrl) {
                     // Has a linked challenge — send to play.fgn.gg
                     const handlePlayAction = async () => {
-                      if (!status?.hasAttempted) {
-                        await handleStart();
+                      try {
+                        if (!status?.hasAttempted) {
+                          await startWorkOrder.mutateAsync(id!);
+                        }
+                        window.open(playUrl, '_blank');
+                      } catch {
+                        // Error already toasted by handleStart
                       }
-                      window.open(playUrl, '_blank');
                     };
 
                     return (
@@ -311,7 +315,7 @@ export default function WorkOrderDetail() {
                       {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
                     </Button>
                   ) : (
-                    <Button size="lg" variant="secondary">
+                    <Button size="lg" variant="secondary" onClick={handleStart}>
                       <RotateCcw className="h-5 w-5 mr-2" />
                       Continue
                     </Button>

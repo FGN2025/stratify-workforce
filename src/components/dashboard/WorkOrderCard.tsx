@@ -1,3 +1,4 @@
+import { NavLink } from 'react-router-dom';
 import { ArrowRight, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ export function WorkOrderCard({ workOrder, tenantColor }: WorkOrderCardProps) {
   const criteria = workOrder.success_criteria as Record<string, number>;
 
   return (
+    <NavLink to={`/work-orders/${workOrder.id}`} className="block">
     <div 
       className={cn(
         "glass-card p-4 hover:border-primary/50 transition-all group cursor-pointer",
@@ -74,5 +76,6 @@ export function WorkOrderCard({ workOrder, tenantColor }: WorkOrderCardProps) {
         </Button>
       </div>
     </div>
+    </NavLink>
   );
 }
