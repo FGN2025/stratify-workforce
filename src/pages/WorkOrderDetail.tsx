@@ -289,10 +289,14 @@ export default function WorkOrderDetail() {
                   if (playUrl) {
                     // Has a linked challenge — send to play.fgn.gg
                     const handlePlayAction = async () => {
-                      if (!status?.hasAttempted) {
-                        await handleStart();
+                      try {
+                        if (!status?.hasAttempted) {
+                          await startWorkOrder.mutateAsync(id!);
+                        }
+                        window.open(playUrl, '_blank');
+                      } catch {
+                        // Error already toasted by handleStart
                       }
-                      window.open(playUrl, '_blank');
                     };
 
                     return (
