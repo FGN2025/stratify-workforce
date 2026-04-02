@@ -116,7 +116,7 @@ export default function Careers() {
         <section>
           <h2 className="text-lg font-bold uppercase tracking-wide mb-4 flex items-center gap-2">
             <GraduationCap className="h-5 w-5 text-primary" />
-            Partner Organizations
+            Apprenticeship Organizations
           </h2>
           <div className="grid sm:grid-cols-3 gap-4">
             <a href="https://www.apprenticeship.gov/" target="_blank" rel="noopener noreferrer"
