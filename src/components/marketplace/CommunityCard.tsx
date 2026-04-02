@@ -178,7 +178,7 @@ export function CommunityCard({
                 <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                   <Users className="h-3 w-3" />
                 </div>
-                <p className="font-data text-lg text-foreground">{memberCount}</p>
+                <p className="font-data text-lg text-foreground">{community.member_count ?? memberCount ?? '—'}</p>
                 <p className="text-[10px] text-muted-foreground">Members</p>
               </div>
               
