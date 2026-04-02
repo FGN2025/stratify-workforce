@@ -164,6 +164,7 @@ const WorkOrders = () => {
               <div key={wo.id} className="w-72 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                   variant={idx === 0 ? 'featured' : 'default'}
                 />
@@ -183,6 +184,7 @@ const WorkOrders = () => {
               <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                   variant="compact"
                 />
@@ -202,6 +204,7 @@ const WorkOrders = () => {
               <div key={`ats-${wo.id}`} className="w-72 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                 />
               </div>
@@ -251,6 +254,7 @@ const WorkOrders = () => {
               <div key={`competition-${wo.id}`} className="w-72 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
+                  isCompleted={completedWorkOrderIds.has(wo.id)}
                   community={getRandomCommunity()}
                 />
               </div>
