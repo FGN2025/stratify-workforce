@@ -262,7 +262,7 @@ export function CommunityFormDialog({
             <DialogDescription>
               {community
                 ? 'Update the community details below.'
-                : 'Create a new training community for your organization.'}
+                : 'Create a new skills community for your organization.'}
             </DialogDescription>
           </DialogHeader>
 
