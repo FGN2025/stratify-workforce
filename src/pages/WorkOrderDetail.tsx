@@ -319,7 +319,7 @@ export default function WorkOrderDetail() {
                       {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
                     </Button>
                   ) : (
-                    <Button size="lg" variant="secondary">
+                    <Button size="lg" variant="secondary" onClick={handleStart}>
                       <RotateCcw className="h-5 w-5 mr-2" />
                       Continue
                     </Button>

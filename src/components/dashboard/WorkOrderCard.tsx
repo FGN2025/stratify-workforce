@@ -75,5 +75,6 @@ export function WorkOrderCard({ workOrder, tenantColor }: WorkOrderCardProps) {
         </Button>
       </div>
     </div>
+    </NavLink>
   );
 }

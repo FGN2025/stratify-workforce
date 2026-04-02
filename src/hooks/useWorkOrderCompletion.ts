@@ -198,36 +198,38 @@ export function useUserWorkOrderStatus(workOrderId: string) {
   return useQuery({
     queryKey: ['work-order-status', user?.id, workOrderId],
     enabled: !!user && !!workOrderId,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      // Auto-poll every 10s while in_progress (waiting for play.fgn.gg sync)
+      return data?.latestStatus === 'in_progress' ? 10000 : false;
+    },
     queryFn: async () => {
       if (!user) return null;
 
+      // Fetch all completions for this work order to compute best score and count
       const { data, error } = await supabase
         .from('user_work_order_completions')
-        .select('*')
+        .select('id, status, score, attempt_number')
         .eq('user_id', user.id)
         .eq('work_order_id', workOrderId)
-        .order('attempt_number', { ascending: false })
-        .limit(1);
+        .order('attempt_number', { ascending: false });
 
       if (error) throw error;
 
-      const latest = data?.[0];
-      if (!latest) return { hasAttempted: false, latestStatus: null, attemptCount: 0, latestCompletionId: undefined };
+      if (!data || data.length === 0) {
+        return { hasAttempted: false, latestStatus: null, attemptCount: 0, latestCompletionId: undefined };
+      }
 
-      // Get total count
-      const { count } = await supabase
-        .from('user_work_order_completions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('work_order_id', workOrderId);
+      const latest = data[0];
+      const bestScore = Math.max(...data.map(c => c.score ?? 0));
 
       return {
         hasAttempted: true,
         latestStatus: latest.status as CompletionStatus,
         latestScore: latest.score,
-        attemptCount: count || 0,
+        attemptCount: data.length,
         isCompleted: latest.status === 'completed',
-        bestScore: latest.score, // TODO: Track best score
+        bestScore,
         latestCompletionId: latest.id,
       };
     },

@@ -41,6 +41,16 @@ const WorkOrders = () => {
   
   // Fetch all work orders
   const { data: allWorkOrders = [], isLoading: loadingWorkOrders } = useWorkOrders('all');
+  const { data: completions = [] } = useWorkOrderCompletions();
+  
+  // Set of work order IDs the user has completed
+  const completedWorkOrderIds = useMemo(() => {
+    return new Set(
+      completions
+        .filter(c => c.status === 'completed')
+        .map(c => c.work_order_id)
+    );
+  }, [completions]);
   
   // Fetch communities for display
   const { data: communities = [] } = useQuery({
