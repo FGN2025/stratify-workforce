@@ -1,100 +1,98 @@
 
 
-# Communities UX Audit: End-to-End Gap Analysis
+# Atlas AI Tutor: Combined Gap Analysis + Welcome Message Plan
+
+This plan consolidates all remaining Atlas AI Tutor gaps into a single implementation pass.
 
 ```text
-DISCOVERY → PROFILE → JOIN → APPROVAL → ACCESS WORK ORDERS
-   ↓          ↓        ↓        ↓              ↓
-  [1,2]     [3,4,5]   [6]     [7,8]          [9,10]
+GAP 1 — Open Notebook is global, not per-SIM          [CRITICAL]  ← from prior plan
+GAP 2 — Tutor never knows which SIM the user is in    [CRITICAL]  ← from prior plan
+GAP 3 — Missing personas for 3 SIM categories         [MODERATE]  ← from prior plan
+GAP 4 — No notebook reference in AI system prompt      [MODERATE]  ← from prior plan
+GAP 5 — Chat panel shows global notebook link only     [LOW]       ← from prior plan
+GAP 6 — No welcome message or starter questions        [MODERATE]  ← NEW (this request)
 ```
-
-## Gap 1: Hardcoded hero stats on Communities page (P2)
-`Communities.tsx` line 76-78 shows `"2,500+"` Active Members and `"180+"` Work Orders — completely hardcoded. Real community count is dynamic but the other two are fake.
-
-**Fix**: Query actual totals from `community_memberships` and `work_orders`, or remove fake numbers.
-
-## Gap 2: Random community assignment on Home page (P1)
-`Index.tsx` line 63-66 assigns a **random community** to each work order card via `getRandomCommunity()` — showing incorrect community associations. Users clicking through will see wrong branding.
-
-**Fix**: Use the actual `tenant_id` relationship. Query work orders with their tenant join, or pass `wo.tenant_id` to look up the correct community.
-
-## Gap 3: Hardcoded location and website on Community Profile (P1)
-`CommunityProfile.tsx` line 167 shows `"United States"` (hardcoded) instead of `community.location`. Line 175 shows `website.com` with `href="#"` instead of `community.website_url`. Both fields exist in the data model but are ignored.
-
-**Fix**: Use `community.location` and `community.website_url`. Hide each if null.
-
-## Gap 4: "Verified" badge shown for ALL communities (P1)
-`CommunityProfile.tsx` line 152-159 always renders a "Verified" badge regardless of `community.is_verified`. Unverified communities appear verified.
-
-**Fix**: Conditionally render based on `community.is_verified`.
-
-## Gap 5: Cover image not used on Community Profile (P2)
-`CommunityProfile.tsx` line 126-132 renders only a gradient from `brand_color`. The `cover_image_url` field is available but never displayed as a background image.
-
-**Fix**: If `community.cover_image_url` exists, use it as `background-image`; fall back to the gradient.
-
-## Gap 6: No re-apply path after rejection (P2)
-`JoinCommunityButton` shows "Request Denied" with reviewer notes but **no way to re-apply**. The user is permanently stuck unless the record is manually deleted.
-
-**Fix**: Add a "Re-apply" button that deletes the rejected membership row and re-inserts a fresh pending request.
-
-## Gap 7: "My Communities" only shows owned communities (P1)
-`useMyCommunities` queries `tenants WHERE owner_id = user.id` — it only shows communities the user **created**, not communities they've **joined** as a member. A user who joined 5 communities but created none sees an empty section.
-
-**Fix**: Also query `community_memberships` to show communities where the user has an approved membership, alongside owned ones.
-
-## Gap 8: No notification to manager on new membership request (P2)
-When a user clicks "Join Community", the membership row is inserted but no notification is created. Managers won't know someone requested to join unless they manually check the Requests tab.
-
-**Fix**: Insert a notification for community managers/admins on membership request creation (via DB trigger or client-side insert).
-
-## Gap 9: Members tab is a placeholder (P2)
-`CommunityProfile.tsx` line 251-254 shows "Member list coming soon" — members tab has no implementation despite `community_memberships` data being available.
-
-**Fix**: Query approved memberships with profile data and render a member list.
-
-## Gap 10: Filter button on Communities page does nothing (P3)
-`Communities.tsx` line 97-100 renders a "Filter" button with no `onClick` or dropdown. It's purely decorative.
-
-**Fix**: Add category/game-title filter dropdown, or remove the button.
-
-## Gap 11: ExternalLink button on Community Profile does nothing (P3)
-`CommunityProfile.tsx` line 186-188 renders an `ExternalLink` icon button with no `onClick` or `href`. It sits next to the Join button but is inert.
-
-**Fix**: Link to `community.website_url` if available, or remove.
-
-## Gap 12: Leaderboard tab is a placeholder (P3)
-"Leaderboard coming soon" — data exists via `get_leaderboard_data()` but isn't wired up per-community.
 
 ---
 
-## Priority Ranking
+## Step 1: Database — Add `notebook_url` to persona configs (Gap 1)
 
-| Priority | Gap | Effort |
-|----------|-----|--------|
-| P1 | #2 — Random community on Home page | Small (use real tenant join) |
-| P1 | #3 — Hardcoded location/website | Trivial (use real fields) |
-| P1 | #4 — Verified badge always shown | Trivial (conditional render) |
-| P1 | #7 — My Communities missing joined communities | Small (add membership query) |
-| P2 | #1 — Fake hero stats | Small (real queries) |
-| P2 | #5 — Cover image unused on profile | Trivial (add backgroundImage) |
-| P2 | #6 — No re-apply after rejection | Small (delete + re-insert) |
-| P2 | #8 — No manager notification on join request | Medium (trigger or insert) |
-| P2 | #9 — Members tab placeholder | Medium (query + list UI) |
-| P3 | #10 — Filter button inert | Small |
-| P3 | #11 — ExternalLink button inert | Trivial |
-| P3 | #12 — Leaderboard tab placeholder | Medium |
+Migration to add a `notebook_url` column to `ai_persona_configs`:
 
-## Recommended First Pass
+```sql
+ALTER TABLE ai_persona_configs ADD COLUMN notebook_url text DEFAULT NULL;
+```
 
-Fix all P1 gaps across 4 files:
+## Step 2: Insert missing game personas (Gap 3)
 
-| File | Changes |
-|------|---------|
-| `src/pages/Index.tsx` | Remove `getRandomCommunity()`; join work orders to their actual tenant via `tenant_id` |
-| `src/pages/CommunityProfile.tsx` | Use `community.location` / `community.website_url` (hide if null); conditionally render Verified badge on `is_verified`; show `cover_image_url` in banner |
-| `src/hooks/useMyCommunities.ts` | Also query `community_memberships` for approved memberships, merge with owned communities |
-| `src/pages/Communities.tsx` | Replace hardcoded hero stats with real aggregates or remove fake numbers |
+Data inserts for `game_Farming_Sim`, `game_Construction_Sim`, and `game_Mechanic_Sim` with relevant system prompts and empty `notebook_url` (admins fill in later).
 
-P2/P3 gaps (re-apply, members list, notifications, filter, leaderboard) follow as separate iterations.
+## Step 3: Pass `gameTitle` through tutor context (Gap 2)
+
+**`src/hooks/useTutorContext.ts`** — The work order detail branch currently returns `type: 'work_order'` with no `gameTitle`. Since the hook doesn't have the work order data, add a lightweight mechanism:
+
+- Add a module-level setter/getter (`setCurrentGameTitle` / `getCurrentGameTitle`) exported from `useTutorContext.ts`
+- When the work order detail page renders and has data, call `setCurrentGameTitle(workOrder.game_title)`; clean up on unmount
+- In `useTutorContext`, read this value when on `/work-orders/:id` and include it as `pageContext.gameTitle`
+
+**`src/pages/WorkOrderDetail.tsx`** — Call `setCurrentGameTitle` in a `useEffect` when work order data loads.
+
+## Step 4: Inject notebook URL into system prompt (Gap 4)
+
+**`supabase/functions/ai-tutor/index.ts`** — Update `getPersonaFromDB` to also select `notebook_url`. In `buildSystemPrompt`, if a `notebook_url` is present, append an instruction like:
+
+```
+Reference knowledge base: {notebook_url}
+When students ask domain questions about this simulation, draw on this source.
+```
+
+## Step 5: Admin UI — Add notebook URL field to persona editor (Gap 1 + 5)
+
+**`src/components/admin/AIConfigManager.tsx`** — In the `PersonaEditor` component, add a "Notebook URL" `Input` field for game-type personas (those with `context_type` starting with `game_`). Update `AIPersonaConfig` type in `useAIConfig.ts` to include `notebook_url`.
+
+## Step 6: Chat panel — Use per-SIM notebook link (Gap 5)
+
+**`src/components/tutor/TutorChatPanel.tsx`** — Instead of reading the global `open_notebook_url` from platform settings for the notebook icon, query the current persona's `notebook_url` based on `pageContext.gameTitle`. Fall back to the global URL if no SIM-specific one exists.
+
+## Step 7: Welcome message + starter questions on first open (Gap 6)
+
+**`src/hooks/useTutorChat.ts`** — After creating a new conversation (the `else` branch in `loadOrCreateConversation`), inject a local-only assistant welcome message:
+
+```typescript
+const welcomeMessage: TutorMessage = {
+  id: crypto.randomUUID(),
+  conversation_id: newConversation.id,
+  role: 'assistant',
+  content: buildWelcomeMessage(userContext, pageContext, chatMode),
+  created_at: new Date().toISOString(),
+};
+dispatch({ type: 'ADD_MESSAGE', payload: welcomeMessage });
+```
+
+The `buildWelcomeMessage` function generates a personalized greeting referencing the user's level/XP and current page context. This message is NOT persisted to the database.
+
+**`src/components/tutor/TutorChatPanel.tsx`** — Replace the current static empty-state block (`messages.length === 0`) with starter question chips that appear after the welcome message. Condition: `messages.length === 1 && messages[0].role === 'assistant' && !isStreaming`.
+
+Clicking a chip calls `sendMessage(question)` directly (not just filling the input). Starter questions are context-aware:
+
+- **General**: "How do I improve my XP?", "What work order should I try next?", "What skills am I building?"
+- **Work Order page**: "What should I focus on in this challenge?", "Tips for improving my score", "What skills does this build?"
+- **Research mode**: "Compare CDL endorsement types", "Fiber optic cable standards", "DOT inspection requirements"
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `supabase/migrations/...` | Add `notebook_url` column to `ai_persona_configs` |
+| Database inserts | 3 new game personas (Farming, Construction, Mechanic) |
+| `src/hooks/useTutorContext.ts` | Add `setCurrentGameTitle`/`getCurrentGameTitle`; use in work order context |
+| `src/pages/WorkOrderDetail.tsx` | Call `setCurrentGameTitle` on mount with work order's game_title |
+| `src/hooks/useAIConfig.ts` | Add `notebook_url` to `AIPersonaConfig` type |
+| `src/components/admin/AIConfigManager.tsx` | Add Notebook URL input to `PersonaEditor` for game personas |
+| `supabase/functions/ai-tutor/index.ts` | Select `notebook_url` from persona; inject into system prompt |
+| `src/hooks/useTutorChat.ts` | Inject welcome message on new conversation; add `buildWelcomeMessage` helper |
+| `src/components/tutor/TutorChatPanel.tsx` | Replace empty-state with starter question chips after welcome message; use per-SIM notebook link |
+| `src/contexts/TutorContext.tsx` | Pass `userContext` through to `useTutorChat` for welcome message personalization |
 
