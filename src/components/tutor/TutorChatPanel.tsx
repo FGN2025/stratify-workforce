@@ -6,12 +6,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useTutor } from '@/contexts/TutorContext';
 import { useTutorContext } from '@/hooks/useTutorContext';
+import { getStarterQuestions } from '@/hooks/useTutorChat';
 import { TutorMessage } from './TutorMessage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useAIPlatformSettings } from '@/hooks/useAIConfig';
+import { useAIPlatformSettings, useAIPersonas } from '@/hooks/useAIConfig';
 import { cn } from '@/lib/utils';
-
-
 
 export function TutorChatPanel() {
   const { isOpen, closeChat, messages, isStreaming, sendMessage, clearConversation, chatMode, setChatMode } = useTutor();
@@ -21,9 +20,20 @@ export function TutorChatPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
   const { data: platformSettings } = useAIPlatformSettings();
+  const { data: personas } = useAIPersonas();
 
   const researchEnabled = platformSettings?.find(s => s.key === 'research_mode_enabled')?.value === true;
-  const notebookUrl = platformSettings?.find(s => s.key === 'open_notebook_url')?.value;
+  const globalNotebookUrl = platformSettings?.find(s => s.key === 'open_notebook_url')?.value;
+
+  // Get SIM-specific notebook URL if available
+  const simNotebookUrl = pageContext.gameTitle
+    ? personas?.find(p => p.context_type === `game_${pageContext.gameTitle}`)?.notebook_url
+    : null;
+  const notebookUrl = simNotebookUrl || (typeof globalNotebookUrl === 'string' ? globalNotebookUrl : null);
+
+  // Check if we should show starter questions
+  const showStarters = messages.length === 1 && messages[0].role === 'assistant' && !isStreaming;
+  const starterQuestions = getStarterQuestions(pageContext, chatMode);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -46,6 +56,10 @@ export function TutorChatPanel() {
     const message = inputValue.trim();
     setInputValue('');
     await sendMessage(message);
+  };
+
+  const handleStarterClick = async (question: string) => {
+    await sendMessage(question);
   };
 
   const contextLabel = chatMode === 'research'
@@ -87,7 +101,7 @@ export function TutorChatPanel() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:text-emerald-600"
-                  onClick={() => window.open(typeof notebookUrl === 'string' ? notebookUrl : '', '_blank')}
+                  onClick={() => window.open(notebookUrl, '_blank')}
                   title="Open Notebook"
                 >
                   <BookOpen className="h-4 w-4" />
@@ -147,58 +161,27 @@ export function TutorChatPanel() {
         {/* Messages */}
         <ScrollArea className="flex-1 p-4" ref={scrollRef}>
           <div className="space-y-4">
-            {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center mb-4">
-                  {chatMode === 'research' ? (
-                    <FlaskConical className="h-8 w-8 text-emerald-600" />
-                  ) : (
-                    <GraduationCap className="h-8 w-8 text-emerald-600" />
-                  )}
-                </div>
-                <h3 className="font-medium text-lg mb-2">
-                  {chatMode === 'research' ? 'Research Mode' : "Hi! I'm Atlas"}
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-[250px]">
-                  {chatMode === 'research'
-                    ? 'Ask deeper questions and explore topics with comprehensive, detailed answers.'
-                    : 'Your AI tutor for FGN Academy. Ask me anything about your courses, work orders, or career path!'
-                  }
-                </p>
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
-                  {(chatMode === 'research'
-                    ? [
-                        'Compare CDL endorsement types',
-                        'Fiber optic cable standards',
-                        'DOT inspection requirements',
-                      ]
-                    : [
-                        'How do I improve my XP?',
-                        'What work order should I try next?',
-                        'Explain fusion splicing',
-                      ]
-                  ).map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => {
-                        setInputValue(suggestion);
-                        inputRef.current?.focus();
-                      }}
-                      className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
+            {messages.map((message, index) => (
+              <TutorMessage
+                key={message.id}
+                message={message}
+                isStreaming={isStreaming && index === messages.length - 1}
+              />
+            ))}
+
+            {/* Starter question chips */}
+            {showStarters && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {starterQuestions.map((question) => (
+                  <button
+                    key={question}
+                    onClick={() => handleStarterClick(question)}
+                    className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-left"
+                  >
+                    {question}
+                  </button>
+                ))}
               </div>
-            ) : (
-              messages.map((message, index) => (
-                <TutorMessage
-                  key={message.id}
-                  message={message}
-                  isStreaming={isStreaming && index === messages.length - 1}
-                />
-              ))
             )}
           </div>
         </ScrollArea>

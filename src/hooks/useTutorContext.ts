@@ -24,6 +24,17 @@ function getLevelFromXP(xp: number): { level: number; name: string } {
   return { level: 1, name: 'Rookie' };
 }
 
+// Module-level game title state for cross-component communication
+let _currentGameTitle: string | null = null;
+
+export function setCurrentGameTitle(title: string | null) {
+  _currentGameTitle = title;
+}
+
+export function getCurrentGameTitle(): string | null {
+  return _currentGameTitle;
+}
+
 export function useTutorContext() {
   const location = useLocation();
   const params = useParams();
@@ -38,6 +49,7 @@ export function useTutorContext() {
         type: 'work_order',
         id: params.id,
         title: 'Work Order',
+        gameTitle: _currentGameTitle || undefined,
       };
     }
 
@@ -102,7 +114,7 @@ export function useTutorContext() {
       type: 'general',
       title: 'Dashboard',
     };
-  }, [location.pathname, params]);
+  }, [location.pathname, params, _currentGameTitle]);
 
   const userContext = useMemo((): TutorUserContext => {
     const totalXp = stats?.totalXp || 0;
@@ -112,8 +124,8 @@ export function useTutorContext() {
       xp: totalXp,
       level: levelInfo.level,
       levelName: levelInfo.name,
-      enrolledCourses: [], // Would come from useCourses hook if needed
-      activeGames: [], // Would come from game stats if needed
+      enrolledCourses: [],
+      activeGames: [],
     };
   }, [stats]);
 

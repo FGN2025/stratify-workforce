@@ -2,7 +2,7 @@ import { useReducer, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useTutorContext } from './useTutorContext';
-import type { TutorMessage, TutorChatState, TutorChatAction, TutorConversation } from '@/types/tutor';
+import type { TutorMessage, TutorChatState, TutorChatAction, TutorConversation, TutorUserContext, TutorPageContext } from '@/types/tutor';
 import { useToast } from '@/hooks/use-toast';
 
 const TUTOR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
@@ -49,10 +49,62 @@ function tutorReducer(state: TutorChatState, action: TutorChatAction): TutorChat
   }
 }
 
+function buildWelcomeMessage(
+  userContext: TutorUserContext,
+  pageContext: TutorPageContext,
+  chatMode: 'tutor' | 'research'
+): string {
+  if (chatMode === 'research') {
+    return `👋 **Welcome to Research Mode!**\n\nI'm Atlas, your research assistant. I can help you explore topics in depth — from industry standards and certifications to technical concepts across all simulation categories.\n\nAsk me anything, and I'll provide thorough, detailed answers.`;
+  }
+
+  const levelGreeting = userContext.level > 1
+    ? `You're currently a **Level ${userContext.level} ${userContext.levelName}** with **${userContext.xp} XP**. `
+    : '';
+
+  if (pageContext.type === 'work_order' && pageContext.gameTitle) {
+    return `👋 **Hey there!** I'm Atlas, your AI tutor.\n\n${levelGreeting}I see you're working on a **${pageContext.title}** challenge. I can help you understand the objectives, share tips for improving your score, and explain what skills you're building.\n\nWhat would you like to know?`;
+  }
+
+  if (pageContext.type === 'work_order') {
+    return `👋 **Hey there!** I'm Atlas, your AI tutor.\n\n${levelGreeting}I see you're looking at a work order. I can help you understand the challenge requirements and suggest strategies for success.\n\nWhat would you like to know?`;
+  }
+
+  return `👋 **Hey there!** I'm Atlas, your AI tutor for FGN Academy.\n\n${levelGreeting}I'm here to help you navigate your training journey — from choosing work orders and improving your skills to understanding your career path.\n\nWhat can I help you with?`;
+}
+
+export function getStarterQuestions(
+  pageContext: TutorPageContext,
+  chatMode: 'tutor' | 'research'
+): string[] {
+  if (chatMode === 'research') {
+    return [
+      'Compare CDL endorsement types',
+      'Fiber optic cable standards',
+      'DOT inspection requirements',
+    ];
+  }
+
+  if (pageContext.type === 'work_order') {
+    return [
+      'What should I focus on in this challenge?',
+      'Tips for improving my score',
+      'What skills does this build?',
+    ];
+  }
+
+  return [
+    'How do I improve my XP?',
+    'What work order should I try next?',
+    'What skills am I building?',
+    'Explain my career path progress',
+  ];
+}
+
 export function useTutorChat(chatMode: 'tutor' | 'research' = 'tutor') {
   const [state, dispatch] = useReducer(tutorReducer, initialState);
   const { user, session } = useAuth();
-  const { apiContext, pageContext } = useTutorContext();
+  const { apiContext, pageContext, userContext } = useTutorContext();
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -88,8 +140,12 @@ export function useTutorChat(chatMode: 'tutor' | 'research' = 'tutor') {
           .eq('conversation_id', existingConversation.id)
           .order('created_at', { ascending: true });
 
-        if (messages) {
+        if (messages && messages.length > 0) {
           dispatch({ type: 'SET_MESSAGES', payload: messages as TutorMessage[] });
+        } else {
+          // Existing conversation but no messages — inject welcome
+          const welcomeMsg = createWelcomeMessage(existingConversation.id);
+          dispatch({ type: 'SET_MESSAGES', payload: [welcomeMsg] });
         }
       } else {
         // Create new conversation
@@ -108,12 +164,23 @@ export function useTutorChat(chatMode: 'tutor' | 'research' = 'tutor') {
         if (error) throw error;
         if (newConversation) {
           dispatch({ type: 'SET_CONVERSATION_ID', payload: newConversation.id });
+          // Inject local-only welcome message
+          const welcomeMsg = createWelcomeMessage(newConversation.id);
+          dispatch({ type: 'ADD_MESSAGE', payload: welcomeMsg });
         }
       }
     } catch (error) {
       console.error('Error loading conversation:', error);
     }
   };
+
+  const createWelcomeMessage = (conversationId: string): TutorMessage => ({
+    id: crypto.randomUUID(),
+    conversation_id: conversationId,
+    role: 'assistant',
+    content: buildWelcomeMessage(userContext, pageContext, chatMode),
+    created_at: new Date().toISOString(),
+  });
 
   const openChat = useCallback(() => {
     dispatch({ type: 'OPEN_CHAT' });
@@ -148,9 +215,9 @@ export function useTutorChat(chatMode: 'tutor' | 'research' = 'tutor') {
     };
     dispatch({ type: 'ADD_MESSAGE', payload: assistantMessage });
 
-    // Prepare messages for API (only user and assistant, not system)
+    // Prepare messages for API (exclude welcome message — only user and assistant with content)
     const apiMessages = [...state.messages, userMessage]
-      .filter(m => m.role !== 'system')
+      .filter(m => m.role !== 'system' && m.content.trim() !== '')
       .map(m => ({ role: m.role, content: m.content }));
 
     try {
