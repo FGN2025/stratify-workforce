@@ -123,9 +123,14 @@ const CommunityProfile = () => {
 
         {/* Cover Banner */}
         <div 
-          className="relative h-48 rounded-xl overflow-hidden"
+          className="relative h-48 rounded-xl overflow-hidden bg-cover bg-center"
           style={{ 
-            background: `linear-gradient(135deg, ${community.brand_color}40 0%, ${community.brand_color}10 100%)` 
+            backgroundImage: community.cover_image_url
+              ? `url(${community.cover_image_url})`
+              : undefined,
+            background: !community.cover_image_url
+              ? `linear-gradient(135deg, ${community.brand_color}40 0%, ${community.brand_color}10 100%)`
+              : undefined,
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
