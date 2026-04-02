@@ -306,7 +306,7 @@ const CommunityProfile = () => {
             <div className="glass-card p-6">
               <h3 className="font-semibold mb-2">About {community.name}</h3>
               <p className="text-muted-foreground">
-                {community.description || `${community.name} is a professional training community focused on developing skilled operators through simulation-based learning. Our members participate in realistic work scenarios to build practical skills in a safe environment.`}
+                {community.description || `${community.name} {community.description || `${community.name} is a professional skills community focused on developing skilled operators through simulation-based learning. Our members participate in realistic work scenarios to build practical skills in a safe environment.`} through simulation-based learning. Our members participate in realistic work scenarios to build practical skills in a safe environment.`}
               </p>
             </div>
           </TabsContent>

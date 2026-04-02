@@ -102,7 +102,7 @@ const Communities = () => {
         {/* Communities Carousel */}
         <HorizontalCarousel
           title="All Communities"
-          subtitle={`${filteredCommunities.length} training organizations`}
+          subtitle={`${filteredCommunities.length} skills communities`}
           icon={<Users className="h-5 w-5" />}
         >
           {filteredCommunities.map((community, idx) => (
