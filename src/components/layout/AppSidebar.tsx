@@ -247,10 +247,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Sim Resources */}
+        {/* Sim Categories */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-            Sim Resources
+            Sim Categories
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
