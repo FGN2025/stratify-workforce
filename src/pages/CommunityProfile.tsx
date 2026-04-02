@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { JoinCommunityButton } from '@/components/communities/JoinCommunityButton';
 import { MembershipReviewQueue } from '@/components/communities/MembershipReviewQueue';
+import { WorkOrderAssignmentManager } from '@/components/communities/WorkOrderAssignmentManager';
 import { useIsManager } from '@/hooks/useMembershipRequest';
 import { usePendingMembershipCount } from '@/hooks/usePendingMembershipCount';
 import { 
