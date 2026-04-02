@@ -2097,6 +2097,51 @@ export type Database = {
           },
         ]
       }
+      work_order_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          id: string
+          notes: string | null
+          tenant_id: string
+          user_id: string | null
+          work_order_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          id?: string
+          notes?: string | null
+          tenant_id: string
+          user_id?: string | null
+          work_order_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          id?: string
+          notes?: string | null
+          tenant_id?: string
+          user_id?: string | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_evidence: {
         Row: {
           completion_id: string

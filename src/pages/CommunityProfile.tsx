@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { JoinCommunityButton } from '@/components/communities/JoinCommunityButton';
 import { MembershipReviewQueue } from '@/components/communities/MembershipReviewQueue';
+import { WorkOrderAssignmentManager } from '@/components/communities/WorkOrderAssignmentManager';
 import { useIsManager } from '@/hooks/useMembershipRequest';
 import { usePendingMembershipCount } from '@/hooks/usePendingMembershipCount';
 import { 
@@ -22,7 +23,8 @@ import {
   Link as LinkIcon,
   ExternalLink,
   Clock,
-  UserCheck
+  UserCheck,
+  ClipboardList
 } from 'lucide-react';
 import type { Tenant, WorkOrder, GameTitle } from '@/types/tenant';
 
@@ -242,6 +244,12 @@ const CommunityProfile = () => {
                 )}
               </TabsTrigger>
             )}
+            {isManager && (
+              <TabsTrigger value="assignments" className="gap-1">
+                <ClipboardList className="h-4 w-4" />
+                Assignments
+              </TabsTrigger>
+            )}
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
@@ -276,6 +284,14 @@ const CommunityProfile = () => {
           {isManager && (
             <TabsContent value="requests" className="mt-6">
               <MembershipReviewQueue tenantId={community.id} />
+            </TabsContent>
+          )}
+
+          {isManager && (
+            <TabsContent value="assignments" className="mt-6">
+              <div className="glass-card p-6">
+                <WorkOrderAssignmentManager tenantId={community.id} />
+              </div>
             </TabsContent>
           )}
 
