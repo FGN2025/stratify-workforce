@@ -23,7 +23,8 @@ import {
   Link as LinkIcon,
   ExternalLink,
   Clock,
-  UserCheck
+  UserCheck,
+  ClipboardList
 } from 'lucide-react';
 import type { Tenant, WorkOrder, GameTitle } from '@/types/tenant';
 
