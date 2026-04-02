@@ -19,6 +19,7 @@ import { useWorkOrderById } from '@/hooks/useWorkOrders';
 import { useUserWorkOrderStatus, useStartWorkOrder, calculateWorkOrderXP } from '@/hooks/useWorkOrderCompletion';
 import { useWorkOrderTasks, useUserTaskProgress } from '@/hooks/useWorkOrderTasks';
 import { UserProgressCard } from '@/components/work-orders/UserProgressCard';
+import { useSimResources } from '@/hooks/useSimResources';
 import { 
   useEvidenceSubmissions, 
   useDeleteEvidence,
@@ -28,6 +29,7 @@ import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import * as LucideIcons from 'lucide-react';
 import {
   ArrowLeft,
   Clock,
@@ -41,6 +43,8 @@ import {
   FileUp,
   Upload,
   ListChecks,
+  ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 
 export default function WorkOrderDetail() {
