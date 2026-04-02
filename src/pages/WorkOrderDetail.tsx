@@ -56,6 +56,10 @@ export default function WorkOrderDetail() {
   
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
   const { data: status } = useUserWorkOrderStatus(id || '');
+  // Auto-refresh status when in_progress (waiting for sync from play.fgn.gg)
+  const isInProgress = status?.latestStatus === 'in_progress';
+  const { data: _ } = useUserWorkOrderStatus(id || '');
+  // We handle refetch via the query options below
   const { data: evidenceList = [], refetch: refetchEvidence } = useEvidenceSubmissions(id || '');
   const { data: tasks = [] } = useWorkOrderTasks(id);
   const { data: taskProgress = [] } = useUserTaskProgress(id);
