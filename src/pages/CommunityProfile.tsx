@@ -110,12 +110,9 @@ const CommunityProfile = () => {
     );
   }
 
-  // Mock stats
   const stats = {
-    members: Math.floor(Math.random() * 500) + 100,
-    events: workOrders.length || Math.floor(Math.random() * 20) + 5,
-    rating: parseFloat((Math.random() * 1 + 4).toFixed(1)),
-    completions: Math.floor(Math.random() * 5000) + 1000,
+    members: community.member_count ?? 0,
+    events: workOrders.length,
   };
 
   return (
@@ -194,7 +191,7 @@ const CommunityProfile = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
+        <div className="grid grid-cols-2 gap-4 mt-8">
           <div className="glass-card p-4 text-center">
             <Users className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
             <p className="font-data text-2xl text-foreground">{stats.members}</p>
@@ -203,17 +200,7 @@ const CommunityProfile = () => {
           <div className="glass-card p-4 text-center">
             <Trophy className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
             <p className="font-data text-2xl text-foreground">{stats.events}</p>
-            <p className="text-xs text-muted-foreground">Events</p>
-          </div>
-          <div className="glass-card p-4 text-center">
-            <Star className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-            <p className="font-data text-2xl text-foreground">{stats.rating}</p>
-            <p className="text-xs text-muted-foreground">Rating</p>
-          </div>
-          <div className="glass-card p-4 text-center">
-            <Clock className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-            <p className="font-data text-2xl text-foreground">{stats.completions.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Completions</p>
+            <p className="text-xs text-muted-foreground">Work Orders</p>
           </div>
         </div>
 

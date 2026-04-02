@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, NavLink } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +56,19 @@ export default function WorkOrderDetail() {
   
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
   const { data: status } = useUserWorkOrderStatus(id || '');
+  const { data: completionCountData } = useQuery({
+    queryKey: ['work-order-completion-count', id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('user_work_order_completions')
+        .select('*', { count: 'exact', head: true })
+        .eq('work_order_id', id!);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!id,
+  });
+  const completionCount = completionCountData;
   const { data: evidenceList = [], refetch: refetchEvidence } = useEvidenceSubmissions(id || '');
   const { data: tasks = [] } = useWorkOrderTasks(id);
   const { data: taskProgress = [] } = useUserTaskProgress(id);
@@ -245,7 +258,7 @@ export default function WorkOrderDetail() {
                   )}
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span className="font-data">24</span> completed
+                    <span className="font-data">{completionCount ?? '—'}</span> completed
                   </div>
                 </div>
               </div>

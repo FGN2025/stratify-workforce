@@ -22,9 +22,9 @@ interface CommunityCardProps {
 
 export function CommunityCard({ 
   community, 
-  memberCount = Math.floor(Math.random() * 500) + 50,
-  eventCount = Math.floor(Math.random() * 20) + 5,
-  rating = parseFloat((Math.random() * 2 + 3).toFixed(1)),
+  memberCount,
+  eventCount,
+  rating,
   featured = false,
   onEdit,
 }: CommunityCardProps) {
@@ -178,7 +178,7 @@ export function CommunityCard({
                 <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                   <Users className="h-3 w-3" />
                 </div>
-                <p className="font-data text-lg text-foreground">{memberCount}</p>
+                <p className="font-data text-lg text-foreground">{community.member_count ?? memberCount ?? '—'}</p>
                 <p className="text-[10px] text-muted-foreground">Members</p>
               </div>
               
@@ -186,7 +186,7 @@ export function CommunityCard({
                 <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                   <Trophy className="h-3 w-3" />
                 </div>
-                <p className="font-data text-lg text-foreground">{eventCount}</p>
+                <p className="font-data text-lg text-foreground">{eventCount ?? '—'}</p>
                 <p className="text-[10px] text-muted-foreground">Events</p>
               </div>
               
@@ -194,7 +194,7 @@ export function CommunityCard({
                 <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                   <Star className="h-3 w-3" />
                 </div>
-                <p className="font-data text-lg text-foreground">{rating}</p>
+                <p className="font-data text-lg text-foreground">{rating ?? '—'}</p>
                 <p className="text-[10px] text-muted-foreground">Rating</p>
               </div>
             </div>
