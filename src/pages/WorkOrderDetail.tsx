@@ -56,6 +56,19 @@ export default function WorkOrderDetail() {
   
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
   const { data: status } = useUserWorkOrderStatus(id || '');
+  const { data: completionCountData } = useQuery({
+    queryKey: ['work-order-completion-count', id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('user_work_order_completions')
+        .select('*', { count: 'exact', head: true })
+        .eq('work_order_id', id!);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!id,
+  });
+  const completionCount = completionCountData;
   const { data: evidenceList = [], refetch: refetchEvidence } = useEvidenceSubmissions(id || '');
   const { data: tasks = [] } = useWorkOrderTasks(id);
   const { data: taskProgress = [] } = useUserTaskProgress(id);
