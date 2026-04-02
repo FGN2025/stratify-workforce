@@ -8,6 +8,7 @@ import { WorkOrderFilters, WorkOrderFilter } from '@/components/work-orders/Work
 import { useWorkOrders, WorkOrderWithXP } from '@/hooks/useWorkOrders';
 import { useChannelSubscriptions } from '@/hooks/useChannelSubscriptions';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useWorkOrderCompletions } from '@/hooks/useWorkOrderCompletion';
 import { ImportChallengeDialog, type MappedChallengeData } from '@/components/admin/ImportChallengeDialog';
 import { WorkOrderEditDialog } from '@/components/admin/WorkOrderEditDialog';
 import { Skeleton } from '@/components/ui/skeleton';
