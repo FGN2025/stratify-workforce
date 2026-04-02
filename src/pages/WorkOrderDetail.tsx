@@ -19,6 +19,7 @@ import { useWorkOrderById } from '@/hooks/useWorkOrders';
 import { useUserWorkOrderStatus, useStartWorkOrder, calculateWorkOrderXP } from '@/hooks/useWorkOrderCompletion';
 import { useWorkOrderTasks, useUserTaskProgress } from '@/hooks/useWorkOrderTasks';
 import { UserProgressCard } from '@/components/work-orders/UserProgressCard';
+import { useSimResources } from '@/hooks/useSimResources';
 import { 
   useEvidenceSubmissions, 
   useDeleteEvidence,
@@ -28,6 +29,7 @@ import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import * as LucideIcons from 'lucide-react';
 import {
   ArrowLeft,
   Clock,
@@ -41,6 +43,8 @@ import {
   FileUp,
   Upload,
   ListChecks,
+  ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 
 export default function WorkOrderDetail() {
@@ -56,6 +60,7 @@ export default function WorkOrderDetail() {
   const { data: tasks = [] } = useWorkOrderTasks(id);
   const { data: taskProgress = [] } = useUserTaskProgress(id);
   const { gameCoverImages } = useGameCoverImages();
+  const { data: simResources = [] } = useSimResources(workOrder?.game_title);
   const startWorkOrder = useStartWorkOrder();
   const deleteEvidence = useDeleteEvidence();
 
@@ -247,17 +252,71 @@ export default function WorkOrderDetail() {
 
               {/* Actions */}
               <div className="flex flex-col gap-3 shrink-0">
-                {!status?.hasAttempted || status.latestStatus !== 'in_progress' ? (
-                  <Button size="lg" onClick={handleStart} disabled={startWorkOrder.isPending}>
-                    <PlayCircle className="h-5 w-5 mr-2" />
-                    {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
-                  </Button>
-                ) : (
-                  <Button size="lg" variant="secondary">
-                    <RotateCcw className="h-5 w-5 mr-2" />
-                    Continue
-                  </Button>
-                )}
+                {(() => {
+                  const hasPassed = status?.isCompleted && (status?.bestScore ?? 0) >= 70;
+                  const playUrl = workOrder.source_challenge_id
+                    ? `https://play.fgn.gg/challenge/${workOrder.source_challenge_id}`
+                    : null;
+
+                  if (hasPassed) {
+                    // Completed with passing score — show results + retry
+                    return (
+                      <>
+                        <div className="text-center p-3 rounded-lg bg-primary/10 border border-primary/20">
+                          <CheckCircle2 className="h-6 w-6 text-primary mx-auto mb-1" />
+                          <p className="text-sm font-semibold">Score: {status.bestScore}%</p>
+                          <p className="text-xs text-muted-foreground">{status.attemptCount} attempt{status.attemptCount !== 1 ? 's' : ''}</p>
+                        </div>
+                        {playUrl && (
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            onClick={() => window.open(playUrl, '_blank')}
+                          >
+                            <RotateCcw className="h-5 w-5 mr-2" />
+                            Try Again on Play
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </Button>
+                        )}
+                      </>
+                    );
+                  }
+
+                  if (playUrl) {
+                    // Has a linked challenge — send to play.fgn.gg
+                    const handlePlayAction = async () => {
+                      if (!status?.hasAttempted) {
+                        await handleStart();
+                      }
+                      window.open(playUrl, '_blank');
+                    };
+
+                    return (
+                      <Button
+                        size="lg"
+                        onClick={handlePlayAction}
+                        disabled={startWorkOrder.isPending}
+                      >
+                        <PlayCircle className="h-5 w-5 mr-2" />
+                        {status?.latestStatus === 'in_progress' ? 'Continue on Play' : 'Launch Challenge'}
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    );
+                  }
+
+                  // No linked challenge — fallback to local behavior
+                  return !status?.hasAttempted || status.latestStatus !== 'in_progress' ? (
+                    <Button size="lg" onClick={handleStart} disabled={startWorkOrder.isPending}>
+                      <PlayCircle className="h-5 w-5 mr-2" />
+                      {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
+                    </Button>
+                  ) : (
+                    <Button size="lg" variant="secondary">
+                      <RotateCcw className="h-5 w-5 mr-2" />
+                      Continue
+                    </Button>
+                  );
+                })()}
                 
                 <ChannelSubscribeButton gameTitle={workOrder.game_title} variant="outline" />
               </div>
@@ -400,6 +459,49 @@ export default function WorkOrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Learning Resources */}
+          {simResources.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  Learning Resources
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {simResources.map((resource) => {
+                  const IconComponent = ((LucideIcons as unknown) as Record<string, LucideIcons.LucideIcon>)[resource.icon_name] || BookOpen;
+                  return (
+                    <a
+                      key={resource.id}
+                      href={resource.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors group"
+                    >
+                      <div
+                        className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${resource.accent_color}20` }}
+                      >
+                        <IconComponent
+                          className="h-4 w-4"
+                          style={{ color: resource.accent_color }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{resource.title}</p>
+                        {resource.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">{resource.description}</p>
+                        )}
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </a>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Your Progress with Credential */}
           {status?.hasAttempted && (
