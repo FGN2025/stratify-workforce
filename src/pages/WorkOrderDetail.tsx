@@ -40,6 +40,7 @@ import {
   PlayCircle,
   RotateCcw,
   AlertTriangle,
+  Loader2,
   FileUp,
   Upload,
   ListChecks,
@@ -341,7 +342,19 @@ export default function WorkOrderDetail() {
           </div>
         </div>
 
-        {/* Content Grid */}
+        {/* Waiting for results banner */}
+        {status?.latestStatus === 'in_progress' && workOrder.source_challenge_id && (
+          <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/30 bg-primary/5 animate-pulse">
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Waiting for results…</p>
+              <p className="text-xs text-muted-foreground">
+                Complete the challenge on play.fgn.gg — your score will sync automatically within a few seconds.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tasks / Success Criteria */}
           <Card className="lg:col-span-2">
