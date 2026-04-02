@@ -252,17 +252,71 @@ export default function WorkOrderDetail() {
 
               {/* Actions */}
               <div className="flex flex-col gap-3 shrink-0">
-                {!status?.hasAttempted || status.latestStatus !== 'in_progress' ? (
-                  <Button size="lg" onClick={handleStart} disabled={startWorkOrder.isPending}>
-                    <PlayCircle className="h-5 w-5 mr-2" />
-                    {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
-                  </Button>
-                ) : (
-                  <Button size="lg" variant="secondary">
-                    <RotateCcw className="h-5 w-5 mr-2" />
-                    Continue
-                  </Button>
-                )}
+                {(() => {
+                  const hasPassed = status?.isCompleted && (status?.bestScore ?? 0) >= 70;
+                  const playUrl = workOrder.source_challenge_id
+                    ? `https://play.fgn.gg/challenge/${workOrder.source_challenge_id}`
+                    : null;
+
+                  if (hasPassed) {
+                    // Completed with passing score — show results + retry
+                    return (
+                      <>
+                        <div className="text-center p-3 rounded-lg bg-primary/10 border border-primary/20">
+                          <CheckCircle2 className="h-6 w-6 text-primary mx-auto mb-1" />
+                          <p className="text-sm font-semibold">Score: {status.bestScore}%</p>
+                          <p className="text-xs text-muted-foreground">{status.attemptCount} attempt{status.attemptCount !== 1 ? 's' : ''}</p>
+                        </div>
+                        {playUrl && (
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            onClick={() => window.open(playUrl, '_blank')}
+                          >
+                            <RotateCcw className="h-5 w-5 mr-2" />
+                            Try Again on Play
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </Button>
+                        )}
+                      </>
+                    );
+                  }
+
+                  if (playUrl) {
+                    // Has a linked challenge — send to play.fgn.gg
+                    const handlePlayAction = async () => {
+                      if (!status?.hasAttempted) {
+                        await handleStart();
+                      }
+                      window.open(playUrl, '_blank');
+                    };
+
+                    return (
+                      <Button
+                        size="lg"
+                        onClick={handlePlayAction}
+                        disabled={startWorkOrder.isPending}
+                      >
+                        <PlayCircle className="h-5 w-5 mr-2" />
+                        {status?.latestStatus === 'in_progress' ? 'Continue on Play' : 'Launch Challenge'}
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    );
+                  }
+
+                  // No linked challenge — fallback to local behavior
+                  return !status?.hasAttempted || status.latestStatus !== 'in_progress' ? (
+                    <Button size="lg" onClick={handleStart} disabled={startWorkOrder.isPending}>
+                      <PlayCircle className="h-5 w-5 mr-2" />
+                      {status?.hasAttempted ? 'Try Again' : 'Start Work Order'}
+                    </Button>
+                  ) : (
+                    <Button size="lg" variant="secondary">
+                      <RotateCcw className="h-5 w-5 mr-2" />
+                      Continue
+                    </Button>
+                  );
+                })()}
                 
                 <ChannelSubscribeButton gameTitle={workOrder.game_title} variant="outline" />
               </div>
