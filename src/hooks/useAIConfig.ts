@@ -24,6 +24,7 @@ export interface AIPersonaConfig {
   persona_name: string;
   system_prompt: string;
   model_override: string | null;
+  notebook_url: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
