@@ -50,7 +50,7 @@ export function useWorkOrderAssignments(tenantId?: string) {
         notes: notes || null,
       };
       if (userId) row.user_id = userId;
-      const { error } = await supabase.from('work_order_assignments').insert(row);
+      const { error } = await supabase.from('work_order_assignments').insert([row as any]);
       if (error) throw error;
     },
     onSuccess: () => {
