@@ -130,10 +130,12 @@ export function EventCard({
                 <div className="flex items-center gap-3 mt-2">
                   <XPRewardBadge xp={xpReward} size="sm" />
                   <DifficultyIndicator difficulty={difficulty} size="sm" />
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {participantCount}
-                  </span>
+                  {participantCount != null && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {participantCount}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
