@@ -460,6 +460,49 @@ export default function WorkOrderDetail() {
             </CardContent>
           </Card>
 
+          {/* Learning Resources */}
+          {simResources.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  Learning Resources
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {simResources.map((resource) => {
+                  const IconComponent = (LucideIcons as Record<string, LucideIcons.LucideIcon>)[resource.icon_name] || BookOpen;
+                  return (
+                    <a
+                      key={resource.id}
+                      href={resource.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors group"
+                    >
+                      <div
+                        className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${resource.accent_color}20` }}
+                      >
+                        <IconComponent
+                          className="h-4 w-4"
+                          style={{ color: resource.accent_color }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{resource.title}</p>
+                        {resource.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">{resource.description}</p>
+                        )}
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </a>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Your Progress with Credential */}
           {status?.hasAttempted && (
             <UserProgressCard
