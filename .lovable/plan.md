@@ -1,45 +1,100 @@
 
 
-# Remaining Audit Gaps: P2 + P3
+# Communities UX Audit: End-to-End Gap Analysis
 
-The P0/P1 fixes are done. Gap #9 (sync notifications) was also already implemented in the edge function. Here's what remains:
+```text
+DISCOVERY → PROFILE → JOIN → APPROVAL → ACCESS WORK ORDERS
+   ↓          ↓        ↓        ↓              ↓
+  [1,2]     [3,4,5]   [6]     [7,8]          [9,10]
+```
 
-## Gap 2 — Hardcoded Fake Stats (P2)
+## Gap 1: Hardcoded hero stats on Communities page (P2)
+`Communities.tsx` line 76-78 shows `"2,500+"` Active Members and `"180+"` Work Orders — completely hardcoded. Real community count is dynamic but the other two are fake.
 
-Fake numbers appear in multiple places:
+**Fix**: Query actual totals from `community_memberships` and `work_orders`, or remove fake numbers.
 
-| Location | Fake Data | Fix |
-|----------|-----------|-----|
-| `WorkOrderCard.tsx` line 64 | `"24"` active (hardcoded) | Query `user_work_order_completions` count per work order, or remove |
-| `WorkOrderDetail.tsx` line 248 | `"24"` completed (hardcoded) | Query actual completion count for that work order |
-| `EventCard.tsx` line 38-39 | `Math.random()` for participantCount and rating | Query real counts or remove defaults |
-| `CommunityCard.tsx` lines 25-27 | `Math.random()` for memberCount, eventCount, rating | Query from `community_memberships` + work orders |
-| `CommunityProfile.tsx` lines 115-119 | `Math.random()` mock stats block | Query real membership/completion counts |
+## Gap 2: Random community assignment on Home page (P1)
+`Index.tsx` line 63-66 assigns a **random community** to each work order card via `getRandomCommunity()` — showing incorrect community associations. Users clicking through will see wrong branding.
 
-## Gap 5 — Race Condition on Launch (P2)
+**Fix**: Use the actual `tenant_id` relationship. Query work orders with their tenant join, or pass `wo.tenant_id` to look up the correct community.
 
-Already partially fixed (the `await mutateAsync` + try/catch). The current code looks correct — `window.open` only fires if `mutateAsync` succeeds. **This gap is resolved.**
+## Gap 3: Hardcoded location and website on Community Profile (P1)
+`CommunityProfile.tsx` line 167 shows `"United States"` (hardcoded) instead of `community.location`. Line 175 shows `website.com` with `href="#"` instead of `community.website_url`. Both fields exist in the data model but are ignored.
 
-## Gap 6 — Return-to-Academy UX (P3)
+**Fix**: Use `community.location` and `community.website_url`. Hide each if null.
 
-After opening play.fgn.gg in a new tab, there's no visual indicator on the Academy side. The `refetchInterval` (Gap 7 fix) partially addresses this — when the user returns to the tab, the query will auto-refresh within 10 seconds. A "Waiting for results..." banner could improve this further but is low priority.
+## Gap 4: "Verified" badge shown for ALL communities (P1)
+`CommunityProfile.tsx` line 152-159 always renders a "Verified" badge regardless of `community.is_verified`. Unverified communities appear verified.
 
-## Recommended Next Step
+**Fix**: Conditionally render based on `community.is_verified`.
 
-**Fix Gap 2** — Remove all hardcoded/random stats. This is the most user-visible remaining issue.
+## Gap 5: Cover image not used on Community Profile (P2)
+`CommunityProfile.tsx` line 126-132 renders only a gradient from `brand_color`. The `cover_image_url` field is available but never displayed as a background image.
 
-### Files to Change
+**Fix**: If `community.cover_image_url` exists, use it as `background-image`; fall back to the gradient.
 
-| File | Change |
-|------|--------|
-| `src/components/dashboard/WorkOrderCard.tsx` | Query completion count per work order from `user_work_order_completions`, or remove the "24 active" stat |
-| `src/pages/WorkOrderDetail.tsx` | Replace hardcoded "24 completed" with a real count query |
-| `src/components/marketplace/EventCard.tsx` | Remove `Math.random()` defaults for participantCount/rating; accept real data or show nothing |
-| `src/components/marketplace/CommunityCard.tsx` | Remove `Math.random()` defaults; query actual member/event counts or accept them as required props |
-| `src/pages/CommunityProfile.tsx` | Replace mock stats block with real queries against `community_memberships` and completions |
+## Gap 6: No re-apply path after rejection (P2)
+`JoinCommunityButton` shows "Request Denied" with reviewer notes but **no way to re-apply**. The user is permanently stuck unless the record is manually deleted.
 
-### Approach
-- Create a shared hook `useWorkOrderCompletionCount(workOrderId)` that returns the count of completions for a given work order
-- For community stats, query `community_memberships` for member count and use the existing work orders data for event count
-- Remove all `Math.random()` default values — if data isn't available, show nothing or "—"
+**Fix**: Add a "Re-apply" button that deletes the rejected membership row and re-inserts a fresh pending request.
+
+## Gap 7: "My Communities" only shows owned communities (P1)
+`useMyCommunities` queries `tenants WHERE owner_id = user.id` — it only shows communities the user **created**, not communities they've **joined** as a member. A user who joined 5 communities but created none sees an empty section.
+
+**Fix**: Also query `community_memberships` to show communities where the user has an approved membership, alongside owned ones.
+
+## Gap 8: No notification to manager on new membership request (P2)
+When a user clicks "Join Community", the membership row is inserted but no notification is created. Managers won't know someone requested to join unless they manually check the Requests tab.
+
+**Fix**: Insert a notification for community managers/admins on membership request creation (via DB trigger or client-side insert).
+
+## Gap 9: Members tab is a placeholder (P2)
+`CommunityProfile.tsx` line 251-254 shows "Member list coming soon" — members tab has no implementation despite `community_memberships` data being available.
+
+**Fix**: Query approved memberships with profile data and render a member list.
+
+## Gap 10: Filter button on Communities page does nothing (P3)
+`Communities.tsx` line 97-100 renders a "Filter" button with no `onClick` or dropdown. It's purely decorative.
+
+**Fix**: Add category/game-title filter dropdown, or remove the button.
+
+## Gap 11: ExternalLink button on Community Profile does nothing (P3)
+`CommunityProfile.tsx` line 186-188 renders an `ExternalLink` icon button with no `onClick` or `href`. It sits next to the Join button but is inert.
+
+**Fix**: Link to `community.website_url` if available, or remove.
+
+## Gap 12: Leaderboard tab is a placeholder (P3)
+"Leaderboard coming soon" — data exists via `get_leaderboard_data()` but isn't wired up per-community.
+
+---
+
+## Priority Ranking
+
+| Priority | Gap | Effort |
+|----------|-----|--------|
+| P1 | #2 — Random community on Home page | Small (use real tenant join) |
+| P1 | #3 — Hardcoded location/website | Trivial (use real fields) |
+| P1 | #4 — Verified badge always shown | Trivial (conditional render) |
+| P1 | #7 — My Communities missing joined communities | Small (add membership query) |
+| P2 | #1 — Fake hero stats | Small (real queries) |
+| P2 | #5 — Cover image unused on profile | Trivial (add backgroundImage) |
+| P2 | #6 — No re-apply after rejection | Small (delete + re-insert) |
+| P2 | #8 — No manager notification on join request | Medium (trigger or insert) |
+| P2 | #9 — Members tab placeholder | Medium (query + list UI) |
+| P3 | #10 — Filter button inert | Small |
+| P3 | #11 — ExternalLink button inert | Trivial |
+| P3 | #12 — Leaderboard tab placeholder | Medium |
+
+## Recommended First Pass
+
+Fix all P1 gaps across 4 files:
+
+| File | Changes |
+|------|---------|
+| `src/pages/Index.tsx` | Remove `getRandomCommunity()`; join work orders to their actual tenant via `tenant_id` |
+| `src/pages/CommunityProfile.tsx` | Use `community.location` / `community.website_url` (hide if null); conditionally render Verified badge on `is_verified`; show `cover_image_url` in banner |
+| `src/hooks/useMyCommunities.ts` | Also query `community_memberships` for approved memberships, merge with owned communities |
+| `src/pages/Communities.tsx` | Replace hardcoded hero stats with real aggregates or remove fake numbers |
+
+P2/P3 gaps (re-apply, members list, notifications, filter, leaderboard) follow as separate iterations.
 
