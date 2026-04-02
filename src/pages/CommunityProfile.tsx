@@ -244,6 +244,12 @@ const CommunityProfile = () => {
                 )}
               </TabsTrigger>
             )}
+            {isManager && (
+              <TabsTrigger value="assignments" className="gap-1">
+                <ClipboardList className="h-4 w-4" />
+                Assignments
+              </TabsTrigger>
+            )}
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
