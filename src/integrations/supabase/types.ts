@@ -105,6 +105,7 @@ export type Database = {
           id: string
           is_active: boolean
           model_override: string | null
+          notebook_url: string | null
           persona_name: string
           system_prompt: string
           updated_at: string
@@ -115,6 +116,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           model_override?: string | null
+          notebook_url?: string | null
           persona_name: string
           system_prompt: string
           updated_at?: string
@@ -125,6 +127,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           model_override?: string | null
+          notebook_url?: string | null
           persona_name?: string
           system_prompt?: string
           updated_at?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_persona_configs ADD COLUMN notebook_url text DEFAULT NULL;

@@ -158,8 +158,13 @@ function ModelsSection() {
 function PersonaEditor({ persona, models }: { persona: AIPersonaConfig; models: { model_id: string; display_name: string }[] }) {
   const [prompt, setPrompt] = useState(persona.system_prompt);
   const [override, setOverride] = useState(persona.model_override || '');
+  const [notebookUrlValue, setNotebookUrlValue] = useState(persona.notebook_url || '');
   const updatePersona = useUpdateAIPersona();
-  const isDirty = prompt !== persona.system_prompt || (override || '') !== (persona.model_override || '');
+  const isDirty = prompt !== persona.system_prompt
+    || (override || '') !== (persona.model_override || '')
+    || (notebookUrlValue || '') !== (persona.notebook_url || '');
+
+  const isGamePersona = persona.context_type.startsWith('game_');
 
   return (
     <Card className="border-border/50">
@@ -184,6 +189,20 @@ function PersonaEditor({ persona, models }: { persona: AIPersonaConfig; models: 
           className="min-h-[120px] text-xs font-mono"
           placeholder="System prompt..."
         />
+        {isGamePersona && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Notebook URL</label>
+            <Input
+              value={notebookUrlValue}
+              onChange={(e) => setNotebookUrlValue(e.target.value)}
+              placeholder="https://www.open-notebook.ai/notebook/..."
+              className="text-xs"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              SIM-specific Open Notebook URL. Atlas will reference this as a knowledge source.
+            </p>
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <Select value={override} onValueChange={setOverride}>
             <SelectTrigger className="flex-1">
@@ -205,6 +224,7 @@ function PersonaEditor({ persona, models }: { persona: AIPersonaConfig; models: 
                 updates: {
                   system_prompt: prompt,
                   model_override: override === 'none' ? null : override || null,
+                  ...(isGamePersona ? { notebook_url: notebookUrlValue || null } : {}),
                 },
               })
             }

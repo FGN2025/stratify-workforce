@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, NavLink } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -28,6 +28,7 @@ import {
 import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { toast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import {
@@ -56,6 +57,14 @@ export default function WorkOrderDetail() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
+
+  // Register game title for tutor context
+  useEffect(() => {
+    if (workOrder?.game_title) {
+      setCurrentGameTitle(workOrder.game_title);
+      return () => { setCurrentGameTitle(null); };
+    }
+  }, [workOrder?.game_title]);
   const { data: status } = useUserWorkOrderStatus(id || '');
   const { data: completionCountData } = useQuery({
     queryKey: ['work-order-completion-count', id],

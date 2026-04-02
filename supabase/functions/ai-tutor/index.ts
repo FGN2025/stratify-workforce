@@ -42,6 +42,7 @@ interface ChatRequest {
 interface PersonaConfig {
   system_prompt: string;
   model_override: string | null;
+  notebook_url: string | null;
 }
 
 interface ModelConfig {
@@ -57,11 +58,11 @@ async function getPersonaFromDB(
   gameTitle?: string
 ): Promise<PersonaConfig | null> {
   // Try game-specific persona first
-  if (contextType === "game" && gameTitle) {
+  if (gameTitle) {
     const gameKey = `game_${gameTitle}`;
     const { data } = await supabaseAdmin
       .from("ai_persona_configs")
-      .select("system_prompt, model_override")
+      .select("system_prompt, model_override, notebook_url")
       .eq("context_type", gameKey)
       .eq("is_active", true)
       .single();
@@ -71,7 +72,7 @@ async function getPersonaFromDB(
   // Try context type directly
   const { data } = await supabaseAdmin
     .from("ai_persona_configs")
-    .select("system_prompt, model_override")
+    .select("system_prompt, model_override, notebook_url")
     .eq("context_type", contextType)
     .eq("is_active", true)
     .single();
@@ -118,19 +119,28 @@ async function getModelFromDB(
 
 function buildSystemPrompt(
   basePrompt: string,
-  context?: ChatRequest["context"]
+  context?: ChatRequest["context"],
+  notebookUrl?: string | null
 ): string {
-  if (!context) return basePrompt;
+  let prompt = basePrompt;
+
+  // Inject notebook reference if available
+  if (notebookUrl) {
+    prompt += `\n\nYou have access to a curated knowledge base for this simulation at: ${notebookUrl}\nWhen students ask domain-specific questions about this simulation, reference this knowledge source for authoritative answers.`;
+  }
+
+  if (!context) return prompt;
 
   const contextInfo: string[] = [];
   if (context.userXp !== undefined) contextInfo.push(`Student XP: ${context.userXp}`);
   if (context.userLevel !== undefined) contextInfo.push(`Student Level: ${context.userLevel}`);
   if (context.title) contextInfo.push(`Current Activity: ${context.title}`);
+  if (context.gameTitle) contextInfo.push(`Current SIM: ${context.gameTitle}`);
 
   if (contextInfo.length > 0) {
-    return `${basePrompt}\n\nCurrent Student Context:\n${contextInfo.join("\n")}`;
+    return `${prompt}\n\nCurrent Student Context:\n${contextInfo.join("\n")}`;
   }
-  return basePrompt;
+  return prompt;
 }
 
 serve(async (req) => {
@@ -175,7 +185,7 @@ serve(async (req) => {
     // Get persona config from DB (with fallback)
     const personaConfig = await getPersonaFromDB(supabaseAdmin, contextType, context?.gameTitle);
     const basePrompt = personaConfig?.system_prompt || FALLBACK_PERSONAS[contextType] || FALLBACK_PERSONAS.general;
-    const systemPrompt = buildSystemPrompt(basePrompt, context);
+    const systemPrompt = buildSystemPrompt(basePrompt, context, personaConfig?.notebook_url);
 
     // Get model from DB (with fallback)
     const { modelId: model, apiKey: modelApiKey } = await getModelFromDB(supabaseAdmin, useFor, personaConfig?.model_override);
