@@ -60,6 +60,7 @@ export default function WorkOrderDetail() {
   const { data: tasks = [] } = useWorkOrderTasks(id);
   const { data: taskProgress = [] } = useUserTaskProgress(id);
   const { gameCoverImages } = useGameCoverImages();
+  const { data: simResources = [] } = useSimResources(workOrder?.game_title);
   const startWorkOrder = useStartWorkOrder();
   const deleteEvidence = useDeleteEvidence();
 
