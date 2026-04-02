@@ -1,88 +1,45 @@
 
 
-# Work Order User Journey: End-to-End UX Audit
+# Remaining Audit Gaps: P2 + P3
 
-## Journey Map + Gaps Identified
+The P0/P1 fixes are done. Gap #9 (sync notifications) was also already implemented in the edge function. Here's what remains:
 
-```text
-DISCOVERY → DETAIL → START → PLAY → SYNC → RESULTS
-   ↓          ↓        ↓       ↓       ↓        ↓
-  [1,2]      [3]     [4,5]   [6]     [7]     [8,9]
-```
+## Gap 2 — Hardcoded Fake Stats (P2)
 
-### Gap 1: Dashboard WorkOrderCard is a dead end
-`WorkOrderCard` (used by `ActiveWorkOrders` on the dashboard) has `cursor-pointer` and a hover arrow button but **no `NavLink` or `onClick`** — clicking does nothing. Users see work orders on the dashboard but can't navigate to them.
+Fake numbers appear in multiple places:
 
-**Fix**: Wrap `WorkOrderCard` in a `NavLink to={/work-orders/${workOrder.id}}`.
+| Location | Fake Data | Fix |
+|----------|-----------|-----|
+| `WorkOrderCard.tsx` line 64 | `"24"` active (hardcoded) | Query `user_work_order_completions` count per work order, or remove |
+| `WorkOrderDetail.tsx` line 248 | `"24"` completed (hardcoded) | Query actual completion count for that work order |
+| `EventCard.tsx` line 38-39 | `Math.random()` for participantCount and rating | Query real counts or remove defaults |
+| `CommunityCard.tsx` lines 25-27 | `Math.random()` for memberCount, eventCount, rating | Query from `community_memberships` + work orders |
+| `CommunityProfile.tsx` lines 115-119 | `Math.random()` mock stats block | Query real membership/completion counts |
 
-### Gap 2: Hardcoded fake stats everywhere
-- `WorkOrderCard` shows "24 active" — hardcoded
-- `EventCard` shows random `participantCount` and `rating` via `Math.random()`
-- `WorkOrderDetail` header shows "24 completed" — hardcoded
+## Gap 5 — Race Condition on Launch (P2)
 
-**Fix**: Query actual completion counts from `user_work_order_completions` or remove the fake numbers.
+Already partially fixed (the `await mutateAsync` + try/catch). The current code looks correct — `window.open` only fires if `mutateAsync` succeeds. **This gap is resolved.**
 
-### Gap 3: No completion status shown on listing cards
-`EventCard` accepts an `isCompleted` prop but it's **never passed** from `WorkOrders.tsx` or `Index.tsx`. Users can't tell which work orders they've already completed when browsing.
+## Gap 6 — Return-to-Academy UX (P3)
 
-**Fix**: Cross-reference `user_work_order_completions` in the listing pages and pass `isCompleted` to each card.
+After opening play.fgn.gg in a new tab, there's no visual indicator on the Academy side. The `refetchInterval` (Gap 7 fix) partially addresses this — when the user returns to the tab, the query will auto-refresh within 10 seconds. A "Waiting for results..." banner could improve this further but is low priority.
 
-### Gap 4: "Continue" button (no external link) does nothing
-In the fallback case (no `source_challenge_id`), the "Continue" button renders as `<Button size="lg" variant="secondary">` with **no onClick handler** — it's completely inert.
+## Recommended Next Step
 
-**Fix**: Add an appropriate action or disable the button with context.
+**Fix Gap 2** — Remove all hardcoded/random stats. This is the most user-visible remaining issue.
 
-### Gap 5: No loading/pending state on Launch Challenge
-When clicking "Launch Challenge", `handleStart` is async but `window.open` fires immediately after — the new tab may open before the completion record is saved. If `handleStart` fails, the user is redirected anyway with no record.
+### Files to Change
 
-**Fix**: `await handleStart()` before `window.open()`, and don't redirect on failure. (The code does `await` but doesn't check for errors since `handleStart` catches and toasts internally — if it throws, `window.open` still runs.)
+| File | Change |
+|------|--------|
+| `src/components/dashboard/WorkOrderCard.tsx` | Query completion count per work order from `user_work_order_completions`, or remove the "24 active" stat |
+| `src/pages/WorkOrderDetail.tsx` | Replace hardcoded "24 completed" with a real count query |
+| `src/components/marketplace/EventCard.tsx` | Remove `Math.random()` defaults for participantCount/rating; accept real data or show nothing |
+| `src/components/marketplace/CommunityCard.tsx` | Remove `Math.random()` defaults; query actual member/event counts or accept them as required props |
+| `src/pages/CommunityProfile.tsx` | Replace mock stats block with real queries against `community_memberships` and completions |
 
-### Gap 6: No "return to Academy" prompt on play.fgn.gg
-After opening play.fgn.gg in a new tab, there's no mechanism to bring the user back to the Academy to see their results. This is outside Academy's control, but the Academy side could:
-- Poll/subscribe for completion updates while the detail page is open
-- Show a "Waiting for results..." state
-
-**Fix**: Add realtime subscription or polling on `user_work_order_completions` to auto-refresh status when the user returns to the Academy tab.
-
-### Gap 7: No real-time feedback when sync completes
-When the `sync-challenge-completion` webhook fires, the user's detail page doesn't update unless they manually refresh. The `useUserWorkOrderStatus` query uses default stale times.
-
-**Fix**: Either enable Supabase Realtime on `user_work_order_completions` or add short-interval refetching (`refetchInterval`) when status is `in_progress`.
-
-### Gap 8: "Best Score" tracking is incomplete
-`useUserWorkOrderStatus` has a `// TODO: Track best score` comment — it returns the latest attempt's score as `bestScore`, not the actual highest score across all attempts.
-
-**Fix**: Query `MAX(score)` across all completions for the work order.
-
-### Gap 9: No notification when results sync
-The `sync-challenge-completion` edge function awards XP and credentials but doesn't create a user notification. Users don't know their results arrived unless they revisit the page.
-
-**Fix**: Insert into `notifications` table from the sync edge function (or a DB trigger on completion).
-
-## Priority Ranking
-
-| Priority | Gap | Effort |
-|----------|-----|--------|
-| P0 | #1 — Dashboard cards not clickable | Trivial (add NavLink) |
-| P0 | #4 — "Continue" button does nothing | Trivial (add handler) |
-| P1 | #3 — No completion badges on listings | Small (query + prop) |
-| P1 | #7 — No auto-refresh on sync | Small (refetchInterval) |
-| P1 | #8 — Best score TODO | Small (MAX query) |
-| P2 | #2 — Fake stats | Medium (real counts) |
-| P2 | #5 — Race condition on launch | Small (error guard) |
-| P2 | #9 — No sync notification | Medium (edge fn change) |
-| P3 | #6 — Return-to-Academy UX | Medium (realtime sub) |
-
-## Recommended Plan
-
-Fix all P0 and P1 gaps in a single pass across 4 files:
-
-| File | Changes |
-|------|---------|
-| `src/components/dashboard/WorkOrderCard.tsx` | Wrap in `NavLink to={/work-orders/${workOrder.id}}` |
-| `src/pages/WorkOrderDetail.tsx` | Fix inert "Continue" button; add `refetchInterval: 10000` when status is `in_progress`; guard `window.open` behind successful start |
-| `src/hooks/useWorkOrderCompletion.ts` | Fix best score: query `MAX(score)` instead of using latest attempt |
-| `src/pages/WorkOrders.tsx` | Fetch user completions, pass `isCompleted` to `EventCard` |
-
-P2/P3 gaps (fake stats, notifications, realtime) can follow as separate iterations.
+### Approach
+- Create a shared hook `useWorkOrderCompletionCount(workOrderId)` that returns the count of completions for a given work order
+- For community stats, query `community_memberships` for member count and use the existing work orders data for event count
+- Remove all `Math.random()` default values — if data isn't available, show nothing or "—"
 
