@@ -35,8 +35,8 @@ interface EventCardProps {
 export function EventCard({ 
   workOrder, 
   community, 
-  participantCount = Math.floor(Math.random() * 100) + 20,
-  rating = Math.floor(Math.random() * 500) + 1500,
+  participantCount,
+  rating,
   schedule = 'Fridays at 2:30pm',
   variant = 'default',
   isCompleted = false,
