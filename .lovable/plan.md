@@ -1,29 +1,32 @@
 
 
-# Migration: Add unique constraint to `user_work_order_completions`
+# Update `breakroom-lms-sync` Edge Function + Add Secrets
 
-The `breakroom_identity` table already exists (migration `20260403174327`), so re-creating it would fail. The only remaining change is the unique constraint on `user_work_order_completions`.
+## What changes
 
-## What will be done
+1. **Replace edge function code** — Overwrite `supabase/functions/breakroom-lms-sync/index.ts` with the new, expanded version that includes:
+   - Proper email-based cross-platform identity resolution
+   - FGN game stats upsert (insert or update `user_game_stats`)
+   - BBW lesson progress, enrollment completion tracking, and `user_stats` management
+   - Idempotent achievement evaluation (checks for existing before inserting)
+   - Achievement XP bonus awards on FGN side
+   - Audit logging to `system_audit_logs`
+   - Better error detail in results
 
-A single migration adding:
+2. **Add 3 secrets** via the `add_secret` tool (user will be prompted to enter values):
+   - `BREAKROOM_SYNC_SECRET` — shared API key for authenticating Breakroom requests
+   - `BBW_SUPABASE_URL` — `https://scjhwscgsrcqdusvdfsu.supabase.co`
+   - `BBW_SUPABASE_SERVICE_ROLE_KEY` — service role key from BBW project
 
-```sql
-ALTER TABLE public.user_work_order_completions
-  ADD CONSTRAINT uq_user_work_order
-  UNIQUE (user_id, work_order_id);
-```
+3. **Static file** — `public/sinewave.space.scripting.txt` already exists with `SPACE_OK`. No change needed.
 
-This enables the `breakroom-lms-sync` edge function to use `.upsert(..., { onConflict: 'user_id,work_order_id' })` correctly.
+## Files modified
 
-## Technical Details
-
-| Item | Detail |
+| File | Action |
 |------|--------|
-| **File** | New migration via database migration tool |
-| **Table** | `public.user_work_order_completions` (already has indexes on both columns) |
-| **Change** | Add `UNIQUE(user_id, work_order_id)` constraint |
-| **Risk** | Will fail if duplicate rows already exist — the constraint enforces one completion record per user per work order |
+| `supabase/functions/breakroom-lms-sync/index.ts` | Full replacement with new code |
 
-No UI or code changes.
+## Deployment
+
+The edge function will be deployed automatically after the file is written. The function will not work until all 3 secrets are configured.
 
