@@ -1,14 +1,29 @@
 
 
-# Migration: Add `breakroom_identity` Table
+# Migration: Add unique constraint to `user_work_order_completions`
 
-Create a single database migration that adds the `breakroom_identity` table with the user's provided SQL, including indexes, RLS, and two policies (admin manage all, users view own).
+The `breakroom_identity` table already exists (migration `20260403174327`), so re-creating it would fail. The only remaining change is the unique constraint on `user_work_order_completions`.
+
+## What will be done
+
+A single migration adding:
+
+```sql
+ALTER TABLE public.user_work_order_completions
+  ADD CONSTRAINT uq_user_work_order
+  UNIQUE (user_id, work_order_id);
+```
+
+This enables the `breakroom-lms-sync` edge function to use `.upsert(..., { onConflict: 'user_id,work_order_id' })` correctly.
 
 ## Technical Details
 
-**File**: New migration via migration tool
+| Item | Detail |
+|------|--------|
+| **File** | New migration via database migration tool |
+| **Table** | `public.user_work_order_completions` (already has indexes on both columns) |
+| **Change** | Add `UNIQUE(user_id, work_order_id)` constraint |
+| **Risk** | Will fail if duplicate rows already exist — the constraint enforces one completion record per user per work order |
 
-**SQL**: Exactly as provided — creates table, two indexes, enables RLS, adds two policies.
-
-**No UI or code changes** — migration only.
+No UI or code changes.
 
