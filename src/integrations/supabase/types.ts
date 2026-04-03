@@ -239,6 +239,44 @@ export type Database = {
         }
         Relationships: []
       }
+      breakroom_identity: {
+        Row: {
+          breakroom_user_id: number | null
+          breakroom_username: string
+          created_at: string
+          id: string
+          tenant_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          breakroom_user_id?: number | null
+          breakroom_username: string
+          created_at?: string
+          id?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          breakroom_user_id?: number | null
+          breakroom_username?: string
+          created_at?: string
+          id?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "breakroom_identity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_path_requirements: {
         Row: {
           career_path_id: string
