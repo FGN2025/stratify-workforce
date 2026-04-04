@@ -1,32 +1,31 @@
 
 
-# Update `breakroom-lms-sync` Edge Function + Add Secrets
+# Insert Breakroom Identity Mapping for End-to-End Testing
 
-## What changes
+## What will be done
 
-1. **Replace edge function code** — Overwrite `supabase/functions/breakroom-lms-sync/index.ts` with the new, expanded version that includes:
-   - Proper email-based cross-platform identity resolution
-   - FGN game stats upsert (insert or update `user_game_stats`)
-   - BBW lesson progress, enrollment completion tracking, and `user_stats` management
-   - Idempotent achievement evaluation (checks for existing before inserting)
-   - Achievement XP bonus awards on FGN side
-   - Audit logging to `system_audit_logs`
-   - Better error detail in results
+Insert a single row into the `breakroom_identity` table to map the Breakroom username **RacerX** to the FGN user `84d2999e-0eae-4a52-b508-a0aafc6c84d7`, using the primary tenant `efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca` (FGN Global).
 
-2. **Add 3 secrets** via the `add_secret` tool (user will be prompted to enter values):
-   - `BREAKROOM_SYNC_SECRET` — shared API key for authenticating Breakroom requests
-   - `BBW_SUPABASE_URL` — `https://scjhwscgsrcqdusvdfsu.supabase.co`
-   - `BBW_SUPABASE_SERVICE_ROLE_KEY` — service role key from BBW project
+## SQL
 
-3. **Static file** — `public/sinewave.space.scripting.txt` already exists with `SPACE_OK`. No change needed.
+```sql
+INSERT INTO public.breakroom_identity (user_id, breakroom_username, tenant_id)
+VALUES (
+  '84d2999e-0eae-4a52-b508-a0aafc6c84d7',
+  'RacerX',
+  'efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca'
+);
+```
 
-## Files modified
+## Technical Details
 
-| File | Action |
-|------|--------|
-| `supabase/functions/breakroom-lms-sync/index.ts` | Full replacement with new code |
+| Field | Value |
+|-------|-------|
+| **Table** | `public.breakroom_identity` |
+| **user_id** | `84d2999e-0eae-4a52-b508-a0aafc6c84d7` |
+| **breakroom_username** | `RacerX` |
+| **tenant_id** | `efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca` (FGN Global) |
+| **Tool** | Supabase insert tool (data operation, not a migration) |
 
-## Deployment
-
-The edge function will be deployed automatically after the file is written. The function will not work until all 3 secrets are configured.
+This gives the `breakroom-lms-sync` edge function a valid identity to resolve during end-to-end testing. When Breakroom sends a POST with `breakroom_username: "RacerX"`, the function will find this row and proceed with the sync logic.
 
