@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-api-key, content-type',
 }
 
-const BREAKROOM_LOGIN_URL = 'https://sine.space/api/v2/user/login'
+const BREAKROOM_LOGIN_URL = 'https://sine.space/api/v1/user/login'
 const BREAKROOM_STUDENTS_URL = 'https://curator.sine.space/web/breakroom/grid/lms/course/members/all/list'
 const BREAKROOM_QUIZZES_URL = 'https://curator.sine.space/web/breakroom/grid/lms/quiz/user/list'
 const GRID_ID = 257
@@ -53,7 +53,7 @@ async function loginToBreakroom(): Promise<string> {
 
   const data = await res.json()
   // The token may be in various response shapes — try common patterns
-  const token = data.token || data.Token || data.access_token || data.accessToken
+  const token = data.Token || data.token || data.access_token || data.SessionToken || data.session_token || data.accessToken
   if (!token) {
     throw new Error(`No token in Breakroom login response: ${JSON.stringify(data).slice(0, 200)}`)
   }
