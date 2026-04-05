@@ -50,7 +50,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `xsrfid=${token}`,
+        'Cookie': `xsrfid=${token}; xsrf=${token}`,
       },
       body: JSON.stringify({
         GridId: GRID_ID,
