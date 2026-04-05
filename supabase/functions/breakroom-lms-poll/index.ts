@@ -163,7 +163,9 @@ Deno.serve(async (req) => {
 
   try {
     // Step 1: Authenticate with Breakroom
-    const token = await loginToBreakroom()
+    const loginResult = await loginToBreakroom()
+    const token = loginResult.token
+    results.login_response_debug = { keys: loginResult.rawKeys }
 
     // Step 2: Fetch all students
     const students = await fetchAllStudents(token)
