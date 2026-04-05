@@ -36,6 +36,7 @@ import Careers from "./pages/Careers";
 import EmbedPassport from "./pages/EmbedPassport";
 import Activity from "./pages/Activity";
 import VerifyCredential from "./pages/VerifyCredential";
+import ChallengeRegistry from "./pages/ChallengeRegistry";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -98,6 +99,9 @@ const App = () => (
               } />
               <Route path="/admin/:section" element={
                 <AdminRoute><Admin /></AdminRoute>
+              } />
+              <Route path="/admin/challenge-registry" element={
+                <AdminRoute><ChallengeRegistry /></AdminRoute>
               } />
               <Route path="/developers" element={
                 <DeveloperRoute><Developers /></DeveloperRoute>

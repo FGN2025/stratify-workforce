@@ -71,7 +71,49 @@ Deno.serve(async (req) => {
     const userRole = roleData.role;
     const isSuperAdmin = userRole === "super_admin";
 
-    // Route handling
+    // Check if this is a POST with action in body (new-style routing)
+    if (req.method === "POST") {
+      const cloned = req.clone();
+      let body: any = {};
+      try { body = await cloned.json(); } catch {}
+
+      if (body.action === "search") {
+        const query = (body.query || "").toLowerCase();
+        if (query.length < 3) {
+          return new Response(JSON.stringify({ users: [] }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+        const matched = (allUsers?.users || [])
+          .filter((u: any) => u.email?.toLowerCase().includes(query))
+          .slice(0, 20)
+          .map((u: any) => ({
+            id: u.id,
+            email: u.email,
+            username: u.user_metadata?.username || null,
+          }));
+        return new Response(JSON.stringify({ users: matched }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (body.action === "get-emails") {
+        const userIds: string[] = body.user_ids || [];
+        const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+        const emails: Record<string, string> = {};
+        for (const u of allUsers?.users || []) {
+          if (userIds.includes(u.id) && u.email) {
+            emails[u.id] = u.email;
+          }
+        }
+        return new Response(JSON.stringify({ emails }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Route handling (legacy path-based)
     if (req.method === "POST" && path === "/reset-password") {
       if (!isSuperAdmin) {
         return new Response(JSON.stringify({ error: "Super admin required" }), {
