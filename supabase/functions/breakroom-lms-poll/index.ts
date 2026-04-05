@@ -154,13 +154,14 @@ Deno.serve(async (req) => {
 
   const fgnClient = createClient(supabaseUrl, serviceRoleKey)
 
-  const results = {
+  const results: Record<string, unknown> = {
     students_found: 0,
     quizzes_found: 0,
     already_synced: 0,
     synced: 0,
     sync_errors: 0,
     errors: [] as string[],
+    login_response_debug: null as unknown,
   }
 
   try {
