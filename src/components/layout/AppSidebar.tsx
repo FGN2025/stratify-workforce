@@ -86,6 +86,7 @@ const adminSubItems = [
   { title: 'Media Library', url: '/admin/media', icon: Image },
   { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
   { title: 'Skills Paths', url: '/admin/career-paths', icon: Route },
+  { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
 ];
 
 const superAdminSubItems = [
