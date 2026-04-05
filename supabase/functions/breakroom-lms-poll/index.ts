@@ -31,6 +31,33 @@ interface BreakroomQuiz {
   StudentsQuizInfo: BreakroomQuizInfo[]
 }
 
+interface PollResults {
+  students_found: number
+  quizzes_found: number
+  already_synced: number
+  synced: number
+  sync_errors: number
+  errors: string[]
+}
+
+function getBreakroomHeaders(token: string): Record<string, string> {
+  return {
+    'Accept': 'application/json',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Authorization': `Bearer ${token}`,
+    'Cache-Control': 'no-cache',
+    'Content-Type': 'application/json',
+    'Origin': 'https://curator.sine.space',
+    'Pragma': 'no-cache',
+    'Referer': 'https://curator.sine.space/grid/dashboard?grid=257',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+    'Cookie': Deno.env.get('BREAKROOM_SESSION_COOKIES') ?? '',
+  }
+}
+
 async function getBreakroomToken(): Promise<string | null> {
   const token = Deno.env.get('BREAKROOM_SESSION_TOKEN')
   if (!token) {
@@ -48,21 +75,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
   while (true) {
     const res = await fetch(BREAKROOM_STUDENTS_URL, {
       method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Authorization': `Bearer ${token}`,
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
-        'Origin': 'https://curator.sine.space',
-        'Pragma': 'no-cache',
-        'Referer': 'https://curator.sine.space/grid/dashboard?grid=257',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
-        'Cookie': Deno.env.get('BREAKROOM_SESSION_COOKIES') ?? '',
-      },
+      headers: getBreakroomHeaders(token),
       body: JSON.stringify({
         GridId: GRID_ID,
         Search: '',
@@ -98,21 +111,7 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
   while (true) {
     const res = await fetch(BREAKROOM_QUIZZES_URL, {
       method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Authorization': `Bearer ${token}`,
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
-        'Origin': 'https://curator.sine.space',
-        'Pragma': 'no-cache',
-        'Referer': 'https://curator.sine.space/grid/dashboard?grid=257',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
-        'Cookie': Deno.env.get('BREAKROOM_SESSION_COOKIES') ?? '',
-      },
+      headers: getBreakroomHeaders(token),
       body: JSON.stringify({
         GridId: GRID_ID,
         UserId: userId,
@@ -153,28 +152,25 @@ Deno.serve(async (req) => {
 
   const fgnClient = createClient(supabaseUrl, serviceRoleKey)
 
-  const results: Record<string, unknown> = {
+  const results: PollResults = {
     students_found: 0,
     quizzes_found: 0,
     already_synced: 0,
     synced: 0,
     sync_errors: 0,
-    errors: [] as string[],
+    errors: [],
   }
 
   try {
-    // Step 1: Get session token
     const token = await getBreakroomToken()
     if (!token) {
-      (results.errors as string[]).push('BREAKROOM_SESSION_TOKEN secret not configured')
+      results.errors.push('BREAKROOM_SESSION_TOKEN secret not configured')
       throw new Error('No session token')
     }
 
-    // Step 2: Fetch all students
     const students = await fetchAllStudents(token)
     results.students_found = students.length
 
-    // Step 3: Build identity map (breakroom_user_id -> FGN user)
     const breakroomUserIds = students.map(s => s.id)
     const { data: identities } = await fgnClient
       .from('breakroom_identity')
@@ -185,13 +181,11 @@ Deno.serve(async (req) => {
       (identities || []).map(i => [i.breakroom_user_id, i])
     )
 
-    // Step 4: Build work order mapping
     const { data: workOrders } = await fgnClient
       .from('work_orders')
       .select('id, source_challenge_id, xp_reward, metadata, title')
       .eq('is_active', true)
 
-    // Step 5: Process each student
     for (const student of students) {
       const identity = identityMap.get(student.id)
       if (!identity) continue
@@ -200,19 +194,18 @@ Deno.serve(async (req) => {
       try {
         quizzes = await fetchCompletedQuizzes(token, student.id)
       } catch (err) {
-        (results.errors as string[]).push(`Quiz fetch error for ${student.name}: ${String(err)}`)
+        results.errors.push(`Quiz fetch error for ${student.name}: ${String(err)}`)
         continue
       }
 
       for (const quiz of quizzes) {
-        (results as Record<string, number>).quizzes_found++
+        results.quizzes_found++
 
         const latestInfo = quiz.StudentsQuizInfo
           ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
 
         if (!latestInfo) continue
 
-        // Deduplication
         const { count } = await fgnClient
           .from('user_work_order_completions')
           .select('id', { count: 'exact', head: true })
@@ -220,11 +213,10 @@ Deno.serve(async (req) => {
           .filter('metadata->>breakroom_quiz_id', 'eq', String(quiz.id))
 
         if (count && count > 0) {
-          (results as Record<string, number>).already_synced++
+          results.already_synced++
           continue
         }
 
-        // Match work order
         let matchedWorkOrder = (workOrders || []).find(wo => {
           const meta = wo.metadata as Record<string, unknown> | null
           if (meta?.breakroom_course_name) {
@@ -272,19 +264,19 @@ Deno.serve(async (req) => {
 
           const syncBody = await syncRes.text()
           if (syncRes.ok) {
-            (results as Record<string, number>).synced++
+            results.synced++
           } else {
-            (results as Record<string, number>).sync_errors++
-            ;(results.errors as string[]).push(`Sync error for ${student.name}/${quiz.name}: ${syncRes.status} ${syncBody.slice(0, 200)}`)
+            results.sync_errors++
+            results.errors.push(`Sync error for ${student.name}/${quiz.name}: ${syncRes.status} ${syncBody.slice(0, 200)}`)
           }
         } catch (err) {
-          (results as Record<string, number>).sync_errors++
-          ;(results.errors as string[]).push(`Sync call error for ${student.name}/${quiz.name}: ${String(err)}`)
+          results.sync_errors++
+          results.errors.push(`Sync call error for ${student.name}/${quiz.name}: ${String(err)}`)
         }
       }
     }
   } catch (err) {
-    (results.errors as string[]).push(`Top-level error: ${String(err)}`)
+    results.errors.push(`Top-level error: ${String(err)}`)
   }
 
   // Audit log

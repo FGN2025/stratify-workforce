@@ -91,7 +91,7 @@ export function useStartLesson() {
           .update({
             status: 'in_progress',
             started_at: new Date().toISOString(),
-            attempts: supabase.rpc ? 1 : 1, // Increment would need RPC
+            attempts: (existing.attempts ?? 0) + 1,
           })
           .eq('id', existing.id)
           .select()
