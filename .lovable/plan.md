@@ -1,70 +1,59 @@
 
 
-## Code Review Assessment
+## Challenge Registry - Implementation Plan
 
-### Overall Health
-The codebase is in solid shape. Auth patterns are correct (roles in separate table, server-side RLS), routing is well-organized, and the admin/developer/protected route guards are properly implemented. Here are the items worth addressing:
+### Overview
+A new admin-only page at `/admin/challenge-registry` with two tabs: **Challenges** (work order cross-platform mapping) and **Breakroom Users** (breakroom_identity management). Admin/super_admin access only.
 
----
+### Files to Create
 
-### 1. Cleanup Items
+**1. `src/pages/ChallengeRegistry.tsx`**
+Main page component wrapped in `AppLayout` with `AdminRoute` protection. Contains the page header ("Challenge Registry" / subtitle) and a `Tabs` component with two tabs routing to the sub-components below.
 
-**Breakroom poll function - header duplication**
-The `fetchAllStudents` and `fetchCompletedQuizzes` functions in `breakroom-lms-poll/index.ts` have identical 12-line header blocks. Extract into a shared `getBreakroomHeaders(token)` helper to reduce duplication and make future token/cookie changes a single edit.
+**2. `src/components/admin/ChallengesTab.tsx`**
+Reads `work_orders` table (all rows, not just active). Displays table with columns: Title, Game Title (colored badge using `useGameChannelColors`), source_challenge_id (monospace + copy button), Is Active (green/red dot), Breakroom Course Name (inline editable input saving to `metadata->breakroom_course_name` on blur), BBW Linked (static grey dash), Actions (3 icon buttons for Copy UUID, Copy PowerShell, Copy Lua).
 
-**Type assertion hacks in poll results**
-Lines like `(results as Record<string, number>).quizzes_found++` are unsafe casts repeated throughout. Define a proper typed `PollResults` interface instead.
+Toolbar: game_title filter dropdown, active/inactive/all toggle, search input, Export Lua button, Export CSV button.
 
-**useProgress.ts dead code comment**
-Line 94: `supabase.rpc ? 1 : 1, // Increment would need RPC` -- this is a no-op ternary. Clean up to just `attempts: (existing.attempts ?? 0) + 1`.
+Inline edit saves optimistically: update local state immediately, fire Supabase upsert of `metadata` jsonb (merge existing metadata with new `breakroom_course_name` key), rollback on error.
 
-**Database linter warnings**
-- Extensions installed in `public` schema (should be moved to a dedicated `extensions` schema)
-- Leaked password protection is disabled (should be enabled for production)
+Export Lua generates a `.txt` download with the `local COURSE_MAP = { ... }` block. Export CSV generates all columns as CSV.
 
----
+**3. `src/components/admin/BreakroomUsersTab.tsx`**
+Reads `breakroom_identity` joined with `profiles` (username) and `tenants` (name). Email comes from an edge function call since we can't query `auth.users` client-side.
 
-### 2. Documentation Gaps
+Table columns: FGN Display Name, Email, Breakroom Username (inline editable), Breakroom User ID (inline editable integer), Tenant, Created At, Delete action with confirmation.
 
-**Breakroom integration runbook is missing.** The admin guide (`docs/admin-user-guide.md`) does not mention the Breakroom polling system at all. This is critical because the session tokens require manual refresh. A runbook should document:
-- How the polling works (cron every 15 min)
-- Which secrets need refreshing (`BREAKROOM_SESSION_TOKEN`, `BREAKROOM_SESSION_COOKIES`, `BREAKROOM_JWT`)
-- How to get a new token (login to curator.sine.space, extract cookies)
-- How to check if polling is working (query `system_audit_logs`)
-- How to manually invoke the function
+Add User modal: email search field (min 3 chars, calls admin-users edge function to search), user selector dropdown, breakroom username/ID fields, tenant dropdown. Inserts into `breakroom_identity`.
 
-**Edge function README**
-`docs/api/` has good coverage for credential-api and public-catalog but no documentation for the breakroom-lms-sync or breakroom-lms-poll functions.
+Export CSV button for backup.
 
----
+**4. `supabase/functions/admin-users/index.ts`** (update existing)
+Add a `search` action that accepts a query string and returns matching users from `auth.users` by email pattern. This supports the Add User modal's email lookup.
 
-### 3. Proposed Plan
+### Files to Modify
 
-**Step 1 -- Extract shared headers in breakroom-lms-poll**
-Create a `getBreakroomHeaders(token: string)` function used by both fetch calls. Reduces the 12-line header block duplication to a single function call.
+**5. `src/components/layout/AppSidebar.tsx`**
+Add `{ title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck }` to `adminSubItems` array (or `superAdminSubItems` if preferred -- will add to `adminSubItems` since both admin and super_admin need access).
 
-**Step 2 -- Type the poll results properly**
-Replace the `Record<string, unknown>` with a typed `PollResults` interface, eliminating all unsafe casts.
+**6. `src/App.tsx`**
+Add route: `<Route path="/admin/challenge-registry" element={<AdminRoute><ChallengeRegistry /></AdminRoute>} />`
 
-**Step 3 -- Fix useProgress.ts dead code**
-Replace the no-op ternary with a proper increment.
-
-**Step 4 -- Add Breakroom integration runbook**
-Create `docs/breakroom-integration.md` documenting the full polling pipeline, secret management, troubleshooting, and manual invocation steps.
-
-**Step 5 -- Add edge function docs**
-Add `docs/api/breakroom-sync.md` documenting the breakroom-lms-sync and breakroom-lms-poll function APIs, payloads, and authentication.
-
----
+**7. `src/pages/Admin.tsx`**
+Add `case 'challenge-registry':` to `renderSection()` -- actually, since this is a standalone page at its own route (not a section of `/admin/:section`), this is handled by the new route in App.tsx. No change needed to Admin.tsx.
 
 ### Technical Details
 
-| Item | File | Scope |
-|------|------|-------|
-| Header dedup | `supabase/functions/breakroom-lms-poll/index.ts` | ~20 lines removed |
-| Type cleanup | `supabase/functions/breakroom-lms-poll/index.ts` | Interface + 8 cast removals |
-| Dead code fix | `src/hooks/useProgress.ts` | 1 line |
-| Runbook | `docs/breakroom-integration.md` | New file |
-| API docs | `docs/api/breakroom-sync.md` | New file |
-| DB linter | Migration for extension schema move | Optional, low priority |
+| Concern | Approach |
+|---------|----------|
+| Game badges | Reuse `useGameChannelColors` hook + `Badge` component with inline `style={{ backgroundColor }}` |
+| Metadata upsert | Read existing `metadata`, spread with new `breakroom_course_name`, update via `.update({ metadata })` |
+| Email lookup | Extend `admin-users` edge function with search capability using `supabase.auth.admin.listUsers()` with email filter |
+| File downloads | Create Blob URLs with `URL.createObjectURL` for Lua/CSV exports |
+| Copy to clipboard | `navigator.clipboard.writeText()` with toast confirmation |
+| Loading states | Skeleton components matching existing admin patterns |
+| Optimistic updates | Update react-query cache immediately, invalidate on error |
+
+### Edge Function Update
+The existing `admin-users` edge function will be extended to support a `GET ?action=search&q=email` endpoint that returns `{ id, email, username }[]` for matching auth users. This avoids creating a new function.
 
