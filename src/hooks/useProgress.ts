@@ -79,7 +79,7 @@ export function useStartLesson() {
       // Check if progress already exists
       const { data: existing } = await supabase
         .from('user_lesson_progress')
-        .select('id')
+        .select('id, attempts')
         .eq('user_id', user.id)
         .eq('lesson_id', lessonId)
         .maybeSingle();
