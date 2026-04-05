@@ -52,8 +52,10 @@ async function loginToBreakroom(): Promise<string> {
   }
 
   const data = await res.json()
+  console.log('Breakroom login response keys:', JSON.stringify(Object.keys(data)))
+  console.log('Breakroom login response body:', JSON.stringify(data).slice(0, 500))
   // The token may be in various response shapes — try common patterns
-  const token = data.Token || data.token || data.access_token || data.SessionToken || data.session_token || data.accessToken
+  const token = data.Token || data.token || data.access_token || data.SessionToken || data.session_token || data.accessToken || data.AuthToken || data.authToken
   if (!token) {
     throw new Error(`No token in Breakroom login response: ${JSON.stringify(data).slice(0, 200)}`)
   }
