@@ -2472,6 +2472,16 @@ export type Database = {
         Returns: boolean
       }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
+      validate_registration_code: {
+        Args: { p_code: string }
+        Returns: {
+          code: string
+          id: string
+          is_valid: boolean
+          tenant_id: string
+          tenant_name: string
+        }[]
+      }
       verify_app_api_key: {
         Args: { p_api_key: string }
         Returns: {

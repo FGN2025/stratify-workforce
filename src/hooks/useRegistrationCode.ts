@@ -38,22 +38,9 @@ export function useRegistrationCode() {
     setError(null);
 
     try {
-      // Query the code with tenant info
+      // Use secure RPC that works for both authenticated and unauthenticated users
       const { data, error: queryError } = await supabase
-        .from('registration_codes')
-        .select(`
-          id,
-          code,
-          tenant_id,
-          max_uses,
-          current_uses,
-          is_active,
-          expires_at,
-          tenants (
-            name
-          )
-        `)
-        .ilike('code', code.trim())
+        .rpc('validate_registration_code', { p_code: code.trim() })
         .single();
 
       if (queryError || !data) {
@@ -62,37 +49,17 @@ export function useRegistrationCode() {
         return null;
       }
 
-      // Check if code is valid
-      const now = new Date();
-      const expiresAt = data.expires_at ? new Date(data.expires_at) : null;
-      const isExpired = expiresAt && expiresAt < now;
-      const isExhausted = data.max_uses !== null && data.current_uses >= data.max_uses;
-      const isActive = data.is_active;
-
-      if (!isActive) {
-        setError('This code is no longer active');
+      if (!data.is_valid) {
+        setError('This code is no longer valid');
         setValidatedCode(null);
         return null;
       }
 
-      if (isExpired) {
-        setError('This code has expired');
-        setValidatedCode(null);
-        return null;
-      }
-
-      if (isExhausted) {
-        setError('This code has reached its usage limit');
-        setValidatedCode(null);
-        return null;
-      }
-
-      const tenantData = data.tenants as { name: string } | null;
       const result: ValidatedCode = {
         id: data.id,
         code: data.code,
         tenantId: data.tenant_id,
-        tenantName: tenantData?.name ?? null,
+        tenantName: data.tenant_name ?? null,
         isValid: true,
       };
 
