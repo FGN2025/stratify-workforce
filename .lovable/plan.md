@@ -1,31 +1,44 @@
 
 
-# Insert Breakroom Identity Mapping for End-to-End Testing
+# Scheduled Cron Job for Breakroom Polling
 
-## What will be done
+## Issues Found
 
-Insert a single row into the `breakroom_identity` table to map the Breakroom username **RacerX** to the FGN user `84d2999e-0eae-4a52-b508-a0aafc6c84d7`, using the primary tenant `efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca` (FGN Global).
+1. **Edge function `breakroom-lms-poll` does not exist.** Only `breakroom-lms-sync` is deployed. Either the cron job should call `breakroom-lms-sync`, or a new `breakroom-lms-poll` edge function needs to be created first.
 
-## SQL
+2. **`current_setting()` won't work.** Supabase does not expose `app.supabase_url` or `app.service_role_key` as Postgres settings. The cron job SQL must use hardcoded values (the project URL and anon key).
 
-```sql
-INSERT INTO public.breakroom_identity (user_id, breakroom_username, tenant_id)
-VALUES (
-  '84d2999e-0eae-4a52-b508-a0aafc6c84d7',
-  'RacerX',
-  'efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca'
-);
-```
+3. **Must use the data insert tool, not migrations.** Per project guidelines, cron job scheduling contains project-specific secrets and should not be stored in migration files that could be replayed on other environments.
 
-## Technical Details
+## Proposed Approach
 
-| Field | Value |
-|-------|-------|
-| **Table** | `public.breakroom_identity` |
-| **user_id** | `84d2999e-0eae-4a52-b508-a0aafc6c84d7` |
-| **breakroom_username** | `RacerX` |
-| **tenant_id** | `efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca` (FGN Global) |
-| **Tool** | Supabase insert tool (data operation, not a migration) |
+Once the target edge function is confirmed, I will:
 
-This gives the `breakroom-lms-sync` edge function a valid identity to resolve during end-to-end testing. When Breakroom sends a POST with `breakroom_username: "RacerX"`, the function will find this row and proceed with the sync logic.
+1. **Enable extensions** via a migration (schema change):
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS pg_cron;
+   CREATE EXTENSION IF NOT EXISTS pg_net;
+   ```
+
+2. **Schedule the cron job** via the insert tool (data operation) with hardcoded values:
+   ```sql
+   SELECT cron.schedule(
+     'breakroom-lms-poll',
+     '*/15 * * * *',
+     $$
+     SELECT net.http_post(
+       url := 'https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/<function-name>',
+       headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon-key>"}'::jsonb,
+       body := '{}'::jsonb
+     )
+     $$
+   );
+   ```
+
+## Decision Needed
+
+Which edge function should the cron job call?
+
+- **`breakroom-lms-sync`** (the existing function)
+- **`breakroom-lms-poll`** (a new function that needs to be created first — please provide the code or requirements)
 
