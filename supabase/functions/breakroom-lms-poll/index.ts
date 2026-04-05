@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-api-key, content-type',
 }
 
-const BREAKROOM_LOGIN_URL = 'https://sine.space/api/v1/user/login'
+const BREAKROOM_LOGIN_URL = 'https://qa-sine.space/api/v2/user/login'
 const BREAKROOM_STUDENTS_URL = 'https://curator.sine.space/web/breakroom/grid/lms/course/members/all/list'
 const BREAKROOM_QUIZZES_URL = 'https://curator.sine.space/web/breakroom/grid/lms/quiz/user/list'
 const GRID_ID = 257
@@ -32,7 +32,7 @@ interface BreakroomQuiz {
   StudentsQuizInfo: BreakroomQuizInfo[]
 }
 
-async function loginToBreakroom(): Promise<string> {
+async function loginToBreakroom(): Promise<{ token: string; rawKeys: string[] }> {
   const username = Deno.env.get('BREAKROOM_ADMIN_USERNAME')
   const password = Deno.env.get('BREAKROOM_ADMIN_PASSWORD')
 
@@ -48,17 +48,16 @@ async function loginToBreakroom(): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Breakroom login failed (${res.status}): ${text}`)
+    throw new Error(`Breakroom login failed (${res.status}): ${text.slice(0, 300)}`)
   }
 
   const data = await res.json()
-  // The token may be in various response shapes — try common patterns
-  const token = data.Token || data.token || data.access_token || data.SessionToken || data.session_token || data.accessToken
+  const token = data.Token || data.token || data.access_token || data.SessionToken || data.session_token || data.accessToken || data.AuthToken || data.authToken
   if (!token) {
-    throw new Error(`No token in Breakroom login response: ${JSON.stringify(data).slice(0, 200)}`)
+    throw new Error(`NO_TOKEN:${JSON.stringify(data).slice(0, 500)}`)
   }
 
-  return token
+  return { token, rawKeys: Object.keys(data) }
 }
 
 async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
@@ -152,18 +151,21 @@ Deno.serve(async (req) => {
 
   const fgnClient = createClient(supabaseUrl, serviceRoleKey)
 
-  const results = {
+  const results: Record<string, unknown> = {
     students_found: 0,
     quizzes_found: 0,
     already_synced: 0,
     synced: 0,
     sync_errors: 0,
     errors: [] as string[],
+    login_response_debug: null as unknown,
   }
 
   try {
     // Step 1: Authenticate with Breakroom
-    const token = await loginToBreakroom()
+    const loginResult = await loginToBreakroom()
+    const token = loginResult.token
+    results.login_response_debug = { keys: loginResult.rawKeys }
 
     // Step 2: Fetch all students
     const students = await fetchAllStudents(token)
@@ -282,7 +284,11 @@ Deno.serve(async (req) => {
       }
     }
   } catch (err) {
-    results.errors.push(`Top-level error: ${String(err)}`)
+    const errStr = String(err)
+    if (errStr.startsWith('Error: NO_TOKEN:')) {
+      results.login_response_debug = errStr.replace('Error: NO_TOKEN:', '')
+    }
+    (results.errors as string[]).push(`Top-level error: ${errStr}`)
   }
 
   // Audit log
