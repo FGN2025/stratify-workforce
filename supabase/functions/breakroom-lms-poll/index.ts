@@ -50,7 +50,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Cookie': `xsrfid=${token}`,
       },
       body: JSON.stringify({
         GridId: GRID_ID,
@@ -89,7 +89,7 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Cookie': `xsrfid=${token}`,
       },
       body: JSON.stringify({
         GridId: GRID_ID,
