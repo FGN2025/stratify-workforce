@@ -50,7 +50,8 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `xsrfid=${token}; xsrf=${token}`,
+        'Authorization': `Bearer ${token}`,
+        'Cookie': Deno.env.get('BREAKROOM_SESSION_COOKIES') ?? '',
       },
       body: JSON.stringify({
         GridId: GRID_ID,
@@ -89,7 +90,8 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `xsrfid=${token}; xsrf=${token}`,
+        'Authorization': `Bearer ${token}`,
+        'Cookie': Deno.env.get('BREAKROOM_SESSION_COOKIES') ?? '',
       },
       body: JSON.stringify({
         GridId: GRID_ID,
