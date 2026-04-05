@@ -32,7 +32,7 @@ interface BreakroomQuiz {
   StudentsQuizInfo: BreakroomQuizInfo[]
 }
 
-async function loginToBreakroom(): Promise<string> {
+async function loginToBreakroom(): Promise<{ token: string; rawKeys: string[] }> {
   const username = Deno.env.get('BREAKROOM_ADMIN_USERNAME')
   const password = Deno.env.get('BREAKROOM_ADMIN_PASSWORD')
 
@@ -48,19 +48,16 @@ async function loginToBreakroom(): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Breakroom login failed (${res.status}): ${text}`)
+    throw new Error(`Breakroom login failed (${res.status}): ${text.slice(0, 300)}`)
   }
 
   const data = await res.json()
-  console.log('Breakroom login response keys:', JSON.stringify(Object.keys(data)))
-  console.log('Breakroom login response body:', JSON.stringify(data).slice(0, 500))
-  // The token may be in various response shapes — try common patterns
   const token = data.Token || data.token || data.access_token || data.SessionToken || data.session_token || data.accessToken || data.AuthToken || data.authToken
   if (!token) {
-    throw new Error(`No token in Breakroom login response: ${JSON.stringify(data).slice(0, 200)}`)
+    throw new Error(`NO_TOKEN:${JSON.stringify(data).slice(0, 500)}`)
   }
 
-  return token
+  return { token, rawKeys: Object.keys(data) }
 }
 
 async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
