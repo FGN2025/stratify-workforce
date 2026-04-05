@@ -5,7 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-api-key, content-type',
 }
 
-const BREAKROOM_LOGIN_URL = 'https://qa-sine.space/api/v2/user/login'
 const BREAKROOM_STUDENTS_URL = 'https://curator.sine.space/web/breakroom/grid/lms/course/members/all/list'
 const BREAKROOM_QUIZZES_URL = 'https://curator.sine.space/web/breakroom/grid/lms/quiz/user/list'
 const GRID_ID = 257
@@ -32,32 +31,13 @@ interface BreakroomQuiz {
   StudentsQuizInfo: BreakroomQuizInfo[]
 }
 
-async function loginToBreakroom(): Promise<{ token: string; rawKeys: string[] }> {
-  const username = Deno.env.get('BREAKROOM_ADMIN_USERNAME')
-  const password = Deno.env.get('BREAKROOM_ADMIN_PASSWORD')
-
-  if (!username || !password) {
-    throw new Error('Missing BREAKROOM_ADMIN_USERNAME or BREAKROOM_ADMIN_PASSWORD')
-  }
-
-  const res = await fetch(BREAKROOM_LOGIN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Breakroom login failed (${res.status}): ${text.slice(0, 300)}`)
-  }
-
-  const data = await res.json()
-  const token = data.Token || data.token || data.access_token || data.SessionToken || data.session_token || data.accessToken || data.AuthToken || data.authToken
+async function getBreakroomToken(): Promise<string | null> {
+  const token = Deno.env.get('BREAKROOM_SESSION_TOKEN')
   if (!token) {
-    throw new Error(`NO_TOKEN:${JSON.stringify(data).slice(0, 500)}`)
+    console.error('BREAKROOM_SESSION_TOKEN secret not configured')
+    return null
   }
-
-  return { token, rawKeys: Object.keys(data) }
+  return token
 }
 
 async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
@@ -85,7 +65,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`Students fetch failed (${res.status}): ${text}`)
+      throw new Error(`Students fetch failed (${res.status}): ${text.slice(0, 300)}`)
     }
 
     const data = await res.json()
@@ -126,7 +106,7 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`Quizzes fetch failed for user ${userId} (${res.status}): ${text}`)
+      throw new Error(`Quizzes fetch failed for user ${userId} (${res.status}): ${text.slice(0, 300)}`)
     }
 
     const data = await res.json()
@@ -158,14 +138,15 @@ Deno.serve(async (req) => {
     synced: 0,
     sync_errors: 0,
     errors: [] as string[],
-    login_response_debug: null as unknown,
   }
 
   try {
-    // Step 1: Authenticate with Breakroom
-    const loginResult = await loginToBreakroom()
-    const token = loginResult.token
-    results.login_response_debug = { keys: loginResult.rawKeys }
+    // Step 1: Get session token
+    const token = await getBreakroomToken()
+    if (!token) {
+      (results.errors as string[]).push('BREAKROOM_SESSION_TOKEN secret not configured')
+      throw new Error('No session token')
+    }
 
     // Step 2: Fetch all students
     const students = await fetchAllStudents(token)
@@ -182,7 +163,7 @@ Deno.serve(async (req) => {
       (identities || []).map(i => [i.breakroom_user_id, i])
     )
 
-    // Step 4: Build work order mapping (name -> work order)
+    // Step 4: Build work order mapping
     const { data: workOrders } = await fgnClient
       .from('work_orders')
       .select('id, source_challenge_id, xp_reward, metadata, title')
@@ -191,26 +172,25 @@ Deno.serve(async (req) => {
     // Step 5: Process each student
     for (const student of students) {
       const identity = identityMap.get(student.id)
-      if (!identity) continue // Skip students without FGN mapping
+      if (!identity) continue
 
       let quizzes: BreakroomQuiz[]
       try {
         quizzes = await fetchCompletedQuizzes(token, student.id)
       } catch (err) {
-        results.errors.push(`Quiz fetch error for ${student.name}: ${String(err)}`)
+        (results.errors as string[]).push(`Quiz fetch error for ${student.name}: ${String(err)}`)
         continue
       }
 
       for (const quiz of quizzes) {
-        results.quizzes_found++
+        (results as Record<string, number>).quizzes_found++
 
-        // Find latest completion info
         const latestInfo = quiz.StudentsQuizInfo
           ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
 
         if (!latestInfo) continue
 
-        // Deduplication: check if already synced
+        // Deduplication
         const { count } = await fgnClient
           .from('user_work_order_completions')
           .select('id', { count: 'exact', head: true })
@@ -218,11 +198,11 @@ Deno.serve(async (req) => {
           .filter('metadata->>breakroom_quiz_id', 'eq', String(quiz.id))
 
         if (count && count > 0) {
-          results.already_synced++
+          (results as Record<string, number>).already_synced++
           continue
         }
 
-        // Find matching work order by breakroom_course_name in metadata or title match
+        // Match work order
         let matchedWorkOrder = (workOrders || []).find(wo => {
           const meta = wo.metadata as Record<string, unknown> | null
           if (meta?.breakroom_course_name) {
@@ -232,7 +212,6 @@ Deno.serve(async (req) => {
           return false
         })
 
-        // Fallback: match by title similarity
         if (!matchedWorkOrder) {
           matchedWorkOrder = (workOrders || []).find(wo =>
             wo.title?.toLowerCase().includes(quiz.name.toLowerCase()) ||
@@ -244,7 +223,6 @@ Deno.serve(async (req) => {
         const xpReward = matchedWorkOrder?.xp_reward || 100
         const grade = latestInfo.grade === -1 ? null : latestInfo.grade
 
-        // Call breakroom-lms-sync
         try {
           const syncRes = await fetch(`${supabaseUrl}/functions/v1/breakroom-lms-sync`, {
             method: 'POST',
@@ -272,23 +250,19 @@ Deno.serve(async (req) => {
 
           const syncBody = await syncRes.text()
           if (syncRes.ok) {
-            results.synced++
+            (results as Record<string, number>).synced++
           } else {
-            results.sync_errors++
-            results.errors.push(`Sync error for ${student.name}/${quiz.name}: ${syncRes.status} ${syncBody.slice(0, 200)}`)
+            (results as Record<string, number>).sync_errors++
+            ;(results.errors as string[]).push(`Sync error for ${student.name}/${quiz.name}: ${syncRes.status} ${syncBody.slice(0, 200)}`)
           }
         } catch (err) {
-          results.sync_errors++
-          results.errors.push(`Sync call error for ${student.name}/${quiz.name}: ${String(err)}`)
+          (results as Record<string, number>).sync_errors++
+          ;(results.errors as string[]).push(`Sync call error for ${student.name}/${quiz.name}: ${String(err)}`)
         }
       }
     }
   } catch (err) {
-    const errStr = String(err)
-    if (errStr.startsWith('Error: NO_TOKEN:')) {
-      results.login_response_debug = errStr.replace('Error: NO_TOKEN:', '')
-    }
-    (results.errors as string[]).push(`Top-level error: ${errStr}`)
+    (results.errors as string[]).push(`Top-level error: ${String(err)}`)
   }
 
   // Audit log
