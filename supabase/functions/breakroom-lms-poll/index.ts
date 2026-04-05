@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-api-key, content-type',
 }
 
-const BREAKROOM_LOGIN_URL = 'https://sine.space/api/v2/user/login'
+const BREAKROOM_LOGIN_URL = 'https://sine.space/api/v1/user/login'
 const BREAKROOM_STUDENTS_URL = 'https://curator.sine.space/web/breakroom/grid/lms/course/members/all/list'
 const BREAKROOM_QUIZZES_URL = 'https://curator.sine.space/web/breakroom/grid/lms/quiz/user/list'
 const GRID_ID = 257
