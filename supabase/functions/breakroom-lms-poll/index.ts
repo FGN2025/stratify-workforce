@@ -49,8 +49,18 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
     const res = await fetch(BREAKROOM_STUDENTS_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/json',
+        'Origin': 'https://curator.sine.space',
+        'Pragma': 'no-cache',
+        'Referer': 'https://curator.sine.space/grid/dashboard?grid=257',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
         'Cookie': Deno.env.get('BREAKROOM_SESSION_COOKIES') ?? '',
       },
       body: JSON.stringify({
@@ -89,8 +99,18 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
     const res = await fetch(BREAKROOM_QUIZZES_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/json',
+        'Origin': 'https://curator.sine.space',
+        'Pragma': 'no-cache',
+        'Referer': 'https://curator.sine.space/grid/dashboard?grid=257',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
         'Cookie': Deno.env.get('BREAKROOM_SESSION_COOKIES') ?? '',
       },
       body: JSON.stringify({
