@@ -89,7 +89,7 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `xsrfid=${token}`,
+        'Cookie': `xsrfid=${token}; xsrf=${token}`,
       },
       body: JSON.stringify({
         GridId: GRID_ID,
