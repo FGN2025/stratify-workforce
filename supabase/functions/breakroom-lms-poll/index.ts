@@ -284,7 +284,11 @@ Deno.serve(async (req) => {
       }
     }
   } catch (err) {
-    results.errors.push(`Top-level error: ${String(err)}`)
+    const errStr = String(err)
+    if (errStr.startsWith('Error: NO_TOKEN:')) {
+      results.login_response_debug = errStr.replace('Error: NO_TOKEN:', '')
+    }
+    (results.errors as string[]).push(`Top-level error: ${errStr}`)
   }
 
   // Audit log
