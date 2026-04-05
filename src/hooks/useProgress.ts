@@ -79,7 +79,7 @@ export function useStartLesson() {
       // Check if progress already exists
       const { data: existing } = await supabase
         .from('user_lesson_progress')
-        .select('id')
+        .select('id, attempts')
         .eq('user_id', user.id)
         .eq('lesson_id', lessonId)
         .maybeSingle();
@@ -91,7 +91,7 @@ export function useStartLesson() {
           .update({
             status: 'in_progress',
             started_at: new Date().toISOString(),
-            attempts: supabase.rpc ? 1 : 1, // Increment would need RPC
+            attempts: (existing.attempts ?? 0) + 1,
           })
           .eq('id', existing.id)
           .select()
