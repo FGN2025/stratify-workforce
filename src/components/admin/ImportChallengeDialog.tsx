@@ -75,7 +75,7 @@ export interface MappedChallengeData {
   xpReward: number;
   estimatedTime: number | null;
   coverImageUrl: string | null;
-  sourceChallengeId: string;
+  fgnOriginChallengeId: string;
   tasks: ExternalTask[];
 }
 
@@ -163,7 +163,7 @@ export function ImportChallengeDialog({
       xpReward: challenge.points_reward || 50,
       estimatedTime: challenge.estimated_time_minutes,
       coverImageUrl: challenge.cover_image_url,
-      sourceChallengeId: challenge.id,
+      fgnOriginChallengeId: challenge.id,
       tasks: challenge.tasks || [],
     });
 
