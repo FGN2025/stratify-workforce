@@ -2306,6 +2306,7 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["work_order_difficulty"]
           estimated_time_minutes: number | null
           evidence_requirements: Json | null
+          fgn_origin_challenge_id: string | null
           game_title: Database["public"]["Enums"]["game_title"]
           id: string
           is_active: boolean | null
@@ -2325,6 +2326,7 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["work_order_difficulty"]
           estimated_time_minutes?: number | null
           evidence_requirements?: Json | null
+          fgn_origin_challenge_id?: string | null
           game_title: Database["public"]["Enums"]["game_title"]
           id?: string
           is_active?: boolean | null
@@ -2344,6 +2346,7 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["work_order_difficulty"]
           estimated_time_minutes?: number | null
           evidence_requirements?: Json | null
+          fgn_origin_challenge_id?: string | null
           game_title?: Database["public"]["Enums"]["game_title"]
           id?: string
           is_active?: boolean | null
