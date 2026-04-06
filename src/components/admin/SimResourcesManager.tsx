@@ -66,7 +66,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   'book-open': BookOpen,
   'video': Video,
   'file-text': FileText,
-  'map': Map,
+  'map': MapIcon,
   'truck': Truck,
   'tractor': Tractor,
   'hard-hat': HardHat,
