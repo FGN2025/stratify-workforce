@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 const AdminBadge = () => (
-  <Badge className="bg-amber-500/20 text-amber-400 ml-2 text-[10px]">Admin</Badge>
+  <Badge variant="outline" className="ml-2 text-[10px] border-primary/30 text-primary">Admin</Badge>
 );
 
 const sections = [
@@ -349,8 +349,8 @@ Body:
           ))}
         </div>
 
-        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <p className="text-xs"><strong className="text-amber-400">⚠️ Breakroom tokens expire approximately weekly.</strong> When tokens expire, no new quiz completions will sync. Refresh tokens by logging into curator.sine.space and extracting cookies from browser DevTools.</p>
+        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <p className="text-xs"><strong className="text-destructive">⚠️ Breakroom tokens expire approximately weekly.</strong> When tokens expire, no new quiz completions will sync. Refresh tokens by logging into curator.sine.space and extracting cookies from browser DevTools.</p>
         </div>
       </div>
     ),
