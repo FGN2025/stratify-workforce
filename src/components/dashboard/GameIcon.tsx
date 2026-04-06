@@ -32,7 +32,7 @@ const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; co
   },
   Fiber_Tech: { 
     icon: Cable, 
-    label: 'Fiber-Tech Simulator',
+    label: 'Fiber-Tech / Roadcraft',
     color: 'text-blue-400 bg-blue-500/20'
   },
 };
