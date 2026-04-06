@@ -8,6 +8,7 @@ const DEFAULT_COLORS: Record<GameTitle, string> = {
   Construction_Sim: '#F59E0B',
   Mechanic_Sim: '#EF4444',
   Fiber_Tech: '#3B82F6',
+  Roadcraft: '#22C55E',
 };
 
 export function useGameChannelColors() {

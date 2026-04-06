@@ -63,6 +63,7 @@ const GAME_OPTIONS: { value: GameTitle; label: string }[] = [
   { value: 'Construction_Sim', label: 'Construction Simulator' },
   { value: 'Mechanic_Sim', label: 'Mechanic Simulator' },
   { value: 'Fiber_Tech', label: 'Fiber-Tech Simulator' },
+  { value: 'Roadcraft', label: 'Roadcraft' },
 ];
 
 const COLOR_PRESETS = [

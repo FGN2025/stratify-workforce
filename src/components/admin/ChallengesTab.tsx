@@ -23,6 +23,7 @@ const GAME_LABELS: Record<GameTitle, string> = {
   Construction_Sim: 'Construction Sim',
   Mechanic_Sim: 'Mechanic Sim',
   Fiber_Tech: 'Fiber-Tech',
+  Roadcraft: 'Roadcraft',
 };
 
 interface WorkOrderRow {

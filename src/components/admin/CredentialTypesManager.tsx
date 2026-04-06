@@ -35,13 +35,15 @@ import {
   Truck,
 } from 'lucide-react';
 
-const GAME_TITLES = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim'] as const;
+const GAME_TITLES = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'] as const;
 
 const GAME_LABELS: Record<string, string> = {
   ATS: 'American Truck Simulator',
   Farming_Sim: 'Farming Simulator',
   Construction_Sim: 'Construction Simulator',
   Mechanic_Sim: 'Mechanic Simulator',
+  Fiber_Tech: 'Fiber-Tech Simulator',
+  Roadcraft: 'Roadcraft',
 };
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {

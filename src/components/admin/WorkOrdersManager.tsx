@@ -68,6 +68,7 @@ const GAME_LABELS: Record<GameTitle, string> = {
   Construction_Sim: 'Construction Simulator',
   Mechanic_Sim: 'Mechanic Simulator',
   Fiber_Tech: 'Fiber-Tech Simulator',
+  Roadcraft: 'Roadcraft',
 };
 
 const DIFFICULTY_COLORS: Record<WorkOrderDifficulty, string> = {

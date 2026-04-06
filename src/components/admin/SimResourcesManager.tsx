@@ -56,6 +56,7 @@ const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; d
   Construction_Sim: { title: 'Construction Simulator', icon: HardHat, defaultColor: '#F59E0B' },
   Mechanic_Sim: { title: 'Mechanic Simulator', icon: Wrench, defaultColor: '#EF4444' },
   Fiber_Tech: { title: 'Fiber-Tech Simulator', icon: Cable, defaultColor: '#3B82F6' },
+  Roadcraft: { title: 'Roadcraft', icon: Map, defaultColor: '#22C55E' },
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {

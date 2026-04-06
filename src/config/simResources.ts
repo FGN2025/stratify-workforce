@@ -75,7 +75,14 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     shortTitle: 'Fiber-Tech',
     icon: Cable,
     accentColor: '#3B82F6',
-    resources: [], // Admin-managed via database
+    resources: [],
+  },
+  Roadcraft: {
+    title: 'Roadcraft',
+    shortTitle: 'Roadcraft',
+    icon: Cable,
+    accentColor: '#22C55E',
+    resources: [],
   },
 };
 
