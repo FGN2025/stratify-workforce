@@ -117,7 +117,7 @@ export function WorkOrderEditDialog({
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [sourceChallengeId, setSourceChallengeId] = useState<string | null>(null);
+  const [fgnOriginChallengeId, setFgnOriginChallengeId] = useState<string | null>(null);
   const [pendingTasks, setPendingTasks] = useState<ExternalTask[]>([]);
   // Fetch channels and tenants on mount
   useEffect(() => {
@@ -186,7 +186,7 @@ export function WorkOrderEditDialog({
         setChannelId('');
         setTenantId('');
         setCoverImageUrl('');
-        setSourceChallengeId(null);
+        setFgnOriginChallengeId(null);
         setPendingTasks([]);
         // Reset evidence
         setEvidenceRequired(false);
@@ -248,7 +248,7 @@ export function WorkOrderEditDialog({
         tenant_id: tenantId || null,
         evidence_requirements: evidenceRequirements as unknown as Json,
         cover_image_url: coverImageUrl.trim() || null,
-        source_challenge_id: sourceChallengeId || null,
+        fgn_origin_challenge_id: fgnOriginChallengeId || null,
       };
 
       if (workOrder) {
@@ -321,7 +321,7 @@ export function WorkOrderEditDialog({
     setXpReward(data.xpReward);
     setEstimatedTime(data.estimatedTime?.toString() || '');
     setCoverImageUrl(data.coverImageUrl || '');
-    setSourceChallengeId(data.sourceChallengeId);
+    setFgnOriginChallengeId(data.fgnOriginChallengeId);
     setPendingTasks(data.tasks || []);
     toast({
       title: 'Challenge Imported',
@@ -357,10 +357,10 @@ export function WorkOrderEditDialog({
             </Button>
           )}
 
-          {sourceChallengeId && (
+          {fgnOriginChallengeId && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
               <Download className="h-3 w-3" />
-              Linked to FGN Challenge: <code className="text-primary">{sourceChallengeId.slice(0, 8)}...</code>
+              Linked to FGN Challenge: <code className="text-primary">{fgnOriginChallengeId.slice(0, 8)}...</code>
             </div>
           )}
 
