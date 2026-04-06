@@ -25,7 +25,7 @@ import {
   BookOpen, 
   Video, 
   FileText, 
-  Map,
+  Map as MapIcon,
   Truck,
   Tractor,
   HardHat,
@@ -47,7 +47,7 @@ const ICON_OPTIONS = [
   { value: 'book-open', label: 'Book', icon: BookOpen },
   { value: 'video', label: 'Video', icon: Video },
   { value: 'file-text', label: 'Document', icon: FileText },
-  { value: 'map', label: 'Map', icon: Map },
+  { value: 'map', label: 'Map', icon: MapIcon },
   { value: 'truck', label: 'Truck', icon: Truck },
   { value: 'tractor', label: 'Tractor', icon: Tractor },
   { value: 'hard-hat', label: 'Hard Hat', icon: HardHat },
@@ -63,6 +63,7 @@ const GAME_OPTIONS: { value: GameTitle; label: string }[] = [
   { value: 'Construction_Sim', label: 'Construction Simulator' },
   { value: 'Mechanic_Sim', label: 'Mechanic Simulator' },
   { value: 'Fiber_Tech', label: 'Fiber-Tech Simulator' },
+  { value: 'Roadcraft', label: 'Roadcraft' },
 ];
 
 const COLOR_PRESETS = [

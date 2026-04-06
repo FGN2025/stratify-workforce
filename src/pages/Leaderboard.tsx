@@ -100,7 +100,7 @@ function LeaderboardSkeleton() {
   );
 }
 
-const GAME_TITLES: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech'];
+const GAME_TITLES: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'];
 
 const Leaderboard = () => {
   const { tenant } = useTenant();

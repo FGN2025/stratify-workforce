@@ -33,7 +33,7 @@ import {
   BookOpen,
   Video,
   FileText,
-  Map,
+  Map as MapIcon,
   Truck,
   Tractor,
   HardHat,
@@ -56,6 +56,7 @@ const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; d
   Construction_Sim: { title: 'Construction Simulator', icon: HardHat, defaultColor: '#F59E0B' },
   Mechanic_Sim: { title: 'Mechanic Simulator', icon: Wrench, defaultColor: '#EF4444' },
   Fiber_Tech: { title: 'Fiber-Tech Simulator', icon: Cable, defaultColor: '#3B82F6' },
+  Roadcraft: { title: 'Roadcraft', icon: MapIcon, defaultColor: '#22C55E' },
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -65,7 +66,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   'book-open': BookOpen,
   'video': Video,
   'file-text': FileText,
-  'map': Map,
+  'map': MapIcon,
   'truck': Truck,
   'tractor': Tractor,
   'hard-hat': HardHat,

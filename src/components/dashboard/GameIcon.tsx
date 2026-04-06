@@ -1,4 +1,4 @@
-import { Truck, Tractor, HardHat, Wrench, Cable } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Map } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 import { cn } from '@/lib/utils';
 
@@ -32,8 +32,13 @@ const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; co
   },
   Fiber_Tech: { 
     icon: Cable, 
-    label: 'Fiber-Tech / Roadcraft',
+    label: 'Fiber-Tech Simulator',
     color: 'text-blue-400 bg-blue-500/20'
+  },
+  Roadcraft: { 
+    icon: Map, 
+    label: 'Roadcraft',
+    color: 'text-emerald-400 bg-emerald-500/20'
   },
 };
 

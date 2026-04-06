@@ -18,14 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2 } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2, Map as MapIcon } from 'lucide-react';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameChannel = Database['public']['Tables']['game_channels']['Row'];
 type GameTitle = Database['public']['Enums']['game_title'];
 
-const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech'];
+const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'];
 
 const gameLabels: Record<GameTitle, string> = {
   ATS: 'American Truck Simulator',
@@ -33,6 +33,7 @@ const gameLabels: Record<GameTitle, string> = {
   Construction_Sim: 'Construction Simulator',
   Mechanic_Sim: 'Mechanic Simulator',
   Fiber_Tech: 'Fiber-Tech Simulator',
+  Roadcraft: 'Roadcraft',
 };
 
 const gameIcons: Record<GameTitle, React.ReactNode> = {
@@ -41,6 +42,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Construction_Sim: <HardHat className="h-4 w-4" />,
   Mechanic_Sim: <Wrench className="h-4 w-4" />,
   Fiber_Tech: <Cable className="h-4 w-4" />,
+  Roadcraft: <MapIcon className="h-4 w-4" />,
 };
 
 interface SimGameEditDialogProps {

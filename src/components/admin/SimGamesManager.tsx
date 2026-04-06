@@ -16,7 +16,8 @@ import {
   ClipboardList,
   Edit,
   Plus,
-  Gamepad2
+  Gamepad2,
+  Map as MapIcon
 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -29,6 +30,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Construction_Sim: <HardHat className="h-6 w-6" />,
   Mechanic_Sim: <Wrench className="h-6 w-6" />,
   Fiber_Tech: <Cable className="h-6 w-6" />,
+  Roadcraft: <MapIcon className="h-6 w-6" />,
 };
 
 const gameLabels: Record<GameTitle, string> = {
@@ -37,6 +39,7 @@ const gameLabels: Record<GameTitle, string> = {
   Construction_Sim: 'Construction Simulator',
   Mechanic_Sim: 'Mechanic Simulator',
   Fiber_Tech: 'Fiber-Tech Simulator',
+  Roadcraft: 'Roadcraft',
 };
 
 export function SimGamesManager() {

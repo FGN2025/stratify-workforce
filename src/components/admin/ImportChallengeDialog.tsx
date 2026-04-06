@@ -55,7 +55,7 @@ const GAME_NAME_MAP: Record<string, GameTitle> = {
   'Construction Simulator': 'Construction_Sim',
   'Mechanic Simulator': 'Mechanic_Sim',
   'Fiber-Tech Simulator': 'Fiber_Tech',
-  'Roadcraft': 'Fiber_Tech',
+  'Roadcraft': 'Roadcraft',
 };
 
 // Map difficulty strings

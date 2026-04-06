@@ -38,6 +38,11 @@ const GAME_CONFIG = {
     short_name: "Fiber-Tech",
     accent_color: "#3B82F6",
   },
+  Roadcraft: {
+    name: "Roadcraft",
+    short_name: "Roadcraft",
+    accent_color: "#22C55E",
+  },
 };
 
 type GameTitle = keyof typeof GAME_CONFIG;

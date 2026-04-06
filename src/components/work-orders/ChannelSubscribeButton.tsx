@@ -22,6 +22,7 @@ const gameLabels: Record<GameTitle, string> = {
   Construction_Sim: 'Construction',
   Mechanic_Sim: 'Mechanic',
   Fiber_Tech: 'Fiber-Tech',
+  Roadcraft: 'Roadcraft',
 };
 
 export function ChannelSubscribeButton({

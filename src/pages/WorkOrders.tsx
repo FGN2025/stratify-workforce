@@ -84,7 +84,7 @@ const WorkOrders = () => {
       'for-you': allWorkOrders.filter(wo => subscribedGames.includes(wo.game_title)).length,
     };
     
-    const gameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim'];
+    const gameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'];
     gameTitles.forEach(game => {
       counts[game] = allWorkOrders.filter(wo => wo.game_title === game).length;
     });
@@ -102,6 +102,8 @@ const WorkOrders = () => {
   const farmingWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Farming_Sim');
   const constructionWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Construction_Sim');
   const mechanicWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Mechanic_Sim');
+  const fiberTechWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Fiber_Tech');
+  const roadcraftWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Roadcraft');
 
   if (loadingWorkOrders) {
     return (
@@ -147,6 +149,8 @@ const WorkOrders = () => {
             { value: `${farmingWorkOrders.length}`, label: 'Farming' },
             { value: `${constructionWorkOrders.length}`, label: 'Construction' },
             { value: `${mechanicWorkOrders.length}`, label: 'Mechanic' },
+            { value: `${fiberTechWorkOrders.length}`, label: 'Fiber-Tech' },
+            { value: `${roadcraftWorkOrders.length}`, label: 'Roadcraft' },
           ]}
         />
 
