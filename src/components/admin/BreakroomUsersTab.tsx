@@ -61,7 +61,7 @@ export function BreakroomUsersTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('breakroom_identity')
-        .select('*, profiles(username), tenants(name)')
+        .select('*, profiles!breakroom_identity_user_id_profiles_fkey(username), tenants(name)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as unknown as BreakroomUser[];
