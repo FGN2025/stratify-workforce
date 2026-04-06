@@ -1,59 +1,37 @@
 
 
-## Challenge Registry - Implementation Plan
+## Comprehensive User Guide Page
 
-### Overview
-A new admin-only page at `/admin/challenge-registry` with two tabs: **Challenges** (work order cross-platform mapping) and **Breakroom Users** (breakroom_identity management). Admin/super_admin access only.
+### What We're Building
+A new in-app help page at `/help/guide` accessible to all authenticated users. This will be a thorough reference covering the full FGN Academy ecosystem: how challenges flow between play.fgn.gg, fgn.academy, broadbandworkforce.com, and Breakroom. It expands well beyond the existing student and admin help pages.
 
-### Files to Create
+### Structure
 
-**1. `src/pages/ChallengeRegistry.tsx`**
-Main page component wrapped in `AppLayout` with `AdminRoute` protection. Contains the page header ("Challenge Registry" / subtitle) and a `Tabs` component with two tabs routing to the sub-components below.
+The page will follow the exact same pattern as `HelpAdmin.tsx` and `HelpStudent.tsx` (card-based sections with icons) but contain these sections:
 
-**2. `src/components/admin/ChallengesTab.tsx`**
-Reads `work_orders` table (all rows, not just active). Displays table with columns: Title, Game Title (colored badge using `useGameChannelColors`), source_challenge_id (monospace + copy button), Is Active (green/red dot), Breakroom Course Name (inline editable input saving to `metadata->breakroom_course_name` on blur), BBW Linked (static grey dash), Actions (3 icon buttons for Copy UUID, Copy PowerShell, Copy Lua).
+1. **Platform Overview** -- What FGN Academy is, the four connected platforms (Academy, play.fgn.gg, broadbandworkforce.com, Breakroom), and how they work together
+2. **Importing Challenges from play.fgn.gg** -- Admin workflow: Admin Dashboard → Work Orders → "New Work Order" → Import from FGN Play dialog. How source_challenge_id links the two platforms
+3. **Challenge Completion Pipeline** -- How play.fgn.gg sends completions via the `sync-challenge-completion` webhook (X-App-Key auth, payload format, score >= 70% to pass, XP award, credential issuance)
+4. **Skill Passport & Credentials** -- How completions become credentials on the Skill Passport, verification hashes, public passport URLs, employer verification flow
+5. **Breakroom Integration** -- How Breakroom virtual world quizzes sync to Academy via the polling pipeline. The `breakroom_identity` table, course name mapping, 15-minute cron cycle
+6. **Cross-Platform Identity** -- How users are matched: Breakroom username → FGN user_id (via breakroom_identity), FGN email → BBW account (via auth.users email)
+7. **Broadband Workforce Sync** -- What data flows to broadbandworkforce.com: quiz attempts, lesson progress, enrollment status, user stats, achievements
+8. **Challenge Registry** -- Admin tool at /admin/challenge-registry for managing cross-platform ID mappings, Breakroom course names, Lua/PowerShell export tools
+9. **Credential API** -- Overview of the two REST APIs (Credential API and Public Catalog), auth methods (none, JWT, API Key), endpoint summary
+10. **Track Completion & Knowledge Checks** -- How completing all challenges in a track (OSHA Safety, Fiber Optics) triggers knowledge check notifications
+11. **Monitoring & Troubleshooting** -- Checking audit logs, signs of expired Breakroom tokens, common issues and fixes
 
-Toolbar: game_title filter dropdown, active/inactive/all toggle, search input, Export Lua button, Export CSV button.
+### Files
 
-Inline edit saves optimistically: update local state immediately, fire Supabase upsert of `metadata` jsonb (merge existing metadata with new `breakroom_course_name` key), rollback on error.
+| Action | File | Details |
+|--------|------|---------|
+| Create | `src/pages/HelpGuide.tsx` | New page component following HelpAdmin/HelpStudent pattern |
+| Edit | `src/App.tsx` | Add route `/help/guide` wrapped in `ProtectedRoute` |
+| Edit | `src/components/layout/AppSidebar.tsx` | Update the Help nav item or add a "Platform Guide" sub-item |
 
-Export Lua generates a `.txt` download with the `local COURSE_MAP = { ... }` block. Export CSV generates all columns as CSV.
-
-**3. `src/components/admin/BreakroomUsersTab.tsx`**
-Reads `breakroom_identity` joined with `profiles` (username) and `tenants` (name). Email comes from an edge function call since we can't query `auth.users` client-side.
-
-Table columns: FGN Display Name, Email, Breakroom Username (inline editable), Breakroom User ID (inline editable integer), Tenant, Created At, Delete action with confirmation.
-
-Add User modal: email search field (min 3 chars, calls admin-users edge function to search), user selector dropdown, breakroom username/ID fields, tenant dropdown. Inserts into `breakroom_identity`.
-
-Export CSV button for backup.
-
-**4. `supabase/functions/admin-users/index.ts`** (update existing)
-Add a `search` action that accepts a query string and returns matching users from `auth.users` by email pattern. This supports the Add User modal's email lookup.
-
-### Files to Modify
-
-**5. `src/components/layout/AppSidebar.tsx`**
-Add `{ title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck }` to `adminSubItems` array (or `superAdminSubItems` if preferred -- will add to `adminSubItems` since both admin and super_admin need access).
-
-**6. `src/App.tsx`**
-Add route: `<Route path="/admin/challenge-registry" element={<AdminRoute><ChallengeRegistry /></AdminRoute>} />`
-
-**7. `src/pages/Admin.tsx`**
-Add `case 'challenge-registry':` to `renderSection()` -- actually, since this is a standalone page at its own route (not a section of `/admin/:section`), this is handled by the new route in App.tsx. No change needed to Admin.tsx.
-
-### Technical Details
-
-| Concern | Approach |
-|---------|----------|
-| Game badges | Reuse `useGameChannelColors` hook + `Badge` component with inline `style={{ backgroundColor }}` |
-| Metadata upsert | Read existing `metadata`, spread with new `breakroom_course_name`, update via `.update({ metadata })` |
-| Email lookup | Extend `admin-users` edge function with search capability using `supabase.auth.admin.listUsers()` with email filter |
-| File downloads | Create Blob URLs with `URL.createObjectURL` for Lua/CSV exports |
-| Copy to clipboard | `navigator.clipboard.writeText()` with toast confirmation |
-| Loading states | Skeleton components matching existing admin patterns |
-| Optimistic updates | Update react-query cache immediately, invalidate on error |
-
-### Edge Function Update
-The existing `admin-users` edge function will be extended to support a `GET ?action=search&q=email` endpoint that returns `{ id, email, username }[]` for matching auth users. This avoids creating a new function.
+### Technical Notes
+- Reuses existing `AppLayout`, `Card`, `CardHeader`, `CardContent`, `Badge`, `Separator` components
+- Admin-specific sections (importing challenges, Challenge Registry, monitoring) will be visually tagged with an "Admin" badge
+- ASCII-style diagrams rendered in `<pre>` blocks showing the data flow architecture
+- No new dependencies or database changes required
 
