@@ -30,6 +30,7 @@ import WorkOrderDetail from "./pages/WorkOrderDetail";
 import Developers from "./pages/Developers";
 import AITest from "./pages/AITest";
 import HelpAdmin from "./pages/HelpAdmin";
+import HelpGuide from "./pages/HelpGuide";
 import HelpStudent from "./pages/HelpStudent";
 import PublicPassport from "./pages/PublicPassport";
 import Careers from "./pages/Careers";
@@ -112,6 +113,9 @@ const App = () => (
               } />
               <Route path="/help/student" element={
                 <ProtectedRoute><HelpStudent /></ProtectedRoute>
+              } />
+              <Route path="/help/guide" element={
+                <ProtectedRoute><HelpGuide /></ProtectedRoute>
               } />
                <Route path="/ai-test" element={<AITest />} />
               <Route path="/activity" element={
