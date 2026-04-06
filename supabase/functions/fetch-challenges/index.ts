@@ -93,14 +93,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Also fetch which challenges are already imported
+    // Also fetch which challenges are already imported (check fgn_origin_challenge_id)
     const { data: existingWorkOrders } = await localSupabase
       .from('work_orders')
-      .select('source_challenge_id')
-      .not('source_challenge_id', 'is', null);
+      .select('fgn_origin_challenge_id')
+      .not('fgn_origin_challenge_id', 'is', null);
 
     const importedIds = new Set(
-      (existingWorkOrders || []).map((wo: { source_challenge_id: string | null }) => wo.source_challenge_id)
+      (existingWorkOrders || []).map((wo: { fgn_origin_challenge_id: string | null }) => wo.fgn_origin_challenge_id)
     );
 
     const enrichedChallenges = (challenges || []).map((c: Record<string, unknown>) => ({
