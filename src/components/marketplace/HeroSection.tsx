@@ -54,21 +54,6 @@ export function HeroSection() {
             </a>
           </div>
           
-          {/* Stats ticker */}
-          <div className="flex items-center gap-8 mt-12 pt-6 border-t border-border/50">
-            <div>
-              <p className="font-data text-2xl text-primary">2,500+</p>
-              <p className="text-xs text-muted-foreground">Active Operators</p>
-            </div>
-            <div>
-              <p className="font-data text-2xl text-foreground">180+</p>
-              <p className="text-xs text-muted-foreground">Work Orders</p>
-            </div>
-            <div>
-              <p className="font-data text-2xl text-foreground">45</p>
-              <p className="text-xs text-muted-foreground">Communities</p>
-            </div>
-          </div>
         </div>
       </section>
 
