@@ -151,6 +151,7 @@ export function AppSidebar() {
     Construction_Sim: false,
     Mechanic_Sim: false,
     Fiber_Tech: false,
+    Roadcraft: false,
   });
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
@@ -183,6 +184,7 @@ export function AppSidebar() {
         Construction_Sim: [],
         Mechanic_Sim: [],
         Fiber_Tech: [],
+        Roadcraft: [],
       };
       dbResources.forEach((r) => {
         if (grouped[r.game_title]) {

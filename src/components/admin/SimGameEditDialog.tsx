@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2 } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2, Map as MapIcon } from 'lucide-react';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -42,7 +42,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Construction_Sim: <HardHat className="h-4 w-4" />,
   Mechanic_Sim: <Wrench className="h-4 w-4" />,
   Fiber_Tech: <Cable className="h-4 w-4" />,
-  Roadcraft: <Map className="h-4 w-4" />,
+  Roadcraft: <MapIcon className="h-4 w-4" />,
 };
 
 interface SimGameEditDialogProps {
