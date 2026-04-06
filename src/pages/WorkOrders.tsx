@@ -100,6 +100,8 @@ const WorkOrders = () => {
   // Group work orders by game type
   const atsWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'ATS');
   const farmingWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Farming_Sim');
+  const constructionWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Construction_Sim');
+  const mechanicWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Mechanic_Sim');
 
   if (loadingWorkOrders) {
     return (
@@ -143,6 +145,8 @@ const WorkOrders = () => {
             { value: `${allWorkOrders.length}`, label: 'Active Orders', highlight: true },
             { value: `${atsWorkOrders.length}`, label: 'Trucking' },
             { value: `${farmingWorkOrders.length}`, label: 'Farming' },
+            { value: `${constructionWorkOrders.length}`, label: 'Construction' },
+            { value: `${mechanicWorkOrders.length}`, label: 'Mechanic' },
           ]}
         />
 
