@@ -88,7 +88,7 @@ export default function LessonDetail() {
 
         {/* Header */}
         <div>
-          <p className="text-sm text-muted-foreground mb-1">{(lesson.modules as any)?.title}</p>
+          
           <h1 className="text-2xl font-bold">{lesson.title}</h1>
           <div className="flex items-center gap-3 mt-2">
             <Badge variant="outline" className="capitalize">{lesson.lesson_type}</Badge>
