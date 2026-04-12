@@ -48,7 +48,6 @@ function TopThreeCard({ entry, position, isCurrentUser }: { entry: LeaderboardEn
           {entry.score}
         </p>
         <div className="flex items-center justify-center gap-2 mt-2 text-xs text-muted-foreground">
-          <span>{entry.hours}h played</span>
           <ChangeIndicator change={entry.change} />
         </div>
       </CardContent>
@@ -214,11 +213,10 @@ const Leaderboard = () => {
               </div>
 
               <div className="glass-card overflow-hidden">
-                <div className="grid grid-cols-12 gap-4 p-4 border-b border-border text-xs text-muted-foreground uppercase tracking-wider">
+                <div className="grid grid-cols-10 gap-4 p-4 border-b border-border text-xs text-muted-foreground uppercase tracking-wider">
                   <div className="col-span-1">Rank</div>
                   <div className="col-span-5">Operator</div>
                   <div className="col-span-2 text-right">Score</div>
-                  <div className="col-span-2 text-right">Hours</div>
                   <div className="col-span-2 text-right">XP</div>
                 </div>
 
@@ -229,7 +227,7 @@ const Leaderboard = () => {
                       <div
                         key={entry.userId}
                         className={cn(
-                          "grid grid-cols-12 gap-4 p-4 items-center hover:bg-muted/30 transition-colors",
+                          "grid grid-cols-10 gap-4 p-4 items-center hover:bg-muted/30 transition-colors",
                           isMe && "bg-primary/5 border-l-2 border-l-primary"
                         )}
                         style={{ animationDelay: `${index * 0.05}s` }}
@@ -253,9 +251,6 @@ const Leaderboard = () => {
                           <span className={cn("font-data text-lg", entry.rank <= 3 ? "text-primary" : "text-foreground")}>
                             {entry.score}
                           </span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="font-data text-muted-foreground">{entry.hours}h</span>
                         </div>
                         <div className="col-span-2 text-right">
                           <span className="font-data text-muted-foreground">{entry.xp.toLocaleString()}</span>
