@@ -67,6 +67,7 @@ const App = () => (
               
               {/* Learning routes */}
               <Route path="/learn" element={<Learn />} />
+              <Route path="/learn/:id" element={<CourseDetail />} />
               
               {/* Events routes */}
               <Route path="/events" element={<Events />} />
