@@ -386,6 +386,12 @@ Deno.serve(async (req) => {
       'ae4c4228-f107-4f31-ae3d-ec819b0b6863',
       '2a7c0a85-8f05-4c15-965b-e94f72f3672f',
       '858d2e0d-6d78-4d7f-8377-0dc40ab269dd',
+      '034e8cf3-8832-4c05-a572-67af46dc9971', // CS Fiber: Underground Conduit Systems
+      'c8298ef1-d359-4536-958f-533e66f7ee4a', // RC Fiber: Aerial Route Assessment
+      '5e9ace81-fcc3-49f9-9013-5321d2e04d56', // CS Fiber: Pre-Construction Safety
+      'd8b601c3-ff40-46c6-aa4b-55da7711c8ce', // CS Fiber: Directional Bore Planning
+      '57da5f29-5a4e-4148-a738-319e7a33252c', // CS Fiber: OSP Handoff
+      '4ce440c1-be75-4700-a8fa-4a80f6d1fbde', // RC Fiber: Cable Run Documentation
     ];
 
     const TRACK3_LESSON_ID = 'a1b2c3d4-0003-4000-8000-000000000001';
