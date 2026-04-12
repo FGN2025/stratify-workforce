@@ -454,10 +454,14 @@ Deno.serve(async (req) => {
     }
 
     if (completionStatus === 'completed' && isTrack4) {
-      // Track 4: fire per-challenge — each challenge unlocks its own module quiz
+      const lessonId = CHALLENGE_LESSON_MAP[challenge_id] ?? null;
+      const deepLink = lessonId
+        ? `/learn/${CE_COURSE_ID}/lessons/${lessonId}`
+        : `/learn/${CE_COURSE_ID}`;
+
       trackCompletion = {
         track: 'Fiber Optics Construction',
-        lesson_id: challenge_id, // the challenge itself is the key; lesson lookup happens client-side
+        lesson_id: lessonId || challenge_id,
         challenge_id,
       };
 
@@ -468,12 +472,15 @@ Deno.serve(async (req) => {
         message: `You completed "${workOrder.title}" on play.fgn.gg — a knowledge check module is now available on fgn.academy to reinforce what you learned.`,
         icon_name: 'graduation-cap',
         accent_color: '#6366f1',
-        link_url: '/learn',
+        link_url: deepLink,
         metadata: {
           track: 'Fiber Optics Construction',
           challenge_id,
           work_order_id: workOrder.id,
           work_order_title: workOrder.title,
+          lesson_id: lessonId,
+          course_id: CE_COURSE_ID,
+          deep_link: deepLink,
         },
       });
     }
