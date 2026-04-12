@@ -18,7 +18,7 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
-  Clock,
+  
   GraduationCap,
   Lock,
   PlayCircle,
@@ -137,10 +137,6 @@ export default function CourseDetail() {
           <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
-                <span>{course.estimated_hours}h estimated</span>
-              </div>
-              <div className="flex items-center gap-1.5">
                 <Star className="h-4 w-4 text-primary" />
                 <span>{course.xp_reward} XP</span>
               </div>
@@ -245,7 +241,7 @@ export default function CourseDetail() {
                             )}
                             <span className={cn(isCompleted && 'line-through')}>{lesson.title}</span>
                             <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
-                              {lesson.duration_minutes}min · {lesson.xp_reward} XP
+                              {lesson.xp_reward} XP
                             </span>
                           </div>
                         );

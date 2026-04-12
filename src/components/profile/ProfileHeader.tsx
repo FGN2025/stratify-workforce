@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Award, 
   Calendar, 
-  Clock, 
+   
   Shield, 
   TrendingUp
 } from 'lucide-react';
@@ -97,14 +97,7 @@ export function ProfileHeader({ profile, credentials, stats, tenantName }: Profi
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
-            <Clock className="h-4 w-4" />
-            <span className="text-xs">Total Hours</span>
-          </div>
-          <p className="font-data text-xl font-semibold">{stats.totalHours}h</p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-border">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
             <Calendar className="h-4 w-4" />

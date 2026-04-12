@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, GraduationCap, Star } from 'lucide-react';
+import { GraduationCap, Star } from 'lucide-react';
 import type { Course } from '@/types/lms';
 import { cn } from '@/lib/utils';
 import { EditableImageWrapper } from '@/components/admin/EditableImageWrapper';
@@ -99,10 +99,6 @@ export function CourseCard({ course, showProgress = false }: CourseCardProps) {
           )}
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              <span>{course.estimated_hours}h</span>
-            </div>
             <div className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 text-primary" />
               <span>{course.xp_reward} XP</span>
