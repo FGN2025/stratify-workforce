@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCourse } from '@/hooks/useCourses';
-import { useEnrollment } from '@/hooks/useEnrollment';
+import { useEnroll } from '@/hooks/useEnrollment';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
