@@ -9,6 +9,12 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
@@ -74,11 +80,12 @@ export default function CourseDetail() {
     );
   }
 
-  const allLessons = course.modules
-    ?.sort((a, b) => a.order_index - b.order_index)
-    .flatMap((m) => m.lessons || []) || [];
-  const totalLessons = allLessons.length;
-  const completedLessons = allLessons.filter((l) => l.progress?.status === 'completed').length;
+  const totalLessons = course.modules?.reduce((sum, m) => sum + (m.lessons?.length || 0), 0) || 0;
+  const completedLessons = course.modules?.reduce(
+    (sum, m) =>
+      sum + (m.lessons?.filter((l) => l.progress?.status === 'completed').length || 0),
+    0
+  ) || 0;
 
   const handleEnroll = async () => {
     if (!user) {
@@ -135,7 +142,7 @@ export default function CourseDetail() {
               </div>
               <div className="flex items-center gap-1.5">
                 <BookOpen className="h-4 w-4" />
-                <span>{totalLessons} lessons</span>
+                <span>{course.modules?.length || 0} modules · {totalLessons} lessons</span>
               </div>
             </div>
             {!course.enrolled && (
@@ -175,42 +182,78 @@ export default function CourseDetail() {
 
         {/* Curriculum */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Lessons</h2>
-          <div className="space-y-1">
-            {course.modules
-              ?.sort((a, b) => a.order_index - b.order_index)
-              .flatMap((module) => module.lessons || [])
-              .map((lesson, idx) => {
-                const Icon = LESSON_ICONS[lesson.lesson_type] || BookOpen;
-                const isCompleted = lesson.progress?.status === 'completed';
-                return (
-                  <div
-                    key={lesson.id}
-                    onClick={() => course.enrolled && navigate(`/learn/${course.id}/lesson/${lesson.id}`)}
-                    className={cn(
-                      'flex items-center gap-3 py-2.5 px-3 rounded-md text-sm border border-border',
-                      isCompleted
-                        ? 'text-muted-foreground'
-                        : 'text-foreground',
-                      course.enrolled && 'cursor-pointer hover:bg-accent/50 transition-colors'
-                    )}
-                  >
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium text-muted-foreground shrink-0">
-                      {idx + 1}
-                    </span>
-                    {isCompleted ? (
-                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    ) : (
-                      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    )}
-                    <span className={cn('flex-1', isCompleted && 'line-through')}>{lesson.title}</span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {lesson.xp_reward} XP
-                    </span>
-                  </div>
-                );
-              })}
-          </div>
+          <h2 className="text-lg font-semibold mb-3">Curriculum</h2>
+          <Accordion type="multiple" className="space-y-2">
+            {course.modules?.map((module, idx) => {
+              const moduleLessons = module.lessons || [];
+              const moduleCompleted = moduleLessons.filter(
+                (l) => l.progress?.status === 'completed'
+              ).length;
+              const allDone = moduleCompleted === moduleLessons.length && moduleLessons.length > 0;
+
+              return (
+                <AccordionItem
+                  key={module.id}
+                  value={module.id}
+                  className="border rounded-lg px-4"
+                >
+                  <AccordionTrigger className="hover:no-underline py-3">
+                    <div className="flex items-center gap-3 text-left">
+                      <div
+                        className={cn(
+                          'flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold',
+                          allDone
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {allDone ? <CheckCircle2 className="h-4 w-4" /> : idx + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{module.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''} ·{' '}
+                          {moduleLessons.reduce((s, l) => s + (l.xp_reward || 0), 0)} XP
+                          {moduleCompleted > 0 && ` · ${moduleCompleted}/${moduleLessons.length} done`}
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="space-y-1 ml-11">
+                      {moduleLessons.map((lesson) => {
+                        const Icon = LESSON_ICONS[lesson.lesson_type] || BookOpen;
+                        const isCompleted = lesson.progress?.status === 'completed';
+                        return (
+                          <div
+                            key={lesson.id}
+                            onClick={() => course.enrolled && navigate(`/learn/${course.id}/lesson/${lesson.id}`)}
+                            className={cn(
+                              'flex items-center gap-3 py-2 px-3 rounded-md text-sm',
+                              isCompleted
+                                ? 'text-muted-foreground'
+                                : 'text-foreground',
+                              course.enrolled && 'cursor-pointer hover:bg-accent/50 transition-colors'
+                            )}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            ) : (
+                              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                            )}
+                            <span className={cn(isCompleted && 'line-through')}>{lesson.title}</span>
+                            <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
+                              {lesson.xp_reward} XP
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
         </div>
       </div>
     </AppLayout>
