@@ -371,7 +371,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 9. Track completion detection — hardcoded per developer brief v2
+    // 9. Track completion detection
+    // Track 3 (OSHA Safety): fires once ALL 4 challenges are completed (single quiz gate)
+    // Track 4 (Fiber Optics): fires per-challenge — each challenge unlocks its own module quiz
     const TRACK3_CHALLENGES = [
       'bcb4a446-d0b7-4432-bedb-4f7ce42ff557',
       '452f8199-9e08-484c-bf8c-887cb24ad3ce',
@@ -395,28 +397,21 @@ Deno.serve(async (req) => {
     ];
 
     const TRACK3_LESSON_ID = 'a1b2c3d4-0003-4000-8000-000000000001';
-    const TRACK4_LESSON_ID = 'a1b2c3d4-0004-4000-8000-000000000001';
 
-    let trackCompletion: { track: string; lesson_id: string } | null = null;
+    let trackCompletion: { track: string; lesson_id: string; challenge_id?: string } | null = null;
 
     const isTrack3 = TRACK3_CHALLENGES.includes(challenge_id);
     const isTrack4 = TRACK4_CHALLENGES.includes(challenge_id);
 
-    if (completionStatus === 'completed' && (isTrack3 || isTrack4)) {
-      const trackChallenges = isTrack3 ? TRACK3_CHALLENGES : TRACK4_CHALLENGES;
-      const trackName = isTrack3 ? 'OSHA Safety Overlay' : 'Fiber Optics Construction';
-      const lessonId = isTrack3 ? TRACK3_LESSON_ID : TRACK4_LESSON_ID;
-
-      // Find all work orders linked to this track's challenges
+    if (completionStatus === 'completed' && isTrack3) {
+      // Track 3: gate on ALL challenges completed → single quiz
       const { data: trackWOs } = await supabase
         .from('work_orders')
         .select('id, source_challenge_id')
-        .in('source_challenge_id', trackChallenges);
+        .in('source_challenge_id', TRACK3_CHALLENGES);
 
-      if (trackWOs && trackWOs.length === trackChallenges.length) {
+      if (trackWOs && trackWOs.length === TRACK3_CHALLENGES.length) {
         const trackWOIds = trackWOs.map(wo => wo.id);
-
-        // Count how many this user has completed (status = 'completed')
         const { count: completedCount } = await supabase
           .from('user_work_order_completions')
           .select('*', { count: 'exact', head: true })
@@ -424,25 +419,45 @@ Deno.serve(async (req) => {
           .eq('status', 'completed')
           .in('work_order_id', trackWOIds);
 
-        if (completedCount && completedCount >= trackChallenges.length) {
-          trackCompletion = { track: trackName, lesson_id: lessonId };
-
-          const notifMessage = isTrack3
-            ? 'You have completed the OSHA Safety Overlay track. Continue your skills development at fgn.academy to earn your credential.'
-            : 'You have completed the Fiber Optics Construction track. Continue to fgn.academy to begin your TIRAP UUIT credential pathway.';
-
+        if (completedCount && completedCount >= TRACK3_CHALLENGES.length) {
+          trackCompletion = { track: 'OSHA Safety Overlay', lesson_id: TRACK3_LESSON_ID };
           notifications.push({
             user_id: user.id,
             type: 'knowledge_check_available',
-            title: `Track Complete: ${trackName}`,
-            message: notifMessage,
+            title: 'Track Complete: OSHA Safety Overlay',
+            message: 'You have completed the OSHA Safety Overlay track. Continue your skills development at fgn.academy to earn your credential.',
             icon_name: 'graduation-cap',
             accent_color: '#6366f1',
             link_url: '/learn',
-            metadata: { track: trackName, lesson_id: lessonId },
+            metadata: { track: 'OSHA Safety Overlay', lesson_id: TRACK3_LESSON_ID },
           });
         }
       }
+    }
+
+    if (completionStatus === 'completed' && isTrack4) {
+      // Track 4: fire per-challenge — each challenge unlocks its own module quiz
+      trackCompletion = {
+        track: 'Fiber Optics Construction',
+        lesson_id: challenge_id, // the challenge itself is the key; lesson lookup happens client-side
+        challenge_id,
+      };
+
+      notifications.push({
+        user_id: user.id,
+        type: 'knowledge_check_available',
+        title: `Knowledge Check Available: ${workOrder.title}`,
+        message: `You completed "${workOrder.title}" on play.fgn.gg — a knowledge check module is now available on fgn.academy to reinforce what you learned.`,
+        icon_name: 'graduation-cap',
+        accent_color: '#6366f1',
+        link_url: '/learn',
+        metadata: {
+          track: 'Fiber Optics Construction',
+          challenge_id,
+          work_order_id: workOrder.id,
+          work_order_title: workOrder.title,
+        },
+      });
     }
 
     // Batch insert all notifications
