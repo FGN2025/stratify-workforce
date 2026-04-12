@@ -1,49 +1,30 @@
 
 
-## Add Roadcraft as a Separate Game Title
+## Plan: Insert All 12 FTS-CE Modules and Lessons
 
-### Why
-Roadcraft challenges span multiple skill domains (fiber installation, flood damage assessment, route planning, project management) that don't all belong under Fiber-Tech. A dedicated `Roadcraft` enum value gives admins flexibility to assign work orders to the appropriate category.
+All 12 SQL blocks have been received for course `dab09852-eeb2-431f-b2f4-b881c6b4aa7f`. I'll execute them as a single database insert operation.
 
-### Changes
+### Modules to insert (order_index 0–11):
+1. **FTS-CE-01**: Utility Locating and Damage Prevention (0)
+2. **FTS-CE-02**: Trenching, Conduit, and Underground Construction (1)
+3. **FTS-CE-03**: Aerial Construction and Pole Line Engineering (2)
+4. **FTS-CE-04**: Fiber Optic Technology Review — Field Edition (3)
+5. **FTS-CE-05**: Directional Boring and Microtrenching Methods (4)
+6. **FTS-CE-06**: OSP Handoff — From Construction to Completion (5)
+7. **FTS-CE-07**: Fiber Cable Types and OSP Selection Logic (6)
+8. **FTS-CE-08**: Fusion Splicing Principles and Closure Systems (7)
+9. **FTS-CE-09**: Connector Types and OSP Termination Methods (8)
+10. **FTS-CE-10**: Fiber Optic Testing Fundamentals (9)
+11. **FTS-CE-11**: OTDR — Reading Traces and Diagnosing Faults (10)
+12. **FTS-CE-12**: Network Design and Loss Budget Basics (11)
 
-**1. Database migration — add `Roadcraft` to `game_title` enum**
-```sql
-ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS 'Roadcraft';
-```
+Each module gets one quiz lesson with 5 questions (80% passing score).
 
-**2. Revert the Roadcraft → Fiber_Tech mapping in ImportChallengeDialog**
-- Change `'Roadcraft': 'Fiber_Tech'` to `'Roadcraft': 'Roadcraft'` in `GAME_NAME_MAP`
+### Technical approach
+- Use the database insert tool to run all 12 `WITH ... INSERT` blocks sequentially in a single SQL statement
+- Note: Block 10 was sent twice — only one copy will be inserted
 
-**3. Update every hardcoded game-title list across ~15 files**
-
-Each file below has a `Record<GameTitle, ...>` or `GameTitle[]` that needs a `Roadcraft` entry:
-
-| File | What to add |
-|------|-------------|
-| `src/types/tenant.ts` | Add `'Roadcraft'` to `GameTitle` union |
-| `src/components/dashboard/GameIcon.tsx` | Add `Roadcraft` config (icon: `Gamepad2` or `Map`, label: `'Roadcraft'`) |
-| `src/hooks/useGameChannelColors.ts` | Add default color (e.g. `'#22C55E'` green) |
-| `src/components/admin/WorkOrderEditDialog.tsx` | Add `<SelectItem value="Roadcraft">Roadcraft</SelectItem>`, revert Fiber_Tech label to just `"Fiber-Tech Simulator"` |
-| `src/components/admin/SimGameEditDialog.tsx` | Add to `allGameTitles`, `gameLabels`, `gameIcons` |
-| `src/components/admin/SimGamesManager.tsx` | Add to `GAME_ICONS` and `GAME_LABELS` |
-| `src/components/admin/SimResourcesManager.tsx` | Add to `GAME_CONFIG` |
-| `src/components/admin/SimResourceEditDialog.tsx` | Add to game options array |
-| `src/components/admin/EventsManager.tsx` | Add to `GAME_LABELS` |
-| `src/components/admin/ChallengesTab.tsx` | Add to `GAME_LABELS` |
-| `src/components/admin/CredentialTypesManager.tsx` | Add `'Roadcraft'` to `GAME_TITLES` array |
-| `src/components/work-orders/ChannelSubscribeButton.tsx` | Add to `GAME_NAMES` |
-| `src/components/layout/AppSidebar.tsx` | Add `'Roadcraft'` to `GAME_ORDER` |
-| `src/config/simResources.ts` | Add `Roadcraft` config block |
-| `src/pages/WorkOrders.tsx` | Add `fiberTechWorkOrders` and `roadcraftWorkOrders` filtered arrays + hero stats |
-| `src/pages/Leaderboard.tsx` | Add to `GAME_TITLES` |
-| `supabase/functions/public-catalog/index.ts` | Add `Roadcraft` to game metadata |
-
-**4. Revert Fiber_Tech labels back to "Fiber-Tech Simulator"**
-Files that were changed to say "Fiber-Tech / Roadcraft" will revert to just "Fiber-Tech Simulator" since they are now separate categories.
-
-### What stays the same
-- No data migration needed — no existing work orders use `Roadcraft` yet (they were mapped to `Fiber_Tech`)
-- No RLS changes
-- Sidebar will auto-populate via the existing `game_channels` database query once an admin creates a Roadcraft channel in SIM Games
+### Steps
+1. Execute the combined SQL inserting all 12 modules and their quiz lessons
+2. Verify the inserted data with a read query
 
