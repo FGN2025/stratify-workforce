@@ -92,8 +92,7 @@ export default function CourseDetail() {
       navigate('/auth', { state: { from: `/learn/${id}` } });
       return;
     }
-    await enroll(course.id);
-  };
+    await enrollMutation.mutateAsync(course.id);
 
   return (
     <AppLayout>
