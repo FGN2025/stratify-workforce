@@ -93,6 +93,7 @@ export default function CourseDetail() {
       return;
     }
     await enrollMutation.mutateAsync(course.id);
+  };
 
   return (
     <AppLayout>
