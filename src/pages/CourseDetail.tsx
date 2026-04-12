@@ -213,7 +213,7 @@ export default function CourseDetail() {
                         <p className="font-medium text-sm">{module.title}</p>
                         <p className="text-xs text-muted-foreground">
                           {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''} ·{' '}
-                          {module.xp_reward} XP
+                          {moduleLessons.reduce((s, l) => s + (l.xp_reward || 0), 0)} XP
                           {moduleCompleted > 0 && ` · ${moduleCompleted}/${moduleLessons.length} done`}
                         </p>
                       </div>
@@ -227,11 +227,13 @@ export default function CourseDetail() {
                         return (
                           <div
                             key={lesson.id}
+                            onClick={() => course.enrolled && navigate(`/learn/${course.id}/lesson/${lesson.id}`)}
                             className={cn(
                               'flex items-center gap-3 py-2 px-3 rounded-md text-sm',
                               isCompleted
                                 ? 'text-muted-foreground'
-                                : 'text-foreground'
+                                : 'text-foreground',
+                              course.enrolled && 'cursor-pointer hover:bg-accent/50 transition-colors'
                             )}
                           >
                             {isCompleted ? (

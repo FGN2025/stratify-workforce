@@ -27,6 +27,7 @@ import AgentWidget from "./pages/AgentWidget";
 import Admin from "./pages/Admin";
 import Learn from "./pages/Learn";
 import CourseDetail from "./pages/CourseDetail";
+import LessonDetail from "./pages/LessonDetail";
 import WorkOrderDetail from "./pages/WorkOrderDetail";
 import Developers from "./pages/Developers";
 import AITest from "./pages/AITest";
@@ -68,6 +69,7 @@ const App = () => (
               {/* Learning routes */}
               <Route path="/learn" element={<Learn />} />
               <Route path="/learn/:id" element={<CourseDetail />} />
+              <Route path="/learn/:courseId/lesson/:lessonId" element={<LessonDetail />} />
               
               {/* Events routes */}
               <Route path="/events" element={<Events />} />
