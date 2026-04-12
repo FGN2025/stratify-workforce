@@ -150,8 +150,8 @@ export default function CourseDetail() {
               </div>
             </div>
             {!course.enrolled && (
-              <Button onClick={handleEnroll} disabled={isEnrolling}>
-                {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
+              <Button onClick={handleEnroll} disabled={enrollMutation.isPending}>
+                {enrollMutation.isPending ? 'Enrolling...' : 'Enroll Now'}
               </Button>
             )}
           </CardContent>
