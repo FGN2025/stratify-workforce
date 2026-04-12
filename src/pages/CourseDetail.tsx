@@ -49,7 +49,7 @@ export default function CourseDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: course, isLoading, error } = useCourse(id);
-  const { enroll, isEnrolling } = useEnrollment();
+  const enrollMutation = useEnroll();
 
   if (isLoading) {
     return (
