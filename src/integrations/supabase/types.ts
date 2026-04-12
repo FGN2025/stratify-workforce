@@ -2390,6 +2390,10 @@ export type Database = {
           total_count: number
         }[]
       }
+      can_access_lesson: {
+        Args: { p_lesson_id: string; p_user_id: string }
+        Returns: boolean
+      }
       can_view_profile: {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
