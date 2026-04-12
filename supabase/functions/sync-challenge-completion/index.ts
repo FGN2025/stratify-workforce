@@ -6,6 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+/** Maps Track 4 challenge IDs → Challenge Enhancer lesson IDs */
+const CHALLENGE_LESSON_MAP: Record<string, string> = {
+  // CE-01: CS Fiber — Underground Conduit Systems and Bedding Standards
+  '034e8cf3-8832-4c05-a572-67af46dc9971': '2eb52508-7822-429c-b95f-be65d63bfb2d',
+  // CE-02: RC Fiber — Aerial Route Assessment and Pole Line Evaluation
+  'c8298ef1-d359-4536-958f-533e66f7ee4a': 'e4332a97-b389-4486-a8f0-304185c7dd52',
+  // CE-03: CS Fiber — Pre-Construction Safety and 811 Compliance
+  '5e9ace81-fcc3-49f9-9013-5321d2e04d56': '529bb1c4-ff45-4641-840c-edce7a97c39b',
+  // CE-05: CS Fiber — Directional Bore Planning and HDD Site Operations
+  'd8b601c3-ff40-46c6-aa4b-55da7711c8ce': 'fb955601-7957-4d05-a748-fe4c4e64d88d',
+  // CE-06 CS: CS Fiber — OSP Handoff
+  '57da5f29-5a4e-4148-a738-319e7a33252c': '0e1a2041-ca0b-4c49-8d07-73fe1fd51d1b',
+  // CE-06 RC: RC Fiber — Cable Run Documentation
+  '4ce440c1-be75-4700-a8fa-4a80f6d1fbde': '0e1a2041-ca0b-4c49-8d07-73fe1fd51d1b',
+};
+
+const CE_COURSE_ID = 'dab09852-eeb2-431f-b2f4-b881c6b4aa7f';
+
 interface TaskProgress {
   task_id: string;
   completed?: boolean;
@@ -436,10 +454,14 @@ Deno.serve(async (req) => {
     }
 
     if (completionStatus === 'completed' && isTrack4) {
-      // Track 4: fire per-challenge — each challenge unlocks its own module quiz
+      const lessonId = CHALLENGE_LESSON_MAP[challenge_id] ?? null;
+      const deepLink = lessonId
+        ? `/learn/${CE_COURSE_ID}/lessons/${lessonId}`
+        : `/learn/${CE_COURSE_ID}`;
+
       trackCompletion = {
         track: 'Fiber Optics Construction',
-        lesson_id: challenge_id, // the challenge itself is the key; lesson lookup happens client-side
+        lesson_id: lessonId || challenge_id,
         challenge_id,
       };
 
@@ -450,12 +472,15 @@ Deno.serve(async (req) => {
         message: `You completed "${workOrder.title}" on play.fgn.gg — a knowledge check module is now available on fgn.academy to reinforce what you learned.`,
         icon_name: 'graduation-cap',
         accent_color: '#6366f1',
-        link_url: '/learn',
+        link_url: deepLink,
         metadata: {
           track: 'Fiber Optics Construction',
           challenge_id,
           work_order_id: workOrder.id,
           work_order_title: workOrder.title,
+          lesson_id: lessonId,
+          course_id: CE_COURSE_ID,
+          deep_link: deepLink,
         },
       });
     }
