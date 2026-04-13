@@ -448,9 +448,17 @@ export function WorkOrdersManager() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-accent/30">
-                      <span className="text-2xl font-bold text-muted-foreground/30">
-                        {GAME_LABELS[wo.game_title]?.charAt(0) || '?'}
-                      </span>
+                      {gameCoverImages[wo.game_title] ? (
+                        <img
+                          src={gameCoverImages[wo.game_title]}
+                          alt={GAME_LABELS[wo.game_title]}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-muted-foreground/30">
+                          {GAME_LABELS[wo.game_title]?.charAt(0) || '?'}
+                        </span>
+                      )}
                     </div>
                   )}
                   {/* Active badge overlay */}
