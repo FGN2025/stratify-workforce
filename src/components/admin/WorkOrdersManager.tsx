@@ -83,6 +83,7 @@ const DIFFICULTY_COLORS: Record<WorkOrderDifficulty, string> = {
 };
 
 export function WorkOrdersManager() {
+  const { gameCoverImages } = useGameCoverImages();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
