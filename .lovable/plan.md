@@ -1,58 +1,39 @@
 
 
-## Plan: Build Quiz/Lesson Player for Course Content
+# Plan: Insert 13 Track 4 Fiber_Tech Work Orders
 
-### Problem
-The 12 quiz lessons in the Challenge Enhancers course have full content (5 questions each with options, correct answers, and explanations) stored in the database, but there is **no UI to take quizzes or view lesson content**. Lessons are listed as static text in the curriculum accordion — they are not clickable and there is no lesson detail view.
+## What
 
-### What to build
+Insert 13 work order rows into `work_orders` for the Track 4 Fiber Optics challenges. These are the rows the `sync-challenge-completion` edge function needs to match incoming completions from play.fgn.gg.
 
-**1. New page: `src/pages/LessonDetail.tsx`**
-- Route: `/learn/:courseId/lesson/:lessonId`
-- Fetches lesson data including `content.questions` from the database
-- Renders a quiz player for `lesson_type = 'quiz'`:
-  - Displays questions one at a time (or all at once — see below)
-  - Radio button selection for each answer
-  - Submit button to grade the quiz
-  - Shows correct/incorrect feedback with explanations after submission
-  - Displays final score (e.g., 4/5) and pass/fail against `passing_score`
-- For other lesson types (`reading`, `video`, `simulation`), renders appropriate content or a placeholder
-- Navigation: back to course, next lesson button
+## Changes
 
-**2. New hook: `src/hooks/useLessonProgress.ts`**
-- `useSubmitQuiz` mutation: calculates score, upserts a row into `user_lesson_progress` with status `completed` or `failed`, score, and `xp_earned`
-- `useLessonDetail` query: fetches a single lesson with its progress record
-- Increments attempt count on resubmission
-- Invalidates course progress queries so the curriculum view updates
+**Single data insert** using the insert tool with your exact SQL, plus one addition: set `channel_id = '71c8c91e-4086-46ff-805a-7fc8b765468b'` (the Fiber-Tech Simulator channel) on all 13 rows so they appear correctly in channel-filtered views and work order listings.
 
-**3. Update `src/pages/CourseDetail.tsx`**
-- Make each lesson row clickable — navigate to `/learn/:courseId/lesson/:lessonId`
-- Add hover/cursor styling to indicate interactivity
-- Show lock icon for Tier 2 lessons the user cannot access (use `can_access_lesson` RPC or badge check)
+```text
+#   Title                                                        XP   Difficulty
+1   CS Fiber: Underground Utility Trench Excavation              15   intermediate
+2   CS Fiber: Conduit Placement and Backfill                     17   intermediate
+3   CS Fiber: Road Crossing and Bore Operations                  20   advanced
+4   RC Fiber: Site Assessment and Route Survey                   13   beginner
+5   RC Fiber: Debris Clearance and Right-of-Way Prep             12   intermediate
+6   RC Fiber: Access Road and Staging Area Prep                  12   intermediate
+7   RC Fiber: Infrastructure Cable Run                           17   intermediate
+8   CS Fiber: Underground Conduit Systems and Bedding Standards  16   intermediate
+9   RC Fiber: Aerial Route Assessment and Pole Line Evaluation   15   intermediate
+10  CS Fiber: Pre-Construction Safety and 811 Compliance         13   beginner
+11  CS Fiber: Directional Bore Planning and HDD Site Operations  18   advanced
+12  CS Fiber: OSP Handoff — Construction to Splicing Crew        20   advanced
+13  RC Fiber: Cable Run Documentation and Route Closeout         16   intermediate
+```
 
-**4. Update `src/App.tsx`**
-- Add route: `<Route path="/learn/:courseId/lesson/:lessonId" element={<LessonDetail />} />`
+`ON CONFLICT (source_challenge_id) DO NOTHING` makes it safe to re-run.
 
-**5. Fix module XP display in `CourseDetail.tsx`**
-- Module `xp_reward` is 0 because XP lives on lessons. Change the display to sum lesson XP per module instead of showing `module.xp_reward`
+## Verification
 
-### Quiz player UX
-- All 5 questions shown on one page with radio buttons
-- "Submit Quiz" button at the bottom
-- After submission: each question shows green/red highlight and the explanation text
-- Score summary card at top: "You scored 4/5 (80%) — Passed!" with XP earned
-- "Retry" button if failed, "Next Module" button if passed
-- Passing threshold comes from `lesson.passing_score` (default 70%)
+After insert, query to confirm all 13 rows exist with correct `game_title`, `channel_id`, and `source_challenge_id` values.
 
-### Technical details
-- The `user_lesson_progress` table already exists with `status`, `score`, `xp_earned`, `attempts` columns
-- Quiz content structure: `content.questions[]` with `{ id, question, options[], correct_index, explanation }`
-- The badge trigger (`handle_fts_badge_completion`) fires on `user_lesson_progress` insert/update when `status = 'completed'`, so quiz completion will automatically trigger badge awards for CE-06 and CE-12
-- RLS policies on `user_lesson_progress` need to be verified — the user must be able to insert/update their own progress rows
+## No code changes needed
 
-### Files created/modified
-- `src/pages/LessonDetail.tsx` — new
-- `src/hooks/useLessonProgress.ts` — new
-- `src/pages/CourseDetail.tsx` — make lessons clickable, fix module XP
-- `src/App.tsx` — add lesson route
+The edge function already references these `source_challenge_id` values — once the rows exist, the completion→notification pipeline will work end-to-end.
 
