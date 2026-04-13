@@ -283,9 +283,11 @@ export default function WorkOrderDetail() {
               <div className="flex flex-col gap-3 shrink-0">
                 {(() => {
                   const hasPassed = status?.isCompleted && (status?.bestScore ?? 0) >= 70;
-                  const playUrl = workOrder.source_challenge_id
-                    ? `https://play.fgn.gg/challenge/${workOrder.source_challenge_id}`
-                    : null;
+                  const playUrl = workOrder.fgn_origin_challenge_id
+                    ? `https://play.fgn.gg/challenge/${workOrder.fgn_origin_challenge_id}`
+                    : workOrder.source_challenge_id
+                      ? `https://play.fgn.gg/challenge/${workOrder.source_challenge_id}`
+                      : null;
 
                   if (hasPassed) {
                     // Completed with passing score — show results + retry
