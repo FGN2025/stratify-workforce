@@ -25,6 +25,8 @@ const fallbackMedia: Record<string, string> = {
   farming_sim_cover: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&h=400&fit=crop',
   construction_sim_cover: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=400&fit=crop',
   mechanic_sim_cover: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&h=400&fit=crop',
+  fiber_tech_cover: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&h=400&fit=crop',
+  roadcraft_cover: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&h=400&fit=crop',
 };
 
 /**
@@ -93,7 +95,7 @@ export function useSiteMediaBatch(locationKeys: string[]) {
  * Hook to get game cover images with fallbacks
  */
 export function useGameCoverImages() {
-  const locationKeys = ['ats_cover', 'farming_sim_cover', 'construction_sim_cover', 'mechanic_sim_cover'];
+  const locationKeys = ['ats_cover', 'farming_sim_cover', 'construction_sim_cover', 'mechanic_sim_cover', 'fiber_tech_cover', 'roadcraft_cover'];
   const { data, isLoading } = useSiteMediaBatch(locationKeys);
 
   const gameCoverImages: Record<string, string> = {
@@ -101,6 +103,8 @@ export function useGameCoverImages() {
     Farming_Sim: data?.farming_sim_cover?.url || fallbackMedia.farming_sim_cover,
     Construction_Sim: data?.construction_sim_cover?.url || fallbackMedia.construction_sim_cover,
     Mechanic_Sim: data?.mechanic_sim_cover?.url || fallbackMedia.mechanic_sim_cover,
+    Fiber_Tech: data?.fiber_tech_cover?.url || fallbackMedia.fiber_tech_cover,
+    Roadcraft: data?.roadcraft_cover?.url || fallbackMedia.roadcraft_cover,
   };
 
   return { gameCoverImages, isLoading };
