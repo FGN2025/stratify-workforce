@@ -227,11 +227,30 @@ export function WorkOrdersManager() {
             Configure training scenarios for simulation games
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Work Order
-        </Button>
-      </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border border-border">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-9 w-9 rounded-r-none"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-9 w-9 rounded-l-none"
+              onClick={() => setViewMode('grid')}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Work Order
+          </Button>
+        </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
