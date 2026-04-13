@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -82,6 +83,7 @@ const DIFFICULTY_COLORS: Record<WorkOrderDifficulty, string> = {
 };
 
 export function WorkOrdersManager() {
+  const { gameCoverImages } = useGameCoverImages();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
@@ -446,9 +448,17 @@ export function WorkOrdersManager() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-accent/30">
-                      <span className="text-2xl font-bold text-muted-foreground/30">
-                        {GAME_LABELS[wo.game_title]?.charAt(0) || '?'}
-                      </span>
+                      {gameCoverImages[wo.game_title] ? (
+                        <img
+                          src={gameCoverImages[wo.game_title]}
+                          alt={GAME_LABELS[wo.game_title]}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-muted-foreground/30">
+                          {GAME_LABELS[wo.game_title]?.charAt(0) || '?'}
+                        </span>
+                      )}
                     </div>
                   )}
                   {/* Active badge overlay */}
