@@ -522,7 +522,7 @@ export function WorkOrdersManager() {
             ))}
           </div>
         )
-      )
+      )}
 
       {/* Edit/Create Dialog */}
       <WorkOrderEditDialog
