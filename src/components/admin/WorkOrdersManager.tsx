@@ -251,6 +251,7 @@ export function WorkOrdersManager() {
             Create Work Order
           </Button>
         </div>
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
