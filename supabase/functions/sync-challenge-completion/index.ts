@@ -456,7 +456,7 @@ Deno.serve(async (req) => {
     if (completionStatus === 'completed' && isTrack4) {
       const lessonId = CHALLENGE_LESSON_MAP[challenge_id] ?? null;
       const deepLink = lessonId
-        ? `/learn/${CE_COURSE_ID}/lessons/${lessonId}`
+        ? `/learn/${CE_COURSE_ID}/lesson/${lessonId}`
         : `/learn/${CE_COURSE_ID}`;
 
       trackCompletion = {
