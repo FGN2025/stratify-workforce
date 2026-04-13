@@ -373,7 +373,7 @@ export function WorkOrdersManager() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <NavLink to={`/work-orders/${wo.id}`}>
+                      <NavLink to={`/work-orders/${wo.id}`} state={{ from: 'admin' }}>
                         <Button variant="ghost" size="icon">
                           <Eye className="h-4 w-4" />
                         </Button>
