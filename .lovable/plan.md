@@ -1,39 +1,41 @@
 
 
-# Plan: Backfill 6 Remaining Fiber_Tech Cover Images
+# Plan: Add Admin Detail View for Work Orders
 
-## Problem
-Six Fiber_Tech work orders still have `NULL` for `cover_image_url` and `fgn_origin_challenge_id`. The user has confirmed the 6 challenge IDs exist on play.fgn.gg with cover images.
+## Current State
+- **WorkOrdersManager** (admin table at `/admin/work-orders`) — flat table with edit/delete actions, no way to click through to a detail view
+- **WorkOrderDetail** (`/work-orders/:id`) — student-facing detail page with progress tracking, evidence uploads, and "Launch Challenge" actions. Already has admin-only features like `EditableImageWrapper` for cover images
+- The table title cells are plain text — not clickable links
 
 ## Approach
-1. Call the `fetch-challenges` edge function to get the title + `cover_image_url` for each of the 6 challenge IDs
-2. Match each remote challenge to the corresponding local work order by title/theme
-3. Run 6 `UPDATE` statements via the insert tool to set `cover_image_url` and `fgn_origin_challenge_id`
+Rather than building a separate admin detail page, **make the existing WorkOrderDetail page work in both contexts** by adding a link from the admin table and showing admin-specific metadata when accessed by an admin.
 
-## Mapping (to be confirmed via fetch-challenges response)
+### Changes
 
-| Challenge ID (play.fgn.gg) | Local Work Order |
-|---|---|
-| `034e8cf3-...` | One of the 6 unmatched work orders |
-| `c8298ef1-...` | (matched by title) |
-| `5e9ace81-...` | ... |
-| `d8b601c3-...` | ... |
-| `57da5f29-...` | ... |
-| `4ce440c1-...` | ... |
+**1. `WorkOrdersManager.tsx` — Make title cells clickable**
+- Wrap each work order title in a `NavLink` to `/work-orders/{id}` so admins can click through to the detail view directly from the management table
+- Add an `Eye` icon button in the Actions column alongside Edit and Delete
 
-### Local work orders needing images:
-1. `4d58c766-...` — CS Fiber: Directional Bore Planning and HDD Site Operations
-2. `729f9234-...` — CS Fiber: OSP Handoff — Construction to Splicing Crew
-3. `b7cc3cd3-...` — CS Fiber: Pre-Construction Safety and 811 Compliance
-4. `d9f48aac-...` — CS Fiber: Underground Conduit Systems and Bedding Standards
-5. `bee0f50f-...` — RC Fiber: Aerial Route Assessment and Pole Line Evaluation
-6. `3a24a819-...` — RC Fiber: Cable Run Documentation and Route Closeout
+**2. `WorkOrderDetail.tsx` — Add admin info panel**
+- For admin users, render an expandable "Admin Details" card showing:
+  - `fgn_origin_challenge_id` (linked to play.fgn.gg if present)
+  - `source_challenge_id` (internal)
+  - `channel_id` and channel name
+  - `tenant_id` and tenant name
+  - `created_at` timestamp
+  - `is_active` status toggle
+  - Quick "Edit" button that opens the WorkOrderEditDialog inline
+- Conditionally rendered using the existing `useUserRole` hook to check for admin/super_admin
+- Back button should be context-aware: if the referrer is `/admin/work-orders`, link back there instead of `/work-orders`
 
-## Steps
-1. Invoke the `fetch-challenges` edge function (already authenticated) to retrieve the 6 challenges with their `cover_image_url` values
-2. Match each challenge to the correct local work order by title similarity
-3. Execute 6 UPDATE statements setting `cover_image_url` and `fgn_origin_challenge_id` on each work order
+**3. `useWorkOrderById` — Include origin fields**
+- The hook already returns `source_challenge_id` and `cover_image_url`
+- Verify `fgn_origin_challenge_id` is also returned (it's in the DB schema but may not be in the select)
 
-## Result
-All 13 Fiber_Tech work order cards will display unique hero images from play.fgn.gg. No code changes needed.
+### Files Modified
+- `src/components/admin/WorkOrdersManager.tsx` — add NavLink on title, add View button
+- `src/pages/WorkOrderDetail.tsx` — add admin details panel
+- `src/hooks/useWorkOrders.ts` — ensure `fgn_origin_challenge_id` is in the query return
+
+### No new routes or pages needed
 
