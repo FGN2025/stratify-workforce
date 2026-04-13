@@ -36,7 +36,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Plus, Edit, Trash2, Clock, Trophy, FileUp, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, Trophy, FileUp, Eye, List, LayoutGrid } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { DifficultyIndicator } from '@/components/work-orders/DifficultyIndicator';
+import { XPRewardBadge } from '@/components/work-orders/XPRewardBadge';
 import { NavLink } from 'react-router-dom';
 import { WorkOrderEditDialog, type EvidenceRequirements } from './WorkOrderEditDialog';
 import type { Database } from '@/integrations/supabase/types';
