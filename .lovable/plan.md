@@ -1,26 +1,36 @@
 
 
-# Plan: Add Grid View Toggle to Work Orders Management
+# Plan: Add Game Cover Image Fallbacks to Admin Grid View
 
-## Overview
-Add a list/grid view toggle to the admin Work Orders Management page. The list view is the current table. The grid view will reuse the existing `EventCard` component (already used on the public Work Orders page) to display work orders as visual cards with cover images, difficulty badges, and XP rewards.
+## Problem
+10 work orders have no `cover_image_url` in the database. The admin grid view shows a plain letter initial ("F", "R") for these, while the student-facing marketplace cards already use game-specific fallback images via the `useGameCoverImages` hook.
 
-## Changes
+## Root Cause
+Not a bug — these challenges were imported from play.fgn.gg without cover images. The admin grid view simply lacks the same fallback logic that the marketplace view already has.
+
+## Fix
 
 ### `src/components/admin/WorkOrdersManager.tsx`
-1. **Add view mode state**: `const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')`
-2. **Add toggle buttons** next to the "Create Work Order" button — two icon buttons (`List` and `LayoutGrid` from lucide-react) with active state styling
-3. **Conditionally render** either the existing table (list mode) or a responsive card grid (grid mode)
-4. **Grid view**: Render each filtered work order using a card layout showing:
-   - Cover image (or game-specific fallback)
-   - Title (linked to `/work-orders/:id` with `state={{ from: 'admin' }}`)
-   - Game label, difficulty badge, XP reward
-   - Active status toggle
-   - Edit/Delete action buttons in a footer row
-   - Uses the existing `GAME_LABELS` and `DIFFICULTY_COLORS` constants already in the file
+1. Import `useGameCoverImages` from `@/hooks/useSiteMedia`
+2. Call `const { gameCoverImages } = useGameCoverImages()` in the component
+3. In the grid card image section, replace the letter-initial fallback with the game cover image:
 
-The grid will use `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4` for responsive layout.
+```tsx
+// Current fallback (letter initial):
+<span className="text-2xl font-bold text-muted-foreground/30">
+  {GAME_LABELS[wo.game_title]?.charAt(0) || '?'}
+</span>
 
-### No other files modified
-All logic (fetching, filtering, dialogs, delete confirmation) stays unchanged. Only the rendering section between the filters and the dialogs is affected.
+// New fallback (game cover image, then letter):
+{gameCoverImages[wo.game_title] ? (
+  <img src={gameCoverImages[wo.game_title]} ... />
+) : (
+  <span ...>{GAME_LABELS[wo.game_title]?.charAt(0) || '?'}</span>
+)}
+```
+
+This matches the exact pattern used in `src/components/marketplace/EventCard.tsx` (line 55).
+
+### No other files changed
+Single file edit. The hook and fallback images already exist.
 
