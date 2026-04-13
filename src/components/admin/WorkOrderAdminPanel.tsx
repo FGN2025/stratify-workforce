@@ -48,7 +48,7 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
       value: workOrder.fgn_origin_challenge_id,
       copyable: true,
       link: workOrder.fgn_origin_challenge_id
-        ? `https://play.fgn.gg/challenge/${workOrder.fgn_origin_challenge_id}`
+        ? `https://play.fgn.gg/challenges/${workOrder.fgn_origin_challenge_id}`
         : undefined,
     },
     { label: 'Source Challenge ID', value: workOrder.source_challenge_id, copyable: true },

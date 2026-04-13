@@ -284,9 +284,9 @@ export default function WorkOrderDetail() {
                 {(() => {
                   const hasPassed = status?.isCompleted && (status?.bestScore ?? 0) >= 70;
                   const playUrl = workOrder.fgn_origin_challenge_id
-                    ? `https://play.fgn.gg/challenge/${workOrder.fgn_origin_challenge_id}`
+                    ? `https://play.fgn.gg/challenges/${workOrder.fgn_origin_challenge_id}`
                     : workOrder.source_challenge_id
-                      ? `https://play.fgn.gg/challenge/${workOrder.source_challenge_id}`
+                      ? `https://play.fgn.gg/challenges/${workOrder.source_challenge_id}`
                       : null;
 
                   if (hasPassed) {
