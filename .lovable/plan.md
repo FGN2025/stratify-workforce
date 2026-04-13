@@ -1,20 +1,26 @@
 
 
-# Plan: Fix play.fgn.gg URL Path (singular → plural)
+# Plan: Add Grid View Toggle to Work Orders Management
 
-## Problem
-The Academy links to `play.fgn.gg/challenge/{id}` but the correct route is `play.fgn.gg/challenges/{id}` (plural). This causes the 404.
-
-Confirmed: fetching `https://play.fgn.gg/challenges/48b739d9-...` returns the Roadcraft challenge page successfully.
+## Overview
+Add a list/grid view toggle to the admin Work Orders Management page. The list view is the current table. The grid view will reuse the existing `EventCard` component (already used on the public Work Orders page) to display work orders as visual cards with cover images, difficulty badges, and XP rewards.
 
 ## Changes
 
-### 1. `src/pages/WorkOrderDetail.tsx` (lines 287-289)
-Change `/challenge/` → `/challenges/` in both URL template strings.
+### `src/components/admin/WorkOrdersManager.tsx`
+1. **Add view mode state**: `const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')`
+2. **Add toggle buttons** next to the "Create Work Order" button — two icon buttons (`List` and `LayoutGrid` from lucide-react) with active state styling
+3. **Conditionally render** either the existing table (list mode) or a responsive card grid (grid mode)
+4. **Grid view**: Render each filtered work order using a card layout showing:
+   - Cover image (or game-specific fallback)
+   - Title (linked to `/work-orders/:id` with `state={{ from: 'admin' }}`)
+   - Game label, difficulty badge, XP reward
+   - Active status toggle
+   - Edit/Delete action buttons in a footer row
+   - Uses the existing `GAME_LABELS` and `DIFFICULTY_COLORS` constants already in the file
 
-### 2. `src/components/admin/WorkOrderAdminPanel.tsx` (line 51)
-Change `/challenge/` → `/challenges/` in the admin panel external link.
+The grid will use `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4` for responsive layout.
 
-## Impact
-Two-character fix (`s` added in two files). All "Continue on Play" buttons and admin detail links will open the correct page on play.fgn.gg.
+### No other files modified
+All logic (fetching, filtering, dialogs, delete confirmation) stays unchanged. Only the rendering section between the filters and the dialogs is affected.
 
