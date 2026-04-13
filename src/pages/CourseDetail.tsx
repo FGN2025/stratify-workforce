@@ -142,7 +142,7 @@ export default function CourseDetail() {
               </div>
               <div className="flex items-center gap-1.5">
                 <BookOpen className="h-4 w-4" />
-                <span>{course.modules?.length || 0} modules · {totalLessons} lessons</span>
+                <span>{course.modules?.length || 0} courses</span>
               </div>
             </div>
             {!course.enrolled && (
@@ -160,7 +160,7 @@ export default function CourseDetail() {
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-muted-foreground">Your Progress</span>
                 <span className="font-medium">
-                  {completedLessons}/{totalLessons} lessons · {course.progress || 0}%
+                  {course.progress || 0}%
                 </span>
               </div>
               <Progress value={course.progress || 0} className="h-2" />
@@ -212,7 +212,6 @@ export default function CourseDetail() {
                       <div>
                         <p className="font-medium text-sm">{module.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {moduleLessons.length} lesson{moduleLessons.length !== 1 ? 's' : ''} ·{' '}
                           {moduleLessons.reduce((s, l) => s + (l.xp_reward || 0), 0)} XP
                           {moduleCompleted > 0 && ` · ${moduleCompleted}/${moduleLessons.length} done`}
                         </p>

@@ -44,7 +44,7 @@ export default function LessonDetail() {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <h2 className="text-xl font-semibold">Lesson not found</h2>
+          <h2 className="text-xl font-semibold">Course not found</h2>
           <Button variant="outline" onClick={() => navigate(courseId ? `/learn/${courseId}` : '/learn')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Course
@@ -134,7 +134,7 @@ export default function LessonDetail() {
                 )}
                 {result.passed && nextLesson && (
                   <Button onClick={() => navigate(`/learn/${courseIdResolved}/lesson/${nextLesson.lessonId}`)}>
-                    Next Lesson
+                    Next Course
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
@@ -227,7 +227,7 @@ export default function LessonDetail() {
         {lesson.lesson_type !== 'quiz' && (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              <p>This {lesson.lesson_type} lesson content will be available soon.</p>
+              <p>This {lesson.lesson_type} course content will be available soon.</p>
             </CardContent>
           </Card>
         )}
