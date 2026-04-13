@@ -306,125 +306,223 @@ export function WorkOrdersManager() {
         Showing {filteredWorkOrders.length} of {workOrders.length} work orders
       </p>
 
-      {/* Table */}
-      <div className="rounded-lg border border-border/50">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Game</TableHead>
-              <TableHead>Difficulty</TableHead>
-              <TableHead className="text-center">XP</TableHead>
-              <TableHead className="text-center">Time</TableHead>
-              <TableHead className="text-center">Evidence</TableHead>
-              <TableHead className="text-center">Active</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredWorkOrders.length === 0 ? (
+      {/* List / Grid View */}
+      {viewMode === 'list' ? (
+        <div className="rounded-lg border border-border/50">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  No work orders found
-                </TableCell>
+                <TableHead>Title</TableHead>
+                <TableHead>Game</TableHead>
+                <TableHead>Difficulty</TableHead>
+                <TableHead className="text-center">XP</TableHead>
+                <TableHead className="text-center">Time</TableHead>
+                <TableHead className="text-center">Evidence</TableHead>
+                <TableHead className="text-center">Active</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : (
-              filteredWorkOrders.map((wo) => (
-                <TableRow key={wo.id}>
-                  <TableCell className="font-medium max-w-[200px]">
-                    <NavLink
-                      to={`/work-orders/${wo.id}`}
-                      state={{ from: 'admin' }}
-                      className="hover:text-primary hover:underline underline-offset-4 transition-colors truncate block"
-                    >
-                      {wo.title}
-                    </NavLink>
+            </TableHeader>
+            <TableBody>
+              {filteredWorkOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    No work orders found
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{GAME_LABELS[wo.game_title]}</span>
-                  </TableCell>
-                  <TableCell>
+                </TableRow>
+              ) : (
+                filteredWorkOrders.map((wo) => (
+                  <TableRow key={wo.id}>
+                    <TableCell className="font-medium max-w-[200px]">
+                      <NavLink
+                        to={`/work-orders/${wo.id}`}
+                        state={{ from: 'admin' }}
+                        className="hover:text-primary hover:underline underline-offset-4 transition-colors truncate block"
+                      >
+                        {wo.title}
+                      </NavLink>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{GAME_LABELS[wo.game_title]}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={`capitalize ${DIFFICULTY_COLORS[wo.difficulty]}`}
+                      >
+                        {wo.difficulty}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Trophy className="h-3 w-3 text-primary" />
+                        <span>{wo.xp_reward}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {wo.estimated_time_minutes ? (
+                        <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{wo.estimated_time_minutes}m</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {wo.evidence_requirements?.required ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <div className="flex items-center justify-center">
+                                <FileUp className="h-4 w-4 text-primary" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">
+                                {wo.evidence_requirements.min_uploads}-{wo.evidence_requirements.max_uploads} files required
+                                <br />
+                                Types: {wo.evidence_requirements.allowed_types.join(', ')}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={wo.is_active ?? true}
+                        onCheckedChange={() => handleToggleActive(wo.id, wo.is_active)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <NavLink to={`/work-orders/${wo.id}`} state={{ from: 'admin' }}>
+                          <Button variant="ghost" size="icon">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </NavLink>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(wo)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(wo.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        /* Grid View */
+        filteredWorkOrders.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            No work orders found
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredWorkOrders.map((wo) => (
+              <Card key={wo.id} className="overflow-hidden group hover:border-primary/50 transition-all">
+                {/* Cover Image */}
+                <div className="relative h-36 bg-muted overflow-hidden">
+                  {wo.cover_image_url ? (
+                    <img
+                      src={wo.cover_image_url}
+                      alt={wo.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-accent/30">
+                      <span className="text-2xl font-bold text-muted-foreground/30">
+                        {GAME_LABELS[wo.game_title]?.charAt(0) || '?'}
+                      </span>
+                    </div>
+                  )}
+                  {/* Active badge overlay */}
+                  <div className="absolute top-2 right-2">
                     <Badge
                       variant="outline"
-                      className={`capitalize ${DIFFICULTY_COLORS[wo.difficulty]}`}
+                      className={wo.is_active
+                        ? 'bg-primary/20 text-primary border-primary/30 text-[10px]'
+                        : 'bg-muted text-muted-foreground border-border text-[10px]'
+                      }
                     >
-                      {wo.difficulty}
+                      {wo.is_active ? 'ACTIVE' : 'INACTIVE'}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Trophy className="h-3 w-3 text-amber-400" />
-                      <span>{wo.xp_reward}</span>
+                  </div>
+                </div>
+
+                <CardContent className="p-4 space-y-3">
+                  {/* Title */}
+                  <NavLink
+                    to={`/work-orders/${wo.id}`}
+                    state={{ from: 'admin' }}
+                    className="font-semibold text-sm hover:text-primary transition-colors line-clamp-2 block"
+                  >
+                    {wo.title}
+                  </NavLink>
+
+                  {/* Game label */}
+                  <p className="text-xs text-muted-foreground">{GAME_LABELS[wo.game_title]}</p>
+
+                  {/* Difficulty + XP row */}
+                  <div className="flex items-center justify-between">
+                    <DifficultyIndicator difficulty={wo.difficulty} showLabel size="sm" />
+                    <XPRewardBadge xp={wo.xp_reward} size="sm" />
+                  </div>
+
+                  {/* Time */}
+                  {wo.estimated_time_minutes && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{wo.estimated_time_minutes} min</span>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {wo.estimated_time_minutes ? (
-                      <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{wo.estimated_time_minutes}m</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {wo.evidence_requirements?.required ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <div className="flex items-center justify-center">
-                              <FileUp className="h-4 w-4 text-primary" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">
-                              {wo.evidence_requirements.min_uploads}-{wo.evidence_requirements.max_uploads} files required
-                              <br />
-                              Types: {wo.evidence_requirements.allowed_types.join(', ')}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
+                  )}
+
+                  {/* Actions footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <Switch
                       checked={wo.is_active ?? true}
                       onCheckedChange={() => handleToggleActive(wo.id, wo.is_active)}
                     />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center gap-1">
                       <NavLink to={`/work-orders/${wo.id}`} state={{ from: 'admin' }}>
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
                       </NavLink>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(wo)}
-                      >
-                        <Edit className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(wo)}>
+                        <Edit className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
                         onClick={() => setDeleteId(wo.id)}
-                        className="text-destructive hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )
+      )
 
       {/* Edit/Create Dialog */}
       <WorkOrderEditDialog
