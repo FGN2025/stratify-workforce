@@ -89,6 +89,7 @@ export function WorkOrdersManager() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gameFilter, setGameFilter] = useState<GameTitle | 'all'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<WorkOrderDifficulty | 'all'>('all');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     fetchWorkOrders();
