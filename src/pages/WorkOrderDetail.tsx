@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, NavLink } from 'react-router-dom';
+import { useParams, NavLink, useLocation } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ import { useGameCoverImages } from '@/hooks/useSiteMedia';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { setCurrentGameTitle } from '@/hooks/useTutorContext';
+import { useUserRole } from '@/hooks/useUserRole';
+import { WorkOrderAdminPanel } from '@/components/admin/WorkOrderAdminPanel';
 import { toast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import {
@@ -55,7 +57,11 @@ export default function WorkOrderDetail() {
   const queryClient = useQueryClient();
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
-  
+  const location = useLocation();
+  const { isAdmin } = useUserRole();
+  const cameFromAdmin = location.state?.from === 'admin' || document.referrer.includes('/admin');
+  const backTo = cameFromAdmin ? '/admin/work-orders' : '/work-orders';
+  const backLabel = cameFromAdmin ? 'Back to Management' : 'Back to Work Orders';
   const { data: workOrder, isLoading } = useWorkOrderById(id || '');
 
   // Register game title for tutor context
@@ -163,10 +169,10 @@ export default function WorkOrderDetail() {
           <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold">Work Order Not Found</h2>
           <p className="text-muted-foreground mt-2">This work order may have been removed or doesn't exist.</p>
-          <NavLink to="/work-orders" className="mt-4">
+          <NavLink to={backTo} className="mt-4">
             <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Work Orders
+              {backLabel}
             </Button>
           </NavLink>
         </div>
@@ -210,9 +216,9 @@ export default function WorkOrderDetail() {
     <AppLayout>
       <div className="space-y-6">
         {/* Back Button */}
-        <NavLink to="/work-orders" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <NavLink to={backTo} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
-          Back to Work Orders
+          {backLabel}
         </NavLink>
 
         {/* Header with Cover Image Hero */}
@@ -363,6 +369,9 @@ export default function WorkOrderDetail() {
             </div>
           </div>
         )}
+
+        {/* Admin Details Panel */}
+        {isAdmin && <WorkOrderAdminPanel workOrder={workOrder} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tasks / Success Criteria */}
