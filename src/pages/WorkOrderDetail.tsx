@@ -370,6 +370,9 @@ export default function WorkOrderDetail() {
           </div>
         )}
 
+        {/* Admin Details Panel */}
+        {isAdmin && <WorkOrderAdminPanel workOrder={workOrder} />}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tasks / Success Criteria */}
           <Card className="lg:col-span-2">
