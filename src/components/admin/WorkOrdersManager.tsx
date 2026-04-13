@@ -310,6 +310,7 @@ export function WorkOrdersManager() {
                   <TableCell className="font-medium max-w-[200px]">
                     <NavLink
                       to={`/work-orders/${wo.id}`}
+                      state={{ from: 'admin' }}
                       className="hover:text-primary hover:underline underline-offset-4 transition-colors truncate block"
                     >
                       {wo.title}
