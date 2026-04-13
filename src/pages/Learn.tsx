@@ -99,6 +99,7 @@ export default function Learn() {
         </div>
 
         {/* External Training Resources */}
+        <div className="container">
         <HorizontalCarousel
           title="External Training Resources"
           subtitle="Deep-dive curriculum for American Truck Simulator"
@@ -115,6 +116,7 @@ export default function Learn() {
             />
           </div>
         </HorizontalCarousel>
+        </div>
       </div>
     </AppLayout>
   );
