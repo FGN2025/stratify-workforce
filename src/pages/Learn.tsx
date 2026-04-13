@@ -116,6 +116,7 @@ export default function Learn() {
             />
           </div>
         </HorizontalCarousel>
+        </div>
       </div>
     </AppLayout>
   );
