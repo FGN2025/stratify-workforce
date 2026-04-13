@@ -36,7 +36,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Plus, Edit, Trash2, Clock, Trophy, FileUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, Trophy, FileUp, Eye } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import { WorkOrderEditDialog, type EvidenceRequirements } from './WorkOrderEditDialog';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -306,8 +307,13 @@ export function WorkOrdersManager() {
             ) : (
               filteredWorkOrders.map((wo) => (
                 <TableRow key={wo.id}>
-                  <TableCell className="font-medium max-w-[200px] truncate">
-                    {wo.title}
+                  <TableCell className="font-medium max-w-[200px]">
+                    <NavLink
+                      to={`/work-orders/${wo.id}`}
+                      className="hover:text-primary hover:underline underline-offset-4 transition-colors truncate block"
+                    >
+                      {wo.title}
+                    </NavLink>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">{GAME_LABELS[wo.game_title]}</span>
@@ -366,6 +372,11 @@ export function WorkOrdersManager() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <NavLink to={`/work-orders/${wo.id}`}>
+                        <Button variant="ghost" size="icon">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </NavLink>
                       <Button
                         variant="ghost"
                         size="icon"

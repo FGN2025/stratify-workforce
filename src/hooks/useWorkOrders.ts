@@ -24,6 +24,7 @@ export interface WorkOrderWithXP {
   evidence_requirements: Record<string, unknown> | null;
   cover_image_url: string | null;
   source_challenge_id: string | null;
+  fgn_origin_challenge_id: string | null;
 }
 
 export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
@@ -75,6 +76,7 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
         evidence_requirements: (wo.evidence_requirements as Record<string, unknown>) || null,
         cover_image_url: wo.cover_image_url,
         source_challenge_id: wo.source_challenge_id,
+        fgn_origin_challenge_id: wo.fgn_origin_challenge_id,
       })) as WorkOrderWithXP[];
     },
   });
@@ -110,6 +112,7 @@ export function useWorkOrderById(id: string) {
         evidence_requirements: (data.evidence_requirements as Record<string, unknown>) || null,
         cover_image_url: data.cover_image_url,
         source_challenge_id: data.source_challenge_id,
+        fgn_origin_challenge_id: data.fgn_origin_challenge_id,
       } as WorkOrderWithXP;
     },
   });
