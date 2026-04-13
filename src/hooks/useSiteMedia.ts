@@ -25,6 +25,8 @@ const fallbackMedia: Record<string, string> = {
   farming_sim_cover: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&h=400&fit=crop',
   construction_sim_cover: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=400&fit=crop',
   mechanic_sim_cover: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&h=400&fit=crop',
+  fiber_tech_cover: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&h=400&fit=crop',
+  roadcraft_cover: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&h=400&fit=crop',
 };
 
 /**
