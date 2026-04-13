@@ -1,29 +1,39 @@
 
 
-# Plan: Import Cover Images from play.fgn.gg
+# Plan: Backfill 6 Remaining Fiber_Tech Cover Images
 
-## Current State
-- The `fetch-challenges` edge function already returns `cover_image_url` from play.fgn.gg
-- The Import Challenge dialog already passes `cover_image_url` through to new work orders
-- **The 13 existing Fiber_Tech work orders were inserted manually** — they have `NULL` for both `cover_image_url` and `fgn_origin_challenge_id`, so there's no link back to the source challenge
+## Problem
+Six Fiber_Tech work orders still have `NULL` for `cover_image_url` and `fgn_origin_challenge_id`. The user has confirmed the 6 challenge IDs exist on play.fgn.gg with cover images.
 
-## Changes
+## Approach
+1. Call the `fetch-challenges` edge function to get the title + `cover_image_url` for each of the 6 challenge IDs
+2. Match each remote challenge to the corresponding local work order by title/theme
+3. Run 6 `UPDATE` statements via the insert tool to set `cover_image_url` and `fgn_origin_challenge_id`
 
-### 1. One-time data backfill (database update)
-Write an UPDATE statement that matches each of the 13 Fiber_Tech work orders to their play.fgn.gg counterpart by title and sets:
-- `cover_image_url` — the hosted image URL from play.fgn.gg's storage bucket
-- `fgn_origin_challenge_id` — the remote challenge UUID, so future syncs work
+## Mapping (to be confirmed via fetch-challenges response)
 
-This requires calling the fetch-challenges endpoint to get the title→image+id mapping, then running 13 UPDATE statements via the insert tool.
+| Challenge ID (play.fgn.gg) | Local Work Order |
+|---|---|
+| `034e8cf3-...` | One of the 6 unmatched work orders |
+| `c8298ef1-...` | (matched by title) |
+| `5e9ace81-...` | ... |
+| `d8b601c3-...` | ... |
+| `57da5f29-...` | ... |
+| `4ce440c1-...` | ... |
 
-### 2. No code changes needed
-The import pipeline (`ImportChallengeDialog` → `WorkOrderEditDialog`) already copies `cover_image_url` from play.fgn.gg challenges into new work orders. Any future imports through the admin UI will automatically carry the hero image.
+### Local work orders needing images:
+1. `4d58c766-...` — CS Fiber: Directional Bore Planning and HDD Site Operations
+2. `729f9234-...` — CS Fiber: OSP Handoff — Construction to Splicing Crew
+3. `b7cc3cd3-...` — CS Fiber: Pre-Construction Safety and 811 Compliance
+4. `d9f48aac-...` — CS Fiber: Underground Conduit Systems and Bedding Standards
+5. `bee0f50f-...` — RC Fiber: Aerial Route Assessment and Pole Line Evaluation
+6. `3a24a819-...` — RC Fiber: Cable Run Documentation and Route Closeout
 
-### 3. No edge function changes needed
-The `fetch-challenges` function already includes `cover_image_url` in its `SELECT *` query. The `sync-challenge-completion` webhook doesn't need cover images — it handles progress, not display.
+## Steps
+1. Invoke the `fetch-challenges` edge function (already authenticated) to retrieve the 6 challenges with their `cover_image_url` values
+2. Match each challenge to the correct local work order by title similarity
+3. Execute 6 UPDATE statements setting `cover_image_url` and `fgn_origin_challenge_id` on each work order
 
 ## Result
-- All 13 existing Fiber_Tech cards will immediately show their unique hero images from play.fgn.gg
-- All future challenge imports will continue to carry images automatically
-- Work orders will also gain their `fgn_origin_challenge_id` link, enabling the "already imported" indicator in the import dialog
+All 13 Fiber_Tech work order cards will display unique hero images from play.fgn.gg. No code changes needed.
 
