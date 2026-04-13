@@ -1,17 +1,29 @@
 
 
-# Plan: Fix Indentation Mismatch Between Course and External Resource Carousels
+# Plan: Import Cover Images from play.fgn.gg
 
-## Problem
-The "Available Courses" carousel is wrapped in a `<div className="container">` (which adds horizontal padding via Tailwind's `container` class), while the "External Training Resources" carousel sits outside that wrapper with no padding. This causes misaligned left edges.
+## Current State
+- The `fetch-challenges` edge function already returns `cover_image_url` from play.fgn.gg
+- The Import Challenge dialog already passes `cover_image_url` through to new work orders
+- **The 13 existing Fiber_Tech work orders were inserted manually** — they have `NULL` for both `cover_image_url` and `fgn_origin_challenge_id`, so there's no link back to the source challenge
 
-## Fix
+## Changes
 
-**File: `src/pages/Learn.tsx`**
+### 1. One-time data backfill (database update)
+Write an UPDATE statement that matches each of the 13 Fiber_Tech work orders to their play.fgn.gg counterpart by title and sets:
+- `cover_image_url` — the hosted image URL from play.fgn.gg's storage bucket
+- `fgn_origin_challenge_id` — the remote challenge UUID, so future syncs work
 
-Move the "External Training Resources" `HorizontalCarousel` (lines 102-117) **inside** the `<div className="container">` block so both carousels share the same horizontal padding. The Tabs component and the external resources carousel will both be children of the same container.
+This requires calling the fetch-challenges endpoint to get the title→image+id mapping, then running 13 UPDATE statements via the insert tool.
 
-Alternatively, if the Tabs wrapper should only cover the tab UI, move the external carousel into its own `<div className="container">` wrapper to match the padding independently.
+### 2. No code changes needed
+The import pipeline (`ImportChallengeDialog` → `WorkOrderEditDialog`) already copies `cover_image_url` from play.fgn.gg challenges into new work orders. Any future imports through the admin UI will automatically carry the hero image.
 
-Recommended approach: wrap the external carousel in its own `<div className="container">` since it's semantically separate from the Tabs section.
+### 3. No edge function changes needed
+The `fetch-challenges` function already includes `cover_image_url` in its `SELECT *` query. The `sync-challenge-completion` webhook doesn't need cover images — it handles progress, not display.
+
+## Result
+- All 13 existing Fiber_Tech cards will immediately show their unique hero images from play.fgn.gg
+- All future challenge imports will continue to carry images automatically
+- Work orders will also gain their `fgn_origin_challenge_id` link, enabling the "already imported" indicator in the import dialog
 
