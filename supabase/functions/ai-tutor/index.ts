@@ -117,16 +117,77 @@ async function getModelFromDB(
     : { modelId: FALLBACK_MODEL, apiKey: null };
 }
 
+interface NotebookResult {
+  answer: string;
+  citations: string[];
+}
+
+async function queryNotebook(
+  question: string,
+  notebookId: string
+): Promise<NotebookResult | null> {
+  const apiUrl = Deno.env.get("OPEN_NOTEBOOK_API_URL");
+  const apiPassword = Deno.env.get("OPEN_NOTEBOOK_API_PASSWORD");
+  if (!apiUrl || !apiPassword) return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(`${apiUrl.replace(/\/$/, "")}/ask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Password": apiPassword,
+      },
+      body: JSON.stringify({
+        question,
+        notebook_id: notebookId,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      console.warn(`Open Notebook /ask returned ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    // Open Notebook /ask returns { answer, sources?: [{title, url}] } or similar
+    const answer: string = data.answer || data.result || data.response || "";
+    const sources = data.sources || data.citations || [];
+    const citations: string[] = Array.isArray(sources)
+      ? sources.map((s: any) =>
+          typeof s === "string" ? s : s.title || s.url || s.source || JSON.stringify(s)
+        )
+      : [];
+
+    if (!answer) return null;
+    return { answer, citations };
+  } catch (err) {
+    console.warn("Open Notebook query failed:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 function buildSystemPrompt(
   basePrompt: string,
   context?: ChatRequest["context"],
-  notebookUrl?: string | null
+  notebookId?: string | null,
+  notebookResult?: NotebookResult | null
 ): string {
   let prompt = basePrompt;
 
-  // Inject notebook reference if available
-  if (notebookUrl) {
-    prompt += `\n\nYou have access to a curated knowledge base for this simulation at: ${notebookUrl}\nWhen students ask domain-specific questions about this simulation, reference this knowledge source for authoritative answers.`;
+  // Inject retrieved knowledge from Open Notebook
+  if (notebookResult && notebookResult.answer) {
+    prompt += `\n\n=== KNOWLEDGE BASE CONTEXT (from Open Notebook) ===\n${notebookResult.answer}`;
+    if (notebookResult.citations.length > 0) {
+      prompt += `\n\nSources:\n${notebookResult.citations.map((c, i) => `[${i + 1}] ${c}`).join("\n")}`;
+    }
+    prompt += `\n=== END KNOWLEDGE BASE ===\n\nUse the above grounded knowledge to inform your answer when relevant. Cite sources by number when you reference them.`;
+  } else if (notebookId) {
+    prompt += `\n\nA curated knowledge base is available for this simulation. Provide authoritative guidance based on standard industry practice.`;
   }
 
   if (!context) return prompt;
@@ -185,7 +246,21 @@ serve(async (req) => {
     // Get persona config from DB (with fallback)
     const personaConfig = await getPersonaFromDB(supabaseAdmin, contextType, context?.gameTitle);
     const basePrompt = personaConfig?.system_prompt || FALLBACK_PERSONAS[contextType] || FALLBACK_PERSONAS.general;
-    const systemPrompt = buildSystemPrompt(basePrompt, context, personaConfig?.notebook_url);
+
+    // If a notebook_id is configured for this persona, query Open Notebook for grounded context
+    let notebookResult: NotebookResult | null = null;
+    const notebookId = personaConfig?.notebook_url || null;
+    if (notebookId) {
+      const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+      if (lastUserMessage?.content) {
+        const query = context?.gameTitle
+          ? `[${context.gameTitle}] ${lastUserMessage.content}`
+          : lastUserMessage.content;
+        notebookResult = await queryNotebook(query, notebookId);
+      }
+    }
+
+    const systemPrompt = buildSystemPrompt(basePrompt, context, notebookId, notebookResult);
 
     // Get model from DB (with fallback)
     const { modelId: model, apiKey: modelApiKey } = await getModelFromDB(supabaseAdmin, useFor, personaConfig?.model_override);
