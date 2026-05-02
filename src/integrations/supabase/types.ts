@@ -1008,6 +1008,48 @@ export type Database = {
           },
         ]
       }
+      scorm_launch_tokens: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          preliminary_score: number | null
+          scorm_session_id: string | null
+          scorm_student_id: string
+          scorm_student_name: string | null
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          preliminary_score?: number | null
+          scorm_session_id?: string | null
+          scorm_student_id: string
+          scorm_student_name?: string | null
+          status?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          preliminary_score?: number | null
+          scorm_session_id?: string | null
+          scorm_student_id?: string
+          scorm_student_name?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sim_resources: {
         Row: {
           accent_color: string
@@ -2488,6 +2530,8 @@ export type Database = {
         Args: { p_tenant_id: string; p_user_id: string }
         Returns: boolean
       }
+      provision_fgn_scorm_toolkit_app: { Args: never; Returns: string }
+      purge_expired_scorm_launch_tokens: { Args: never; Returns: number }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
       validate_registration_code: {
         Args: { p_code: string }
