@@ -14,18 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _scorm_key_scratch: {
-        Row: {
-          api_key: string | null
-        }
-        Insert: {
-          api_key?: string | null
-        }
-        Update: {
-          api_key?: string | null
-        }
-        Relationships: []
-      }
       achievements: {
         Row: {
           category: Database["public"]["Enums"]["achievement_category"]
