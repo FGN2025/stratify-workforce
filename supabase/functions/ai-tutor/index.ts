@@ -246,7 +246,21 @@ serve(async (req) => {
     // Get persona config from DB (with fallback)
     const personaConfig = await getPersonaFromDB(supabaseAdmin, contextType, context?.gameTitle);
     const basePrompt = personaConfig?.system_prompt || FALLBACK_PERSONAS[contextType] || FALLBACK_PERSONAS.general;
-    const systemPrompt = buildSystemPrompt(basePrompt, context, personaConfig?.notebook_url);
+
+    // If a notebook_id is configured for this persona, query Open Notebook for grounded context
+    let notebookResult: NotebookResult | null = null;
+    const notebookId = personaConfig?.notebook_url || null;
+    if (notebookId) {
+      const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+      if (lastUserMessage?.content) {
+        const query = context?.gameTitle
+          ? `[${context.gameTitle}] ${lastUserMessage.content}`
+          : lastUserMessage.content;
+        notebookResult = await queryNotebook(query, notebookId);
+      }
+    }
+
+    const systemPrompt = buildSystemPrompt(basePrompt, context, notebookId, notebookResult);
 
     // Get model from DB (with fallback)
     const { modelId: model, apiKey: modelApiKey } = await getModelFromDB(supabaseAdmin, useFor, personaConfig?.model_override);
