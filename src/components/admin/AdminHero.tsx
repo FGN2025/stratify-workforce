@@ -30,7 +30,7 @@ export function AdminHero({ stats, isLoading }: AdminHeroProps) {
       
       {/* Glow effect */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-brand-path/10 rounded-full blur-3xl" />
       
       <div className="relative z-10 p-8 md:p-12">
         <div className="flex items-center gap-3 mb-4">
@@ -42,7 +42,7 @@ export function AdminHero({ stats, isLoading }: AdminHeroProps) {
           </span>
         </div>
         
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+        <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-2 tracking-tight">
           Admin Dashboard
         </h1>
         <p className="text-muted-foreground text-lg max-w-xl mb-8">
@@ -55,19 +55,19 @@ export function AdminHero({ stats, isLoading }: AdminHeroProps) {
             icon={Users}
             label="Total Users"
             value={isLoading ? '—' : stats.totalUsers.toString()}
-            color="text-blue-400"
+            color="text-brand-fiber"
           />
           <StatCard
             icon={ClipboardList}
             label="Work Orders"
             value={isLoading ? '—' : stats.totalWorkOrders.toString()}
-            color="text-amber-400"
+            color="text-brand-path"
           />
           <StatCard
             icon={Activity}
             label="Active Sessions"
             value={isLoading ? '—' : stats.activeSessions.toString()}
-            color="text-emerald-400"
+            color="text-success"
           />
         </div>
       </div>

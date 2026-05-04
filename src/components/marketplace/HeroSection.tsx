@@ -26,7 +26,7 @@ export function HeroSection() {
         
         {/* Content */}
         <div className="relative z-10 px-8 py-16 md:py-24 max-w-2xl">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight">
             <span className="block text-foreground">WELCOME TO THE</span>
             <span className="block text-primary mt-1">WORLD OF</span>
             <span className="block text-foreground">SIMULATION GAMES</span>

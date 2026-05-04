@@ -24,9 +24,9 @@ const iconMap: Record<string, typeof Trophy> = {
 
 const rarityColors: Record<string, string> = {
   common: 'text-muted-foreground',
-  rare: 'text-blue-500',
-  epic: 'text-purple-500',
-  legendary: 'text-amber-500',
+  rare: 'text-brand-fiber',
+  epic: 'text-brand-perf',
+  legendary: 'text-brand-path',
 };
 
 interface AchievementCardProps {
