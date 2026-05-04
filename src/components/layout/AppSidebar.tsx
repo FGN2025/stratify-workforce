@@ -205,7 +205,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-2">
         <div className={cn(
           "flex items-center justify-center transition-all",
-          collapsed ? "h-10" : "h-16"
+          collapsed ? "h-10" : "h-32"
         )}>
           <img
             src="/fgn-logo.png"
