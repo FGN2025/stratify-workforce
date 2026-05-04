@@ -52,7 +52,7 @@ export function TutorMessage({ message, isStreaming }: TutorMessageProps) {
           className={cn(
             isUser
               ? 'bg-primary text-primary-foreground'
-              : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white'
+              : 'bg-gradient-to-br from-primary to-amber-600 text-primary-foreground'
           )}
         >
           {isUser ? <User className="h-4 w-4" /> : <GraduationCap className="h-4 w-4" />}
