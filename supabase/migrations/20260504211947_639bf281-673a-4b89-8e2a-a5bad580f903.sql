@@ -1,0 +1,1 @@
+UPDATE public.tenants SET brand_color = '#F59E0B' WHERE slug = 'fgn';
