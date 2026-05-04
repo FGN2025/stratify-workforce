@@ -1008,6 +1008,74 @@ export type Database = {
           },
         ]
       }
+      scorm_courses: {
+        Row: {
+          ai_enhanced: Json | null
+          bundle_id: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          destination: string
+          generated_by: string | null
+          id: string
+          is_published: boolean
+          manifest_url: string
+          published_at: string | null
+          scorm_version: string
+          source_challenge_id: string | null
+          title: string
+          updated_at: string
+          work_order_id: string
+          zip_url: string | null
+        }
+        Insert: {
+          ai_enhanced?: Json | null
+          bundle_id: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          destination: string
+          generated_by?: string | null
+          id?: string
+          is_published?: boolean
+          manifest_url: string
+          published_at?: string | null
+          scorm_version?: string
+          source_challenge_id?: string | null
+          title: string
+          updated_at?: string
+          work_order_id: string
+          zip_url?: string | null
+        }
+        Update: {
+          ai_enhanced?: Json | null
+          bundle_id?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          destination?: string
+          generated_by?: string | null
+          id?: string
+          is_published?: boolean
+          manifest_url?: string
+          published_at?: string | null
+          scorm_version?: string
+          source_challenge_id?: string | null
+          title?: string
+          updated_at?: string
+          work_order_id?: string
+          zip_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorm_courses_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scorm_launch_tokens: {
         Row: {
           challenge_id: string
