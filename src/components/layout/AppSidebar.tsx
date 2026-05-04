@@ -202,18 +202,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+      <SidebarHeader className="border-b border-sidebar-border p-2">
         <div className={cn(
-          "flex items-center gap-3 transition-all",
-          collapsed && "justify-center"
+          "flex items-center justify-center transition-all",
+          collapsed ? "h-10" : "h-16"
         )}>
-          <img src="/fgn-logo.png" alt="FGN Academy" className="h-8 w-8" width={32} height={32} />
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-foreground">FGN.academy</span>
-              <span className="text-xs text-muted-foreground">{tenant?.name || 'Loading...'}</span>
-            </div>
-          )}
+          <img
+            src="/fgn-logo.png"
+            alt="FGN Academy"
+            className={cn("object-contain", collapsed ? "h-9 w-9" : "h-full w-auto max-w-full")}
+          />
         </div>
       </SidebarHeader>
 
