@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Image, Upload, X, Loader2 } from 'lucide-react';
+import { Image, Upload, X, Loader2, Info } from 'lucide-react';
 
 export function TenantMediaSettings() {
   const { tenant } = useTenant();
