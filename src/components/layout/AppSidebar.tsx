@@ -202,10 +202,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="border-b border-sidebar-border p-2">
+      <SidebarHeader className="border-b border-sidebar-border p-0 h-16">
         <div className={cn(
-          "flex items-center justify-center transition-all",
-          collapsed ? "h-10" : "h-32"
+          "flex items-center justify-center h-full w-full overflow-hidden",
         )}>
           <img
             src="/fgn-logo.png"
