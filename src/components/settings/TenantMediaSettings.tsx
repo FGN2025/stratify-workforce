@@ -191,6 +191,22 @@ export function TenantMediaSettings() {
               <p className="text-xs text-muted-foreground">
                 Recommended: Square image, at least 200x200px. PNG or SVG for best quality.
               </p>
+
+              <div className="flex items-start gap-2 rounded-md border border-border/50 bg-muted/30 p-2.5">
+                <Info className="h-3.5 w-3.5 text-brand-path shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Hero and cover images must follow the{' '}
+                  <a
+                    href="https://github.com/FGN2025/stratify-workforce/blob/main/docs/brand/imagery.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    FGN imagery rules
+                  </a>
+                  : photoreal cinematic, machinery-led, real workers in PPE mid-task. No stock huddles or posed portraits.
+                </p>
+              </div>
             </div>
           </div>
         </div>
