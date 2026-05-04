@@ -207,7 +207,7 @@ export function AppSidebar() {
           "flex items-center gap-3 transition-all",
           collapsed && "justify-center"
         )}>
-          <img src="/favicon.png" alt="FGN Academy" className="h-8 w-8" />
+          <img src="/fgn-logo.png" alt="FGN Academy" className="h-8 w-8" width={32} height={32} />
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-semibold text-foreground">FGN.academy</span>
