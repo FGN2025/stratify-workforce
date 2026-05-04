@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        display: ['Rajdhani', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -63,6 +64,13 @@ export default {
         warning: "hsl(var(--warning))",
         error: "hsl(var(--error))",
         info: "hsl(var(--info))",
+        // FGN Pillar Locks (Brand Guide v2 §2) — same color on every property
+        brand: {
+          perf: "hsl(var(--brand-pillar-perf))",
+          play: "hsl(var(--brand-pillar-play))",
+          path: "hsl(var(--brand-pillar-path))",
+          fiber: "hsl(var(--brand-pillar-fiber))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

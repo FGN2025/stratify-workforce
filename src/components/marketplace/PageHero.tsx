@@ -56,7 +56,7 @@ export function PageHero({
       
       {/* Content */}
       <div className="relative z-10 px-8 py-12 md:py-16 max-w-2xl">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold tracking-tight">
           {title}
         </h1>
         

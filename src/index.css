@@ -4,6 +4,9 @@
 @import "@fontsource/inter/700.css";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/rajdhani/500.css";
+@import "@fontsource/rajdhani/600.css";
+@import "@fontsource/rajdhani/700.css";
 
 @tailwind base;
 @tailwind components;
@@ -23,9 +26,15 @@
     --popover: 220 45% 8%;
     --popover-foreground: 210 40% 98%;
 
-    /* Primary: FGN Amber #f49d14 = hsl(37, 91%, 52%) */
-    --primary: 37 91% 52%;
+    /* Primary: FGN Pathways Amber #F59E0B (Brand Guide v2 §2) = hsl(38, 92%, 50%) */
+    --primary: 38 92% 50%;
     --primary-foreground: 0 0% 0%;
+
+    /* FGN Pillar Locks (Brand Guide v2 §2) — never tenant-overridden */
+    --brand-pillar-perf: 262 83% 58%;   /* #7C3AED Performance / Violet */
+    --brand-pillar-play: 180 100% 42%;  /* #00D4D4 Play / Cyan */
+    --brand-pillar-path: 38 92% 50%;    /* #F59E0B Pathways / Amber */
+    --brand-pillar-fiber: 214 100% 59%; /* #2E8BFF Fiber / Azure */
 
     --secondary: 220 40% 15%;
     --secondary-foreground: 210 40% 98%;
@@ -41,7 +50,7 @@
 
     --border: 220 35% 15%;
     --input: 220 35% 15%;
-    --ring: 37 91% 52%;
+    --ring: 38 92% 50%;
 
     --radius: 0.75rem;
 
@@ -53,26 +62,26 @@
     
     /* Status Colors */
     --success: 160 84% 39%;
-    --warning: 37 91% 52%;
+    --warning: 38 92% 50%;
     --error: 0 84% 60%;
-    --info: 217 91% 60%;
-    
-    /* Data visualization */
-    --chart-1: 37 91% 52%;
-    --chart-2: 217 91% 60%;
-    --chart-3: 160 84% 39%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 0 84% 60%;
+    --info: 214 100% 59%;
+
+    /* Data visualization — aligned to FGN Pillar Locks */
+    --chart-1: 38 92% 50%;    /* path / amber */
+    --chart-2: 214 100% 59%;  /* fiber / azure */
+    --chart-3: 180 100% 42%;  /* play / cyan */
+    --chart-4: 262 83% 58%;   /* perf / violet */
+    --chart-5: 160 84% 39%;   /* success */
 
     /* Sidebar */
     --sidebar-background: 220 50% 5%;
     --sidebar-foreground: 215 20% 65%;
-    --sidebar-primary: 37 91% 52%;
+    --sidebar-primary: 38 92% 50%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 220 35% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 220 35% 13%;
-    --sidebar-ring: 37 91% 52%;
+    --sidebar-ring: 38 92% 50%;
   }
 
   .dark {
