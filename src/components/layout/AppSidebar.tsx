@@ -37,6 +37,7 @@ import {
   Zap,
   Shield,
   Calendar,
+  Wrench,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -88,6 +89,7 @@ const adminSubItems = [
   { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
   { title: 'Skills Paths', url: '/admin/career-paths', icon: Route },
   { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
+  { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench },
 ];
 
 const superAdminSubItems = [
