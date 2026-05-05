@@ -40,6 +40,8 @@ import EmbedPassport from "./pages/EmbedPassport";
 import Activity from "./pages/Activity";
 import VerifyCredential from "./pages/VerifyCredential";
 import ChallengeRegistry from "./pages/ChallengeRegistry";
+import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
+import CourseBuilder from "./pages/admin/CourseBuilder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -107,6 +109,12 @@ const App = () => (
               } />
               <Route path="/admin/challenge-registry" element={
                 <AdminRoute><ChallengeRegistry /></AdminRoute>
+              } />
+              <Route path="/admin/course-builder" element={
+                <AdminRoute><CourseBuilder /></AdminRoute>
+              } />
+              <Route path="/scorm-player/:courseId/launch" element={
+                <ProtectedRoute><ScormPlayerLaunch /></ProtectedRoute>
               } />
               <Route path="/developers" element={
                 <DeveloperRoute><Developers /></DeveloperRoute>

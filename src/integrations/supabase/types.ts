@@ -1008,6 +1008,51 @@ export type Database = {
           },
         ]
       }
+      scorm_course_progress: {
+        Row: {
+          attempts: number
+          course_id: string
+          created_at: string
+          id: string
+          last_session_at: string | null
+          lesson_id: string | null
+          lesson_location: string | null
+          lesson_status: string | null
+          score: number | null
+          suspend_data: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          course_id: string
+          created_at?: string
+          id?: string
+          last_session_at?: string | null
+          lesson_id?: string | null
+          lesson_location?: string | null
+          lesson_status?: string | null
+          score?: number | null
+          suspend_data?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          course_id?: string
+          created_at?: string
+          id?: string
+          last_session_at?: string | null
+          lesson_id?: string | null
+          lesson_location?: string | null
+          lesson_status?: string | null
+          score?: number | null
+          suspend_data?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       scorm_courses: {
         Row: {
           ai_enhanced: Json | null
@@ -1212,6 +1257,7 @@ export type Database = {
       }
       skill_credentials: {
         Row: {
+          course_id: string | null
           created_at: string
           credential_type: Database["public"]["Enums"]["credential_type"]
           credential_type_key: string | null
@@ -1222,14 +1268,19 @@ export type Database = {
           issued_at: string
           issuer: string | null
           issuer_app_slug: string | null
+          lesson_id: string | null
           metadata: Json | null
+          module_id: string | null
           passport_id: string
           score: number | null
           skills_verified: string[] | null
+          source: string | null
           title: string
           verification_hash: string
+          xp_earned: number
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           credential_type: Database["public"]["Enums"]["credential_type"]
           credential_type_key?: string | null
@@ -1240,14 +1291,19 @@ export type Database = {
           issued_at?: string
           issuer?: string | null
           issuer_app_slug?: string | null
+          lesson_id?: string | null
           metadata?: Json | null
+          module_id?: string | null
           passport_id: string
           score?: number | null
           skills_verified?: string[] | null
+          source?: string | null
           title: string
           verification_hash: string
+          xp_earned?: number
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           credential_type?: Database["public"]["Enums"]["credential_type"]
           credential_type_key?: string | null
@@ -1258,12 +1314,16 @@ export type Database = {
           issued_at?: string
           issuer?: string | null
           issuer_app_slug?: string | null
+          lesson_id?: string | null
           metadata?: Json | null
+          module_id?: string | null
           passport_id?: string
           score?: number | null
           skills_verified?: string[] | null
+          source?: string | null
           title?: string
           verification_hash?: string
+          xp_earned?: number
         }
         Relationships: [
           {
@@ -2508,6 +2568,7 @@ export type Database = {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
       }
+      ensure_skill_passport: { Args: { p_user_id: string }; Returns: string }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
       get_ai_model_configs_safe: {
         Args: never
