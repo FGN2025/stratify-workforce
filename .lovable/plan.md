@@ -1,93 +1,122 @@
 
-# Align fgn.academy with FGN Brand Guide v2 (Pathways pillar)
+## Scope
 
-Decision locked in: **fgn.academy is the Pathways property → Amber primary stays.** Current `#f49d14` is essentially the guide's `#F59E0B` so no visible CTA reskin is needed. The work is making the rest of the guide enforceable in code and docs.
+Four parallel deliverables coordinating with `fgn-scorm-toolkit` Phase 2 v0:
 
-## What changes
+1. **Secrets** — Add `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` to scorm-build function (unblocks toolkit Steps 5/6).
+2. **Migration #1** — Skill Passport enrichment schema (v0.3 lock-in).
+3. **Step 7** — Native SCORM Player route at `/scorm-player/:courseId/launch`.
+4. **Step 8** — Course Builder admin page at `/admin/course-builder`.
 
-### 1. Lock pillar tokens in CSS + Tailwind (the most important rule in the guide)
+---
 
-The guide's "Pillar Locks" rule says the same pillar gets the same color on every property, every chart, every badge. Today these colors are scattered (hardcoded `text-blue-400`, `text-purple-500`, `bg-amber-500/10`, etc.). Add the four canonical tokens once:
+## 1. Secrets
 
-```text
-src/index.css :root
-  --brand-pillar-perf:  262 83% 58%   /* #7C3AED violet  */
-  --brand-pillar-play:  180 100% 42%  /* #00D4D4 cyan    */
-  --brand-pillar-path:  38 92% 50%    /* #F59E0B amber   */
-  --brand-pillar-fiber: 214 100% 59%  /* #2E8BFF azure   */
+Use `add_secret` for `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. Both consumed by `scorm-build/_lib/course-enhancer/*`. No code changes.
+
+---
+
+## 2. Migration #1 — Skill Passport Enrichment Schema
+
+Single migration, additive only, nullable columns to keep `sync-challenge-completion` and `credential-api` working.
+
+**`skill_credentials` — new columns:**
+- `source text` — `'work_order' | 'scorm_session' | 'external_api' | 'manual'`
+- `course_id uuid` — nullable FK-style reference to `scorm_courses.id`
+- `lesson_id uuid` — nullable
+- `module_id uuid` — nullable
+- `xp_earned integer default 0`
+
+**Partial unique index (idempotency for SCORM retakes):**
+```
+CREATE UNIQUE INDEX skill_credentials_scorm_session_unique
+  ON skill_credentials (passport_id, course_id)
+  WHERE source = 'scorm_session';
 ```
 
-Expose in `tailwind.config.ts` as `brand: { perf, play, path, fiber }` so usages become `text-brand-perf`, `bg-brand-play/10`, `border-brand-amber` per §6 of the guide.
+**New table `scorm_course_progress`** (transient session state, read by player on launch):
+- `id uuid PK`, `user_id uuid`, `course_id uuid`, `lesson_id uuid nullable`
+- `suspend_data text` (SCORM CMI suspend_data)
+- `lesson_status text`, `lesson_location text` (bookmark)
+- `score numeric`, `attempts integer default 0`
+- `last_session_at timestamptz`, `created_at`, `updated_at`
+- Unique `(user_id, course_id)`
+- RLS: users read/write own rows; admins read all; service role bypass for `scorm-session-complete` (deferred).
 
-Also nudge `--primary` from `37 91% 52%` → `38 92% 50%` to match the exact Pathways hex. Negligible visual change.
+**Triggers (`SECURITY DEFINER`, `SET search_path = public`):**
+- `trg_course_completion_credential` — on `user_course_enrollments.completed_at` set, INSERT a `course_completion` credential rolled up from lesson skills + course xp.
+- `trg_module_milestone` — on completion of all lessons in a module, INSERT a `badge` credential (skipped if module has no `skills_granted` metadata).
+- Both call a shared `ensure_skill_passport(user_id)` helper.
 
-### 2. Replace ad-hoc pillar colors
+**Backfill (idempotent DO block in same migration):**
+- For every historical `user_course_enrollments.completed_at IS NOT NULL` without a matching `course_completion` credential, insert one.
+- For every completed module per user without matching badge, insert one.
+- Guarded by `NOT EXISTS` checks against `external_reference_id = enrollment.id::text`.
 
-Sweep these files to use the new pillar tokens instead of arbitrary Tailwind palette colors:
+**`verification_hash`** computed in trigger as `encode(digest(passport_id::text || coalesce(external_reference_id,'') || issued_at::text, 'sha256'), 'hex')`.
 
-- `src/components/profile/AchievementCard.tsx` — `rarityColors` blue/purple/amber → pillar tokens
-- `src/components/admin/AdminHero.tsx` — `text-blue-400`, `text-amber-400`, `text-emerald-400`, `bg-amber-500/10` → tokens
-- Chart vars `--chart-1..5` in `src/index.css` → align to perf/play/path/fiber + success/danger
-- `src/hooks/useGameChannelColors.ts` `DEFAULT_COLORS` — keep game accents (those are per-game, not pillar), but make sure ATS/Construction/etc. are still their own values, not silently flipped to pillar tokens
+---
 
-### 3. Typography — add Rajdhani for headings (Arcade mode spec)
+## 3. Step 7 — SCORM Player Route
 
-Brand guide §4 (Arcade mode): Orbitron display · **Rajdhani 600 headings** · Inter body. You already use Inter. Adding Rajdhani is the minimum change that aligns headings without redesigning every hero.
+**Route:** `/scorm-player/:courseId/launch` added to `App.tsx`. Auth-gated via `ProtectedRoute`.
 
-- `bun add @fontsource/rajdhani`
-- Import 500/600/700 in `src/index.css`
-- Tailwind: add `display: ['Rajdhani', 'Inter', ...]` and apply `font-display` to h1/h2 in app shell (HeroSection, AdminHero, PageHero)
-- **Skip Orbitron** for now — your Industrial Command Center memory rejects neon/sci-fi treatment. Document the deviation.
+**New page:** `src/pages/ScormPlayerLaunch.tsx`
+- Fetches `scorm_courses` row by `courseId` (RLS handles published gating).
+- Vendored player lives at `src/lib/scorm-player/` — copy `packages/scorm-player` from the toolkit. Treat as a leaf module; no deps beyond what's already in `package.json`.
+- Renders the player in an iframe-safe wrapper sized to viewport minus topnav.
+- Shows preview banner (warning style, top of player frame): **"Preview mode — progress sync ships in v0.3."**
+- Wires `reportProgress(state)` as a `useCallback` no-op that `console.debug`s the payload shape. Marked `// v0.3: POST to scorm-session-complete` so the stub is obvious during the v0.3 swap.
+- Loads launch URL from `scorm_courses.manifest_url` (or `zip_url` extracted index — confirm with toolkit's player API on copy).
 
-### 4. FGN wordmark & naming hygiene
+**Vendoring:**
+- Copy player source under `src/lib/scorm-player/` with a top-of-file `// Vendored from fgn-scorm-toolkit packages/scorm-player @ <commit>` header.
+- No build pipeline changes; player is plain TS/React.
 
-Per §1 + §5:
-- Use "FGN" stand-alone in chrome; expand to **"Fiber Gaming Network"** only in learner-facing copy (academy is Arcade audience, not Enterprise). Audit `JoinFGNAcademyDialog`, footers, alt text — replace any "Federated Generative Network" string here.
-- Wordmark color rule: white on dark surface (current background). Add a check that no component recolors the FGN logo to amber/accent.
+---
 
-### 5. Imagery rule documentation (§7)
+## 4. Step 8 — Course Builder Admin Page
 
-The brand guide adds a full visual-language spec — photoreal cinematic, machinery-led, faces obscured, no stock-photo huddles. This is enforced at content time, not code time, but we should:
+**Route:** `/admin/course-builder` (wrapped in `AdminRoute`).
 
-- Add `docs/brand/imagery.md` distilling §7.1–7.6 (aesthetic register, people rule, composition, lighting, FGN-distinctive content) so anyone uploading hero/cover images via the admin Media Library has a reference.
-- Add a one-line caption under the upload field in `TenantMediaSettings.tsx` linking to the doc.
+**New page:** `src/pages/admin/CourseBuilder.tsx`
 
-### 6. Component token additions (§6)
+**UI flow (industrial command center aesthetic):**
+1. **Challenge selector** — multi-select autocomplete sourced from `fetch-challenges` edge function (existing). Shows challenge name + framework chip. Drag-to-reorder.
+2. **Bundle config card** — title (editable, prefilled from derived title), description (editable), pillar override (Select), destination (`fgn-academy` | `external-lms`), SCORM version (`1.2` | `cmi5`).
+3. **AI enhancement toggles** — checkboxes for: regenerate description, regenerate cover image, generate quiz placeholders. Disabled with tooltip "Awaiting toolkit Steps 5/6" until those ship; surface as pass-through flags now so the contract is locked.
+4. **Build action** — calls `scorm-build` edge function via `supabase.functions.invoke`. Streams warnings into a results panel (level chip, code, message, suggestion).
+5. **Result card** — on success show `bundle_id`, manifest URL, ZIP URL, "Open in Player" link to `/scorm-player/:courseId/launch` once a `scorm_courses` row exists.
 
-Add the missing semantic tokens the guide names:
-- `--brand-glow` (amber glow utility — already implicit in `glow-primary`, just rename for clarity)
-- `--shadow-elevation` — declared but currently unused; map to a soft Enterprise-mode shadow for the few light-surface components (PDF passport export, embed widget)
+**New hook:** `src/hooks/useScormBuild.ts` — wraps the edge function call, returns `{ build, isBuilding, result, warnings, error }`.
 
-### 7. Memory update
+**Sidebar:** Add "Course Builder" entry under admin section in `AppSidebar.tsx`.
 
-Update `mem://style/aesthetic`:
-- Note that academy = **Pathways pillar** (Arcade audience, Amber primary by design — this matches the guide, not a deviation)
-- Add new `mem://style/pillar-tokens` documenting the four locked pillar colors and that they must never be tenant-overridden (only `--brand-primary` / `--brand-secondary` may be)
-- Note Rajdhani-for-headings adoption; Orbitron intentionally skipped due to Industrial Command Center aesthetic
+---
 
-## Out of scope (call out, don't do)
+## Sequencing
 
-- **Light-surface "Enterprise mode" toggle** (`?mode=enterprise`) — guide describes it but academy is fully Arcade; building the toggle is a separate effort if/when academy is embedded in a provider portal.
-- **Switching to Cyan primary** — explicitly rejected; academy is Pathways.
-- **Cover-image AI pipeline (§8)** — already lives in `scorm-build/_lib/course-enhancer/`; brand guide just documents what's shipped. No code changes needed.
-- **Text-generation rules (§9)** — already encoded in `_lib/course-enhancer/prompts/style-guide.ts`. Verified, no drift.
+```text
+[1] Add secrets ─────────► toolkit Steps 5/6 unblocked
+[2] Migration #1 ────────► v0.3 schema locked
+[3] Step 7 player ──┐
+                    ├──► v0 testable end-to-end (no progress sync)
+[4] Step 8 builder ─┘
+```
+
+Items 1–4 ship in this loop. Item 4 from the prior plan (`scorm-session-complete` edge function) remains deferred until toolkit Step 7 ships.
+
+## Out of scope this loop
+
+- Backfill items 5–8 from prior plan (achievement engine, UI surfacing on Profile/Passport, verification harness) — call out as next loop after Player + Builder land so they can be tested against real generated courses.
+- `scorm-session-complete` edge function — deferred per contract.
 
 ## Files touched
 
-```text
-src/index.css                                  (pillar vars, chart vars, font import)
-tailwind.config.ts                             (brand.* colors, fontFamily.display)
-src/components/profile/AchievementCard.tsx     (rarity → pillar tokens)
-src/components/admin/AdminHero.tsx             (hardcoded colors → tokens)
-src/components/marketplace/HeroSection.tsx     (font-display on h1)
-src/components/marketplace/PageHero.tsx        (font-display on h1)
-src/components/admin/AdminHero.tsx             (font-display on h1)
-src/components/settings/TenantMediaSettings.tsx (imagery-rules link)
-src/components/marketplace/JoinFGNAcademyDialog.tsx (naming audit)
-docs/brand/imagery.md                          (NEW — §7 distilled)
-mem://style/aesthetic                          (updated)
-mem://style/pillar-tokens                      (NEW)
-package.json                                   (+ @fontsource/rajdhani)
-```
-
-No DB migrations, no edge function changes, no breaking visual changes for users.
+- `supabase/migrations/<ts>_skill_passport_enrichment.sql` (new)
+- `src/App.tsx` (routes)
+- `src/pages/ScormPlayerLaunch.tsx` (new)
+- `src/pages/admin/CourseBuilder.tsx` (new)
+- `src/hooks/useScormBuild.ts` (new)
+- `src/lib/scorm-player/**` (vendored, new)
+- `src/components/layout/AppSidebar.tsx` (sidebar entry)
