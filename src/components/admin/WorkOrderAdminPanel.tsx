@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Settings2, ChevronDown, Copy, ExternalLink } from 'lucide-react';
+import { Settings2, ChevronDown, Copy, ExternalLink, Wrench } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -82,6 +83,14 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
                 <Switch checked={isActive} onCheckedChange={handleToggleActive} />
               </div>
             </div>
+
+            {/* Course Builder shortcut */}
+            <Button asChild variant="outline" size="sm" className="w-full justify-start">
+              <Link to={`/admin/course-builder?workOrderId=${workOrder.id}`}>
+                <Wrench className="h-4 w-4 mr-2 text-primary" />
+                Build SCORM course from this Work Order
+              </Link>
+            </Button>
 
             {/* Metadata rows */}
             <TooltipProvider>

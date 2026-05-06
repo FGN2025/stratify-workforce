@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useScormBuild, type ScormBuildRequest } from '@/hooks/useScormBuild';
 import { Card } from '@/components/ui/card';
@@ -11,7 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Wrench, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface WorkOrder {
   id: string;
@@ -22,10 +22,12 @@ interface WorkOrder {
 }
 
 export default function CourseBuilder() {
+  const [searchParams] = useSearchParams();
+  const prefillWoId = searchParams.get('workOrderId') ?? '';
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loadingWO, setLoadingWO] = useState(true);
   const [form, setForm] = useState<ScormBuildRequest>({
-    workOrderId: '',
+    workOrderId: prefillWoId,
     destination: 'fgn-academy',
     brandMode: 'arcade',
     scormVersion: '1.2',
@@ -43,10 +45,19 @@ export default function CourseBuilder() {
         .eq('is_active', true)
         .not('source_challenge_id', 'is', null)
         .order('title');
-      setWorkOrders((data as WorkOrder[] | null) ?? []);
+      let list = (data as WorkOrder[] | null) ?? [];
+      if (prefillWoId && !list.some((w) => w.id === prefillWoId)) {
+        const { data: extra } = await supabase
+          .from('work_orders')
+          .select('id, title, game_title, source_challenge_id, is_active')
+          .eq('id', prefillWoId)
+          .maybeSingle();
+        if (extra) list = [extra as WorkOrder, ...list];
+      }
+      setWorkOrders(list);
       setLoadingWO(false);
     })();
-  }, []);
+  }, [prefillWoId]);
 
   const update = <K extends keyof ScormBuildRequest>(k: K, v: ScormBuildRequest[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
