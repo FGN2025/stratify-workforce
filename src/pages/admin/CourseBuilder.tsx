@@ -22,10 +22,12 @@ interface WorkOrder {
 }
 
 export default function CourseBuilder() {
+  const [searchParams] = useSearchParams();
+  const prefillWoId = searchParams.get('workOrderId') ?? '';
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loadingWO, setLoadingWO] = useState(true);
   const [form, setForm] = useState<ScormBuildRequest>({
-    workOrderId: '',
+    workOrderId: prefillWoId,
     destination: 'fgn-academy',
     brandMode: 'arcade',
     scormVersion: '1.2',
