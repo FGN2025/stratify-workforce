@@ -3,6 +3,7 @@
 // (ScormPlayerLaunch) and is a no-op until v0.3 ships scorm-session-complete.
 
 import { useMemo, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
