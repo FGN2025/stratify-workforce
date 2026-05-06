@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
     // --------------------------------------------------------------
     const { data: wo, error: woErr } = await adminSupabase
       .from('work_orders')
-      .select('id, title, description, game_title, is_active, source_challenge_id, cover_image_url, difficulty')
+      .select('id, title, description, game_title, is_active, source_challenge_id, fgn_origin_challenge_id, cover_image_url, difficulty')
       .eq('id', body.workOrderId)
       .maybeSingle();
 
