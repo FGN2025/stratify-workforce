@@ -31,6 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { WorkOrderAdminPanel } from '@/components/admin/WorkOrderAdminPanel';
+import { LearningResourcesCard } from '@/components/work-orders/LearningResourcesCard';
 import { toast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import {
