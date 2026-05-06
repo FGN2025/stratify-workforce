@@ -17,6 +17,8 @@ interface UseUserRoleReturn {
 export function useUserRole(): UseUserRoleReturn {
   const { user } = useAuth();
   const [role, setRole] = useState<AppRole | null>(null);
+  // Start in loading state so route guards don't read a stale `isAdmin=false`
+  // for one render between auth resolving and the role fetch starting.
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -26,8 +28,10 @@ export function useUserRole(): UseUserRoleReturn {
       return;
     }
 
+    // Set loading synchronously on user change so guards wait for fetch.
+    setIsLoading(true);
+
     const fetchRole = async () => {
-      setIsLoading(true);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
