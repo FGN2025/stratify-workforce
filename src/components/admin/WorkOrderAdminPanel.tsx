@@ -85,10 +85,13 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
             </div>
 
             {/* Course Builder shortcut */}
-            <Button asChild variant="outline" size="sm" className="w-full justify-start">
+            <Button asChild size="sm" className="w-full justify-between shadow-sm">
               <Link to={`/admin/course-builder?workOrderId=${workOrder.id}`}>
-                <Wrench className="h-4 w-4 mr-2 text-primary" />
-                Build SCORM course from this Work Order
+                <span className="flex items-center">
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Build SCORM course from this Work Order
+                </span>
+                <ChevronDown className="h-4 w-4 -rotate-90" />
               </Link>
             </Button>
 
