@@ -45,10 +45,19 @@ export default function CourseBuilder() {
         .eq('is_active', true)
         .not('source_challenge_id', 'is', null)
         .order('title');
-      setWorkOrders((data as WorkOrder[] | null) ?? []);
+      let list = (data as WorkOrder[] | null) ?? [];
+      if (prefillWoId && !list.some((w) => w.id === prefillWoId)) {
+        const { data: extra } = await supabase
+          .from('work_orders')
+          .select('id, title, game_title, source_challenge_id, is_active')
+          .eq('id', prefillWoId)
+          .maybeSingle();
+        if (extra) list = [extra as WorkOrder, ...list];
+      }
+      setWorkOrders(list);
       setLoadingWO(false);
     })();
-  }, []);
+  }, [prefillWoId]);
 
   const update = <K extends keyof ScormBuildRequest>(k: K, v: ScormBuildRequest[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
