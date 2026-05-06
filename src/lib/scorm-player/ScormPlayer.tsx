@@ -175,7 +175,7 @@ function ModuleBody({
   switch (mod.type) {
     case 'briefing':
     case 'completion':
-      return <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: mod.html }} />;
+      return <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mod.html) }} />;
     case 'media':
       return (
         <div>
@@ -191,7 +191,7 @@ function ModuleBody({
       return (
         <div className="space-y-4">
           {mod.preLaunchHtml && (
-            <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: mod.preLaunchHtml }} />
+            <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mod.preLaunchHtml) }} />
           )}
           <div>
             <h4 className="font-semibold mb-2">Tasks</h4>
