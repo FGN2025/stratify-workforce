@@ -8,6 +8,8 @@ import { BookOpen, PlayCircle, Loader2, ExternalLink } from 'lucide-react';
 
 interface Props {
   workOrderId: string;
+  /** "inline" renders bare rows (no Card chrome) for embedding in another card. */
+  variant?: 'card' | 'inline';
 }
 
 interface ScormCourseRow {
@@ -22,7 +24,7 @@ interface ScormCourseRow {
   published_at: string | null;
 }
 
-export function LearningResourcesCard({ workOrderId }: Props) {
+export function LearningResourcesCard({ workOrderId, variant = 'card' }: Props) {
   const { data: courses, isLoading } = useQuery({
     queryKey: ['wo-scorm-courses', workOrderId],
     queryFn: async () => {
@@ -38,7 +40,16 @@ export function LearningResourcesCard({ workOrderId }: Props) {
     enabled: !!workOrderId,
   });
 
+  const inline = variant === 'inline';
+
   if (isLoading) {
+    if (inline) {
+      return (
+        <div className="text-xs text-muted-foreground flex items-center gap-2 px-1 py-2">
+          <Loader2 className="h-3 w-3 animate-spin" /> Loading SCORM courses…
+        </div>
+      );
+    }
     return (
       <Card>
         <CardHeader>
@@ -55,6 +66,52 @@ export function LearningResourcesCard({ workOrderId }: Props) {
 
   if (!courses || courses.length === 0) return null;
 
+  const rows = (
+    <>
+      {courses.map((c) => (
+        <div
+          key={c.id}
+          className="flex items-stretch gap-3 rounded-lg border border-border bg-muted/20 overflow-hidden hover:bg-muted/30 transition-colors"
+        >
+          {c.cover_image_url ? (
+            <img src={c.cover_image_url} alt={c.title} className="w-20 h-20 object-cover shrink-0" />
+          ) : (
+            <div className="w-20 h-20 shrink-0 bg-muted flex items-center justify-center">
+              <BookOpen className="h-7 w-7 text-muted-foreground" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0 p-2.5 flex flex-col gap-1">
+            <div className="flex items-start gap-2">
+              <h4 className="font-semibold text-sm truncate flex-1">{c.title}</h4>
+              <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                SCORM {c.scorm_version}
+              </Badge>
+            </div>
+            {c.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2">{c.description}</p>
+            )}
+            <div className="flex items-center gap-2 mt-auto pt-1">
+              <Button asChild size="sm" className="h-7 text-xs">
+                <Link to={`/scorm-player/${c.id}/launch`}>
+                  <PlayCircle className="h-3 w-3 mr-1" /> Launch Course
+                </Link>
+              </Button>
+              {c.zip_url && (
+                <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+                  <a href={c.zip_url} target="_blank" rel="noreferrer">
+                    SCORM ZIP <ExternalLink className="h-3 w-3 ml-1" />
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+
+  if (inline) return <div className="space-y-2">{rows}</div>;
+
   return (
     <Card>
       <CardHeader>
@@ -65,47 +122,7 @@ export function LearningResourcesCard({ workOrderId }: Props) {
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {courses.map((c) => (
-          <div
-            key={c.id}
-            className="flex items-stretch gap-3 rounded-lg border border-border bg-muted/20 overflow-hidden hover:bg-muted/30 transition-colors"
-          >
-            {c.cover_image_url ? (
-              <img src={c.cover_image_url} alt={c.title} className="w-24 h-24 object-cover shrink-0" />
-            ) : (
-              <div className="w-24 h-24 shrink-0 bg-muted flex items-center justify-center">
-                <BookOpen className="h-8 w-8 text-muted-foreground" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0 p-3 flex flex-col gap-1">
-              <div className="flex items-start gap-2">
-                <h4 className="font-semibold text-sm truncate flex-1">{c.title}</h4>
-                <Badge variant="outline" className="text-[10px] font-mono shrink-0">
-                  SCORM {c.scorm_version}
-                </Badge>
-              </div>
-              {c.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">{c.description}</p>
-              )}
-              <div className="flex items-center gap-2 mt-auto pt-1">
-                <Button asChild size="sm" className="h-7 text-xs">
-                  <Link to={`/scorm-player/${c.id}/launch`}>
-                    <PlayCircle className="h-3 w-3 mr-1" /> Launch Course
-                  </Link>
-                </Button>
-                {c.zip_url && (
-                  <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
-                    <a href={c.zip_url} target="_blank" rel="noreferrer">
-                      SCORM ZIP <ExternalLink className="h-3 w-3 ml-1" />
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </CardContent>
+      <CardContent className="space-y-3">{rows}</CardContent>
     </Card>
   );
 }

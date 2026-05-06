@@ -376,8 +376,7 @@ export default function WorkOrderDetail() {
         {/* Admin Details Panel */}
         {isAdmin && <WorkOrderAdminPanel workOrder={workOrder} />}
 
-        {/* Learning Resources (SCORM courses generated from this work order) */}
-        <LearningResourcesCard workOrderId={workOrder.id} />
+        {/* SCORM courses render alongside sim resources below in the Learning Resources card */}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tasks / Success Criteria */}
@@ -514,8 +513,8 @@ export default function WorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Learning Resources */}
-          {simResources.length > 0 && (
+          {/* Learning Resources — sim resources (game-wide) + SCORM courses (per-WO) */}
+          {(simResources.length > 0 || workOrder.id) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -553,6 +552,8 @@ export default function WorkOrderDetail() {
                     </a>
                   );
                 })}
+                {/* SCORM courses generated specifically for this Work Order */}
+                <LearningResourcesCard workOrderId={workOrder.id} variant="inline" />
               </CardContent>
             </Card>
           )}
