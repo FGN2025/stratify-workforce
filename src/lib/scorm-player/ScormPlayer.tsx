@@ -6,13 +6,15 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle2, ExternalLink, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import type { CourseManifest, CourseModule, ProgressState, QuizQuestion } from './types';
 
 interface Props {
   manifest: CourseManifest;
   manifestBaseUrl: string;
   onProgress?: (state: ProgressState) => void;
+  onFinish?: () => void;
+  finishCta?: { label: string; href: string } | null;
 }
 
 function resolveAssetUrl(baseUrl: string, relative: string): string {
@@ -24,17 +26,23 @@ function resolveAssetUrl(baseUrl: string, relative: string): string {
   }
 }
 
-export function ScormPlayer({ manifest, manifestBaseUrl, onProgress }: Props) {
+export function ScormPlayer({ manifest, manifestBaseUrl, onProgress, onFinish, finishCta }: Props) {
   const modules = manifest.modules;
   const [index, setIndex] = useState(0);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [quizState, setQuizState] = useState<Record<string, { score: number; passed: boolean }>>({});
+  const [showFinish, setShowFinish] = useState(false);
 
   const current = modules[index];
+  const allDone = completed.size >= modules.length;
   const pct = useMemo(
     () => Math.round((completed.size / Math.max(modules.length, 1)) * 100),
     [completed, modules.length],
   );
+
+  const coverUrl = manifest.coverImageUrl
+    ? resolveAssetUrl(manifestBaseUrl, manifest.coverImageUrl)
+    : manifest.coverImageRemoteUrl ?? null;
 
   const emit = (next: Partial<ProgressState> = {}) => {
     const state: ProgressState = {
@@ -58,7 +66,12 @@ export function ScormPlayer({ manifest, manifestBaseUrl, onProgress }: Props) {
 
   const goNext = () => {
     if (current) markComplete(current);
-    if (index < modules.length - 1) setIndex(index + 1);
+    if (index < modules.length - 1) {
+      setIndex(index + 1);
+    } else {
+      setShowFinish(true);
+      onFinish?.();
+    }
   };
   const goPrev = () => index > 0 && setIndex(index - 1);
 
@@ -67,10 +80,22 @@ export function ScormPlayer({ manifest, manifestBaseUrl, onProgress }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4 h-full relative">
+      {coverUrl && (
+        <div className="relative rounded-lg overflow-hidden border border-border h-40">
+          <img src={coverUrl} alt={`${manifest.title} cover`} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <h2 className="text-2xl font-display font-bold tracking-wide text-foreground">{manifest.title}</h2>
+            {manifest.description && (
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{manifest.description}</p>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <div className="flex-1">
-          <h2 className="text-xl font-display font-bold tracking-wide">{manifest.title}</h2>
+          {!coverUrl && <h2 className="text-xl font-display font-bold tracking-wide">{manifest.title}</h2>}
           <p className="text-xs text-muted-foreground font-mono">
             Module {index + 1} of {modules.length} · {current.type}
           </p>
@@ -102,10 +127,35 @@ export function ScormPlayer({ manifest, manifestBaseUrl, onProgress }: Props) {
             </span>
           )}
         </div>
-        <Button onClick={goNext} disabled={index >= modules.length - 1 && completed.has(current.id)}>
+        <Button onClick={goNext}>
           {index < modules.length - 1 ? 'Next' : 'Finish'} <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </div>
+
+      {showFinish && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/85 backdrop-blur-sm rounded-lg">
+          <Card className="max-w-md w-full mx-4 p-8 text-center border-primary/40 bg-card">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mb-4">
+              <Trophy className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-2xl font-display font-bold mb-2">Course Complete</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              You finished all {modules.length} modules of <span className="text-foreground font-medium">{manifest.title}</span>.
+              {allDone ? '' : ' Some modules were skipped — revisit them anytime.'}
+            </p>
+            <div className="flex flex-col gap-2">
+              {finishCta && (
+                <Button asChild size="lg">
+                  <a href={finishCta.href}>{finishCta.label}</a>
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setShowFinish(false)}>
+                Review Modules
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
