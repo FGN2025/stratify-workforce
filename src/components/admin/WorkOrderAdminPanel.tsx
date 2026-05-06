@@ -84,6 +84,14 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
               </div>
             </div>
 
+            {/* Course Builder shortcut */}
+            <Button asChild variant="outline" size="sm" className="w-full justify-start">
+              <Link to={`/admin/course-builder?workOrderId=${workOrder.id}`}>
+                <Wrench className="h-4 w-4 mr-2 text-primary" />
+                Build SCORM course from this Work Order
+              </Link>
+            </Button>
+
             {/* Metadata rows */}
             <TooltipProvider>
               <div className="space-y-1">
