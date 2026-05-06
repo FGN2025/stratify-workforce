@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Wrench, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Wrench, ExternalLink, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 interface WorkOrder {
   id: string;
