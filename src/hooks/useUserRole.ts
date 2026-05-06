@@ -32,6 +32,7 @@ export function useUserRole(): UseUserRoleReturn {
     setIsLoading(true);
 
     const fetchRole = async () => {
+      console.log('[useUserRole] Fetching role for user:', user.id, user.email);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -39,9 +40,10 @@ export function useUserRole(): UseUserRoleReturn {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('[useUserRole] Error fetching user role:', error);
         setRole(null);
       } else {
+        console.log('[useUserRole] Role result:', data);
         setRole(data?.role || null);
       }
       setIsLoading(false);
