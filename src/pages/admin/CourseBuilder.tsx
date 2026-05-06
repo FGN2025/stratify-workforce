@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useScormBuild, type ScormBuildRequest } from '@/hooks/useScormBuild';
 import { Card } from '@/components/ui/card';
@@ -11,7 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Wrench, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface WorkOrder {
   id: string;
