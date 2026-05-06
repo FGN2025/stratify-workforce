@@ -253,6 +253,7 @@ export default function CourseBuilder() {
           )}
         </Card>
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }
