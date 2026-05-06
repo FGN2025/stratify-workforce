@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
     try {
       transformResult = await transform(
         {
-          challengeIds: [wo.source_challenge_id],
+          challengeIds: [wo.fgn_origin_challenge_id ?? wo.source_challenge_id],
           destination: body.destination as ScormDestination,
           scormVersion: (body.scormVersion ?? '1.2') as '1.2' | 'cmi5',
           bundleId: courseId,
