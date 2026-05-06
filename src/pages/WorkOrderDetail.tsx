@@ -513,8 +513,8 @@ export default function WorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Learning Resources */}
-          {simResources.length > 0 && (
+          {/* Learning Resources — sim resources (game-wide) + SCORM courses (per-WO) */}
+          {(simResources.length > 0 || workOrder.id) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -552,6 +552,8 @@ export default function WorkOrderDetail() {
                     </a>
                   );
                 })}
+                {/* SCORM courses generated specifically for this Work Order */}
+                <LearningResourcesCard workOrderId={workOrder.id} variant="inline" />
               </CardContent>
             </Card>
           )}
