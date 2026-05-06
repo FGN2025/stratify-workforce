@@ -1,45 +1,34 @@
-# Smoke Test: 3 Untested SCORM Destinations
+## Goal
 
-Mirror the fgn-academy smoke from last sync against `external-lms`, `broadband-workforce`, and `simu-cdl-path`. No code changes — this is pure verification. Approve to switch to default mode and execute.
+Force a clean redeploy of the `scorm-build` edge function so the worker stops serving pre-48779fa code, then verify the new `enhanceCourse` branches are actually executing before you re-run smoke cells 2–4.
 
-## Why approval is needed
+## Source verification (already done, read-only)
 
-`scorm-build` is state-changing (inserts `scorm_courses` rows, uploads ZIP + manifest to `media-assets` storage, calls play.fgn.gg). Plan mode is read-only, so I need approval to invoke it.
+Confirmed on disk in this project:
 
-## Test matrix
+- `supabase/functions/scorm-build/index.ts`
+  - L60: `import { enhanceCourse } from './_lib/course-enhancer/enhance.ts'`
+  - L478: `await enhanceCourse(courseManifest, { ... })` between `transform()` and asset packaging
+  - L454 / L462 / L501: emit `ENHANCER_KEY_MISSING`, `ENHANCER_IMAGE_KEY_MISSING`, `ENHANCER_FAILED`
+- `supabase/functions/scorm-build/_lib/course-enhancer/` contains `enhance.ts`, `anthropic-client.ts`, `openai-client.ts`, `cache.ts`, `academy-uploader.ts`, `prompts/`
 
-Pick one work order with a valid `fgn_origin_challenge_id` (so the play.fgn.gg fetch succeeds — same fix that unblocked fgn-academy). Build it once per destination, then build a second time to verify replacement semantics.
+So the toolkit catchup (d447fe4 → e1aa92f) is reflected in source. The smoke signals confirm it is not reflected in the running worker.
 
-| # | destination | brandMode | scormVersion | pass criteria |
-|---|---|---|---|---|
-| 1 | external-lms | enterprise | 1.2 | 200, manifestUrl reachable, zipUrl downloads, `is_replacement: false` |
-| 2 | external-lms | enterprise | 1.2 | 200, `is_replacement: true`, prior row replaced (same WO+dest) |
-| 3 | broadband-workforce | enterprise | 1.2 | 200, manifest + zip ok, `is_replacement: false` |
-| 4 | broadband-workforce | enterprise | 1.2 | 200, `is_replacement: true` |
-| 5 | simu-cdl-path | enterprise | 1.2 | 200, manifest + zip ok, `is_replacement: false` |
-| 6 | simu-cdl-path | enterprise | 1.2 | 200, `is_replacement: true` |
+## Steps (require build mode)
 
-`enhanceText` / `enhanceCover` left **off** — pure builder smoke, no Anthropic/OpenAI calls (Step 5/6 territory).
+1. **Hard redeploy `scorm-build`** via `supabase--deploy_edge_functions(["scorm-build"])`. This bumps the worker version and evicts any cached instance.
+2. **Tail boot logs** with `supabase--edge_function_logs` for `scorm-build` and confirm a fresh `Boot` event appears with a new `function_id` or `deployment_id` (current id seen in logs: `2fa87e37-a3b8-432d-a247-59c05d71ed97` — should change or at minimum produce a new boot timestamp ahead of the smoke run).
+3. **Live-fire probe** via `supabase--curl_edge_functions` against WO `82352214-…` with `enhanceText=false, enhanceCover=false` and confirm the response shape now includes the `aiEnhanced` field (even if false/null) — that field's presence is the canary that the new orchestration block ran.
+4. **Secrets sanity** via `secrets--fetch_secrets` to re-confirm `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are still set on this project. If either is missing, cells 2/3 will surface `ENHANCER_KEY_MISSING` / `ENHANCER_IMAGE_KEY_MISSING` warnings instead of silently no-op'ing — which is the *correct* new behavior and itself a positive signal that the new code is live.
+5. **Hand back** to you for cells 2–4 + the CS Fiber `inferFramework()` regression check. No source edits required from my side; if step 3 still shows no `aiEnhanced` field after a confirmed fresh boot, I'll bisect into `enhance.ts` per the standing commitment (not the destination router).
 
-## Execution steps
+## Not in scope
 
-1. `read_query` against `work_orders` to pick a candidate row with non-null `fgn_origin_challenge_id` and `is_active = true`. Prefer one already used in fgn-academy smoke for apples-to-apples.
-2. For each destination: invoke `scorm-build` via `supabase--curl_edge_functions` with `{ workOrderId, destination, brandMode: 'enterprise', scormVersion: '1.2' }`.
-3. For each response: `curl -I` the `manifestUrl` and `zipUrl`, assert 200 + non-zero content-length.
-4. Re-invoke same payload, assert `is_replacement: true` and that the previous `scorm_courses.id` for `(work_order_id, destination)` was superseded (query `scorm_courses` ordered by `created_at desc`).
-5. Check `scorm-build` edge logs for warnings/errors per call.
-6. Cleanup: leave the latest row per destination in place (useful as a baseline for Step 5 diff). Delete intermediate replaced rows only if they accumulate.
+- No changes to `enhance.ts`, `transform.ts`, or the destination router.
+- No changes to image size defaults (`1536x1024` at call site stays; library default `1024x1024` stays).
+- No DB migrations.
+- No frontend changes — the in-flight P0 perf work (`useUserRole` done, lazy routes / `Index.tsx` / hero images still queued) is unaffected and remains paused pending your separate approval.
 
-## Deliverable
+## Risk
 
-Single results table back to you:
-- destination → http status, manifestUrl HEAD, zipUrl HEAD (size), is_replacement on 2nd call, any warnings[], any log noise
-- pass/fail per row, plus a one-line "clean baseline" / "regression in X" summary
-
-Estimated wall time: ~3–5 min (6 invocations + HEAD checks).
-
-## Out of scope
-
-- No DB schema changes, no edge function edits, no toolkit-side coordination.
-- Not touching the `fgn_origin_challenge_id` fix (already in repo at the lines you're backporting as d447fe4).
-- Not exercising `enhanceText`/`enhanceCover` — that's Step 5/6.
+Effectively zero — this is a redeploy of code that already passed your toolkit review at e1aa92f. Worst case the redeploy surfaces a build error that was previously swallowed (your hypothesis #3), in which case the failure mode is loud (deploy fails, function stays on prior version, you keep the same baseline you have now) rather than silent.
