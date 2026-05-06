@@ -73,18 +73,23 @@ export default function CourseBuilder() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-display font-bold tracking-wide flex items-center gap-2">
-            <Wrench className="h-7 w-7 text-primary" /> Course Builder
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Generate SCORM courses from published Work Orders.
-          </p>
-        </div>
-        <Badge variant="outline" className="font-mono">scorm-build · Phase 2 v0</Badge>
-      </header>
+    <AppLayout>
+      <div className="space-y-6">
+        <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Admin Dashboard
+        </Link>
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-display font-bold tracking-wide flex items-center gap-2">
+              <Wrench className="h-7 w-7 text-primary" /> Course Builder
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Generate SCORM courses from published Work Orders.
+            </p>
+          </div>
+          <Badge variant="outline" className="font-mono">scorm-build · Phase 2 v0</Badge>
+        </header>
 
       <Card className="p-6 space-y-5 bg-card/50 backdrop-blur border-border">
         <div className="space-y-2">
