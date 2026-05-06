@@ -11,6 +11,7 @@ export default function ScormPlayerLaunch() {
   const { courseId } = useParams<{ courseId: string }>();
   const [manifest, setManifest] = useState<CourseManifest | null>(null);
   const [manifestUrl, setManifestUrl] = useState<string>('');
+  const [workOrderId, setWorkOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +21,7 @@ export default function ScormPlayerLaunch() {
       try {
         const { data, error: dbErr } = await supabase
           .from('scorm_courses')
-          .select('manifest_url, title')
+          .select('manifest_url, title, work_order_id')
           .eq('id', courseId)
           .maybeSingle();
         if (dbErr) throw dbErr;
@@ -28,6 +29,7 @@ export default function ScormPlayerLaunch() {
           throw new Error('Course not found or not published.');
         }
         setManifestUrl(data.manifest_url);
+        setWorkOrderId((data as { work_order_id?: string | null }).work_order_id ?? null);
         const res = await fetch(data.manifest_url, { cache: 'no-store' });
         if (!res.ok) throw new Error(`Failed to load manifest: HTTP ${res.status}`);
         const json = (await res.json()) as CourseManifest;
@@ -82,7 +84,16 @@ export default function ScormPlayerLaunch() {
         </AlertDescription>
       </Alert>
       <div className="flex-1 container mx-auto px-4 py-6 flex flex-col">
-        <ScormPlayer manifest={manifest} manifestBaseUrl={manifestUrl} onProgress={reportProgress} />
+        <ScormPlayer
+          manifest={manifest}
+          manifestBaseUrl={manifestUrl}
+          onProgress={reportProgress}
+          finishCta={
+            workOrderId
+              ? { label: 'Return to Work Order', href: `/work-orders/${workOrderId}` }
+              : { label: 'Back to Learn', href: '/learn' }
+          }
+        />
       </div>
     </div>
   );
