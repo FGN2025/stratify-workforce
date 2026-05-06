@@ -376,8 +376,7 @@ export default function WorkOrderDetail() {
         {/* Admin Details Panel */}
         {isAdmin && <WorkOrderAdminPanel workOrder={workOrder} />}
 
-        {/* Learning Resources (SCORM courses generated from this work order) */}
-        <LearningResourcesCard workOrderId={workOrder.id} />
+        {/* SCORM courses render alongside sim resources below in the Learning Resources card */}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tasks / Success Criteria */}
