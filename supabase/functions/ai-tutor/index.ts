@@ -226,6 +226,20 @@ serve(async (req) => {
       );
     }
 
+    // Validate JWT before consuming any AI credits
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    const { data: authData, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !authData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired session. Please sign in again." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { messages, context }: ChatRequest = await req.json();
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
