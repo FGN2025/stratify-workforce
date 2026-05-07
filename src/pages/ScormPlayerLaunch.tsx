@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { ScormPlayer } from '@/lib/scorm-player/ScormPlayer';
+import { useFgnAcademyProgress } from '@/lib/scorm-player/useFgnAcademyProgress';
 import type { CourseManifest, ProgressState } from '@/lib/scorm-player/types';
 import { Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -14,6 +15,13 @@ export default function ScormPlayerLaunch() {
   const [workOrderId, setWorkOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // v0.3 progress sync via scorm-session-complete edge function.
+  // Hook handles restore-on-mount, 2s debounce, flush-bypass for terminal
+  // events, cumulative→delta time conversion, and 2xx-gated retry. See
+  // useFgnAcademyProgress.ts and PHASE_2_SPEC.md §"v0.3 coordination contract".
+  const { initialSuspendData, isReady: progressReady, flushProgress, error: progressError } =
+    useFgnAcademyProgress(courseId);
 
   useEffect(() => {
     if (!courseId) return;
@@ -42,43 +50,18 @@ export default function ScormPlayerLaunch() {
     })();
   }, [courseId]);
 
-  // v0.3: POST to scorm-session-complete with the locked contract payload.
-  // For v0 this is a debug-only no-op so toolkit Step 7 wiring sees the shape.
-  // Player now emits the full v0.3 ProgressState including sessionId,
-  // sessionTimeSeconds, lessonStatus, lessonLocation, scoreRaw,
-  // passingThreshold, passed, scormSuspendData. Hook swap (Step 7 of
-  // PHASE_2_SPEC.md §"v0.3 coordination contract") will replace this
-  // log with a debounced POST to /functions/v1/scorm-session-complete.
+  // Forward Player state changes to the v0.3 hook. Terminal lesson statuses
+  // (passed / failed / completed) bypass the 2s debounce so the credential
+  // write isn't gated on a trailing timer.
   const reportProgress = (state: ProgressState) => {
-    // eslint-disable-next-line no-console
-    console.debug('[scorm-player] progress', {
-      courseId,
-      // v0.3 wire-format preview (snake_case keys; mapped here so the
-      // debug output matches what the hook will POST when Lovable's
-      // edge function lands).
-      payload: {
-        course_id: courseId,
-        session_id: state.sessionId,
-        session_time_seconds: state.sessionTimeSeconds,
-        lesson_status: state.lessonStatus,
-        lesson_location: state.lessonLocation,
-        score_raw: state.scoreRaw,
-        passing_threshold: state.passingThreshold,
-        scorm_suspend_data: state.scormSuspendData,
-        passed: state.passed,
-      },
-      // Also keep the raw v0 ProgressState available for any consumer
-      // that wants the legacy shape during the v0.3 transition.
-      legacy: {
-        currentModuleId: state.currentModuleId,
-        completedModuleIds: state.completedModuleIds,
-        quizScores: state.quizScores,
-        status: state.status,
-      },
-    });
+    const isTerminal =
+      state.lessonStatus === 'passed' ||
+      state.lessonStatus === 'completed' ||
+      state.lessonStatus === 'failed';
+    flushProgress(state, isTerminal ? { flush: true } : undefined);
   };
 
-  if (loading) {
+  if (loading || !progressReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -106,17 +89,20 @@ export default function ScormPlayerLaunch() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Alert className="rounded-none border-x-0 border-t-0 border-b border-amber-500/40 bg-amber-500/10">
-        <AlertTriangle className="h-4 w-4 text-amber-500" />
-        <AlertDescription className="text-amber-200">
-          Preview mode — progress sync ships in v0.3.
-        </AlertDescription>
-      </Alert>
+      {progressError && (
+        <Alert className="rounded-none border-x-0 border-t-0 border-b border-amber-500/40 bg-amber-500/10">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-amber-200">
+            Progress sync warning: {progressError}. Your local progress is preserved; we'll retry on the next interaction.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex-1 container mx-auto px-4 py-6 flex flex-col">
         <ScormPlayer
           manifest={manifest}
           manifestBaseUrl={manifestUrl}
           onProgress={reportProgress}
+          initialSuspendData={initialSuspendData}
           finishCta={
             workOrderId
               ? { label: 'Return to Work Order', href: `/work-orders/${workOrderId}` }

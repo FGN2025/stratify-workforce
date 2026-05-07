@@ -78,11 +78,16 @@ export function ScormPlayer({
     return () => clearInterval(interval);
   }, []);
 
-  // v0.3: restore from suspend data on mount. Run once; manifest is
-  // assumed stable for the Player's lifetime (parent remounts on
-  // course change). Bounded to v=1 envelopes; older shapes are ignored.
+  // v0.3: restore from suspend data. Runs once when initialSuspendData
+  // becomes available (host may resolve it asynchronously via
+  // useFgnAcademyProgress). restoredRef guards against re-running on
+  // subsequent prop changes -- we only want to hydrate once per Player
+  // mount. Bounded to v=1 envelopes; older shapes are ignored.
+  const restoredRef = useRef(false);
   useEffect(() => {
+    if (restoredRef.current) return;
     if (!initialSuspendData) return;
+    restoredRef.current = true;
     try {
       const parsed = JSON.parse(initialSuspendData) as ScormSuspendDataV1;
       if (parsed.v !== 1) return;
@@ -105,8 +110,7 @@ export function ScormPlayer({
       // eslint-disable-next-line no-console
       console.warn('[scorm-player] failed to restore from suspend data:', err);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialSuspendData, modules]);
 
   const current = modules[index];
   const allDone = completed.size >= modules.length;
