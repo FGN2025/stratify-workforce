@@ -50,6 +50,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import DOMPurify from 'npm:isomorphic-dompurify';
 import { transform } from './_lib/scorm-builder/transform.ts';
 import {
   createSupabaseFetcher,
@@ -62,6 +63,33 @@ import type {
   ImageQuality,
   ImageSize,
 } from './_lib/course-enhancer/openai-client.ts';
+import type { QuizQuestion } from './_lib/course-types.ts';
+
+// v0.1 -- briefing HTML sanitization. Strict allowlist matching the
+// briefing prompt contract. Lovable also runs DOMPurify client-side
+// for preview render fidelity; this server-side pass is the
+// authoritative strip-and-strip-quietly per the locked v0.1 contract
+// (PHASE_2_SPEC.md §"HTML sanitization").
+const SANITIZE_ALLOWED_TAGS = ['p', 'strong', 'em', 'h3', 'ul', 'li'];
+const SANITIZE_ALLOWED_ATTR: string[] = [];
+
+function sanitizeBriefingHtml(html: string): {
+  sanitized: string;
+  didStrip: boolean;
+} {
+  const sanitized = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: SANITIZE_ALLOWED_TAGS,
+    ALLOWED_ATTR: SANITIZE_ALLOWED_ATTR,
+  });
+  // Length-shrink heuristic for didStrip. Conservative: false
+  // positives (warning fires when nothing meaningful changed) are
+  // safer than false negatives (admin doesn't realize content was
+  // stripped). DOMPurify normalization may shorten by a few bytes
+  // even on safe input but the warning is informational and easy to
+  // verify by re-previewing.
+  const didStrip = sanitized.length < html.length;
+  return { sanitized, didStrip };
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,6 +134,33 @@ interface BuildRequest {
   imageSize?: string;
   imageModel?: string;
   uploadCoverToAcademy?: boolean;
+
+  // v0.1 manual text override fields. See PHASE_2_SPEC.md §"v0.1
+  // coordination contract — manual text override".
+
+  /**
+   * If true, run transform + enhance and return the resulting
+   * CourseManifest in the response without writing to storage /
+   * scorm_courses / ZIP. Used by the Course Builder UI to show admin
+   * a preview before publish. Default: false.
+   */
+  dryRun?: boolean;
+
+  /**
+   * Per-module HTML overrides for briefing modules, keyed by module
+   * id. When provided, the override is sanitized server-side and
+   * applied to the manifest BEFORE enhance, and that module's id
+   * goes into the enhancer's skipModuleIds so it isn't regenerated.
+   */
+  briefingHtml?: Record<string, string>;
+
+  /**
+   * Per-module quiz question overrides, keyed by quiz module id.
+   * Each value is a complete replacement of the module's questions
+   * array (not a partial patch). Server validates QuizQuestion shape
+   * + id regex + uniqueness. Skipped during enhance for that module.
+   */
+  quizQuestions?: Record<string, QuizQuestion[]>;
 }
 
 function jsonError(status: number, message: string, extra?: Record<string, unknown>): Response {
@@ -127,6 +182,174 @@ const UUID_RE =
 
 function isUuid(s: string): boolean {
   return UUID_RE.test(s);
+}
+
+// v0.1 manual text override -- shape validation for briefingHtml /
+// quizQuestions overrides. Runs post-transform so cross-reference
+// checks against the manifest's module IDs work. All issues aggregate
+// into a single OVERRIDE_VALIDATION 400 per the locked v0.1 contract.
+// See PHASE_2_SPEC.md §"v0.1 coordination contract — manual text
+// override" §"Server-side validation rules".
+
+const QUESTION_ID_RE = /^[A-Za-z0-9_-]+$/;
+const QUIZ_TYPES = new Set(['single-choice', 'multi-choice', 'true-false']);
+
+interface ValidationIssue {
+  path: string;
+  message: string;
+}
+
+function validateOverrides(
+  body: BuildRequest,
+  manifestModules: Array<{ id: string; type: string }>,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Index manifest modules by id for cross-reference checks.
+  const moduleById = new Map(manifestModules.map((m) => [m.id, m] as const));
+
+  // -- briefingHtml --
+  if (body.briefingHtml !== undefined) {
+    if (typeof body.briefingHtml !== 'object' || body.briefingHtml === null || Array.isArray(body.briefingHtml)) {
+      issues.push({ path: 'briefingHtml', message: 'must be an object keyed by module id' });
+    } else {
+      for (const [moduleId, html] of Object.entries(body.briefingHtml)) {
+        const path = `briefingHtml.${moduleId}`;
+        if (typeof html !== 'string') {
+          issues.push({ path, message: 'must be a string' });
+          continue;
+        }
+        if (html.length === 0) {
+          issues.push({ path, message: 'must be non-empty string' });
+        }
+        if (html.length > 8000) {
+          issues.push({ path, message: `exceeds 8000 char cap (got ${html.length})` });
+        }
+        const mod = moduleById.get(moduleId);
+        if (!mod) {
+          issues.push({ path, message: 'module id not found in manifest' });
+        } else if (mod.type !== 'briefing') {
+          issues.push({ path, message: `module is type '${mod.type}', expected 'briefing'` });
+        }
+      }
+    }
+  }
+
+  // -- quizQuestions --
+  if (body.quizQuestions !== undefined) {
+    if (typeof body.quizQuestions !== 'object' || body.quizQuestions === null || Array.isArray(body.quizQuestions)) {
+      issues.push({ path: 'quizQuestions', message: 'must be an object keyed by module id' });
+    } else {
+      for (const [moduleId, questions] of Object.entries(body.quizQuestions)) {
+        const modPath = `quizQuestions.${moduleId}`;
+        if (!Array.isArray(questions)) {
+          issues.push({ path: modPath, message: 'must be an array of QuizQuestion' });
+          continue;
+        }
+        if (questions.length === 0) {
+          issues.push({ path: modPath, message: 'must be non-empty array' });
+        }
+        const mod = moduleById.get(moduleId);
+        if (!mod) {
+          issues.push({ path: modPath, message: 'module id not found in manifest' });
+        } else if (mod.type !== 'quiz') {
+          issues.push({ path: modPath, message: `module is type '${mod.type}', expected 'quiz'` });
+        }
+        // Per-question shape checks
+        const seenIds = new Set<string>();
+        for (let i = 0; i < questions.length; i += 1) {
+          const q = questions[i] as unknown;
+          const qPath = `${modPath}[${i}]`;
+          if (typeof q !== 'object' || q === null || Array.isArray(q)) {
+            issues.push({ path: qPath, message: 'must be an object' });
+            continue;
+          }
+          const qq = q as Record<string, unknown>;
+          // id
+          if (typeof qq.id !== 'string') {
+            issues.push({ path: `${qPath}.id`, message: 'must be a string' });
+          } else if (qq.id.length < 1 || qq.id.length > 128) {
+            issues.push({ path: `${qPath}.id`, message: 'must be 1-128 chars' });
+          } else if (!QUESTION_ID_RE.test(qq.id)) {
+            issues.push({ path: `${qPath}.id`, message: 'must match /^[A-Za-z0-9_-]+$/' });
+          } else {
+            if (seenIds.has(qq.id)) {
+              issues.push({ path: `${qPath}.id`, message: 'duplicate id' });
+            }
+            seenIds.add(qq.id);
+          }
+          // prompt
+          if (typeof qq.prompt !== 'string' || qq.prompt.length === 0) {
+            issues.push({ path: `${qPath}.prompt`, message: 'must be non-empty string' });
+          }
+          // type
+          if (typeof qq.type !== 'string' || !QUIZ_TYPES.has(qq.type)) {
+            issues.push({
+              path: `${qPath}.type`,
+              message: `must be one of [single-choice, multi-choice, true-false]`,
+            });
+          }
+          // choices
+          if (!Array.isArray(qq.choices)) {
+            issues.push({ path: `${qPath}.choices`, message: 'must be an array' });
+            continue;
+          }
+          if (qq.choices.length < 2) {
+            issues.push({ path: `${qPath}.choices`, message: 'must have at least 2 entries' });
+          }
+          let correctCount = 0;
+          for (let j = 0; j < qq.choices.length; j += 1) {
+            const c = qq.choices[j] as unknown;
+            const cPath = `${qPath}.choices[${j}]`;
+            if (typeof c !== 'object' || c === null) {
+              issues.push({ path: cPath, message: 'must be an object' });
+              continue;
+            }
+            const cc = c as Record<string, unknown>;
+            if (typeof cc.id !== 'string') {
+              issues.push({ path: `${cPath}.id`, message: 'must be a string' });
+            } else if (cc.id.length < 1 || cc.id.length > 128) {
+              issues.push({ path: `${cPath}.id`, message: 'must be 1-128 chars' });
+            } else if (!QUESTION_ID_RE.test(cc.id)) {
+              issues.push({ path: `${cPath}.id`, message: 'must match /^[A-Za-z0-9_-]+$/' });
+            }
+            if (typeof cc.label !== 'string' || cc.label.length === 0) {
+              issues.push({ path: `${cPath}.label`, message: 'must be non-empty string' });
+            }
+            if (typeof cc.correct !== 'boolean') {
+              issues.push({ path: `${cPath}.correct`, message: 'must be boolean' });
+            } else if (cc.correct === true) {
+              correctCount += 1;
+            }
+          }
+          // type-specific correct-count rules
+          if (qq.type === 'single-choice' && correctCount !== 1) {
+            issues.push({
+              path: qPath,
+              message: `single-choice requires exactly 1 correct, got ${correctCount}`,
+            });
+          } else if (qq.type === 'multi-choice' && correctCount < 1) {
+            issues.push({
+              path: qPath,
+              message: `multi-choice requires at least 1 correct, got 0`,
+            });
+          } else if (qq.type === 'true-false') {
+            if (qq.choices.length !== 2) {
+              issues.push({ path: `${qPath}.choices`, message: 'true-false must have exactly 2 choices' });
+            }
+            if (correctCount !== 1) {
+              issues.push({
+                path: qPath,
+                message: `true-false requires exactly 1 correct, got ${correctCount}`,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return issues;
 }
 
 function escapeHtml(s: string): string {
@@ -429,6 +652,90 @@ Deno.serve(async (req) => {
     }
 
     // --------------------------------------------------------------
+    // 9.4 v0.1 manual text overrides -- validate + apply pre-enhance.
+    //     Validation runs against manifest module ids (post-transform)
+    //     so cross-reference checks work. All issues aggregate into a
+    //     single OVERRIDE_VALIDATION 400 per the locked v0.1 contract.
+    //     See PHASE_2_SPEC.md §"v0.1 coordination contract".
+    // --------------------------------------------------------------
+    const validationIssues = validateOverrides(body, courseManifest.modules);
+    if (validationIssues.length > 0) {
+      return jsonError(400, 'override validation failed', {
+        code: 'OVERRIDE_VALIDATION',
+        issues: validationIssues,
+      });
+    }
+
+    // Apply title/description overrides to the manifest. These work
+    // identically on dryRun and publish phases.
+    if (body.title !== undefined) {
+      courseManifest.title = body.title;
+    }
+    if (body.description !== undefined) {
+      courseManifest.description = body.description;
+    }
+
+    // Apply briefingHtml overrides with server-side sanitization.
+    // Strict allowlist <p, strong, em, h3, ul, li> with zero allowed
+    // attributes. Stripping is silent (no 400) but emits a non-blocking
+    // BRIEFING_HTML_SANITIZED warning per module so admin knows what
+    // changed. Post-sanitize empty -> 400 OVERRIDE_VALIDATION (matches
+    // the locked spec rule "non-empty after sanitization").
+    const sanitizationWarnings: Array<Record<string, unknown>> = [];
+    const sanitizationEmptyIssues: ValidationIssue[] = [];
+    if (body.briefingHtml) {
+      for (const [moduleId, html] of Object.entries(body.briefingHtml)) {
+        const mod = courseManifest.modules.find((m) => m.id === moduleId);
+        if (mod && mod.type === 'briefing') {
+          const { sanitized, didStrip } = sanitizeBriefingHtml(html);
+          if (sanitized.length === 0) {
+            sanitizationEmptyIssues.push({
+              path: `briefingHtml.${moduleId}`,
+              message:
+                'must be non-empty after sanitization (all content stripped by allowlist)',
+            });
+            continue;
+          }
+          mod.html = sanitized;
+          if (didStrip) {
+            sanitizationWarnings.push({
+              level: 'info',
+              code: 'BRIEFING_HTML_SANITIZED',
+              message:
+                'Stripped non-allowlisted content from briefing HTML override.',
+              moduleId,
+            });
+          }
+        }
+      }
+    }
+    if (sanitizationEmptyIssues.length > 0) {
+      return jsonError(400, 'override validation failed', {
+        code: 'OVERRIDE_VALIDATION',
+        issues: sanitizationEmptyIssues,
+      });
+    }
+
+    // Apply quizQuestions overrides (full-array replacement, validated).
+    if (body.quizQuestions) {
+      for (const [moduleId, questions] of Object.entries(body.quizQuestions)) {
+        const mod = courseManifest.modules.find((m) => m.id === moduleId);
+        if (mod && mod.type === 'quiz') {
+          mod.questions = questions;
+        }
+      }
+    }
+
+    // Module ids that are skipped during enhance (per-module skip,
+    // course-level description handled via the slots filter below).
+    const overrideBriefingIds = Object.keys(body.briefingHtml ?? {});
+    const overrideQuizIds = Object.keys(body.quizQuestions ?? {});
+    const skipModuleIds = new Set<string>([
+      ...overrideBriefingIds,
+      ...overrideQuizIds,
+    ]);
+
+    // --------------------------------------------------------------
     // 9.5 Optional AI enhancement (Steps 5+6).
     //     Single call to enhanceCourse with whatever slots the body
     //     opts into. Per-slot failures are non-fatal -- the enhancer
@@ -467,9 +774,21 @@ Deno.serve(async (req) => {
 
       const slots: ('description' | 'briefingHtml' | 'quizQuestions' | 'coverImage')[] = [];
       if (wantsText && anthropicKey) {
-        slots.push('description', 'briefingHtml', 'quizQuestions');
+        // v0.1: course-level description slot is filtered out when
+        // admin provided an override (no module-id granularity here;
+        // it's a course-scope field).
+        if (body.description === undefined) slots.push('description');
+        // briefingHtml + quizQuestions slots stay; per-module skipping
+        // is via skipModuleIds passed to enhanceCourse below.
+        slots.push('briefingHtml', 'quizQuestions');
       }
-      if (wantsCover && openaiKey) {
+      // v0.1: dryRun never triggers enhanceCover. Cover regen is
+      // expensive ($0.04-0.08 + 30-60s per call) and admins iterating
+      // through preview cycles would burn tokens for no UX win since
+      // covers don't depend on text edits. Cover regen runs once on
+      // publish (dryRun: false) if requested. See PHASE_2_SPEC.md
+      // §"Cover image in v0.1".
+      if (wantsCover && openaiKey && !body.dryRun) {
         slots.push('coverImage');
       }
 
@@ -477,6 +796,7 @@ Deno.serve(async (req) => {
         try {
           const result = await enhanceCourse(courseManifest, {
             slots,
+            ...(skipModuleIds.size > 0 ? { skipModuleIds } : {}),
             ...(anthropicKey ? { apiKey: anthropicKey } : {}),
             ...(openaiKey
               ? {
@@ -503,6 +823,22 @@ Deno.serve(async (req) => {
           });
         }
       }
+    }
+
+    // --------------------------------------------------------------
+    // 9.7 v0.1 dryRun: short-circuit before persistence.
+    //     Returns the enhanced manifest so the Course Builder UI can
+    //     render the editable preview pane. No storage uploads, no
+    //     scorm_courses upsert, no ZIP packaging, no cover regen
+    //     (suppressed at slot push above). Override application from
+    //     §9.4 has already mutated courseManifest in place.
+    // --------------------------------------------------------------
+    if (body.dryRun === true) {
+      return jsonOk({
+        status: 'preview',
+        manifest: courseManifest,
+        warnings: [...transformWarnings, ...enhanceWarnings, ...sanitizationWarnings],
+      });
     }
 
     // --------------------------------------------------------------
@@ -709,7 +1045,7 @@ Deno.serve(async (req) => {
       coverImageUrl: absoluteCoverUrl,
       title: courseManifest.title,
       isReplacement: existing !== null && existing !== undefined,
-      warnings: [...transformWarnings, ...enhanceWarnings, ...packagingWarnings],
+      warnings: [...transformWarnings, ...enhanceWarnings, ...sanitizationWarnings, ...packagingWarnings],
     });
   } catch (err) {
     console.error('scorm-build unexpected error:', err);
