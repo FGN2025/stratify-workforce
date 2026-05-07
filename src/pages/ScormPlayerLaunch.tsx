@@ -44,9 +44,38 @@ export default function ScormPlayerLaunch() {
 
   // v0.3: POST to scorm-session-complete with the locked contract payload.
   // For v0 this is a debug-only no-op so toolkit Step 7 wiring sees the shape.
+  // Player now emits the full v0.3 ProgressState including sessionId,
+  // sessionTimeSeconds, lessonStatus, lessonLocation, scoreRaw,
+  // passingThreshold, passed, scormSuspendData. Hook swap (Step 7 of
+  // PHASE_2_SPEC.md §"v0.3 coordination contract") will replace this
+  // log with a debounced POST to /functions/v1/scorm-session-complete.
   const reportProgress = (state: ProgressState) => {
     // eslint-disable-next-line no-console
-    console.debug('[scorm-player] progress', { courseId, state });
+    console.debug('[scorm-player] progress', {
+      courseId,
+      // v0.3 wire-format preview (snake_case keys; mapped here so the
+      // debug output matches what the hook will POST when Lovable's
+      // edge function lands).
+      payload: {
+        course_id: courseId,
+        session_id: state.sessionId,
+        session_time_seconds: state.sessionTimeSeconds,
+        lesson_status: state.lessonStatus,
+        lesson_location: state.lessonLocation,
+        score_raw: state.scoreRaw,
+        passing_threshold: state.passingThreshold,
+        scorm_suspend_data: state.scormSuspendData,
+        passed: state.passed,
+      },
+      // Also keep the raw v0 ProgressState available for any consumer
+      // that wants the legacy shape during the v0.3 transition.
+      legacy: {
+        currentModuleId: state.currentModuleId,
+        completedModuleIds: state.completedModuleIds,
+        quizScores: state.quizScores,
+        status: state.status,
+      },
+    });
   };
 
   if (loading) {

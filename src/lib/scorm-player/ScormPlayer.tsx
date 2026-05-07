@@ -1,14 +1,25 @@
 // Vendored from fgn-scorm-toolkit packages/scorm-player (v0 minimal port).
 // Phase 2 v0: presentation-only. reportProgress() is wired by the host
 // (ScormPlayerLaunch) and is a no-op until v0.3 ships scorm-session-complete.
+//
+// v0.3 plumbing added 2026-05-06: sessionId / session-time / suspend
+// serializer / lessonStatus mapping / restore-from-suspend. All behind the
+// existing onProgress callback so v0 host (still console.debug) is unchanged.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { CheckCircle2, ExternalLink, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
-import type { CourseManifest, CourseModule, ProgressState, QuizQuestion } from './types';
+import type {
+  CourseManifest,
+  CourseModule,
+  ProgressState,
+  QuizQuestion,
+  ScormLessonStatus,
+  ScormSuspendDataV1,
+} from './types';
 
 interface Props {
   manifest: CourseManifest;
@@ -16,7 +27,17 @@ interface Props {
   onProgress?: (state: ProgressState) => void;
   onFinish?: () => void;
   finishCta?: { label: string; href: string } | null;
+  /**
+   * Optional suspend-data string from a prior session. Hosts that have
+   * already loaded scorm_course_progress.suspend_data on mount can pass
+   * it here; the Player will hydrate index / completed / quiz state from
+   * the embedded {v:1, ...} envelope. Positions not present in the
+   * current manifest are dropped (graceful degrade across regenerates).
+   */
+  initialSuspendData?: string;
 }
+
+const SUSPEND_DATA_BYTE_CAP = 4096;
 
 function resolveAssetUrl(baseUrl: string, relative: string): string {
   if (/^https?:/.test(relative)) return relative;
@@ -27,12 +48,65 @@ function resolveAssetUrl(baseUrl: string, relative: string): string {
   }
 }
 
-export function ScormPlayer({ manifest, manifestBaseUrl, onProgress, onFinish, finishCta }: Props) {
+export function ScormPlayer({
+  manifest,
+  manifestBaseUrl,
+  onProgress,
+  onFinish,
+  finishCta,
+  initialSuspendData,
+}: Props) {
   const modules = manifest.modules;
   const [index, setIndex] = useState(0);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [quizState, setQuizState] = useState<Record<string, { score: number; passed: boolean }>>({});
   const [showFinish, setShowFinish] = useState(false);
+
+  // v0.3: stable session id per Player mount (UUID v4).
+  const sessionIdRef = useRef<string>('');
+  if (!sessionIdRef.current) {
+    sessionIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  // v0.3: monotonic seconds since mount. Pause/blur handling deferred
+  // (the contract just says "your call"); for v0.3 we tick continuously.
+  const [sessionTimeSeconds, setSessionTimeSeconds] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setSessionTimeSeconds((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // v0.3: restore from suspend data on mount. Run once; manifest is
+  // assumed stable for the Player's lifetime (parent remounts on
+  // course change). Bounded to v=1 envelopes; older shapes are ignored.
+  useEffect(() => {
+    if (!initialSuspendData) return;
+    try {
+      const parsed = JSON.parse(initialSuspendData) as ScormSuspendDataV1;
+      if (parsed.v !== 1) return;
+      const restoredIndex = modules.findIndex((m) => m.position === parsed.currentPosition);
+      if (restoredIndex >= 0) setIndex(restoredIndex);
+      const restoredCompleted = new Set<string>();
+      for (const pos of parsed.completedPositions ?? []) {
+        const mod = modules.find((m) => m.position === pos);
+        if (mod) restoredCompleted.add(mod.id);
+      }
+      if (restoredCompleted.size > 0) setCompleted(restoredCompleted);
+      const restoredQuiz: Record<string, { score: number; passed: boolean }> = {};
+      for (const [posStr, result] of Object.entries(parsed.quizScores ?? {})) {
+        const pos = Number(posStr);
+        const mod = modules.find((m) => m.position === pos && m.type === 'quiz');
+        if (mod) restoredQuiz[mod.id] = result;
+      }
+      if (Object.keys(restoredQuiz).length > 0) setQuizState(restoredQuiz);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[scorm-player] failed to restore from suspend data:', err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const current = modules[index];
   const allDone = completed.size >= modules.length;
@@ -45,16 +119,80 @@ export function ScormPlayer({ manifest, manifestBaseUrl, onProgress, onFinish, f
     ? resolveAssetUrl(manifestBaseUrl, manifest.coverImageUrl)
     : manifest.coverImageRemoteUrl ?? null;
 
-  const emit = (next: Partial<ProgressState> = {}) => {
-    const state: ProgressState = {
+  // v0.3: derive ProgressState fresh on every emit. Locating quiz module
+  // up front so multiple downstream derivations don't repeat the lookup.
+  const buildState = (): ProgressState => {
+    const quizModule = modules.find((m) => m.type === 'quiz');
+    const quizResult = quizModule ? quizState[quizModule.id] : undefined;
+    const scoreRaw = quizResult?.score ?? null;
+    const passingThreshold = quizModule && quizModule.type === 'quiz' ? quizModule.passThreshold : null;
+
+    // SCORM 1.2 lesson_status mapping
+    const lessonStatus: ScormLessonStatus = (() => {
+      if (allDone) {
+        if (quizModule) return quizResult?.passed ? 'passed' : 'failed';
+        return 'completed';
+      }
+      if (completed.size > 0 || index > 0 || sessionTimeSeconds > 0) return 'incomplete';
+      return 'not attempted';
+    })();
+
+    const passed = quizModule ? quizResult?.passed ?? false : allDone;
+
+    // Suspend payload — position-keyed for density and regen-survival.
+    const completedPositions = Array.from(completed)
+      .map((id) => modules.find((m) => m.id === id)?.position)
+      .filter((p): p is number => typeof p === 'number')
+      .sort((a, b) => a - b);
+    const quizScoresByPosition: Record<string, { score: number; passed: boolean }> = {};
+    for (const [modId, result] of Object.entries(quizState)) {
+      const pos = modules.find((m) => m.id === modId)?.position;
+      if (typeof pos === 'number') quizScoresByPosition[String(pos)] = result;
+    }
+    const suspendObj: ScormSuspendDataV1 = {
+      v: 1,
+      currentPosition: current?.position ?? 0,
+      completedPositions,
+      quizScores: quizScoresByPosition,
+    };
+    const scormSuspendData = JSON.stringify(suspendObj);
+    if (scormSuspendData.length > SUSPEND_DATA_BYTE_CAP) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[scorm-player] scormSuspendData exceeds ${SUSPEND_DATA_BYTE_CAP} bytes:`,
+        scormSuspendData.length,
+      );
+    }
+
+    return {
       currentModuleId: current?.id ?? null,
       completedModuleIds: Array.from(completed),
       quizScores: quizState,
-      status: completed.size >= modules.length ? 'passed' : 'in_progress',
-      ...next,
+      status: allDone ? 'passed' : 'in_progress',
+
+      // v0.3 contract fields — host's useFgnAcademyProgress maps these
+      // to snake_case wire format (session_id, session_time_seconds,
+      // lesson_status, lesson_location, score_raw, passing_threshold,
+      // passed, scorm_suspend_data).
+      sessionId: sessionIdRef.current,
+      sessionTimeSeconds,
+      lessonStatus,
+      lessonLocation: current ? String(current.position) : null,
+      scoreRaw,
+      passingThreshold,
+      passed,
+      scormSuspendData,
     };
-    onProgress?.(state);
   };
+
+  // Emit on every meaningful state change. Session time ticks are
+  // intentionally NOT included in deps to avoid 1Hz emit churn — the
+  // current sessionTimeSeconds is read from closure at emit time, so
+  // every emit reflects the freshest counter.
+  useEffect(() => {
+    onProgress?.(buildState());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, completed, quizState]);
 
   const markComplete = (mod: CourseModule) => {
     setCompleted((prev) => {
@@ -62,7 +200,6 @@ export function ScormPlayer({ manifest, manifestBaseUrl, onProgress, onFinish, f
       next.add(mod.id);
       return next;
     });
-    emit();
   };
 
   const goNext = () => {
