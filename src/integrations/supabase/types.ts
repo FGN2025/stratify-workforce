@@ -1015,11 +1015,14 @@ export type Database = {
           created_at: string
           id: string
           last_session_at: string | null
+          last_session_id: string | null
           lesson_id: string | null
           lesson_location: string | null
-          lesson_status: string | null
+          lesson_status: string
           score: number | null
+          score_raw: number | null
           suspend_data: string | null
+          total_time_seconds: number
           updated_at: string
           user_id: string
         }
@@ -1029,11 +1032,14 @@ export type Database = {
           created_at?: string
           id?: string
           last_session_at?: string | null
+          last_session_id?: string | null
           lesson_id?: string | null
           lesson_location?: string | null
-          lesson_status?: string | null
+          lesson_status?: string
           score?: number | null
+          score_raw?: number | null
           suspend_data?: string | null
+          total_time_seconds?: number
           updated_at?: string
           user_id: string
         }
@@ -1043,11 +1049,14 @@ export type Database = {
           created_at?: string
           id?: string
           last_session_at?: string | null
+          last_session_id?: string | null
           lesson_id?: string | null
           lesson_location?: string | null
-          lesson_status?: string | null
+          lesson_status?: string
           score?: number | null
+          score_raw?: number | null
           suspend_data?: string | null
+          total_time_seconds?: number
           updated_at?: string
           user_id?: string
         }
@@ -1257,10 +1266,12 @@ export type Database = {
       }
       skill_credentials: {
         Row: {
+          attempts: number | null
           course_id: string | null
           created_at: string
           credential_type: Database["public"]["Enums"]["credential_type"]
           credential_type_key: string | null
+          duration_seconds: number | null
           expires_at: string | null
           external_reference_id: string | null
           game_title: Database["public"]["Enums"]["game_title"] | null
@@ -1280,10 +1291,12 @@ export type Database = {
           xp_earned: number
         }
         Insert: {
+          attempts?: number | null
           course_id?: string | null
           created_at?: string
           credential_type: Database["public"]["Enums"]["credential_type"]
           credential_type_key?: string | null
+          duration_seconds?: number | null
           expires_at?: string | null
           external_reference_id?: string | null
           game_title?: Database["public"]["Enums"]["game_title"] | null
@@ -1303,10 +1316,12 @@ export type Database = {
           xp_earned?: number
         }
         Update: {
+          attempts?: number | null
           course_id?: string | null
           created_at?: string
           credential_type?: Database["public"]["Enums"]["credential_type"]
           credential_type_key?: string | null
+          duration_seconds?: number | null
           expires_at?: string | null
           external_reference_id?: string | null
           game_title?: Database["public"]["Enums"]["game_title"] | null
