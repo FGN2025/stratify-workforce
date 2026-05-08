@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -15,53 +15,35 @@ interface UseUserRoleReturn {
 }
 
 export function useUserRole(): UseUserRoleReturn {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const userId = user?.id ?? null;
-  const userEmail = user?.email;
-  const [role, setRole] = useState<AppRole | null>(null);
-  // Start in loading state so route guards don't read a stale `isAdmin=false`
-  // for one render between auth resolving and the role fetch starting.
-  const [isLoading, setIsLoading] = useState(true);
+  const accessToken = session?.access_token ?? null;
 
-  useEffect(() => {
-    if (!userId) {
-      setRole(null);
-      setIsLoading(false);
-      return;
-    }
+  const { data: role = null, isLoading } = useQuery({
+    queryKey: ['user-role', userId, accessToken],
+    queryFn: async (): Promise<AppRole | null> => {
+      if (!userId) return null;
 
-    let cancelled = false;
-    setIsLoading(true);
-
-    const fetchRole = async () => {
-      console.log('[useUserRole] Fetching role for user:', userId, userEmail);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (cancelled) return;
-
       if (error) {
         console.error('[useUserRole] Error fetching user role:', error);
-        setRole(null);
-      } else {
-        console.log('[useUserRole] Role result:', data);
-        setRole(data?.role || null);
+        return null;
       }
-      setIsLoading(false);
-    };
 
-    fetchRole();
-
-    return () => {
-      cancelled = true;
-    };
-    // Depend on the primitive userId (stable across auth context re-renders)
-    // rather than the user object, which can be a new reference each render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+      return data?.role ?? null;
+    },
+    enabled: !!userId && !!accessToken,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+  });
 
   return {
     role,
