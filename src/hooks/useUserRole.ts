@@ -16,28 +16,32 @@ interface UseUserRoleReturn {
 
 export function useUserRole(): UseUserRoleReturn {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const userEmail = user?.email;
   const [role, setRole] = useState<AppRole | null>(null);
   // Start in loading state so route guards don't read a stale `isAdmin=false`
   // for one render between auth resolving and the role fetch starting.
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setRole(null);
       setIsLoading(false);
       return;
     }
 
-    // Set loading synchronously on user change so guards wait for fetch.
+    let cancelled = false;
     setIsLoading(true);
 
     const fetchRole = async () => {
-      console.log('[useUserRole] Fetching role for user:', user.id, user.email);
+      console.log('[useUserRole] Fetching role for user:', userId, userEmail);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
+
+      if (cancelled) return;
 
       if (error) {
         console.error('[useUserRole] Error fetching user role:', error);
@@ -50,7 +54,14 @@ export function useUserRole(): UseUserRoleReturn {
     };
 
     fetchRole();
-  }, [user]);
+
+    return () => {
+      cancelled = true;
+    };
+    // Depend on the primitive userId (stable across auth context re-renders)
+    // rather than the user object, which can be a new reference each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   return {
     role,
