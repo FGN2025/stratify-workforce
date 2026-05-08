@@ -347,6 +347,47 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_lesson_mappings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          lesson_id: string
+          notes: string | null
+          play_challenge_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          lesson_id: string
+          notes?: string | null
+          play_challenge_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          lesson_id?: string
+          notes?: string | null
+          play_challenge_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_lesson_mappings_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_posts: {
         Row: {
           channel_game: Database["public"]["Enums"]["game_title"]
