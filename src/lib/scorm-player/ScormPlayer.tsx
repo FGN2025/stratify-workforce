@@ -189,16 +189,37 @@ export function ScormPlayer({
     };
   };
 
+  // v0.3 polish: track whether the user has taken an action since
+  // mount. Without this, restore-on-mount hydrates index/completed/
+  // quizState from suspend_data, the next render's emit fires with
+  // a terminal lessonStatus (passed/completed) for already-completed
+  // courses, the host treats it as a terminal flush, and the server
+  // bumps scorm_course_progress.attempts -- inflating the counter on
+  // every reload of a completed course even though no new attempt
+  // was made. Suppressing the post-restore initial emit until the
+  // user takes a real action keeps `attempts` accurate.
+  const userActedRef = useRef(false);
+
   // Emit on every meaningful state change. Session time ticks are
   // intentionally NOT included in deps to avoid 1Hz emit churn — the
   // current sessionTimeSeconds is read from closure at emit time, so
   // every emit reflects the freshest counter.
   useEffect(() => {
+    // Suppress post-restore initial emit. On a fresh mount with no
+    // restore, restoredRef.current stays false so this guard doesn't
+    // apply and the emit fires (host sees initial state). On a
+    // restored mount, the guard suppresses until the user acts;
+    // user actions flip userActedRef before the resulting state
+    // change triggers this useEffect.
+    if (restoredRef.current && !userActedRef.current) {
+      return;
+    }
     onProgress?.(buildState());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, completed, quizState]);
 
   const markComplete = (mod: CourseModule) => {
+    userActedRef.current = true;
     setCompleted((prev) => {
       const next = new Set(prev);
       next.add(mod.id);
@@ -207,6 +228,7 @@ export function ScormPlayer({
   };
 
   const goNext = () => {
+    userActedRef.current = true;
     if (current) markComplete(current);
     if (index < modules.length - 1) {
       setIndex(index + 1);
@@ -215,7 +237,12 @@ export function ScormPlayer({
       onFinish?.();
     }
   };
-  const goPrev = () => index > 0 && setIndex(index - 1);
+  const goPrev = () => {
+    if (index > 0) {
+      userActedRef.current = true;
+      setIndex(index - 1);
+    }
+  };
 
   if (!current) {
     return <div className="p-8 text-muted-foreground">No modules in this course.</div>;
@@ -252,6 +279,7 @@ export function ScormPlayer({
         <h3 className="text-lg font-display font-semibold mb-4">{current.title}</h3>
         <ModuleBody module={current} baseUrl={manifestBaseUrl} onComplete={() => markComplete(current)}
           onQuizResult={(score, passed) => {
+            userActedRef.current = true;
             setQuizState((q) => ({ ...q, [current.id]: { score, passed } }));
             if (passed) markComplete(current);
           }}
