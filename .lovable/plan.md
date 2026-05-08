@@ -1,72 +1,66 @@
-## Diagnosis
+## Workstream A — Course Builder UI catches up to v0.1 contract
+## Workstream B — DB-driven challenge↔lesson mapping
 
-You're correct — `scorm-session-complete` does not exist in this project. `supabase/functions/` contains only `scorm-build`, `scorm-launch-status`, `scorm-publish`. The hook ships, the migration shipped (table `scorm_course_progress` exists with the v0.3 columns: `total_time_seconds`, `last_session_id`, `score_raw`, `suspend_data`, `lesson_status`, `lesson_location`, `attempts`), but the function code was never authored on the Lovable side. The 404 preflight identical to a bogus name is exactly that: no function directory → no deployment → no route.
+Sequenced so DB migration lands first (B-schema), then edge function update, then both UIs in parallel.
 
-"Auto-deploy on push" only deploys functions whose source is present in the repo. Nothing failed silently; the source was never written.
+---
 
-## Plan
+### Step 1 — Migration: `challenge_lesson_mappings`
 
-Create `supabase/functions/scorm-session-complete/index.ts` against the locked v0.3 contract, deploy it, run a curl matrix, then hand back for your smoke run.
+New table:
+- `id uuid pk`, `play_challenge_id text not null`, `lesson_id uuid not null references lessons(id) on delete cascade`
+- `notes text`, `is_active boolean default true`, `created_by uuid`, `created_at`, `updated_at`
+- `unique (play_challenge_id, lesson_id)`, partial index on `is_active = true`
+- RLS: admins manage all; authenticated read active rows
+- `play_challenge_id` is text (no cross-project FK enforcement, per flag)
 
-### 1. Function: `supabase/functions/scorm-session-complete/index.ts`
+### Step 2 — Edge function: `sync-challenge-completion`
+Replace hardcoded `CHALLENGE_LESSON_MAP` with a query against `challenge_lesson_mappings` filtered by `play_challenge_id` and `is_active = true`, returning `lesson_id[]`. Add 60s in-memory TTL cache keyed by challenge id. Per-lesson XP grant semantics (each mapped lesson grants its own `xp_reward`) called out explicitly in the commit message. Hard redeploy after.
 
-- CORS preflight + standard headers (matches existing scorm-* functions).
-- Auth: validate JWT via `supabase.auth.getUser()` using the caller's Authorization header; 401 if missing/invalid. `verify_jwt = false` at the platform level, validation in code (project convention).
-- Zod-validated body matching the hook's `SessionCompletePayload`:
-  - `course_id: uuid`
-  - `session_id: uuid`
-  - `lesson_status: enum('not attempted','incomplete','completed','passed','failed','browsed')`
-  - `lesson_location: string nullable`
-  - `score_raw: number nullable` (0–100)
-  - `passing_threshold: number nullable` (0–100) — accepted but not persisted (not a column); used only to derive `passed` server-side as a sanity cross-check against the client's `passed`.
-  - `session_time_seconds: number, integer, >= 0, <= 3600` — hard 400 outside envelope, no clamping (matches locked contract).
-  - `scorm_suspend_data: string` (cap at e.g. 64KB to prevent abuse).
-  - `passed: boolean`
-  - `flush?: boolean` (informational; doesn't change server behavior).
-- Verify `course_id` exists in `scorm_courses` and `is_published = true`; 404 if not.
-- Upsert into `scorm_course_progress` on `(user_id, course_id)` with stateless time math:
-  - `total_time_seconds = scorm_course_progress.total_time_seconds + EXCLUDED.session_time_seconds`
-  - `suspend_data = EXCLUDED.suspend_data`
-  - `lesson_status`, `lesson_location`, `score_raw` overwritten with new values
-  - `last_session_id = EXCLUDED.session_id`, `last_session_at = now()`, `updated_at = now()`
-  - On terminal status (`passed`/`failed`/`completed`), increment `attempts` on conflict; on first-pass insert, leave `attempts` at 0 unless terminal (then 1).
-- On terminal `passed=true`:
-  - Resolve `passport_id` via `ensure_skill_passport(user_id)` RPC (exists in db).
-  - INSERT into `skill_credentials` with `source='scorm_session'`, `course_id`, `credential_type='course_completion'`, `title` = course title, `issuer='FGN Academy'`, `xp_earned` = course xp_reward (lookup from `scorm_courses`/source course; if scorm_courses lacks xp, default 0 with warn), `attempts=1`, `external_reference_id = 'scorm:'||course_id||':'||user_id`, `verification_hash` = sha256(passport||ref||now).
-  - ON CONFLICT (passport_id, source, external_reference_id): `attempts = skill_credentials.attempts + 1`, `xp_earned = GREATEST(skill_credentials.xp_earned, EXCLUDED.xp_earned)`, `issued_at = now()`. Requires a unique index — verify and add via migration if missing.
-  - `user_points` first-pass grant: insert XP row only when `attempts = 1` (i.e., the INSERT path, not the conflict path). Use a returning clause from the credential upsert to detect first-pass.
-- Response: `{ status:'ok', total_time_seconds, attempts, credential_issued: boolean }`.
-- All errors include CORS headers; structured logging (`console.log` with JSON) for edge tail.
+### Step 3 — Admin UI: Challenge↔Lesson Mappings
+New tab under existing admin (`ChallengeLessonMappingsTab.tsx`):
+- List view: play_challenge_id, lesson title (joined), notes, active toggle, edit/delete
+- `ChallengeLessonMappingDialog.tsx`: Combobox for play_challenge_id sourced from `work_orders.fgn_origin_challenge_id` distinct values + free-text fallback; Combobox for lesson (course → module → lesson hierarchy); notes textarea
+- Hook: `useChallengeLessonMappings.ts` (list/create/update/delete via supabase client)
 
-### 2. Migration (only if needed)
+### Step 4 — Course Builder v0.1 contract types
+Extend `src/types/course-types.ts`:
+- `ScormBuildRequest`: add `dryRun?: boolean`, `briefingHtml?: Record<lessonId, string>`, `quizQuestions?: Record<lessonId, QuizQuestion[]>`
+- Discriminated `ScormBuildResponse`: `{status:'preview',...}` | `{status:'ok', courseId, manifestUrl,...}` | `{status:'error', code, issues?: ValidationIssue[]}`
+- `ValidationIssue { path: string; code: string; message: string; severity: 'error'|'warning' }`
+- Path parser regex `/(\w[\w-]*)|\[(\d+)\]/g` (per A1 flag)
 
-Verify the unique constraints exist:
-- `scorm_course_progress (user_id, course_id)` — required for upsert.
-- `skill_credentials (passport_id, source, external_reference_id)` where `source='scorm_session'` — required for the re-pass conflict path.
+### Step 5 — CourseBuilder refactor: 3-state machine
+`Configure → Preview → Published`
+- **Configure**: existing form → submit calls `dryRun: true`, transitions to Preview with returned manifest
+- **Preview**: render PreviewPane with editable BriefingEditor (rich text, client DOMPurify pinned to server's 6-tag allowlist per A3) and QuizQuestionEditor per lesson (CRUD; new questions get `crypto.randomUUID()`); "Re-preview" re-runs `dryRun:true` with current overrides; "Publish" runs without `dryRun`
+- **Published**: success summary, link to course
+- Use `coverImageRemoteUrl` over `coverImageUrl` when present (A2)
+- Handle no-quiz / no-briefing courses gracefully (A2)
+- `beforeunload` + react-router blocker for unsaved overrides (A2)
+- ValidationSummary surfaces `issues[]`; click on issue scrolls preview pane to mapped field; client filters `QUIZ_PLACEHOLDER_NEEDS_AUTHORING` and `ENHANCER_NO_OUTPUT` as defense-in-depth (server already filters)
 
-If either is missing, ship a migration that adds them. (Will check via supabase--read_query during build before authoring.)
+### Step 6 — Supporting components
+`src/components/admin/course-builder/`:
+- `PreviewPane.tsx`
+- `BriefingEditor.tsx` (sanitized rich text, 6-tag allowlist)
+- `QuizQuestionEditor.tsx`
+- `ValidationSummary.tsx`
 
-### 3. Deploy + curl matrix
+### Step 7 — Smoke
+End-to-end: preview → edit briefing + quiz → re-preview → publish → manually trigger sync-challenge-completion against a row in the new mappings table; confirm XP grant fires per mapped lesson.
 
-- `supabase--deploy_edge_functions(["scorm-session-complete"])`.
-- Confirm boot via `supabase--edge_function_logs`.
-- Curl matrix against a real published `course_id`:
-  1. Fresh in-progress flush (lesson_status=incomplete, time=30) → 200, row inserted, total=30.
-  2. Second flush (time=45) → 200, total=75, no credential.
-  3. Terminal pass (passed=true, score=85) → 200, credential row, user_points +xp, attempts=1.
-  4. Re-pass (passed=true, score=92) → 200, attempts=2, GREATEST xp held, no second user_points row.
-  5. Negative envelope: time=-5 → 400. time=4000 → 400. Bad body shape → 400. Missing auth → 401. Unknown course → 404.
+---
 
-### 4. Hand back
+### Out of scope
+Multi-work-order curriculum authoring, work-order backfilling, `game_title` on trigger-issued credentials, auto-pull of play participants. Version-row trigger for cache invalidation deferred unless admins report stale lookups.
 
-Ping you with: deployed function id, curl matrix output, and confirmation the 5 negative cells return the expected status codes. You re-run your smoke matrix against the live function; I tail edge logs in parallel.
-
-## Out of scope
-
-- No changes to the hook (`useFgnAcademyProgress.ts`), `ScormPlayer.tsx`, or `ScormPlayerLaunch.tsx` — the client side is correct as shipped at c4acd0e.
-- No changes to `scorm-build` or the enhancer.
-- No backfill endpoint for >1h sessions (out-of-band per locked contract).
-
-## Risk
-
-Low. Function is additive, gated on auth, validates strictly, and the client gracefully degrades on any non-2xx (already proven by the 404 you observed). Worst case the curl matrix surfaces a contract drift I fix before handing back.
+### Files touched
+- New migration
+- `supabase/functions/sync-challenge-completion/index.ts`
+- `src/types/course-types.ts`
+- `src/components/admin/CourseBuilder.tsx` (refactor)
+- `src/components/admin/course-builder/*` (4 new)
+- `src/components/admin/ChallengeLessonMappingsTab.tsx` + dialog
+- `src/hooks/useChallengeLessonMappings.ts`
+- Admin page route to mount the new tab

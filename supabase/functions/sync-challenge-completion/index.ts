@@ -6,23 +6,42 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-/** Maps Track 4 challenge IDs → Challenge Enhancer lesson IDs */
-const CHALLENGE_LESSON_MAP: Record<string, string> = {
-  // CE-01: CS Fiber — Underground Conduit Systems and Bedding Standards
-  '034e8cf3-8832-4c05-a572-67af46dc9971': '2eb52508-7822-429c-b95f-be65d63bfb2d',
-  // CE-02: RC Fiber — Aerial Route Assessment and Pole Line Evaluation
-  'c8298ef1-d359-4536-958f-533e66f7ee4a': 'e4332a97-b389-4486-a8f0-304185c7dd52',
-  // CE-03: CS Fiber — Pre-Construction Safety and 811 Compliance
-  '5e9ace81-fcc3-49f9-9013-5321d2e04d56': '529bb1c4-ff45-4641-840c-edce7a97c39b',
-  // CE-05: CS Fiber — Directional Bore Planning and HDD Site Operations
-  'd8b601c3-ff40-46c6-aa4b-55da7711c8ce': 'fb955601-7957-4d05-a748-fe4c4e64d88d',
-  // CE-06 CS: CS Fiber — OSP Handoff
-  '57da5f29-5a4e-4148-a738-319e7a33252c': '0e1a2041-ca0b-4c49-8d07-73fe1fd51d1b',
-  // CE-06 RC: RC Fiber — Cable Run Documentation
-  '4ce440c1-be75-4700-a8fa-4a80f6d1fbde': '0e1a2041-ca0b-4c49-8d07-73fe1fd51d1b',
-};
-
 const CE_COURSE_ID = 'dab09852-eeb2-431f-b2f4-b881c6b4aa7f';
+
+/**
+ * Per-challenge lesson lookup with a 60s TTL cache.
+ * Source: public.challenge_lesson_mappings (admin-managed). Returns ALL active
+ * lesson_ids mapped to the challenge — each carries its own xp_reward, so a
+ * single play.fgn.gg challenge can grant XP across multiple lessons (callers
+ * are expected to grant XP per-lesson, not deduplicated).
+ */
+type SupabaseLike = ReturnType<typeof createClient>;
+const LESSON_LOOKUP_CACHE = new Map<string, { ids: string[]; expires: number }>();
+const LESSON_LOOKUP_TTL_MS = 60_000;
+
+async function getLessonIdsForChallenge(
+  client: SupabaseLike,
+  challengeId: string,
+): Promise<string[]> {
+  const now = Date.now();
+  const cached = LESSON_LOOKUP_CACHE.get(challengeId);
+  if (cached && cached.expires > now) return cached.ids;
+
+  const { data, error } = await client
+    .from('challenge_lesson_mappings')
+    .select('lesson_id')
+    .eq('play_challenge_id', challengeId)
+    .eq('is_active', true);
+
+  if (error) {
+    console.error('[lesson-lookup] query failed', challengeId, error);
+    return cached?.ids ?? [];
+  }
+
+  const ids = (data ?? []).map((r) => r.lesson_id as string);
+  LESSON_LOOKUP_CACHE.set(challengeId, { ids, expires: now + LESSON_LOOKUP_TTL_MS });
+  return ids;
+}
 
 interface TaskProgress {
   task_id: string;
@@ -454,14 +473,15 @@ Deno.serve(async (req) => {
     }
 
     if (completionStatus === 'completed' && isTrack4) {
-      const lessonId = CHALLENGE_LESSON_MAP[challenge_id] ?? null;
-      const deepLink = lessonId
-        ? `/learn/${CE_COURSE_ID}/lesson/${lessonId}`
+      const lessonIds = await getLessonIdsForChallenge(supabase, challenge_id);
+      const primaryLessonId = lessonIds[0] ?? null;
+      const deepLink = primaryLessonId
+        ? `/learn/${CE_COURSE_ID}/lesson/${primaryLessonId}`
         : `/learn/${CE_COURSE_ID}`;
 
       trackCompletion = {
         track: 'Fiber Optics Construction',
-        lesson_id: lessonId || challenge_id,
+        lesson_id: primaryLessonId || challenge_id,
         challenge_id,
       };
 
@@ -478,7 +498,8 @@ Deno.serve(async (req) => {
           challenge_id,
           work_order_id: workOrder.id,
           work_order_title: workOrder.title,
-          lesson_id: lessonId,
+          lesson_id: primaryLessonId,
+          lesson_ids: lessonIds,
           course_id: CE_COURSE_ID,
           deep_link: deepLink,
         },
