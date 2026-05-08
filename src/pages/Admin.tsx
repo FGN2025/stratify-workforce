@@ -21,6 +21,7 @@ import { AIConfigManager } from '@/components/admin/AIConfigManager';
 import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
 import { CareerPathsManager } from '@/components/admin/CareerPathsManager';
 import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
+import { ChallengeLessonMappingsManager } from '@/components/admin/ChallengeLessonMappingsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
