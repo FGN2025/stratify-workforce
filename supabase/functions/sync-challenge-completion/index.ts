@@ -473,14 +473,15 @@ Deno.serve(async (req) => {
     }
 
     if (completionStatus === 'completed' && isTrack4) {
-      const lessonId = CHALLENGE_LESSON_MAP[challenge_id] ?? null;
-      const deepLink = lessonId
-        ? `/learn/${CE_COURSE_ID}/lesson/${lessonId}`
+      const lessonIds = await getLessonIdsForChallenge(supabase, challenge_id);
+      const primaryLessonId = lessonIds[0] ?? null;
+      const deepLink = primaryLessonId
+        ? `/learn/${CE_COURSE_ID}/lesson/${primaryLessonId}`
         : `/learn/${CE_COURSE_ID}`;
 
       trackCompletion = {
         track: 'Fiber Optics Construction',
-        lesson_id: lessonId || challenge_id,
+        lesson_id: primaryLessonId || challenge_id,
         challenge_id,
       };
 
@@ -497,7 +498,8 @@ Deno.serve(async (req) => {
           challenge_id,
           work_order_id: workOrder.id,
           work_order_title: workOrder.title,
-          lesson_id: lessonId,
+          lesson_id: primaryLessonId,
+          lesson_ids: lessonIds,
           course_id: CE_COURSE_ID,
           deep_link: deepLink,
         },
