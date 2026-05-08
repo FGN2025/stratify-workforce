@@ -43,7 +43,7 @@ interface WorkOrder {
 type Stage = 'configure' | 'preview' | 'published';
 
 // Server's narrow allowlist; we strip everything else client-side too.
-const ALLOWED_TAGS = new Set(['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h2', 'h3']);
+const ALLOWED_TAGS = new Set(['p', 'strong', 'em', 'h3', 'ul', 'li']);
 function sanitizeBriefing(html: string): string {
   // Strip script/style fully, then tags not in allowlist (preserve their text content).
   return html
