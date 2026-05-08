@@ -226,6 +226,8 @@ export default function Admin() {
             <ChallengeSyncTester />
           </div>
         ) : null;
+      case 'challenge-mappings':
+        return <ChallengeLessonMappingsManager />;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : null;
       default:
