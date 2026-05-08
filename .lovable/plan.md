@@ -1,5 +1,9 @@
 
-# v0.2 contract review — Lovable side
+# v0.2 contract — Lovable side — **STATUS: LOCKED (2026-05-08)**
+
+Toolkit confirmed all 6 gap answers: G1 UPDATE-in-place regen (toolkit owns DELETE of `scorm_course_work_orders` + `scorm_course_progress` in single service-role txn, no Lovable trigger needed); G2 `workOrderUrls[]` mirrors `workOrderIds[]` with `leadWorkOrderUrl` pinned; G3 path conventions confirmed (top-level for size/mixed, `[idx]` for per-WO; canonical code `BUNDLE_CHALLENGE_UNPUBLISHED`); G4 skills UNION sourced from `work_orders.skills_required`; G5 multi-bundle render order is Lovable's commit (lead first, then non-lead by `published_at desc`); G6 progress reset confirmed via toolkit's regen DELETE.
+
+## v0.2 contract review — Lovable side
 
 Reviewed against current schema (`scorm_courses` ships with the auto-named `scorm_courses_work_order_id_destination_key` constraint — your DROP statement matches), v0.1 override plumbing, v0.3 credential rollup, and the Course Builder UI shipped today.
 
