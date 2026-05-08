@@ -1103,6 +1103,48 @@ export type Database = {
         }
         Relationships: []
       }
+      scorm_course_work_orders: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          is_lead: boolean
+          position: number
+          work_order_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          is_lead?: boolean
+          position?: number
+          work_order_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          is_lead?: boolean
+          position?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorm_course_work_orders_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "scorm_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scorm_course_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scorm_courses: {
         Row: {
           ai_enhanced: Json | null
