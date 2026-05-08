@@ -602,7 +602,7 @@ function BriefingEditor({
         placeholder="<p>HTML…</p>"
       />
       <div className="text-xs text-muted-foreground">
-        Allowed tags: <code className="font-mono">p, br, strong, em, ul, ol, li, h2, h3</code>.
+        Allowed tags: <code className="font-mono">p, strong, em, h3, ul, li</code>.
         Sanitized client-side and server-side.
       </div>
       <div
