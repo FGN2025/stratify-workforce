@@ -183,21 +183,27 @@ function MappingDialog({
   const [notes, setNotes] = useState('');
   const [isActive, setIsActive] = useState(true);
 
-  // Reset form when dialog opens
-  useState(() => {
-    // no-op; we use a key-based remount below
-  });
-
-  // Initialize on open
-  if (state.open && editing && challenge === '' && lessonId === '' && !useCustom) {
-    const known = challengeOptions.some((c) => c.challenge_id === editing.play_challenge_id);
-    setChallenge(known ? editing.play_challenge_id : '');
-    setUseCustom(!known);
-    setCustomChallenge(known ? '' : editing.play_challenge_id);
-    setLessonId(editing.lesson_id);
-    setNotes(editing.notes ?? '');
-    setIsActive(editing.is_active);
-  }
+  // Initialize form whenever dialog opens
+  useEffect(() => {
+    if (!state.open) return;
+    if (editing) {
+      const known = challengeOptions.some((c) => c.challenge_id === editing.play_challenge_id);
+      setChallenge(known ? editing.play_challenge_id : '');
+      setUseCustom(!known);
+      setCustomChallenge(known ? '' : editing.play_challenge_id);
+      setLessonId(editing.lesson_id);
+      setNotes(editing.notes ?? '');
+      setIsActive(editing.is_active);
+    } else {
+      setChallenge('');
+      setCustomChallenge('');
+      setUseCustom(false);
+      setLessonId('');
+      setNotes('');
+      setIsActive(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.open, editing?.id]);
 
   const reset = () => {
     setChallenge('');
