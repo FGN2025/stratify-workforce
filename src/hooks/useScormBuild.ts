@@ -3,7 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import type { CourseManifest, QuizQuestion } from '@/lib/scorm-player/types';
 
 export interface ScormBuildRequest {
-  workOrderId: string;
+  /** Single-WO path (back-compat). Mutually exclusive with workOrderIds. */
+  workOrderId?: string;
+  /** Bundle path: 2–10 WO ids. Index 0 is the lead. Mutually exclusive with workOrderId. */
+  workOrderIds?: string[];
   destination: 'fgn-academy' | 'broadband-workforce' | 'simu-cdl-path' | 'external-lms';
   brandMode: 'arcade' | 'enterprise';
   scormVersion?: '1.2' | 'cmi5';
@@ -52,7 +55,12 @@ export type ScormBuildResponse =
       manifestUrl: string;
       zipUrl: string | null;
       playerUrl: string | null;
+      /** Lead WO URL (back-compat alias for leadWorkOrderUrl). */
       workOrderUrl: string;
+      /** v0.2: lead WO URL, always present. */
+      leadWorkOrderUrl?: string;
+      /** v0.2: mirrors workOrderIds[] exactly (lead at [0]). Single-WO builds: [workOrderUrl]. */
+      workOrderUrls?: string[];
       coverImageUrl: string | null;
       title: string;
       isReplacement: boolean;
@@ -95,6 +103,12 @@ function classify(data: unknown): ScormBuildResponse {
       warnings: filterWarnings(d.warnings),
     };
   }
+  const leadUrl: string = d.leadWorkOrderUrl ?? d.workOrderUrl;
+  const urls: string[] | undefined = Array.isArray(d.workOrderUrls)
+    ? (d.workOrderUrls as string[])
+    : leadUrl
+      ? [leadUrl]
+      : undefined;
   return {
     kind: 'ok',
     status: d.status ?? 'ok',
@@ -102,7 +116,9 @@ function classify(data: unknown): ScormBuildResponse {
     manifestUrl: d.manifestUrl,
     zipUrl: d.zipUrl ?? null,
     playerUrl: d.playerUrl ?? null,
-    workOrderUrl: d.workOrderUrl,
+    workOrderUrl: leadUrl,
+    leadWorkOrderUrl: leadUrl,
+    workOrderUrls: urls,
     coverImageUrl: d.coverImageUrl ?? null,
     title: d.title,
     isReplacement: !!d.isReplacement,
