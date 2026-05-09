@@ -535,6 +535,7 @@ export type Database = {
           description: string | null
           difficulty_level: Database["public"]["Enums"]["difficulty_level"]
           estimated_hours: number | null
+          game_title: Database["public"]["Enums"]["game_title"] | null
           id: string
           is_published: boolean
           tenant_id: string | null
@@ -548,6 +549,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: Database["public"]["Enums"]["difficulty_level"]
           estimated_hours?: number | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
           id?: string
           is_published?: boolean
           tenant_id?: string | null
@@ -561,6 +563,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: Database["public"]["Enums"]["difficulty_level"]
           estimated_hours?: number | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
           id?: string
           is_published?: boolean
           tenant_id?: string | null
