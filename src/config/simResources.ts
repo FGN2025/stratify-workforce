@@ -1,7 +1,7 @@
 // Simulation Resources Configuration
 // Scalable architecture for all simulator game external resources
 
-import { Truck, Tractor, HardHat, Wrench, Cable, GraduationCap, Briefcase } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Map, GraduationCap, Briefcase } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 
