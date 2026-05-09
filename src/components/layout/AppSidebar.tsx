@@ -300,6 +300,27 @@ export function AppSidebar() {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pl-4">
                         <SidebarMenu>
+                          <SidebarMenuItem key={`${gameKey}-industry`}>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location.pathname === `/sim/${gameKey}`}
+                              tooltip={`${game.title} Industry`}
+                              className={cn(
+                                'transition-colors',
+                                location.pathname === `/sim/${gameKey}`
+                                  ? 'text-primary bg-primary/10'
+                                  : 'text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent'
+                              )}
+                            >
+                              <NavLink to={`/sim/${gameKey}`} className="flex items-center gap-3">
+                                <Target
+                                  className="h-4 w-4"
+                                  style={{ color: game.accentColor }}
+                                />
+                                {!collapsed && <span>Industry Hub</span>}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
                           {hasDbResources ? (
                             gameResources.map((resource) => {
                               const ResourceIcon = getResourceIcon(resource.icon_name);

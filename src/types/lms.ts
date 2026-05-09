@@ -11,6 +11,8 @@ export type AchievementTrigger = 'points' | 'lessons' | 'courses' | 'time' | 'sc
 export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type CredentialType = 'course_completion' | 'certification' | 'badge' | 'skill_verification';
 
+export type GameTitleEnum = 'ATS' | 'Farming_Sim' | 'Construction_Sim' | 'Mechanic_Sim' | 'Fiber_Tech' | 'Roadcraft';
+
 export interface Course {
   id: string;
   tenant_id: string | null;
@@ -21,6 +23,7 @@ export interface Course {
   estimated_hours: number;
   xp_reward: number;
   is_published: boolean;
+  game_title: GameTitleEnum | null;
   created_at: string;
   updated_at: string;
   // Computed/joined fields

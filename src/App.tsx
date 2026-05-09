@@ -44,6 +44,7 @@ import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
 import CourseBuilder from "./pages/admin/CourseBuilder";
 import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
+import SimIndustry from "./pages/SimIndustry";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/eula" element={<Eula />} />
               <Route path="/verify" element={<VerifyCredential />} />
+              <Route path="/sim/:gameTitle" element={<SimIndustry />} />
               
               {/* Learning routes */}
               <Route path="/learn" element={<Learn />} />
