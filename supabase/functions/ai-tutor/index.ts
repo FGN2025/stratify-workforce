@@ -264,14 +264,23 @@ serve(async (req) => {
     // If a notebook_id is configured for this persona, query Open Notebook for grounded context
     let notebookResult: NotebookResult | null = null;
     const notebookId = personaConfig?.notebook_url || null;
-    if (notebookId) {
+    const notebookConfigured = !!(Deno.env.get("OPEN_NOTEBOOK_API_URL") && Deno.env.get("OPEN_NOTEBOOK_API_PASSWORD"));
+    if (notebookId && !notebookConfigured) {
+      console.warn(`[notebook] persona has notebook_id but OPEN_NOTEBOOK_API_URL/PASSWORD not configured — skipping RAG (context=${contextType}, game=${context?.gameTitle ?? "-"})`);
+    }
+    if (notebookId && notebookConfigured) {
       const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
       if (lastUserMessage?.content) {
+        const t0 = Date.now();
         const query = context?.gameTitle
           ? `[${context.gameTitle}] ${lastUserMessage.content}`
           : lastUserMessage.content;
         notebookResult = await queryNotebook(query, notebookId);
+        const ms = Date.now() - t0;
+        console.log(`[notebook] context=${contextType} game=${context?.gameTitle ?? "-"} notebook=${notebookId} status=${notebookResult ? "ok" : "miss"} citations=${notebookResult?.citations.length ?? 0} ms=${ms}`);
       }
+    } else if (!notebookId) {
+      console.log(`[notebook] context=${contextType} game=${context?.gameTitle ?? "-"} status=skipped reason=no_notebook_id`);
     }
 
     const systemPrompt = buildSystemPrompt(basePrompt, context, notebookId, notebookResult);
