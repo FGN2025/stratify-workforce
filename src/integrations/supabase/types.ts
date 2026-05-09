@@ -2220,6 +2220,7 @@ export type Database = {
           amount: number
           created_at: string
           description: string | null
+          event_key: string | null
           id: string
           points_type: Database["public"]["Enums"]["points_type"]
           source_id: string | null
@@ -2230,6 +2231,7 @@ export type Database = {
           amount: number
           created_at?: string
           description?: string | null
+          event_key?: string | null
           id?: string
           points_type?: Database["public"]["Enums"]["points_type"]
           source_id?: string | null
@@ -2240,6 +2242,7 @@ export type Database = {
           amount?: number
           created_at?: string
           description?: string | null
+          event_key?: string | null
           id?: string
           points_type?: Database["public"]["Enums"]["points_type"]
           source_id?: string | null

@@ -252,14 +252,16 @@ Deno.serve(async (req) => {
 
       // First-pass XP grant.
       if (xpReward > 0) {
-        const { error: ptsErr } = await admin.from('user_points').insert({
+        const eventKey = `scorm:first-pass:${p.course_id}:${userId}`;
+        const { error: ptsErr } = await admin.from('user_points').upsert({
           user_id: userId,
           points_type: 'xp',
           amount: xpReward,
           source_type: 'course',
           source_id: p.course_id,
           description: `SCORM course completion: ${course.title}`,
-        });
+          event_key: eventKey,
+        }, { onConflict: 'user_id,event_key', ignoreDuplicates: true });
         if (ptsErr) {
           // Log but don't fail the request — credential is the durable record.
           console.error('user_points insert failed', ptsErr);

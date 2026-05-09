@@ -1,89 +1,57 @@
-## Context
+## Goal
 
-Today the Breakroom integration is **admin-only**: identity linking (`BreakroomUsersTab`), the new `BreakroomMapperManager`, and back-end poll/sync functions. Students get **no visible signal** that Breakroom exists, that their spatial work counts, or how it relates to play.fgn.gg. Breakroom is the *enrichment layer* that turns a sim challenge into a verified spatial task feeding the Skill Passport — that story is invisible to learners and to anyone reviewing a passport.
+Stop double-credit on `user_points` from Breakroom and SCORM completion writers by adding an idempotency key + DB-enforced uniqueness, then making both writers insert-on-conflict-do-nothing.
 
-Below is a prioritized menu of UX improvements. Pick what to ship; nothing here is a database/back-end refactor — most are presentation + a couple of small read-side hooks.
+## Why now
 
----
+`user_points` has no unique constraint today. Three independent writers (`breakroom-lms-sync`, `scorm-session-complete`, achievement evaluators) can each insert XP rows for the same logical event. SCORM already guards via an existing-credential check, but it is an app-level race window, not a DB invariant. Breakroom has no guard at all on the WO XP insert.
 
-## Tier 1 — Make Breakroom visible to students (highest leverage)
+## Step 1 — Schema (migration)
 
-### 1A. "Spatial Task" badge on Work Order cards & detail
-When a work order has `metadata.breakroom_course_name` (or any `breakroom_*` mapping), show a small **"Spatial Task — Breakroom"** chip next to the existing play.fgn.gg / SCORM badges on:
-- `WorkOrderCard` (dashboard + marketplace)
-- `WorkOrderDetail` header
-- `EnrolledCourses` lesson rows when the lesson's WO is Breakroom-enriched
+Add a nullable idempotency key to `public.user_points`:
 
-Tooltip: *"This challenge has a metaverse extension in Breakroom. Completing it there awards XP + Skill Passport credit."*
+- `event_key text` — stable identifier per logical award event.
+- Partial unique index: `unique (user_id, event_key) where event_key is not null`.
+- Backfill existing rows: leave `event_key` NULL (partial index ignores them, so no conflict on legacy data).
 
-### 1B. "Open in Breakroom" CTA on Work Order Detail
-Mirror the existing "Play on play.fgn.gg" button. Two states:
-- **Identity linked** (`breakroom_identity` exists for the user) → launch button to `curator.sine.space` (or the specific room URL stored in WO metadata).
-- **Not linked** → "Connect your Breakroom account" CTA that opens a small dialog explaining how to link (admin-assisted today; eventually self-serve — see Tier 3).
+Key format convention (documented in migration comment):
 
-### 1C. Recent Spatial Completions feed on Profile
-A new section on `Profile` (and PublicPassport) titled **"Spatial Verifications"** that lists the latest `breakroom_sync_attempts` with `sync_outcome = 'completed'` for the viewing user. Each row: quiz name → matched Work Order → XP awarded → "verified in Breakroom" badge with timestamp. This is the user-visible proof that the loop closed.
+```text
+breakroom:wo:<work_order_id>:quiz:<breakroom_quiz_id>
+breakroom:achv:<achievement_id>:quiz:<breakroom_quiz_id>
+scorm:first-pass:<course_id>:<user_id>
+```
 
----
+Including the user is unnecessary because the unique index already scopes to `user_id`, but keeping it in the SCORM key keeps the literal greppable.
 
-## Tier 2 — Close the feedback loop (real-time + clarity)
+## Step 2 — `breakroom-lms-sync`
 
-### 2A. Toast / notification when a Breakroom completion lands
-Reuse `useNotifications`. When `breakroom-lms-sync` writes a completion, also insert a notification row (`type: 'spatial_verification'`). Student sees:
-> "✅ Spatial task verified — *ASE A1 Engine Repair* — +100 XP added to your Skill Passport."
+Two `user_points` insert sites today; both get an `event_key` and switch to `upsert` with `onConflict: 'user_id,event_key', ignoreDuplicates: true`:
 
-This converts a silent 15-min poll into a delightful in-app moment.
+1. **WO completion XP** (line ~115): `event_key = breakroom:wo:<workOrder.id>:quiz:<metadata.breakroom_quiz_id ?? course_id_external>`.
+2. **Achievement XP** in `evaluateFgnAchievements`: `event_key = breakroom:achv:<achievement.id>:quiz:<...>`. Pass the quiz id through as a parameter.
 
-### 2B. Source attribution on Skill Passport credentials
-Credentials already track `source` (e.g., `module_milestone`, `course_completion`). Add display logic so credentials that originated from a Breakroom sync show a **"Verified in Breakroom"** ribbon vs. play.fgn.gg's existing chip. Same component (`CertificationCard` / `AchievementCard`), one new variant.
+If `breakroom_quiz_id` is missing from metadata, fall back to `course_id_external` so the key is always defined. No behavior change for unique events; duplicate replays become no-ops.
 
-### 2C. "How verification works" explainer
-Tiny component on Work Order Detail and Skill Passport: a 3-step diagram —
-`play.fgn.gg → Breakroom (spatial task) → Skill Passport`
-— making the bridge role of Academy explicit. Static content, helps onboarding.
+## Step 3 — `scorm-session-complete`
 
----
+The first-pass XP insert (line ~256) gets `event_key = scorm:first-pass:<course_id>:<userId>` and switches to upsert with `ignoreDuplicates: true`. The existing `existingCred` check stays as-is (still useful for the credential row); the unique index becomes the durable backstop against concurrent terminal callbacks for the same course.
 
-## Tier 3 — Reduce admin toil & user friction
+## Step 4 — Verification
 
-### 3A. Self-serve Breakroom identity linking
-Today admins link `breakroom_username` ↔ FGN user via `BreakroomUsersTab`. Add a **Settings → Connections** card next to Discord:
-- User enters their Breakroom username.
-- Edge function verifies it exists in Breakroom API.
-- Writes `breakroom_identity` with a `verification_status = 'pending_admin_review'` flag (to prevent identity hijack), or auto-approves if the email returned by Breakroom matches the FGN account email.
+- Re-run the Breakroom Mapper retry on a previously synced quiz; confirm `user_points` row count for that user/WO does not increase.
+- Trigger two near-simultaneous SCORM terminal callbacks (curl) for the same course; confirm exactly one XP row.
+- Spot-check `select count(*), user_id, event_key from user_points where event_key is not null group by 1,2,3 having count(*)>1;` returns zero.
 
-### 3B. Admin "Suggested mappings" in the Mapper page
-Extend `BreakroomMapperManager` with a fuzzy-match suggestion column: for each unmapped quiz, show top 3 work orders ranked by title similarity (Levenshtein on quiz name vs. WO title) so admins can one-click instead of searching. Pure client-side compute on existing data.
+## Out of scope (intentionally)
 
-### 3C. Bulk reset & retry filters
-`BreakroomMapperManager` already lets admins reset one row. Add: filter by outcome, multi-select, bulk reset. Useful after a bulk mapping pass.
+- Notification dedupe (separate concern; can reuse the same key later).
+- Backfilling `event_key` on historical rows.
+- Bundle-aware Breakroom crediting (the bigger Mapper change discussed previously).
+- Changing `user_game_stats` math — only `user_points` is in scope.
 
----
+## Files touched
 
-## Tier 4 — Telemetry & trust
-
-### 4A. Public passport: spatial verification counter
-On `PublicPassport` / `EmbedPassport`, show a stat: *"N spatial tasks verified in Breakroom"*. Reinforces that the passport is multi-source (not just sim playtime).
-
-### 4B. Audit log surfacing for admins
-Add `skipped_unmapped` and `synced` counters to the existing audit-log view (`useAuditLogs`) with a Breakroom filter. Already discussed earlier, still pending.
-
-### 4C. Health badge for Breakroom session tokens
-Tiny indicator in Admin → Breakroom Mapper header: green if last poll succeeded with `students_found > 0`, amber if 0 students, red if 401/403. Saves the "is the token expired?" debugging round-trip.
-
----
-
-## Recommended first slice
-
-If you want a single, cohesive ship that *immediately* improves student UX:
-
-> **Tier 1 (1A + 1B + 1C) + Tier 2A.**
-> Students see the spatial task exists, can launch it, get notified when it completes, and see it on their profile. ~4 small frontend components + 1 small notification insert in `breakroom-lms-sync`.
-
-Tier 3 is the next-best chunk (admin sanity + self-serve linking) and unblocks scale beyond Darcy/RacerX.
-
----
-
-## Decision needed
-
-Which tier(s) do you want me to plan in detail for implementation? Recommend confirming the **first slice above** or picking a different combination.
+- New migration: add column + partial unique index + comment.
+- `supabase/functions/breakroom-lms-sync/index.ts` — 2 insert sites + helper signature.
+- `supabase/functions/scorm-session-complete/index.ts` — 1 insert site.

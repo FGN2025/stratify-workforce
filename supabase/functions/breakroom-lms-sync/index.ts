@@ -113,14 +113,18 @@ Deno.serve(async (req) => {
         }, { onConflict: 'user_id,work_order_id' })
 
       if (!completionError && completionStatus === 'completed') {
-        await fgnClient.from('user_points').insert({
+        const quizKeyPart = (metadata as Record<string, unknown> | undefined)?.breakroom_quiz_id
+          ?? course_id_external
+        const woEventKey = `breakroom:wo:${workOrder.id}:quiz:${quizKeyPart}`
+        await fgnClient.from('user_points').upsert({
           user_id,
           points_type: 'xp',
           amount: woXp,
           source_type: 'work_order',
           source_id: workOrder.id,
-          description: `Breakroom LMS completion: ${course_id_external}`
-        })
+          description: `Breakroom LMS completion: ${course_id_external}`,
+          event_key: woEventKey,
+        }, { onConflict: 'user_id,event_key', ignoreDuplicates: true })
 
         const { data: existingStats } = await fgnClient
           .from('user_game_stats')
@@ -183,7 +187,8 @@ Deno.serve(async (req) => {
     }
 
     results.fgn_achievements = await evaluateFgnAchievements(
-      fgnClient, user_id, event_type, score, passed
+      fgnClient, user_id, event_type, score, passed,
+      (metadata as Record<string, unknown> | undefined)?.breakroom_quiz_id ?? course_id_external
     )
 
   } catch (err) {
@@ -337,8 +342,9 @@ async function evaluateFgnAchievements(
   client: ReturnType<typeof createClient>,
   userId: string,
   eventType: string,
-  score?: number,
-  passed?: boolean
+  score: number | undefined,
+  passed: boolean | undefined,
+  quizKeyPart: unknown
 ): Promise<string> {
   const { data: achievements } = await client
     .from('achievements')
@@ -371,14 +377,16 @@ async function evaluateFgnAchievements(
       })
 
       if (achievement.xp_reward) {
-        await client.from('user_points').insert({
+        const achvEventKey = `breakroom:achv:${achievement.id}:quiz:${quizKeyPart}`
+        await client.from('user_points').upsert({
           user_id: userId,
           points_type: 'xp',
           amount: achievement.xp_reward,
           source_type: 'achievement',
           source_id: achievement.id,
-          description: 'Achievement unlocked via Breakroom LMS'
-        })
+          description: 'Achievement unlocked via Breakroom LMS',
+          event_key: achvEventKey,
+        }, { onConflict: 'user_id,event_key', ignoreDuplicates: true })
       }
       awarded++
     }
