@@ -68,7 +68,7 @@ async function getBreakroomToken(): Promise<string | null> {
   return token
 }
 
-async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
+async function fetchAllStudents(token: string, rawSink?: unknown[]): Promise<BreakroomStudent[]> {
   const allStudents: BreakroomStudent[] = []
   let page = 1
   const pageSize = 100
@@ -94,6 +94,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
     }
 
     const data = await res.json()
+    if (rawSink) rawSink.push({ endpoint: 'students', page, payload: data })
     const students: BreakroomStudent[] = data.Students || data.students || []
     allStudents.push(...students)
 
@@ -104,7 +105,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
   return allStudents
 }
 
-async function fetchCompletedQuizzes(token: string, userId: number): Promise<BreakroomQuiz[]> {
+async function fetchCompletedQuizzes(token: string, userId: number, rawSink?: unknown[]): Promise<BreakroomQuiz[]> {
   const allQuizzes: BreakroomQuiz[] = []
   let page = 1
   const pageSize = 100
@@ -132,6 +133,7 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
     }
 
     const data = await res.json()
+    if (rawSink) rawSink.push({ endpoint: 'quizzes', userId, page, payload: data })
     const quizzes: BreakroomQuiz[] = data.MemberQuizzes || data.memberQuizzes || []
     allQuizzes.push(...quizzes)
 
@@ -146,6 +148,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  const url = new URL(req.url)
+  const debug = url.searchParams.get('debug') === '1'
+  const rawSink: unknown[] | undefined = debug ? [] : undefined
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -170,7 +176,7 @@ Deno.serve(async (req) => {
       throw new Error('No session token')
     }
 
-    const students = await fetchAllStudents(token)
+    const students = await fetchAllStudents(token, rawSink)
     results.students_found = students.length
 
     const breakroomUserIds = students.map(s => s.id)
@@ -194,7 +200,7 @@ Deno.serve(async (req) => {
 
       let quizzes: BreakroomQuiz[]
       try {
-        quizzes = await fetchCompletedQuizzes(token, student.id)
+        quizzes = await fetchCompletedQuizzes(token, student.id, rawSink)
       } catch (err) {
         results.errors.push(`Quiz fetch error for ${student.name}: ${String(err)}`)
         continue
@@ -348,7 +354,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ success: true, results }),
+    JSON.stringify({ success: true, results, ...(debug ? { raw: rawSink } : {}) }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   )
 })
