@@ -187,7 +187,8 @@ Deno.serve(async (req) => {
     }
 
     results.fgn_achievements = await evaluateFgnAchievements(
-      fgnClient, user_id, event_type, score, passed
+      fgnClient, user_id, event_type, score, passed,
+      (metadata as Record<string, unknown> | undefined)?.breakroom_quiz_id ?? course_id_external
     )
 
   } catch (err) {
