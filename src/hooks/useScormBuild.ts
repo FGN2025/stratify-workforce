@@ -103,6 +103,12 @@ function classify(data: unknown): ScormBuildResponse {
       warnings: filterWarnings(d.warnings),
     };
   }
+  const leadUrl: string = d.leadWorkOrderUrl ?? d.workOrderUrl;
+  const urls: string[] | undefined = Array.isArray(d.workOrderUrls)
+    ? (d.workOrderUrls as string[])
+    : leadUrl
+      ? [leadUrl]
+      : undefined;
   return {
     kind: 'ok',
     status: d.status ?? 'ok',
@@ -110,7 +116,9 @@ function classify(data: unknown): ScormBuildResponse {
     manifestUrl: d.manifestUrl,
     zipUrl: d.zipUrl ?? null,
     playerUrl: d.playerUrl ?? null,
-    workOrderUrl: d.workOrderUrl,
+    workOrderUrl: leadUrl,
+    leadWorkOrderUrl: leadUrl,
+    workOrderUrls: urls,
     coverImageUrl: d.coverImageUrl ?? null,
     title: d.title,
     isReplacement: !!d.isReplacement,
