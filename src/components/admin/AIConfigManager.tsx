@@ -164,8 +164,6 @@ function PersonaEditor({ persona, models }: { persona: AIPersonaConfig; models: 
     || (override || '') !== (persona.model_override || '')
     || (notebookUrlValue || '') !== (persona.notebook_url || '');
 
-  const isGamePersona = persona.context_type.startsWith('game_');
-
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
@@ -189,20 +187,18 @@ function PersonaEditor({ persona, models }: { persona: AIPersonaConfig; models: 
           className="min-h-[120px] text-xs font-mono"
           placeholder="System prompt..."
         />
-        {isGamePersona && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Notebook URL</label>
-            <Input
-              value={notebookUrlValue}
-              onChange={(e) => setNotebookUrlValue(e.target.value)}
-              placeholder="https://www.open-notebook.ai/notebook/..."
-              className="text-xs"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              SIM-specific Open Notebook URL. Atlas will reference this as a knowledge source.
-            </p>
-          </div>
-        )}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Open Notebook ID</label>
+          <Input
+            value={notebookUrlValue}
+            onChange={(e) => setNotebookUrlValue(e.target.value)}
+            placeholder="notebook_id (e.g. 01H...)"
+            className="text-xs"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            Per-persona Open Notebook id. Overrides the global notebook. Leave blank to skip RAG for this persona.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <Select value={override} onValueChange={setOverride}>
             <SelectTrigger className="flex-1">
@@ -224,7 +220,7 @@ function PersonaEditor({ persona, models }: { persona: AIPersonaConfig; models: 
                 updates: {
                   system_prompt: prompt,
                   model_override: override === 'none' ? null : override || null,
-                  ...(isGamePersona ? { notebook_url: notebookUrlValue || null } : {}),
+                  notebook_url: notebookUrlValue || null,
                 },
               })
             }

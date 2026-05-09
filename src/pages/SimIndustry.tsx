@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { useParams, NavLink, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
@@ -112,6 +113,14 @@ export default function SimIndustry() {
     () => simResources.filter((r) => r.game_title === game && r.is_active),
     [simResources, game],
   );
+
+  // Activate SIM-specific Atlas persona while on this hub
+  useEffect(() => {
+    if (isValid) {
+      setCurrentGameTitle(game);
+      return () => setCurrentGameTitle(null);
+    }
+  }, [isValid, game]);
 
   if (!isValid || !meta) {
     return <Navigate to="/work-orders" replace />;

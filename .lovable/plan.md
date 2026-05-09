@@ -1,61 +1,73 @@
-## SIM Activation Plan — Roadcraft & Mechanic_Sim
+# Atlas Persona Persistence — Assessment & Gaps
 
-Goal: bring both SIMs from "skeleton row exists" to "Industry Hub feels alive" parity with Fiber_Tech / Construction_Sim.
+## Persistence layer (DB) — HEALTHY
 
-### Current State (audited)
+`ai_persona_configs` has 11 active rows resolved by `ai-tutor` in this order: `game_<title>` → `context_type` → hardcoded fallback. Coverage:
 
-| Surface | Roadcraft | Mechanic_Sim |
-|---|---|---|
-| `game_channels` row | ✅ teal `#12cabd`, no cover | ✅ red `#ef4444`, no cover |
-| Work orders | 2 active | 1 active |
-| Courses (`game_title`) | 0 | 0 |
-| `sim_resources` | 0 | 0 |
-| `credential_types` | 0 | 0 |
-| `career_path_requirements` | 0 (no path) | 4 (diesel-mechanic) |
-| Subscribers | 0 | 1 |
-| Atlas AI persona | ❌ | ❌ |
-| Sidebar icon | shares `Cable` w/ Fiber-Tech | `Wrench` ✅ |
+| context_type            | persona                       | prompt_len | notebook_url | model_override |
+|-------------------------|-------------------------------|-----------:|--------------|----------------|
+| general                 | Atlas - General               | 640        | —            | —              |
+| research                | Atlas - Research              | 485        | —            | —              |
+| onboarding              | Atlas - Onboarding            | 398        | —            | —              |
+| course                  | Atlas - Course                | 410        | —            | —              |
+| work_order              | Atlas - Work Order            | 364        | —            | —              |
+| game_ATS                | Atlas - CDL Training          | 608        | —            | —              |
+| game_Fiber_Tech         | Atlas - Fiber Tech            | 545        | —            | —              |
+| game_Construction_Sim   | Atlas — Construction Sim Tutor| 690        | —            | —              |
+| game_Farming_Sim        | Atlas — Farming Sim Tutor     | 656        | —            | —              |
+| game_Mechanic_Sim       | Atlas — Mechanic Sim Tutor    | 667        | —            | —              |
+| game_Roadcraft          | Atlas - Roadcraft             | 1033       | —            | —              |
 
-### Phased Sequencing
+Every `game_title` enum value has a matching persona row. Persona edits persist via `useUpdateAIPersona` and survive sessions.
 
-**Phase A — Visual Identity (fast, ~30 min, no content authoring)**
-1. Swap Roadcraft icon from `Cable` → distinct icon (proposed: `Map` or `Construction`). Update `GameIcon.tsx` and `simResources.ts`.
-2. Author channel cover images for both SIMs (1920×600 hero), upload via media library, set `game_channels.cover_image_url`.
-3. Tighten `game_channels.description` copy + `simResources.ts` `title`/`shortTitle` so the Industry Hub hero reads cleanly.
-4. Align Roadcraft accent: `simResources` says `#22C55E` but channel row is `#12cabd`. Pick one and reconcile.
+## Gaps
 
-**Phase B — Career Spine (Mechanic_Sim first, it has a head start)**
-5. Mechanic_Sim: define 2–3 `credential_types` matching the existing `diesel-mechanic` `career_path_requirements` rows (so readiness % stops being 0).
-6. Roadcraft: create a `career_paths` row (e.g. `roadcraft-operator` or `infrastructure-tech`) + 4–6 `career_path_requirements` rows + matching `credential_types`.
+### 1. SIM Industry Hub does not activate the SIM persona (HIGH)
+`/sim/:gameTitle` (e.g. the current `/sim/Mechanic_Sim`) never calls `setCurrentGameTitle`, and `useTutorContext` has no `/sim/...` branch — Atlas falls through to the generic `general` persona instead of `game_Mechanic_Sim`. Most visible miss given Roadcraft + Mechanic_Sim were just activated.
 
-**Phase C — Curriculum Seed (1 starter course per SIM)**
-7. Roadcraft: "Roadcraft Foundations" course, `game_title='Roadcraft'`, 4–6 lessons covering equipment intro, site safety, basic ops, mission flow.
-8. Mechanic_Sim: "CMS Foundations" course, `game_title='Mechanic_Sim'`, 4–6 lessons covering diagnostics workflow, tooling, safety, work-order intake.
-9. Decide authoring path — see Open Question #1.
+### 2. Course / Lesson pages don't pass `gameTitle` (HIGH)
+- `/learn/courses/:id` resolves to `type: 'course'` with no `gameTitle`, even though `courses.game_title` is now populated for Roadcraft Foundations and CMS Foundations.
+- `/lessons/:id` isn't routed at all in `useTutorContext` — falls into default `general`. The `lesson` value exists in `TutorContextType` but is never produced.
 
-**Phase D — Resources & Work Order Expansion**
-10. Add 2–3 `sim_resources` per SIM (partner sites, official docs, community).
-11. Author 2–3 additional work orders per SIM to give the Hub depth.
+Result today: SIM-flavored personas only fire on work-order detail pages.
 
-**Phase E — Integrations (defer unless requested)**
-12. Atlas AI persona rows for each SIM (`ai_persona_configs.context_type='sim:Roadcraft'`, etc.).
-13. Telemetry mapping rules in `telemetry-ingest` if either SIM has a Breakroom/Play feed.
-14. SCORM bundle authoring via the toolkit (only when challenge mappings exist).
+### 3. `setCurrentGameTitle` is a module-level singleton (MEDIUM)
+Cross-tab / fast-nav races can leave a stale game title if a component unmounts after another mounts. Migrate to React context colocated with `TutorProvider`.
 
-### Open Questions Before Building
+### 4. Open Notebook readiness — wiring exists, plumbing is uneven (MEDIUM, **expanded per user direction**)
 
-1. **Course authoring path** — `CourseBuilder.tsx` is SCORM-bundle focused and has no native `game_title` selector. Options:
-   - (a) Add a `game_title` dropdown to CourseBuilder + author the two starter courses through the SCORM toolkit pipeline.
-   - (b) Seed two minimal native courses (modules + lessons rows) directly via migration/insert and handle SCORM later.
-   - (c) Defer Phase C entirely until the toolkit produces a Roadcraft/Mechanic bundle organically.
-2. **Roadcraft career path identity** — does a target role already exist in your taxonomy (e.g. `infrastructure-operator`), or should we mint `roadcraft-operator`?
-3. **Cover imagery** — generate via `imagegen` (premium) using brand cues, or do you have source art queued?
-4. **Accent reconciliation for Roadcraft** — keep the channel teal `#12cabd` (and update config) or switch to green `#22C55E` (and update channel)?
+Open Notebook is already plumbed end-to-end:
+- `ai-tutor` reads `notebook_url` per persona, queries `OPEN_NOTEBOOK_API_URL/ask` with `OPEN_NOTEBOOK_API_PASSWORD`, and grafts the answer + citations into the system prompt.
+- `TutorChatPanel` shows a "Open Notebook" book icon when either a SIM persona has `notebook_url` or `ai_platform_settings.open_notebook_url` is set globally.
 
-### Out of Scope
-- Multi-SIM courses, tenant-specific curricula, badging artwork beyond `icon_name` + `accent_color`, SCORM bundle authoring (Phase E only on demand).
+But: **all 11 rows have `notebook_url = NULL`**, the column is misnamed (`notebook_url` actually stores a notebook **id** that is appended to `/ask` as `notebook_id`), and there's no admin path or convention for filling it. Since the user has stated every Atlas instance will eventually get its own notebook, this build phase needs to:
 
-### Risks
-- Phase C is the largest effort; lack of native non-SCORM course authoring UI is the bottleneck.
-- Without `credential_types`, Phase B career readiness will keep showing 0% even after requirements exist.
-- Subscriber count is 0 (Roadcraft) / 1 (Mechanic) — even after activation, social proof will be thin until promoted.
+- **a.** Reserve a `notebook_url` (id) slot on every persona row — confirm column is nullable (it is) and add a comment clarifying it stores a notebook id, not a URL. Optionally rename to `notebook_id` in a follow-up migration to avoid confusion; for now keep the name to avoid touching the edge function.
+- **b.** Make the resolver tolerant of partial rollout: today a missing `notebook_url` simply skips RAG, which is correct — verify no UI copy ("curated knowledge base is available") fires unless an id is present. The current `buildSystemPrompt` does gate on `notebookId`, good.
+- **c.** Expose `notebook_url` as a first-class field in the persona admin UI so notebooks can be attached one-by-one as they're authored, without code changes per persona. (Confirm `useUpdateAIPersona` already accepts arbitrary `Partial<AIPersonaConfig>` — it does.)
+- **d.** Add a per-persona "Test notebook" action in admin that pings `/ask` with a canned question and surfaces latency + citation count, so authors can validate connectivity before users hit it.
+- **e.** Document the precedence: per-persona `notebook_url` overrides `ai_platform_settings.open_notebook_url` (the panel already reflects this; record it in the Atlas memory).
+- **f.** Confirm both `OPEN_NOTEBOOK_API_URL` and `OPEN_NOTEBOOK_API_PASSWORD` secrets are configured in Lovable Cloud for **Test** and **Live** before rollout — RAG silently no-ops if either is missing.
+- **g.** Telemetry: add a lightweight log line in `ai-tutor` when a notebook query is attempted vs. skipped vs. failed, so we can measure notebook hit-rate per persona once they start landing.
+
+### 5. No persona for `game` context type (LOW)
+`TutorContextType` lists `game` but no row emits it. Either drop it from the union or emit it from `/sim/:gameTitle` (preferred — pairs with fix #1).
+
+### 6. No audit / version history (LOW)
+`ai_persona_configs` has `updated_at` but no `updated_by` or version trail. A bad edit silently overwrites the live persona for every user. Add a lightweight `ai_persona_config_history` table before notebooks start landing — bad notebook ids should be one-click revertable.
+
+### 7. Admin surface (LOW — verify)
+`useAIPersonas` exists but the audit didn't surface a sidebar entry. Confirm personas are editable in-app (required to make #4c useful) vs. SQL-only today.
+
+## Recommended fix order
+
+1. **Wire `/sim/:gameTitle` into `useTutorContext`** — emit `{ type: 'game', gameTitle }` so the `game_*` persona resolves on the hub.
+2. **Propagate `gameTitle` from courses/lessons** — read `courses.game_title` in `CourseDetail`/`LessonDetail`, call `setCurrentGameTitle` on mount; add `/lessons/:id` and `/learn/courses/:id` branches.
+3. **Notebook readiness pass (#4 a–g)** — admin field, test ping, secret check, telemetry, memory note. No notebook ids seeded yet; just make sure attaching one is a 30-second admin action.
+4. **Harden the singleton** — move `_currentGameTitle` into a React context provider colocated with `TutorProvider`.
+5. **Add a versioning table + admin diff view** before opening persona edits to non-super-admins.
+
+## Out of scope for this audit
+- Authoring notebook content itself.
+- Rewriting persona prompts.
+- Migrating personas from DB to file-based seeds.

@@ -43,6 +43,17 @@ export function useTutorContext() {
   const pageContext = useMemo((): TutorPageContext => {
     const pathname = location.pathname;
 
+    // SIM Industry Hub — emit `game` context so game_<title> persona resolves
+    const simMatch = pathname.match(/^\/sim\/([^/]+)/);
+    if (simMatch) {
+      const sim = decodeURIComponent(simMatch[1]);
+      return {
+        type: 'game',
+        title: sim,
+        gameTitle: sim,
+      };
+    }
+
     // Work order detail page
     if (pathname.startsWith('/work-orders/') && params.id) {
       return {
@@ -61,11 +72,21 @@ export function useTutorContext() {
       };
     }
 
-    // Course/Learn pages
+    // Lesson detail — defer to singleton populated by LessonDetail page
+    if (/^\/learn\/[^/]+\/lesson\/[^/]+/.test(pathname)) {
+      return {
+        type: 'lesson',
+        title: 'Lesson',
+        gameTitle: _currentGameTitle || undefined,
+      };
+    }
+
+    // Course/Learn pages — defer to singleton populated by CourseDetail page
     if (pathname.startsWith('/learn')) {
       return {
         type: 'course',
         title: 'Learning',
+        gameTitle: _currentGameTitle || undefined,
       };
     }
 

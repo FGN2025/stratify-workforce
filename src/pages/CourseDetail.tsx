@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCourse } from '@/hooks/useCourses';
 import { useEnroll } from '@/hooks/useEnrollment';
@@ -50,6 +52,16 @@ export default function CourseDetail() {
   const { user } = useAuth();
   const { data: course, isLoading, error } = useCourse(id);
   const enrollMutation = useEnroll();
+
+  // Activate SIM-specific Atlas persona for SIM-tagged courses
+  useEffect(() => {
+    const gt = (course as { game_title?: string | null } | undefined)?.game_title ?? null;
+    if (gt) {
+      setCurrentGameTitle(gt);
+      return () => setCurrentGameTitle(null);
+    }
+  }, [course]);
+
 
   if (isLoading) {
     return (
