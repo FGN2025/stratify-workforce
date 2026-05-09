@@ -53,14 +53,21 @@ function sanitizeBriefing(html: string): string {
     );
 }
 
+const MIN_BUNDLE = 2;
+const MAX_BUNDLE = 10;
+
 export default function CourseBuilder() {
   const [searchParams] = useSearchParams();
   const prefillWoId = searchParams.get('workOrderId') ?? '';
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loadingWO, setLoadingWO] = useState(true);
   const [stage, setStage] = useState<Stage>('configure');
-  const [form, setForm] = useState<ScormBuildRequest>({
-    workOrderId: prefillWoId,
+
+  // v0.2: switched the Configure stage to an ordered WO list. Index 0 is the lead.
+  // Single-WO build = list of length 1; bundle = length 2..10.
+  const [workOrderIds, setWorkOrderIds] = useState<string[]>(prefillWoId ? [prefillWoId] : ['']);
+
+  const [form, setForm] = useState<Omit<ScormBuildRequest, 'workOrderId' | 'workOrderIds'>>({
     destination: 'fgn-academy',
     brandMode: 'arcade',
     scormVersion: '1.2',
@@ -108,19 +115,34 @@ export default function CourseBuilder() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [hasUnsaved, stage]);
 
-  const update = <K extends keyof ScormBuildRequest>(k: K, v: ScormBuildRequest[K]) =>
+  const update = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const onPreview = async () => {
-    if (!form.workOrderId) return;
-    const r = await build({
+  /** Build the request body picking single-WO vs bundle path. */
+  const buildBody = (extra: Partial<ScormBuildRequest>): ScormBuildRequest => {
+    const filled = workOrderIds.filter(Boolean);
+    const base: ScormBuildRequest = {
       ...form,
       title: form.title?.trim() || undefined,
       description: form.description?.trim() || undefined,
-      dryRun: true,
-      briefingHtml: Object.keys(briefingHtml).length ? briefingHtml : undefined,
-      quizQuestions: Object.keys(quizQuestions).length ? quizQuestions : undefined,
-    });
+      ...extra,
+    };
+    if (filled.length >= MIN_BUNDLE) {
+      return { ...base, workOrderIds: filled };
+    }
+    return { ...base, workOrderId: filled[0] ?? '' };
+  };
+
+  const onPreview = async () => {
+    const filled = workOrderIds.filter(Boolean);
+    if (filled.length === 0) return;
+    const r = await build(
+      buildBody({
+        dryRun: true,
+        briefingHtml: Object.keys(briefingHtml).length ? briefingHtml : undefined,
+        quizQuestions: Object.keys(quizQuestions).length ? quizQuestions : undefined,
+      })
+    );
     if (r.kind === 'preview') {
       setStage('preview');
       // Seed override editors from the manifest if not already set
@@ -137,14 +159,13 @@ export default function CourseBuilder() {
   };
 
   const onPublish = async () => {
-    const r = await build({
-      ...form,
-      title: form.title?.trim() || undefined,
-      description: form.description?.trim() || undefined,
-      dryRun: false,
-      briefingHtml: Object.keys(briefingHtml).length ? briefingHtml : undefined,
-      quizQuestions: Object.keys(quizQuestions).length ? quizQuestions : undefined,
-    });
+    const r = await build(
+      buildBody({
+        dryRun: false,
+        briefingHtml: Object.keys(briefingHtml).length ? briefingHtml : undefined,
+        quizQuestions: Object.keys(quizQuestions).length ? quizQuestions : undefined,
+      })
+    );
     if (r.kind === 'ok') {
       setStage('published');
       setHasUnsaved(false);
@@ -166,8 +187,9 @@ export default function CourseBuilder() {
     setBriefingHtml({});
     setQuizQuestions({});
     setHasUnsaved(false);
-    setForm((f) => ({ ...f, workOrderId: '' }));
+    setWorkOrderIds(['']);
   };
+
 
   return (
     <AppLayout>
