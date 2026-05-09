@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useLessonDetail, useSubmitQuiz, useNextLesson } from '@/hooks/useLessonProgress';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,15 @@ export default function LessonDetail() {
   const lessonOrder = lesson?.order_index ?? 0;
 
   const { data: nextLesson } = useNextLesson(courseIdResolved, moduleOrder, lessonOrder);
+
+  // Activate SIM-specific Atlas persona for SIM-tagged lessons
+  useEffect(() => {
+    const gt = ((lesson?.modules as any)?.courses?.game_title ?? null) as string | null;
+    if (gt) {
+      setCurrentGameTitle(gt);
+      return () => setCurrentGameTitle(null);
+    }
+  }, [lesson]);
 
   if (isLoading) {
     return (

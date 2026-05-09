@@ -46,7 +46,7 @@ export function useLessonDetail(lessonId: string | undefined) {
     queryFn: async () => {
       const { data: lesson, error } = await supabase
         .from('lessons')
-        .select('id, title, lesson_type, content, xp_reward, passing_score, order_index, module_id, work_order_id, modules!inner(id, course_id, order_index, title)')
+        .select('id, title, lesson_type, content, xp_reward, passing_score, order_index, module_id, work_order_id, modules!inner(id, course_id, order_index, title, courses!inner(game_title))')
         .eq('id', lessonId!)
         .single();
 
