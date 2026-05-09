@@ -42,6 +42,7 @@ export function useCourses() {
         estimated_hours: course.estimated_hours ?? 0,
         xp_reward: course.xp_reward,
         is_published: course.is_published ?? false,
+        game_title: (course as { game_title?: Course['game_title'] }).game_title ?? null,
         created_at: course.created_at,
         updated_at: course.updated_at,
         enrolled: enrolledCourseIds.has(course.id),
