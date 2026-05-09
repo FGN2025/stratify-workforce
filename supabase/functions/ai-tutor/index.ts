@@ -266,10 +266,16 @@ serve(async (req) => {
     let notebookResult: NotebookResult | null = null;
     const notebookId = personaConfig?.notebook_url || null;
     const notebookConfigured = !!(Deno.env.get("OPEN_NOTEBOOK_API_URL") && Deno.env.get("OPEN_NOTEBOOK_API_PASSWORD"));
+
+    let attemptStatus: "hit" | "miss" | "skip" = "skip";
+    let attemptReason: string | null = null;
+    let attemptLatency: number | null = null;
+
     if (notebookId && !notebookConfigured) {
+      attemptStatus = "skip";
+      attemptReason = "notebook_api_not_configured";
       console.warn(`[notebook] persona has notebook_id but OPEN_NOTEBOOK_API_URL/PASSWORD not configured — skipping RAG (context=${contextType}, game=${context?.gameTitle ?? "-"})`);
-    }
-    if (notebookId && notebookConfigured) {
+    } else if (notebookId && notebookConfigured) {
       const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
       if (lastUserMessage?.content) {
         const t0 = Date.now();
@@ -277,12 +283,37 @@ serve(async (req) => {
           ? `[${context.gameTitle}] ${lastUserMessage.content}`
           : lastUserMessage.content;
         notebookResult = await queryNotebook(query, notebookId);
-        const ms = Date.now() - t0;
-        console.log(`[notebook] context=${contextType} game=${context?.gameTitle ?? "-"} notebook=${notebookId} status=${notebookResult ? "ok" : "miss"} citations=${notebookResult?.citations.length ?? 0} ms=${ms}`);
+        attemptLatency = Date.now() - t0;
+        attemptStatus = notebookResult ? "hit" : "miss";
+        attemptReason = notebookResult ? null : "no_answer_returned";
+        console.log(`[notebook] context=${contextType} game=${context?.gameTitle ?? "-"} notebook=${notebookId} status=${attemptStatus} citations=${notebookResult?.citations.length ?? 0} ms=${attemptLatency}`);
+      } else {
+        attemptStatus = "skip";
+        attemptReason = "no_user_message";
       }
-    } else if (!notebookId) {
+    } else {
+      attemptStatus = "skip";
+      attemptReason = "no_notebook_id";
       console.log(`[notebook] context=${contextType} game=${context?.gameTitle ?? "-"} status=skipped reason=no_notebook_id`);
     }
+
+    // Persist telemetry (fire-and-forget; never block chat on insert errors)
+    supabaseAdmin
+      .from("notebook_attempts")
+      .insert({
+        status: attemptStatus,
+        reason: attemptReason,
+        context_type: contextType,
+        game_title: context?.gameTitle ?? null,
+        persona_id: personaConfig?.id ?? null,
+        notebook_id: notebookId,
+        citation_count: notebookResult?.citations.length ?? 0,
+        latency_ms: attemptLatency,
+        user_id: authData.user.id,
+      })
+      .then(({ error }) => {
+        if (error) console.warn("[notebook] telemetry insert failed:", error.message);
+      });
 
     const systemPrompt = buildSystemPrompt(basePrompt, context, notebookId, notebookResult);
 
