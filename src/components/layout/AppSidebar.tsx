@@ -38,6 +38,7 @@ import {
   Shield,
   Calendar,
   Wrench,
+  Link2,
 } from 'lucide-react';
 import {
   Sidebar,
