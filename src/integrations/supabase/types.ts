@@ -1006,6 +1006,56 @@ export type Database = {
           },
         ]
       }
+      notebook_attempts: {
+        Row: {
+          citation_count: number
+          context_type: string | null
+          created_at: string
+          game_title: string | null
+          id: string
+          latency_ms: number | null
+          notebook_id: string | null
+          persona_id: string | null
+          reason: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          citation_count?: number
+          context_type?: string | null
+          created_at?: string
+          game_title?: string | null
+          id?: string
+          latency_ms?: number | null
+          notebook_id?: string | null
+          persona_id?: string | null
+          reason?: string | null
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          citation_count?: number
+          context_type?: string | null
+          created_at?: string
+          game_title?: string | null
+          id?: string
+          latency_ms?: number | null
+          notebook_id?: string | null
+          persona_id?: string | null
+          reason?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notebook_attempts_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "ai_persona_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
