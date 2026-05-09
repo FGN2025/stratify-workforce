@@ -354,7 +354,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ success: true, results }),
+    JSON.stringify({ success: true, results, ...(debug ? { raw: rawSink } : {}) }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   )
 })
