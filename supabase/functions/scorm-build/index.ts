@@ -1214,136 +1214,61 @@ Deno.serve(async (req) => {
     }
 
     // --------------------------------------------------------------
-    // 13. Upsert the scorm_courses row. Service role bypasses RLS;
-    //     we set generated_by explicitly to the calling admin's
-    //     user.id for provenance.
-    // --------------------------------------------------------------
-    const dbRow = {
-      id: courseId,
-      work_order_id: wo.id,
-      destination: body.destination,
-      title: courseManifest.title,
-      description: courseManifest.description ?? null,
-      cover_image_url: absoluteCoverUrl,
-      scorm_version: courseManifest.scormVersion,
-      manifest_url: manifestUrl,
-      zip_url: null, // Step 4.5+ will populate this
-      bundle_id: courseManifest.id,
-      is_published: true,
-      published_at: new Date().toISOString(),
-      generated_by: user.id,
-      source_challenge_id: wo.source_challenge_id,
-      ai_enhanced: courseManifest.aiEnhanced ?? null,
-    };
-
-    if (existing) {
-      // Replace the existing row in place. updated_at handled by
-      // the trigger.
-      const { id: _id, ...updateRow } = dbRow;
-      const { error: updateErr } = await adminSupabase
-        .from('scorm_courses')
-        .update(updateRow)
-        .eq('id', existing.id);
-      if (updateErr) {
-        return jsonError(
-          500,
-          `failed to update scorm_courses row: ${updateErr.message}`,
-        );
-      }
-    } else {
-      const { error: insertErr } = await adminSupabase
-        .from('scorm_courses')
-        .insert(dbRow);
-      if (insertErr) {
-        return jsonError(
-          500,
-          `failed to insert scorm_courses row: ${insertErr.message}`,
-        );
-      }
-    }
-
-    // --------------------------------------------------------------
-    // 13.5 v0.2 Replacement transaction sequence — bundle membership
-    //      + progress cleanup. Per PHASE_2_SPEC.md §"Replacement
-    //      transaction sequence (regenerate)":
+    // 13. Persist via upsert_scorm_course_bundle RPC -- one atomic
+    //     PG transaction wrapping all three regen ops:
+    //       (a) INSERT-or-UPDATE scorm_courses. is_published /
+    //           published_at NOT in the DO UPDATE clause so admin-
+    //           flipped staging state survives regen.
+    //       (b) DELETE + INSERT scorm_course_work_orders for course_id
+    //           (idempotent membership replacement; recovers partial
+    //           state from a prior failed regen).
+    //       (c) Conditionally DELETE scorm_course_progress (bundle
+    //           replacement only -- single-WO regenerate keeps v0
+    //           behavior of preserving progress; v0.3's restore-on-
+    //           mount handles stale positions for single-WO).
     //
-    //        1. DELETE join rows for this course_id (always — also
-    //           handles partial-state recovery from a prior failed
-    //           regen)
-    //        2. INSERT one join row per WO in input order; lead at
-    //           position 0 with is_lead=true
-    //        3. DELETE progress rows for this course_id (replacement
-    //           only — positions in old suspend_data don't map to
-    //           new modules, so progress is hard-reset on regen)
+    //     Replaces the v0.2.0 sequential-ops sequence; closes the
+    //     atomicity gap that was flagged as a v0.2.x improvement.
+    //     zip_url is stamped separately after ZIP packaging so
+    //     packaging failures don't roll back the bundle write
+    //     (current behavior preserved). See PHASE_2_SPEC.md
+    //     §"Replacement transaction sequence (regenerate)".
     //
-    //      Atomicity gap (v0.2.x improvement): supabase-js can't run
-    //      a multi-table transaction from the JS client. We sequence
-    //      the operations and document partial-failure recovery via
-    //      retry. A `regenerate_scorm_course_bundle(...)` stored proc
-    //      called via RPC would close the gap; tracked as a follow-up
-    //      migration ask for Lovable.
+    //     Proc is service-role-only (REVOKE ALL FROM public,
+    //     authenticated, anon); the edge fn's adminSupabase client
+    //     uses SUPABASE_SERVICE_ROLE_KEY so this works.
     // --------------------------------------------------------------
-    {
-      // (1) Wipe any prior membership rows for this course_id. Idempotent:
-      //     no-op for new builds (nothing to delete), wipes old rows for
-      //     replacements + recovers partial-state from prior failed runs.
-      const { error: delJoinErr } = await adminSupabase
-        .from('scorm_course_work_orders')
-        .delete()
-        .eq('course_id', courseId);
-      if (delJoinErr) {
-        return jsonError(
-          500,
-          `failed to clear scorm_course_work_orders for course ${courseId}: ${delJoinErr.message}`,
-        );
-      }
+    const joinRows = orderedWos.map((w, idx) => ({
+      work_order_id: w.id,
+      position: idx,
+      is_lead: idx === 0,
+    }));
+    const wipeProgress = existing !== null && existing !== undefined && isBundleBuild;
 
-      // (2) Insert fresh membership rows. Lead at position 0 with
-      //     is_lead=true; non-lead WOs at position 1..N-1.
-      const joinRows = orderedWos.map((w, idx) => ({
-        course_id: courseId,
-        work_order_id: w.id,
-        position: idx,
-        is_lead: idx === 0,
-      }));
-      const { error: insJoinErr } = await adminSupabase
-        .from('scorm_course_work_orders')
-        .insert(joinRows);
-      if (insJoinErr) {
-        return jsonError(
-          500,
-          `failed to insert scorm_course_work_orders for course ${courseId}: ${insJoinErr.message}`,
-        );
-      }
-
-      // (3) Bundle replacement only: wipe progress rows. Single-WO
-      //     regenerate keeps v0 behavior (progress preserved across
-      //     regen — v0.3's restore-on-mount handles stale positions
-      //     by silently dropping them). Bundle replacement applies
-      //     the hard-reset because Lovable's bundle-replacement modal
-      //     copy explicitly warns "All learner progress for this
-      //     course will be reset." Single-WO modal copy (v0) doesn't
-      //     warn, so toolkit must not surprise learners by wiping
-      //     progress on single-WO regenerate.
-      if (existing && isBundleBuild) {
-        const { error: delProgErr } = await adminSupabase
-          .from('scorm_course_progress')
-          .delete()
-          .eq('course_id', courseId);
-        if (delProgErr) {
-          // Non-fatal: course is published, manifest is canonical,
-          // join rows are correct. Stale progress will appear to
-          // learners until next regen retry (where this DELETE
-          // re-runs idempotently). Surface as a console warning so
-          // admin can retry rather than silently shipping a broken
-          // state. We don't 500 here because the manifest is already
-          // overwritten and Player URLs are live; failing the
-          // request would be misleading.
-          console.warn(
-            `scorm_course_progress wipe failed for course ${courseId}: ${delProgErr.message}. Retry regenerate to complete cleanup.`,
-          );
-        }
-      }
+    const { error: rpcErr } = await adminSupabase.rpc(
+      'upsert_scorm_course_bundle',
+      {
+        p_course_id: courseId,
+        p_work_order_id: wo.id,
+        p_destination: body.destination,
+        p_title: courseManifest.title,
+        p_description: courseManifest.description ?? null,
+        p_cover_image_url: absoluteCoverUrl,
+        p_scorm_version: courseManifest.scormVersion,
+        p_manifest_url: manifestUrl,
+        p_bundle_id: courseManifest.id,
+        p_generated_by: user.id,
+        p_source_challenge_id: wo.source_challenge_id,
+        p_ai_enhanced: courseManifest.aiEnhanced ?? null,
+        p_join_rows: joinRows,
+        p_wipe_progress: wipeProgress,
+      },
+    );
+    if (rpcErr) {
+      return jsonError(
+        500,
+        `upsert_scorm_course_bundle failed for course ${courseId}: ${rpcErr.message}`,
+      );
     }
 
     // --------------------------------------------------------------
