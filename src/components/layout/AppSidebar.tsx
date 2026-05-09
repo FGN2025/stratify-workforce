@@ -91,6 +91,7 @@ const adminSubItems = [
   { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
   { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon },
   { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench },
+  { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2 },
 ];
 
 const superAdminSubItems = [
