@@ -18,6 +18,7 @@ import { SuperAdminPanel } from '@/components/admin/superadmin/SuperAdminPanel';
 import { CommunityReviewQueue } from '@/components/admin/CommunityReviewQueue';
 import { DiscordConnectionsManager } from '@/components/admin/DiscordConnectionsManager';
 import { AIConfigManager } from '@/components/admin/AIConfigManager';
+import { NotebookTelemetryDashboard } from '@/components/admin/NotebookTelemetryDashboard';
 import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
 import { CareerPathsManager } from '@/components/admin/CareerPathsManager';
 import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
