@@ -284,6 +284,48 @@ export type Database = {
           },
         ]
       }
+      breakroom_sync_attempts: {
+        Row: {
+          attempt_count: number
+          bbw_result: string | null
+          breakroom_quiz_id: number
+          breakroom_user_id: number
+          created_at: string
+          fgn_result: string | null
+          fgn_user_id: string
+          id: string
+          last_attempt_at: string
+          metadata: Json | null
+          sync_outcome: string
+        }
+        Insert: {
+          attempt_count?: number
+          bbw_result?: string | null
+          breakroom_quiz_id: number
+          breakroom_user_id: number
+          created_at?: string
+          fgn_result?: string | null
+          fgn_user_id: string
+          id?: string
+          last_attempt_at?: string
+          metadata?: Json | null
+          sync_outcome: string
+        }
+        Update: {
+          attempt_count?: number
+          bbw_result?: string | null
+          breakroom_quiz_id?: number
+          breakroom_user_id?: number
+          created_at?: string
+          fgn_result?: string | null
+          fgn_user_id?: string
+          id?: string
+          last_attempt_at?: string
+          metadata?: Json | null
+          sync_outcome?: string
+        }
+        Relationships: []
+      }
       career_path_requirements: {
         Row: {
           career_path_id: string

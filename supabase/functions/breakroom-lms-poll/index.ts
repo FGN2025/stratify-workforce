@@ -35,6 +35,7 @@ interface PollResults {
   students_found: number
   quizzes_found: number
   already_synced: number
+  skipped_unmapped: number
   synced: number
   sync_errors: number
   errors: string[]
@@ -156,6 +157,7 @@ Deno.serve(async (req) => {
     students_found: 0,
     quizzes_found: 0,
     already_synced: 0,
+    skipped_unmapped: 0,
     synced: 0,
     sync_errors: 0,
     errors: [],
@@ -206,14 +208,21 @@ Deno.serve(async (req) => {
 
         if (!latestInfo) continue
 
-        const { count } = await fgnClient
-          .from('user_work_order_completions')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', identity.user_id)
-          .filter('metadata->>breakroom_quiz_id', 'eq', String(quiz.id))
+        // Dedupe against breakroom_sync_attempts (manual reset to retry: DELETE the row)
+        const { data: existingAttempt } = await fgnClient
+          .from('breakroom_sync_attempts')
+          .select('id, sync_outcome')
+          .eq('breakroom_quiz_id', quiz.id)
+          .eq('breakroom_user_id', student.id)
+          .maybeSingle()
 
-        if (count && count > 0) {
-          results.already_synced++
+        if (existingAttempt) {
+          if (existingAttempt.sync_outcome === 'completed') {
+            results.already_synced++
+          } else {
+            // 'no_matching_work_order' or 'sync_error' — skip until manually reset
+            results.skipped_unmapped++
+          }
           continue
         }
 
@@ -236,6 +245,10 @@ Deno.serve(async (req) => {
         const sourceId = matchedWorkOrder?.source_challenge_id || quiz.name
         const xpReward = matchedWorkOrder?.xp_reward || 100
         const grade = latestInfo.grade === -1 ? null : latestInfo.grade
+
+        let syncOutcome: 'completed' | 'no_matching_work_order' | 'sync_error' = 'sync_error'
+        let fgnResult: string | null = null
+        let bbwResult: string | null = null
 
         try {
           const syncRes = await fetch(`${supabaseUrl}/functions/v1/breakroom-lms-sync`, {
@@ -264,14 +277,58 @@ Deno.serve(async (req) => {
 
           const syncBody = await syncRes.text()
           if (syncRes.ok) {
-            results.synced++
+            try {
+              const parsed = JSON.parse(syncBody)
+              fgnResult = parsed?.results?.fgn_completion ?? null
+              bbwResult = parsed?.results?.bbw_quiz ?? null
+            } catch (_) {
+              // ignore parse failure; outcome derivation falls back below
+            }
+
+            if (fgnResult === 'completed') {
+              syncOutcome = 'completed'
+              results.synced++
+            } else if (fgnResult === 'no_matching_work_order') {
+              syncOutcome = 'no_matching_work_order'
+              results.skipped_unmapped++
+            } else {
+              syncOutcome = 'sync_error'
+              results.sync_errors++
+              results.errors.push(`Unexpected sync result for ${student.name}/${quiz.name}: ${syncBody.slice(0, 200)}`)
+            }
           } else {
+            syncOutcome = 'sync_error'
             results.sync_errors++
             results.errors.push(`Sync error for ${student.name}/${quiz.name}: ${syncRes.status} ${syncBody.slice(0, 200)}`)
           }
         } catch (err) {
+          syncOutcome = 'sync_error'
           results.sync_errors++
           results.errors.push(`Sync call error for ${student.name}/${quiz.name}: ${String(err)}`)
+        }
+
+        // Always record the attempt so the next poll skips this quiz
+        try {
+          await fgnClient
+            .from('breakroom_sync_attempts')
+            .upsert({
+              breakroom_quiz_id: quiz.id,
+              breakroom_user_id: student.id,
+              fgn_user_id: identity.user_id,
+              sync_outcome: syncOutcome,
+              fgn_result: fgnResult,
+              bbw_result: bbwResult,
+              last_attempt_at: new Date().toISOString(),
+              attempt_count: 1,
+              metadata: {
+                quiz_name: quiz.name,
+                breakroom_course_id: quiz.courseId,
+                breakroom_course_name: student.course?.name,
+                completion_date: latestInfo.date,
+              },
+            }, { onConflict: 'breakroom_quiz_id,breakroom_user_id' })
+        } catch (err) {
+          results.errors.push(`Failed to record sync attempt for ${student.name}/${quiz.name}: ${String(err)}`)
         }
       }
     }
