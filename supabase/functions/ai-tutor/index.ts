@@ -40,6 +40,7 @@ interface ChatRequest {
 }
 
 interface PersonaConfig {
+  id?: string;
   system_prompt: string;
   model_override: string | null;
   notebook_url: string | null;
