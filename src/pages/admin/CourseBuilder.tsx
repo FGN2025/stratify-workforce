@@ -212,7 +212,7 @@ export default function CourseBuilder() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="font-mono">
-              scorm-build · v0.1
+              scorm-build · v0.2
             </Badge>
             <StageBadge stage={stage} />
           </div>
