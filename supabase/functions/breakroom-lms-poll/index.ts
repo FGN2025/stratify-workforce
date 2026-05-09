@@ -157,6 +157,7 @@ Deno.serve(async (req) => {
     students_found: 0,
     quizzes_found: 0,
     already_synced: 0,
+    skipped_unmapped: 0,
     synced: 0,
     sync_errors: 0,
     errors: [],
