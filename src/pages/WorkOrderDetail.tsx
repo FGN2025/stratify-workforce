@@ -32,6 +32,8 @@ import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { WorkOrderAdminPanel } from '@/components/admin/WorkOrderAdminPanel';
 import { LearningResourcesCard } from '@/components/work-orders/LearningResourcesCard';
+import { SpatialTaskBadge } from '@/components/work-orders/SpatialTaskBadge';
+import { OpenInBreakroomButton } from '@/components/work-orders/OpenInBreakroomButton';
 import { toast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import {
@@ -251,9 +253,10 @@ export default function WorkOrderDetail() {
             <div className="flex-1 p-6 flex flex-col md:flex-row gap-6">
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <Badge variant="outline">{getGameLabel(workOrder.game_title)}</Badge>
                   <DifficultyIndicator difficulty={workOrder.difficulty} showLabel />
+                  <SpatialTaskBadge metadata={workOrder.metadata} size="md" />
                   {status?.isCompleted && (
                     <Badge className="bg-primary/20 text-primary border-primary/30">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -353,7 +356,9 @@ export default function WorkOrderDetail() {
                     </Button>
                   );
                 })()}
-                
+
+                <OpenInBreakroomButton metadata={workOrder.metadata} />
+
                 <ChannelSubscribeButton gameTitle={workOrder.game_title} variant="outline" />
               </div>
             </div>
