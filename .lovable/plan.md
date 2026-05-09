@@ -1,82 +1,61 @@
+## SIM Activation Plan — Roadcraft & Mechanic_Sim
 
-# SIM-as-Spine: Industry-Aware Learning Layer
+Goal: bring both SIMs from "skeleton row exists" to "Industry Hub feels alive" parity with Fiber_Tech / Construction_Sim.
 
-Today `game_title` is a tag used for filtering. This plan promotes it to the **organizing spine** of the platform, so each SIM (Trucking, Construction, Fiber-Tech, etc.) becomes a coherent industry pathway: subscribe → train → work → credential → career.
+### Current State (audited)
 
-## Goals
+| Surface | Roadcraft | Mechanic_Sim |
+|---|---|---|
+| `game_channels` row | ✅ teal `#12cabd`, no cover | ✅ red `#ef4444`, no cover |
+| Work orders | 2 active | 1 active |
+| Courses (`game_title`) | 0 | 0 |
+| `sim_resources` | 0 | 0 |
+| `credential_types` | 0 | 0 |
+| `career_path_requirements` | 0 (no path) | 4 (diesel-mechanic) |
+| Subscribers | 0 | 1 |
+| Atlas AI persona | ❌ | ❌ |
+| Sidebar icon | shares `Cable` w/ Fiber-Tech | `Wrench` ✅ |
 
-1. Every learning artifact (course, career path) can declare its SIM directly — not via inference through a work order.
-2. A learner can land on a single page per SIM and see everything: channel, courses, work orders, resources, credentials they've earned, careers they're approaching.
-3. The Skill Passport pivots by SIM so readiness is legible per industry.
-4. Admins curate per-SIM content without touching code.
+### Phased Sequencing
 
-## Scope (3 phases)
+**Phase A — Visual Identity (fast, ~30 min, no content authoring)**
+1. Swap Roadcraft icon from `Cable` → distinct icon (proposed: `Map` or `Construction`). Update `GameIcon.tsx` and `simResources.ts`.
+2. Author channel cover images for both SIMs (1920×600 hero), upload via media library, set `game_channels.cover_image_url`.
+3. Tighten `game_channels.description` copy + `simResources.ts` `title`/`shortTitle` so the Industry Hub hero reads cleanly.
+4. Align Roadcraft accent: `simResources` says `#22C55E` but channel row is `#12cabd`. Pick one and reconcile.
 
-### Phase 1 — Anchor content to SIMs (data model)
+**Phase B — Career Spine (Mechanic_Sim first, it has a head start)**
+5. Mechanic_Sim: define 2–3 `credential_types` matching the existing `diesel-mechanic` `career_path_requirements` rows (so readiness % stops being 0).
+6. Roadcraft: create a `career_paths` row (e.g. `roadcraft-operator` or `infrastructure-tech`) + 4–6 `career_path_requirements` rows + matching `credential_types`.
 
-Add first-class `game_title` to learning content so we stop inferring it.
+**Phase C — Curriculum Seed (1 starter course per SIM)**
+7. Roadcraft: "Roadcraft Foundations" course, `game_title='Roadcraft'`, 4–6 lessons covering equipment intro, site safety, basic ops, mission flow.
+8. Mechanic_Sim: "CMS Foundations" course, `game_title='Mechanic_Sim'`, 4–6 lessons covering diagnostics workflow, tooling, safety, work-order intake.
+9. Decide authoring path — see Open Question #1.
 
-- `courses.game_title` (nullable enum) — primary SIM the course belongs to.
-- `career_paths.game_title` is already nullable; backfill it and start requiring it for new paths.
-- Backfill `courses.game_title` from the dominant `lessons.work_order_id → work_orders.game_title` of its lessons. Manual override for ambiguous courses.
-- Admin: add a SIM selector to the Course Builder.
-- No change to `work_orders` / `sim_resources` / `game_channels` — already keyed by `game_title`.
+**Phase D — Resources & Work Order Expansion**
+10. Add 2–3 `sim_resources` per SIM (partner sites, official docs, community).
+11. Author 2–3 additional work orders per SIM to give the Hub depth.
 
-### Phase 2 — SIM Industry pages (`/sim/:gameTitle`)
+**Phase E — Integrations (defer unless requested)**
+12. Atlas AI persona rows for each SIM (`ai_persona_configs.context_type='sim:Roadcraft'`, etc.).
+13. Telemetry mapping rules in `telemetry-ingest` if either SIM has a Breakroom/Play feed.
+14. SCORM bundle authoring via the toolkit (only when challenge mappings exist).
 
-One canonical landing page per SIM, replacing the per-game ATS deep-dive logic that's currently hard-coded into `/work-orders`.
+### Open Questions Before Building
 
-Page composition (top to bottom, all `HorizontalCarousel`):
+1. **Course authoring path** — `CourseBuilder.tsx` is SCORM-bundle focused and has no native `game_title` selector. Options:
+   - (a) Add a `game_title` dropdown to CourseBuilder + author the two starter courses through the SCORM toolkit pipeline.
+   - (b) Seed two minimal native courses (modules + lessons rows) directly via migration/insert and handle SCORM later.
+   - (c) Defer Phase C entirely until the toolkit produces a Roadcraft/Mechanic bundle organically.
+2. **Roadcraft career path identity** — does a target role already exist in your taxonomy (e.g. `infrastructure-operator`), or should we mint `roadcraft-operator`?
+3. **Cover imagery** — generate via `imagegen` (premium) using brand cues, or do you have source art queued?
+4. **Accent reconciliation for Roadcraft** — keep the channel teal `#12cabd` (and update config) or switch to green `#22C55E` (and update channel)?
 
-1. **SIM Hero** — channel cover, accent color, subscribe button, member count, brief industry description.
-2. **Curriculum** — `courses` filtered by `game_title`, with enrollment status.
-3. **Active Work Orders** — `work_orders` filtered by `game_title`, with completion state.
-4. **Career Paths in this Industry** — `career_paths` filtered by `game_title`, each showing the user's `calculate_readiness()` percentage.
-5. **Credentials You Can Earn** — `credential_types` filtered by `game_title`.
-6. **External Resources** — `sim_resources` filtered by `game_title` (replaces the static `config/simResources.ts` ATS Deep Dive).
-7. **Leaderboard** — top performers in this SIM (existing leaderboard, scoped).
+### Out of Scope
+- Multi-SIM courses, tenant-specific curricula, badging artwork beyond `icon_name` + `accent_color`, SCORM bundle authoring (Phase E only on demand).
 
-Routing:
-- `/sim/:gameTitle` (e.g. `/sim/Construction_Sim`).
-- Sidebar: add a "Simulators" group that lists each enabled SIM.
-- Existing `/work-orders` keeps its cross-SIM filtered view; per-SIM deep-dive moves to `/sim/:gameTitle`.
-
-Behavior:
-- SIMs with sparse content (Farming, Mechanic) still render the page with empty-state messaging per section ("First Construction course coming soon"). Honors existing content-staging memory: hide CTAs for unmapped sections instead of broken links.
-
-### Phase 3 — Passport pivots by SIM
-
-Today the passport is a flat credential list. Make it SIM-aware.
-
-- Profile / Passport page: add a SIM filter row (chips with channel accent colors) above the credential grid.
-- New "Industry Readiness" panel using `calculate_readiness()` grouped by SIM, showing a bar per active SIM (active = has subscription, work-order progress, or credential).
-- Public passport (`/passport/:slug`) gets the same SIM filter so external viewers (employers) can scope to one industry.
-
-## Out of scope (now)
-
-- Many-to-many courses↔SIMs. Single `game_title` per course is enough today; revisit if a course legitimately spans two industries.
-- Reworking `game_channels`. Channels stay as-is (subscription + accent color source of truth per memory).
-- Tenant-specific SIM curation. Industry pages are global; tenant scoping can layer on later via existing `tenant_id` filters on courses/work orders.
-
-## Risks / decisions to confirm
-
-- **Course → SIM cardinality.** Going single-valued. Confirm no cross-industry courses exist that need both tags.
-- **Static vs DB sim resources.** Plan deletes `src/config/simResources.ts` ATS-only block in favor of `sim_resources` table. Need to ensure DB rows are seeded for ATS to avoid regression on `/work-orders`.
-- **Empty SIMs.** Five of six SIMs are sparse. Empty-state copy needs to feel intentional, not broken.
-
-## Technical details
-
-- Migration: `ALTER TABLE public.courses ADD COLUMN game_title public.game_title;` plus an index. No RLS change needed (existing policies remain).
-- Backfill SQL: derive course `game_title` from majority `work_orders.game_title` via `lessons.work_order_id`; null where unknown.
-- New hook: `useSimOverview(gameTitle)` — single React Query that parallel-fetches courses, work orders, career paths with readiness, credential types, sim resources, and channel meta for one SIM.
-- New page: `src/pages/SimIndustry.tsx` + route in `App.tsx`.
-- Admin: extend `CourseBuilder.tsx` with a `Select` for `game_title` (use `'none'` sentinel per memory).
-- Passport pivot: extend `PublicPassport.tsx` and `Profile.tsx` with a `gameTitle` state + filter; reuse channel accent colors via `useGameChannelColors`.
-- Sidebar: extend `AppSidebar.tsx` "Simulators" group, iterating `game_channels`.
-
-## Suggested sequencing
-
-1. Migration + course backfill + Course Builder selector.
-2. `/sim/:gameTitle` page with read-only sections.
-3. Passport SIM filter + Industry Readiness panel.
-4. Retire the static `simResources.ts` ATS block once the DB-driven path is verified.
+### Risks
+- Phase C is the largest effort; lack of native non-SCORM course authoring UI is the bottleneck.
+- Without `credential_types`, Phase B career readiness will keep showing 0% even after requirements exist.
+- Subscriber count is 0 (Roadcraft) / 1 (Mechanic) — even after activation, social proof will be thin until promoted.
