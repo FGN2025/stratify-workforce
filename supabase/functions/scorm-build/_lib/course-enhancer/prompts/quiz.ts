@@ -72,25 +72,28 @@ Return ONLY the structured JSON specified by the output schema.`;
   // JSON schema mirrors the QuizQuestion type. Kept inline so the
   // structured-output endpoint can constrain decoding.
   //
-  // NOTE on minItems: Anthropic's structured-outputs endpoint only
-  // accepts `minItems` values of 0 or 1. Anything else fails with
-  // "output_config.format.schema: For 'array' type, 'minItems' values
-  // other than 0 or 1 are not supported". This silently broke every
-  // quiz enhance call (surfaced as ENHANCER_QUIZ_FAILED warnings) until
-  // we caught it in production 2026-05-09. Cardinality enforcement now
-  // lives exclusively in validateGeneratedQuiz below — it requires >=1
-  // question, >=2 choices per question, and the type-specific correct-
-  // count rules. The natural-language prompt also tells the model
-  // "Generate 3 to 5" + "3-4 choices per single-choice", which it
-  // follows reliably without schema reinforcement. maxItems stays in
-  // place: it caps response size for cost control and Anthropic
-  // accepts it freely.
+  // NOTE on array constraints: Anthropic's structured-outputs endpoint
+  // rejects BOTH `minItems > 1` and any `maxItems` value at all on
+  // array fields. The two distinct errors are:
+  //   "For 'array' type, 'minItems' values other than 0 or 1 are not
+  //    supported"
+  //   "For 'array' type, property 'maxItems' is not supported"
+  // Both silently broke every quiz enhance call (surfaced as
+  // ENHANCER_QUIZ_FAILED warnings) until we caught it in production
+  // 2026-05-09. Cardinality enforcement now lives exclusively in
+  // validateGeneratedQuiz below — it requires >=1 question, >=2
+  // choices per question, and the type-specific correct-count rules.
+  // The natural-language prompt tells the model "Generate 3 to 5
+  // questions" and "3-4 choices per single-choice", which it follows
+  // reliably without schema reinforcement. Upper-bound trimming (in
+  // case the model overshoots) can be added to the validator if real
+  // model behavior shows drift; current samples respect the prompt
+  // bounds.
   const schema: Record<string, unknown> = {
     type: 'object',
     properties: {
       questions: {
         type: 'array',
-        maxItems: 5,
         items: {
           type: 'object',
           properties: {
@@ -102,7 +105,6 @@ Return ONLY the structured JSON specified by the output schema.`;
             },
             choices: {
               type: 'array',
-              maxItems: 4,
               items: {
                 type: 'object',
                 properties: {
