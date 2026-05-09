@@ -102,6 +102,7 @@ const superAdminSubItems = [
   { title: 'Credential Types', url: '/admin/credential-types', icon: Award },
   { title: 'Discord', url: '/admin/discord', icon: MessageCircle },
   { title: 'AI Config', url: '/admin/ai-config', icon: Bot },
+  { title: 'Notebook Telemetry', url: '/admin/notebook-telemetry', icon: Bot },
   { title: 'FGN Play', url: '/admin/sync-tester', icon: Zap },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
