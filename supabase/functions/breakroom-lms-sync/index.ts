@@ -150,7 +150,28 @@ Deno.serve(async (req) => {
             last_played_at: new Date().toISOString()
           })
         }
-      }
+
+        // Notify the user that their spatial task was verified
+        if (!completionError && completionStatus === 'completed') {
+          const courseLabel = (metadata as Record<string, unknown> | undefined)?.breakroom_course_name
+            ?? (metadata as Record<string, unknown> | undefined)?.quiz_name
+            ?? course_id_external
+          await fgnClient.from('user_notifications').insert({
+            user_id,
+            type: 'achievement',
+            title: 'Spatial task verified',
+            message: `${courseLabel} — +${woXp} XP added to your Skill Passport via Breakroom.`,
+            icon_name: 'Boxes',
+            accent_color: 'hsl(var(--secondary))',
+            link_url: `/work-orders/${workOrder.id}`,
+            metadata: {
+              source: 'breakroom_lms',
+              work_order_id: workOrder.id,
+              xp_awarded: woXp,
+              event_type,
+            },
+          })
+        }
 
       results.fgn_completion = completionError
         ? `error: ${completionError.message}`
