@@ -113,14 +113,18 @@ Deno.serve(async (req) => {
         }, { onConflict: 'user_id,work_order_id' })
 
       if (!completionError && completionStatus === 'completed') {
-        await fgnClient.from('user_points').insert({
+        const quizKeyPart = (metadata as Record<string, unknown> | undefined)?.breakroom_quiz_id
+          ?? course_id_external
+        const woEventKey = `breakroom:wo:${workOrder.id}:quiz:${quizKeyPart}`
+        await fgnClient.from('user_points').upsert({
           user_id,
           points_type: 'xp',
           amount: woXp,
           source_type: 'work_order',
           source_id: workOrder.id,
-          description: `Breakroom LMS completion: ${course_id_external}`
-        })
+          description: `Breakroom LMS completion: ${course_id_external}`,
+          event_key: woEventKey,
+        }, { onConflict: 'user_id,event_key', ignoreDuplicates: true })
 
         const { data: existingStats } = await fgnClient
           .from('user_game_stats')
