@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
 
       let quizzes: BreakroomQuiz[]
       try {
-        quizzes = await fetchCompletedQuizzes(token, student.id)
+        quizzes = await fetchCompletedQuizzes(token, student.id, rawSink)
       } catch (err) {
         results.errors.push(`Quiz fetch error for ${student.name}: ${String(err)}`)
         continue
