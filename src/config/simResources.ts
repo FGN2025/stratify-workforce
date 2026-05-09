@@ -80,8 +80,8 @@ export const SIM_RESOURCES: SimResourcesConfig = {
   Roadcraft: {
     title: 'Roadcraft',
     shortTitle: 'Roadcraft',
-    icon: Cable,
-    accentColor: '#22C55E',
+    icon: Map,
+    accentColor: '#12cabd',
     resources: [],
   },
 };
