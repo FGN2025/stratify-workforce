@@ -55,7 +55,12 @@ export type ScormBuildResponse =
       manifestUrl: string;
       zipUrl: string | null;
       playerUrl: string | null;
+      /** Lead WO URL (back-compat alias for leadWorkOrderUrl). */
       workOrderUrl: string;
+      /** v0.2: lead WO URL, always present. */
+      leadWorkOrderUrl?: string;
+      /** v0.2: mirrors workOrderIds[] exactly (lead at [0]). Single-WO builds: [workOrderUrl]. */
+      workOrderUrls?: string[];
       coverImageUrl: string | null;
       title: string;
       isReplacement: boolean;
