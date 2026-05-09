@@ -26,7 +26,7 @@ interface BreakroomQuizInfo {
 interface BreakroomQuiz {
   id: number
   name: string
-  courseId: number
+  courseid: number
   attempts: number
   StudentsQuizInfo: BreakroomQuizInfo[]
 }
@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
               metadata: {
                 breakroom_quiz_id: quiz.id,
                 breakroom_user_id: student.id,
-                breakroom_course_id: quiz.courseId,
+                breakroom_course_id: quiz.courseid,
                 completion_date: latestInfo.date,
                 polled: true,
               },
@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
               attempt_count: 1,
               metadata: {
                 quiz_name: quiz.name,
-                breakroom_course_id: quiz.courseId,
+                breakroom_course_id: quiz.courseid,
                 breakroom_course_name: student.course?.name,
                 completion_date: latestInfo.date,
               },
