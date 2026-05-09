@@ -149,6 +149,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const url = new URL(req.url)
+  const debug = url.searchParams.get('debug') === '1'
+  const rawSink: unknown[] | undefined = debug ? [] : undefined
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const syncSecret = Deno.env.get('BREAKROOM_SYNC_SECRET')!
@@ -172,7 +176,7 @@ Deno.serve(async (req) => {
       throw new Error('No session token')
     }
 
-    const students = await fetchAllStudents(token)
+    const students = await fetchAllStudents(token, rawSink)
     results.students_found = students.length
 
     const breakroomUserIds = students.map(s => s.id)
