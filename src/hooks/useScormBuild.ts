@@ -3,7 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import type { CourseManifest, QuizQuestion } from '@/lib/scorm-player/types';
 
 export interface ScormBuildRequest {
-  workOrderId: string;
+  /** Single-WO path (back-compat). Mutually exclusive with workOrderIds. */
+  workOrderId?: string;
+  /** Bundle path: 2–10 WO ids. Index 0 is the lead. Mutually exclusive with workOrderId. */
+  workOrderIds?: string[];
   destination: 'fgn-academy' | 'broadband-workforce' | 'simu-cdl-path' | 'external-lms';
   brandMode: 'arcade' | 'enterprise';
   scormVersion?: '1.2' | 'cmi5';
