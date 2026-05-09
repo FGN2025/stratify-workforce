@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCourse } from '@/hooks/useCourses';
 import { useEnroll } from '@/hooks/useEnrollment';
