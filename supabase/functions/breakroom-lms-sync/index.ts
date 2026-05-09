@@ -342,8 +342,9 @@ async function evaluateFgnAchievements(
   client: ReturnType<typeof createClient>,
   userId: string,
   eventType: string,
-  score?: number,
-  passed?: boolean
+  score: number | undefined,
+  passed: boolean | undefined,
+  quizKeyPart: unknown
 ): Promise<string> {
   const { data: achievements } = await client
     .from('achievements')
@@ -376,14 +377,16 @@ async function evaluateFgnAchievements(
       })
 
       if (achievement.xp_reward) {
-        await client.from('user_points').insert({
+        const achvEventKey = `breakroom:achv:${achievement.id}:quiz:${quizKeyPart}`
+        await client.from('user_points').upsert({
           user_id: userId,
           points_type: 'xp',
           amount: achievement.xp_reward,
           source_type: 'achievement',
           source_id: achievement.id,
-          description: 'Achievement unlocked via Breakroom LMS'
-        })
+          description: 'Achievement unlocked via Breakroom LMS',
+          event_key: achvEventKey,
+        }, { onConflict: 'user_id,event_key', ignoreDuplicates: true })
       }
       awarded++
     }
