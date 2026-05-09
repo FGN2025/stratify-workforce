@@ -43,6 +43,7 @@ import ChallengeRegistry from "./pages/ChallengeRegistry";
 import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
 import CourseBuilder from "./pages/admin/CourseBuilder";
 import Privacy from "./pages/Privacy";
+import Eula from "./pages/Eula";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/community/:slug" element={<CommunityProfile />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/eula" element={<Eula />} />
               <Route path="/verify" element={<VerifyCredential />} />
               
               {/* Learning routes */}
