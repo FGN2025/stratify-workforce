@@ -229,6 +229,8 @@ export default function Admin() {
         ) : null;
       case 'challenge-mappings':
         return <ChallengeLessonMappingsManager />;
+      case 'breakroom-mapper':
+        return <BreakroomMapperManager />;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : null;
       default:
