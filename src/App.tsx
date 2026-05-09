@@ -72,6 +72,7 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/eula" element={<Eula />} />
               <Route path="/verify" element={<VerifyCredential />} />
+              <Route path="/sim/:gameTitle" element={<SimIndustry />} />
               
               {/* Learning routes */}
               <Route path="/learn" element={<Learn />} />
