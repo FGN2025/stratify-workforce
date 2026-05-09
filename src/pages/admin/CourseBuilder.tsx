@@ -224,6 +224,8 @@ export default function CourseBuilder() {
           <ConfigureStage
             form={form}
             update={update}
+            workOrderIds={workOrderIds}
+            setWorkOrderIds={setWorkOrderIds}
             workOrders={workOrders}
             loadingWO={loadingWO}
             isBuilding={isBuilding}
