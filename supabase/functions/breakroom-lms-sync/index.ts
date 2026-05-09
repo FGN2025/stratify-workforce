@@ -172,6 +172,7 @@ Deno.serve(async (req) => {
             },
           })
         }
+      }
 
       results.fgn_completion = completionError
         ? `error: ${completionError.message}`
