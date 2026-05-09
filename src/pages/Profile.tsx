@@ -6,6 +6,7 @@ import { SkillRadar } from '@/components/profile/SkillRadar';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { AchievementCard } from '@/components/profile/AchievementCard';
 import { CertificationCard } from '@/components/profile/CertificationCard';
+import { SpatialVerifications } from '@/components/profile/SpatialVerifications';
 import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -223,6 +224,9 @@ const Profile = () => {
             ))}
           </HorizontalCarousel>
         )}
+
+        {/* Spatial verifications from Breakroom (owner-only via RLS) */}
+        <SpatialVerifications userId={profile.id} />
 
         {/* Empty states */}
         {achievements.length === 0 && credentials.length === 0 && (
