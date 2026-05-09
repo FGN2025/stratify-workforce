@@ -159,7 +159,26 @@ const ALLOWED_IMAGE_SIZES = new Set([
 const ADMIN_ROLES = new Set(['admin', 'super_admin']);
 
 interface BuildRequest {
-  workOrderId: string;
+  /**
+   * Single Work Order id. v0/v0.1 path; preserved for back-compat.
+   * Mutually exclusive with `workOrderIds`. When only this is set,
+   * the build runs as a 1-WO course at (workOrderId, destination).
+   */
+  workOrderId?: string;
+
+  /**
+   * v0.2 multi-challenge bundling. Ordered list of Work Order IDs to
+   * bundle into one SCORM course. Length 2-10. The first entry is the
+   * LEAD work order (drives Learning Resource attachment defaults,
+   * default cover image passthrough, and default title/description
+   * when the admin omits the course-level overrides).
+   *
+   * Mutually exclusive with `workOrderId` (server returns 400
+   * BUNDLE_MIXED_INPUT if both are present). See PHASE_2_SPEC.md
+   * §"v0.2 coordination contract — multi-challenge bundling".
+   */
+  workOrderIds?: string[];
+
   destination: string;
   brandMode: string;
   scormVersion?: string;
@@ -200,6 +219,11 @@ interface BuildRequest {
   quizQuestions?: Record<string, QuizQuestion[]>;
 }
 
+// v0.2 bundle constants -- mirror PHASE_2_SPEC.md §"v0.2 coordination
+// contract" §"Server-side validation rules".
+const BUNDLE_MIN = 2;
+const BUNDLE_MAX = 10;
+
 function jsonError(status: number, message: string, extra?: Record<string, unknown>): Response {
   return new Response(JSON.stringify({ error: message, ...extra }), {
     status,
@@ -234,6 +258,14 @@ const QUIZ_TYPES = new Set(['single-choice', 'multi-choice', 'true-false']);
 interface ValidationIssue {
   path: string;
   message: string;
+  /**
+   * v0.2: optional stable error code for bundle-level validation
+   * (BUNDLE_TOO_SMALL, BUNDLE_DUPLICATE_WO, etc.). UI uses this for
+   * field-mapping to picker behavior. v0.1 OVERRIDE_VALIDATION issues
+   * omit this; only bundle issues populate it. Backwards-compat:
+   * existing UI parsers ignore unknown fields.
+   */
+  code?: string;
 }
 
 function validateOverrides(
@@ -537,13 +569,114 @@ Deno.serve(async (req) => {
       return jsonError(400, 'invalid JSON body');
     }
 
-    // Required fields
-    if (!body.workOrderId || typeof body.workOrderId !== 'string') {
-      return jsonError(400, 'workOrderId is required');
+    // --------------------------------------------------------------
+    // 4a. v0.2 bundle vs single-WO request-shape validation.
+    //     Aggregates BUNDLE_* issues into one OVERRIDE_VALIDATION 400
+    //     so the picker UI can field-map every malformed entry at once.
+    //     See PHASE_2_SPEC.md §"v0.2 coordination contract" §"Server-side
+    //     validation rules" + §"Path conventions".
+    // --------------------------------------------------------------
+    const bundleShapeIssues: ValidationIssue[] = [];
+    const hasSingle = body.workOrderId !== undefined;
+    const hasArray = body.workOrderIds !== undefined;
+
+    if (hasSingle && hasArray) {
+      bundleShapeIssues.push({
+        path: 'workOrderIds',
+        message: 'specify either workOrderId or workOrderIds, not both',
+        code: 'BUNDLE_MIXED_INPUT',
+      });
     }
-    if (!isUuid(body.workOrderId)) {
-      return jsonError(400, `workOrderId is not a valid UUID: ${body.workOrderId}`);
+
+    let normalizedIds: string[] = [];
+    if (hasArray) {
+      // Bundle path. Length, dupes, per-element UUID checks aggregate.
+      if (!Array.isArray(body.workOrderIds)) {
+        bundleShapeIssues.push({
+          path: 'workOrderIds',
+          message: 'must be an array of work order UUIDs',
+          code: 'BUNDLE_MIXED_INPUT',
+        });
+      } else {
+        if (body.workOrderIds.length < BUNDLE_MIN) {
+          bundleShapeIssues.push({
+            path: 'workOrderIds',
+            message: `must contain at least ${BUNDLE_MIN} entries; use workOrderId for single-WO builds`,
+            code: 'BUNDLE_TOO_SMALL',
+          });
+        }
+        if (body.workOrderIds.length > BUNDLE_MAX) {
+          bundleShapeIssues.push({
+            path: 'workOrderIds',
+            message: `capped at ${BUNDLE_MAX} (build-timeout headroom); split into multiple bundles`,
+            code: 'BUNDLE_TOO_LARGE',
+          });
+        }
+        const seen = new Set<string>();
+        for (let i = 0; i < body.workOrderIds.length; i += 1) {
+          const id = body.workOrderIds[i];
+          if (typeof id !== 'string') {
+            bundleShapeIssues.push({
+              path: `workOrderIds[${i}]`,
+              message: 'must be a string UUID',
+            });
+            continue;
+          }
+          if (!isUuid(id)) {
+            bundleShapeIssues.push({
+              path: `workOrderIds[${i}]`,
+              message: `not a valid UUID: ${id}`,
+            });
+            continue;
+          }
+          if (seen.has(id)) {
+            bundleShapeIssues.push({
+              path: `workOrderIds[${i}]`,
+              message: `duplicate workOrderId: ${id}`,
+              code: 'BUNDLE_DUPLICATE_WO',
+            });
+            continue;
+          }
+          seen.add(id);
+        }
+        // Build normalizedIds in input order, keeping only valid UUIDs.
+        // (Per-WO existence/active checks happen later against the DB.)
+        normalizedIds = body.workOrderIds.filter(
+          (id): id is string => typeof id === 'string' && isUuid(id),
+        );
+        // Dedup while preserving first-occurrence order.
+        normalizedIds = Array.from(new Set(normalizedIds));
+      }
+    } else if (hasSingle) {
+      // Single-WO path (back-compat). Normalize to a 1-element array
+      // so all downstream code can work uniformly off normalizedIds[].
+      if (typeof body.workOrderId !== 'string') {
+        return jsonError(400, 'workOrderId must be a string');
+      }
+      if (!isUuid(body.workOrderId)) {
+        return jsonError(400, `workOrderId is not a valid UUID: ${body.workOrderId}`);
+      }
+      normalizedIds = [body.workOrderId];
+    } else {
+      return jsonError(400, 'workOrderId or workOrderIds is required');
     }
+
+    if (bundleShapeIssues.length > 0) {
+      return jsonError(400, 'override validation failed', {
+        code: 'OVERRIDE_VALIDATION',
+        issues: bundleShapeIssues,
+      });
+    }
+
+    // isBundleBuild is the v0.2 marker used downstream for behavior
+    // that differs between single-WO and bundle paths (response shape,
+    // metadata derivation, regen transaction). Keyed off the request
+    // input form, not normalizedIds.length, so a 1-element array would
+    // still be treated as bundle path (currently rejected by
+    // BUNDLE_TOO_SMALL above; reserved for future relaxation).
+    const isBundleBuild = hasArray;
+    const leadWorkOrderId = normalizedIds[0]!;
+
     if (!ALLOWED_DESTINATIONS.has(body.destination)) {
       return jsonError(400, `destination must be one of [${Array.from(ALLOWED_DESTINATIONS).join(', ')}]; got: ${body.destination}`);
     }
@@ -574,38 +707,111 @@ Deno.serve(async (req) => {
     }
 
     // --------------------------------------------------------------
-    // 5. Look up the Work Order. Must exist + be active + have a
-    //    source_challenge_id (otherwise transform has nothing to
-    //    pull from on play.fgn.gg).
+    // 5. Look up all referenced Work Orders (single-WO path = 1-element
+    //    array; bundle path = 2-10 entries). Each must exist + be active
+    //    + have a source_challenge_id. Bundle path aggregates per-WO
+    //    failures into one OVERRIDE_VALIDATION 400 with stable codes
+    //    (BUNDLE_WO_NOT_FOUND, BUNDLE_WO_INACTIVE, BUNDLE_WO_NO_CHALLENGE);
+    //    single-WO path retains original 404/400 semantics for back-compat.
     // --------------------------------------------------------------
-    const { data: wo, error: woErr } = await adminSupabase
+    const { data: wosRaw, error: wosErr } = await adminSupabase
       .from('work_orders')
       .select('id, title, description, game_title, is_active, source_challenge_id, fgn_origin_challenge_id, cover_image_url, difficulty')
-      .eq('id', body.workOrderId)
-      .maybeSingle();
+      .in('id', normalizedIds);
 
-    if (woErr) {
-      return jsonError(500, `failed to fetch work order: ${woErr.message}`);
+    if (wosErr) {
+      return jsonError(500, `failed to fetch work orders: ${wosErr.message}`);
     }
-    if (!wo) {
-      return jsonError(404, `work order not found: ${body.workOrderId}`);
+
+    type WorkOrderRow = {
+      id: string;
+      title: string;
+      description: string | null;
+      game_title: string | null;
+      is_active: boolean;
+      source_challenge_id: string | null;
+      fgn_origin_challenge_id: string | null;
+      cover_image_url: string | null;
+      difficulty: string | null;
+    };
+    const wosById = new Map<string, WorkOrderRow>(
+      (wosRaw ?? []).map((w: WorkOrderRow) => [w.id, w] as const),
+    );
+
+    if (isBundleBuild) {
+      // Aggregate per-WO issues across the bundle so the picker UI can
+      // highlight every malformed row at once.
+      const wosIssues: ValidationIssue[] = [];
+      for (let i = 0; i < normalizedIds.length; i += 1) {
+        const id = normalizedIds[i]!;
+        const w = wosById.get(id);
+        if (!w) {
+          wosIssues.push({
+            path: `workOrderIds[${i}]`,
+            message: `work order not found: ${id}`,
+            code: 'BUNDLE_WO_NOT_FOUND',
+          });
+          continue;
+        }
+        if (!w.is_active) {
+          wosIssues.push({
+            path: `workOrderIds[${i}]`,
+            message: `work order is inactive: ${id}`,
+            code: 'BUNDLE_WO_INACTIVE',
+          });
+          continue;
+        }
+        if (!w.source_challenge_id) {
+          wosIssues.push({
+            path: `workOrderIds[${i}]`,
+            message: `work order has no source_challenge_id: ${id}`,
+            code: 'BUNDLE_WO_NO_CHALLENGE',
+          });
+          continue;
+        }
+      }
+      if (wosIssues.length > 0) {
+        return jsonError(400, 'override validation failed', {
+          code: 'OVERRIDE_VALIDATION',
+          issues: wosIssues,
+        });
+      }
+    } else {
+      // Single-WO back-compat: 404/400 fast-fail, exactly as before.
+      const w = wosById.get(leadWorkOrderId);
+      if (!w) {
+        return jsonError(404, `work order not found: ${leadWorkOrderId}`);
+      }
+      if (!w.is_active) {
+        return jsonError(404, `work order is inactive: ${leadWorkOrderId}`);
+      }
+      if (!w.source_challenge_id) {
+        return jsonError(400, 'work order has no source_challenge_id; cannot build a SCORM course from it');
+      }
     }
-    if (!wo.is_active) {
-      return jsonError(404, `work order is inactive: ${body.workOrderId}`);
-    }
-    if (!wo.source_challenge_id) {
-      return jsonError(400, 'work order has no source_challenge_id; cannot build a SCORM course from it');
-    }
+
+    // Ordered list of validated WO rows (lead at index 0, then bundle
+    // order). All entries have non-null source_challenge_id by here.
+    const orderedWos = normalizedIds.map((id) => wosById.get(id)!);
+    const leadWo = orderedWos[0]!;
+    // `wo` is preserved as the lead alias so downstream code that
+    // already reads from the single-WO-shape stays unchanged for the
+    // single-WO path. Bundle-aware code reads orderedWos[].
+    const wo = leadWo;
 
     // --------------------------------------------------------------
     // 6. Look up any existing scorm_courses row for this
-    //    (work_order_id, destination) tuple. Surface to the caller
-    //    so the UI can show a confirmation modal before replacing.
+    //    (lead_work_order_id, destination) tuple. v0.2: keyed on the
+    //    LEAD WO (workOrderIds[0]). Surface to the caller so the UI
+    //    can show a confirmation modal before replacing. Bundle
+    //    membership changes (non-lead WOs added/removed) replace the
+    //    same row; lead changes create a new course (different lead =
+    //    different (lead_work_order_id, destination) tuple).
     // --------------------------------------------------------------
     const { data: existing, error: existingErr } = await adminSupabase
       .from('scorm_courses')
       .select('id, title, is_published, created_at, updated_at')
-      .eq('work_order_id', body.workOrderId)
+      .eq('work_order_id', leadWorkOrderId)
       .eq('destination', body.destination)
       .maybeSingle();
 
@@ -651,11 +857,19 @@ Deno.serve(async (req) => {
     //    derive course.id; we pass our DB courseId so the manifest's
     //    internal id matches the DB row.
     // --------------------------------------------------------------
+    // v0.2: challengeIds[] is the concatenated list across the bundle
+    // in input order (lead at index 0). transform() already supports
+    // 1..N challenges natively (Promise.all over the IDs); no transform
+    // change needed for bundling. Each WO contributes one challenge via
+    // fgn_origin_challenge_id ?? source_challenge_id (existing fallback).
+    const bundledChallengeIds = orderedWos.map(
+      (w) => w.fgn_origin_challenge_id ?? w.source_challenge_id!,
+    );
     let transformResult;
     try {
       transformResult = await transform(
         {
-          challengeIds: [wo.fgn_origin_challenge_id ?? wo.source_challenge_id],
+          challengeIds: bundledChallengeIds,
           destination: body.destination as ScormDestination,
           scormVersion: (body.scormVersion ?? '1.2') as '1.2' | 'cmi5',
           bundleId: courseId,
@@ -665,10 +879,32 @@ Deno.serve(async (req) => {
         fetcher,
       );
     } catch (err) {
-      return jsonError(
-        502,
-        `transform failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      // ChallengeNotFoundError from the toolkit fetcher surfaces here.
+      // For v0.2 bundles we fast-fail on the first missing challenge
+      // rather than aggregating across the bundle (would require a
+      // pre-flight fetch loop or a transform-layer change). Aggregation
+      // is a v0.2.x follow-up; current behavior is contract-compliant
+      // for single-WO and surfaces a clear single-issue 400 for bundles
+      // with the BUNDLE_CHALLENGE_UNPUBLISHED code so the picker can
+      // still field-map.
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const isMissingChallenge =
+        err instanceof Error
+        && (err.constructor?.name === 'ChallengeNotFoundError'
+          || /not found|not published/i.test(errMsg));
+      if (isMissingChallenge && isBundleBuild) {
+        return jsonError(400, 'override validation failed', {
+          code: 'OVERRIDE_VALIDATION',
+          issues: [
+            {
+              path: 'workOrderIds',
+              message: `play.fgn.gg challenge not published or not found: ${errMsg}`,
+              code: 'BUNDLE_CHALLENGE_UNPUBLISHED',
+            },
+          ],
+        });
+      }
+      return jsonError(502, `transform failed: ${errMsg}`);
     }
 
     // courseManifest and assets are reassigned in the enhancement
@@ -1027,6 +1263,90 @@ Deno.serve(async (req) => {
     }
 
     // --------------------------------------------------------------
+    // 13.5 v0.2 Replacement transaction sequence — bundle membership
+    //      + progress cleanup. Per PHASE_2_SPEC.md §"Replacement
+    //      transaction sequence (regenerate)":
+    //
+    //        1. DELETE join rows for this course_id (always — also
+    //           handles partial-state recovery from a prior failed
+    //           regen)
+    //        2. INSERT one join row per WO in input order; lead at
+    //           position 0 with is_lead=true
+    //        3. DELETE progress rows for this course_id (replacement
+    //           only — positions in old suspend_data don't map to
+    //           new modules, so progress is hard-reset on regen)
+    //
+    //      Atomicity gap (v0.2.x improvement): supabase-js can't run
+    //      a multi-table transaction from the JS client. We sequence
+    //      the operations and document partial-failure recovery via
+    //      retry. A `regenerate_scorm_course_bundle(...)` stored proc
+    //      called via RPC would close the gap; tracked as a follow-up
+    //      migration ask for Lovable.
+    // --------------------------------------------------------------
+    {
+      // (1) Wipe any prior membership rows for this course_id. Idempotent:
+      //     no-op for new builds (nothing to delete), wipes old rows for
+      //     replacements + recovers partial-state from prior failed runs.
+      const { error: delJoinErr } = await adminSupabase
+        .from('scorm_course_work_orders')
+        .delete()
+        .eq('course_id', courseId);
+      if (delJoinErr) {
+        return jsonError(
+          500,
+          `failed to clear scorm_course_work_orders for course ${courseId}: ${delJoinErr.message}`,
+        );
+      }
+
+      // (2) Insert fresh membership rows. Lead at position 0 with
+      //     is_lead=true; non-lead WOs at position 1..N-1.
+      const joinRows = orderedWos.map((w, idx) => ({
+        course_id: courseId,
+        work_order_id: w.id,
+        position: idx,
+        is_lead: idx === 0,
+      }));
+      const { error: insJoinErr } = await adminSupabase
+        .from('scorm_course_work_orders')
+        .insert(joinRows);
+      if (insJoinErr) {
+        return jsonError(
+          500,
+          `failed to insert scorm_course_work_orders for course ${courseId}: ${insJoinErr.message}`,
+        );
+      }
+
+      // (3) Bundle replacement only: wipe progress rows. Single-WO
+      //     regenerate keeps v0 behavior (progress preserved across
+      //     regen — v0.3's restore-on-mount handles stale positions
+      //     by silently dropping them). Bundle replacement applies
+      //     the hard-reset because Lovable's bundle-replacement modal
+      //     copy explicitly warns "All learner progress for this
+      //     course will be reset." Single-WO modal copy (v0) doesn't
+      //     warn, so toolkit must not surprise learners by wiping
+      //     progress on single-WO regenerate.
+      if (existing && isBundleBuild) {
+        const { error: delProgErr } = await adminSupabase
+          .from('scorm_course_progress')
+          .delete()
+          .eq('course_id', courseId);
+        if (delProgErr) {
+          // Non-fatal: course is published, manifest is canonical,
+          // join rows are correct. Stale progress will appear to
+          // learners until next regen retry (where this DELETE
+          // re-runs idempotently). Surface as a console warning so
+          // admin can retry rather than silently shipping a broken
+          // state. We don't 500 here because the manifest is already
+          // overwritten and Player URLs are live; failing the
+          // request would be misleading.
+          console.warn(
+            `scorm_course_progress wipe failed for course ${courseId}: ${delProgErr.message}. Retry regenerate to complete cleanup.`,
+          );
+        }
+      }
+    }
+
+    // --------------------------------------------------------------
     // 14. Phase 2 v0 step 4.5 -- package the SCORM ZIP for download.
     //     Uses the redirect-ZIP pattern: index.html redirects to the
     //     fgn.academy native player URL. Trade-off: SCORM API progress
@@ -1102,12 +1422,23 @@ Deno.serve(async (req) => {
     //     fgn-academy destination (where the native /scorm-player/
     //     route renders the course); external destinations rely on
     //     zipUrl for download distribution.
+    //
+    //     v0.2: workOrderUrls[] mirrors workOrderIds[] exactly — lead
+    //     at index 0, then bundle order. leadWorkOrderUrl is always
+    //     present as a pinned "Primary Work Order" pointer so success-
+    //     state UI doesn't have to re-derive it. workOrderUrl is kept
+    //     as the lead URL for back-compat with the v0/v0.1 single-
+    //     field response.
     // --------------------------------------------------------------
     const playerUrl =
       body.destination === 'fgn-academy'
         ? `https://fgn.academy/scorm-player/${courseId}/launch`
         : null;
-    const workOrderUrl = `https://fgn.academy/work-orders/${wo.id}`;
+    const workOrderUrls = orderedWos.map(
+      (w) => `https://fgn.academy/work-orders/${w.id}`,
+    );
+    const leadWorkOrderUrl = workOrderUrls[0]!;
+    const workOrderUrl = leadWorkOrderUrl; // back-compat
 
     return jsonOk({
       status: 'ok',
@@ -1116,6 +1447,8 @@ Deno.serve(async (req) => {
       zipUrl,
       playerUrl,
       workOrderUrl,
+      workOrderUrls,
+      leadWorkOrderUrl,
       coverImageUrl: absoluteCoverUrl,
       title: courseManifest.title,
       isReplacement: existing !== null && existing !== undefined,
