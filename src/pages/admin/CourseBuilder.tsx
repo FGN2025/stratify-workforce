@@ -318,50 +318,143 @@ function ValidationSummary({ issues }: { issues: ValidationIssue[] }) {
 }
 
 // ---------- Configure stage ----------
+type ConfigForm = Omit<ScormBuildRequest, 'workOrderId' | 'workOrderIds'>;
+
 function ConfigureStage({
   form,
   update,
+  workOrderIds,
+  setWorkOrderIds,
   workOrders,
   loadingWO,
   isBuilding,
   onPreview,
 }: {
-  form: ScormBuildRequest;
-  update: <K extends keyof ScormBuildRequest>(k: K, v: ScormBuildRequest[K]) => void;
+  form: ConfigForm;
+  update: <K extends keyof ConfigForm>(k: K, v: ConfigForm[K]) => void;
+  workOrderIds: string[];
+  setWorkOrderIds: React.Dispatch<React.SetStateAction<string[]>>;
   workOrders: WorkOrder[];
   loadingWO: boolean;
   isBuilding: boolean;
   onPreview: () => void;
 }) {
+  const filled = workOrderIds.filter(Boolean);
+  const isBundle = filled.length >= MIN_BUNDLE;
+  const atMax = workOrderIds.length >= MAX_BUNDLE;
+  const hasDupes = new Set(filled).size !== filled.length;
+
+  // Mixed-framework soft-warn: surface when bundle WOs span multiple game_titles.
+  const selectedGames = filled
+    .map((id) => workOrders.find((w) => w.id === id)?.game_title)
+    .filter((g): g is string => !!g);
+  const uniqueGames = Array.from(new Set(selectedGames));
+  const mixedFramework = isBundle && uniqueGames.length > 1;
+
+  const setAt = (idx: number, value: string) =>
+    setWorkOrderIds((arr) => {
+      const next = [...arr];
+      next[idx] = value;
+      return next;
+    });
+  const removeAt = (idx: number) =>
+    setWorkOrderIds((arr) => (arr.length === 1 ? [''] : arr.filter((_, i) => i !== idx)));
+  const addRow = () =>
+    setWorkOrderIds((arr) => (arr.length >= MAX_BUNDLE ? arr : [...arr, '']));
+
+  const canPreview =
+    !isBuilding &&
+    filled.length >= 1 &&
+    !hasDupes &&
+    filled.length <= MAX_BUNDLE;
+
   return (
     <Card className="p-6 space-y-5 bg-card/50 backdrop-blur border-border">
-      <div className="space-y-2">
-        <Label>Source Work Order</Label>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <Label>Source Work Order{workOrderIds.length > 1 ? 's' : ''}</Label>
+          <Badge variant="outline" className="font-mono text-[10px]">
+            {filled.length}/{MAX_BUNDLE} {isBundle ? '· bundle' : '· single'}
+          </Badge>
+        </div>
         {loadingWO ? (
           <div className="text-sm text-muted-foreground flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading work orders…
           </div>
         ) : (
-          <Select
-            value={form.workOrderId || 'none'}
-            onValueChange={(v) => update('workOrderId', v === 'none' ? '' : v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a work order" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">— Select —</SelectItem>
-              {workOrders.map((w) => (
-                <SelectItem key={w.id} value={w.id}>
-                  {w.title} {w.game_title ? `· ${w.game_title}` : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            {workOrderIds.map((id, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-muted-foreground w-14 shrink-0">
+                  {idx === 0 ? 'LEAD' : `#${idx + 1}`}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <Select
+                    value={id || 'none'}
+                    onValueChange={(v) => setAt(idx, v === 'none' ? '' : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a work order" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Select —</SelectItem>
+                      {workOrders.map((w) => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.title} {w.game_title ? `· ${w.game_title}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {workOrderIds.length > 1 && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => removeAt(idx)}
+                    aria-label="Remove work order"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={addRow}
+              disabled={atMax}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              {atMax ? `Bundle cap reached (${MAX_BUNDLE})` : 'Add another WO'}
+            </Button>
+          </div>
         )}
         <p className="text-xs text-muted-foreground">
-          Only active work orders with a linked play.fgn.gg challenge are listed.
+          Only active work orders with a linked play.fgn.gg challenge are listed. Index 0 is the
+          lead — it drives default title, description, and cover passthrough.
         </p>
+        {hasDupes && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              <Badge variant="outline" className="font-mono mr-2">BUNDLE_DUPLICATE_WO</Badge>
+              Each work order can appear at most once in a bundle.
+            </AlertDescription>
+          </Alert>
+        )}
+        {mixedFramework && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              <Badge variant="outline" className="font-mono mr-2">MIXED_FRAMEWORK</Badge>
+              Bundle spans multiple game frameworks ({uniqueGames.join(', ')}). The build will
+              still succeed, but the resulting course mixes pedagogy from each. Confirm this is
+              intentional before publishing.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -369,7 +462,7 @@ function ConfigureStage({
           <Label>Destination</Label>
           <Select
             value={form.destination}
-            onValueChange={(v) => update('destination', v as ScormBuildRequest['destination'])}
+            onValueChange={(v) => update('destination', v as ConfigForm['destination'])}
           >
             <SelectTrigger>
               <SelectValue />
@@ -386,7 +479,7 @@ function ConfigureStage({
           <Label>Brand Mode</Label>
           <Select
             value={form.brandMode}
-            onValueChange={(v) => update('brandMode', v as ScormBuildRequest['brandMode'])}
+            onValueChange={(v) => update('brandMode', v as ConfigForm['brandMode'])}
           >
             <SelectTrigger>
               <SelectValue />
@@ -401,7 +494,7 @@ function ConfigureStage({
           <Label>SCORM Version</Label>
           <Select
             value={form.scormVersion}
-            onValueChange={(v) => update('scormVersion', v as ScormBuildRequest['scormVersion'])}
+            onValueChange={(v) => update('scormVersion', v as ConfigForm['scormVersion'])}
           >
             <SelectTrigger>
               <SelectValue />
@@ -419,7 +512,7 @@ function ConfigureStage({
         <Input
           value={form.title ?? ''}
           onChange={(e) => update('title', e.target.value)}
-          placeholder="Derived from challenge if blank"
+          placeholder={isBundle ? 'Derived from lead WO if blank' : 'Derived from challenge if blank'}
         />
       </div>
 
@@ -462,7 +555,7 @@ function ConfigureStage({
       </div>
 
       <div className="flex gap-2 pt-2">
-        <Button onClick={onPreview} disabled={!form.workOrderId || isBuilding}>
+        <Button onClick={onPreview} disabled={!canPreview}>
           {isBuilding ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : (
