@@ -137,10 +137,21 @@ export class EnhanceClient {
     // We use the streaming variant for parity with generateText —
     // structured generations can be just as long as freeform text
     // when there are many quiz items.
+    // NOTE on output_config.format shape: Anthropic's structured-outputs
+    // endpoint tightened its envelope validator (Pydantic-style strict
+    // schema). Previously we passed `name: args.schemaName` directly
+    // inside `format`, but the current API rejects that with
+    // "output_config.format.name: Extra inputs are not permitted".
+    // The schema name appears to no longer be a recognized field at
+    // this level. Removed entirely; `args.schemaName` is retained on
+    // the function signature for API stability (callers still pass it
+    // for clarity / future logging) but not sent to the model. Schema
+    // identity is implicit in the schema body itself, so removing the
+    // name field has no effect on output validation.
+    const _unusedSchemaName = args.schemaName; // documented above; not sent
     const outputConfig: Record<string, unknown> = {
       format: {
         type: 'json_schema',
-        name: args.schemaName,
         schema: args.schema,
       },
     };
