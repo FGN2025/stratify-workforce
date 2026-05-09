@@ -26,7 +26,7 @@ interface BreakroomQuizInfo {
 interface BreakroomQuiz {
   id: number
   name: string
-  courseId: number
+  courseid: number
   attempts: number
   StudentsQuizInfo: BreakroomQuizInfo[]
 }
