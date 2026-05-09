@@ -68,7 +68,7 @@ async function getBreakroomToken(): Promise<string | null> {
   return token
 }
 
-async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
+async function fetchAllStudents(token: string, rawSink?: unknown[]): Promise<BreakroomStudent[]> {
   const allStudents: BreakroomStudent[] = []
   let page = 1
   const pageSize = 100
@@ -94,6 +94,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
     }
 
     const data = await res.json()
+    if (rawSink) rawSink.push({ endpoint: 'students', page, payload: data })
     const students: BreakroomStudent[] = data.Students || data.students || []
     allStudents.push(...students)
 
@@ -104,7 +105,7 @@ async function fetchAllStudents(token: string): Promise<BreakroomStudent[]> {
   return allStudents
 }
 
-async function fetchCompletedQuizzes(token: string, userId: number): Promise<BreakroomQuiz[]> {
+async function fetchCompletedQuizzes(token: string, userId: number, rawSink?: unknown[]): Promise<BreakroomQuiz[]> {
   const allQuizzes: BreakroomQuiz[] = []
   let page = 1
   const pageSize = 100
@@ -132,6 +133,7 @@ async function fetchCompletedQuizzes(token: string, userId: number): Promise<Bre
     }
 
     const data = await res.json()
+    if (rawSink) rawSink.push({ endpoint: 'quizzes', userId, page, payload: data })
     const quizzes: BreakroomQuiz[] = data.MemberQuizzes || data.memberQuizzes || []
     allQuizzes.push(...quizzes)
 
