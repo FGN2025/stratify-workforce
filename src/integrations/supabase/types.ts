@@ -2805,6 +2805,25 @@ export type Database = {
       provision_fgn_scorm_toolkit_app: { Args: never; Returns: string }
       purge_expired_scorm_launch_tokens: { Args: never; Returns: number }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
+      upsert_scorm_course_bundle: {
+        Args: {
+          p_ai_enhanced: Json
+          p_bundle_id: string
+          p_course_id: string
+          p_cover_image_url: string
+          p_description: string
+          p_destination: string
+          p_generated_by: string
+          p_join_rows: Json
+          p_manifest_url: string
+          p_scorm_version: string
+          p_source_challenge_id: string
+          p_title: string
+          p_wipe_progress: boolean
+          p_work_order_id: string
+        }
+        Returns: string
+      }
       validate_registration_code: {
         Args: { p_code: string }
         Returns: {
