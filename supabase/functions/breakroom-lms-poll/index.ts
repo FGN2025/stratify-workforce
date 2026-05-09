@@ -35,6 +35,7 @@ interface PollResults {
   students_found: number
   quizzes_found: number
   already_synced: number
+  skipped_unmapped: number
   synced: number
   sync_errors: number
   errors: string[]
