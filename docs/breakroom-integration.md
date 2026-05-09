@@ -151,6 +151,37 @@ SELECT cron.schedule(
 
 ---
 
+## Sync Attempt Tracking & Dedupe
+
+The poll uses the `breakroom_sync_attempts` table to dedupe quizzes regardless of sync outcome. Every poll attempt against a Breakroom quiz writes one row keyed on `(breakroom_quiz_id, breakroom_user_id)`. Subsequent polls skip any quiz already present in the table:
+
+- `sync_outcome = 'completed'` → counted as `already_synced`
+- `sync_outcome = 'no_matching_work_order'` or `'sync_error'` → counted as `skipped_unmapped`
+
+This prevents the previous loop bug where unmapped quizzes were re-synced every 15 minutes (sync would return `no_matching_work_order`, no completion row was written, and the next poll re-classified the same quiz as new).
+
+### Manual reset (re-trigger after mapping a work order)
+
+When you register a missing `source_challenge_id` mapping for a Breakroom quiz, delete the corresponding row(s) so the next poll picks them up:
+
+```sql
+-- Find unmapped attempts to inspect
+SELECT breakroom_quiz_id, metadata->>'quiz_name' AS quiz, fgn_user_id, last_attempt_at
+FROM breakroom_sync_attempts
+WHERE sync_outcome <> 'completed';
+
+-- Reset a single quiz/user pair
+DELETE FROM breakroom_sync_attempts
+WHERE breakroom_quiz_id = <quiz_id> AND breakroom_user_id = <user_id>;
+
+-- Or reset all unmapped attempts after a bulk mapping pass
+DELETE FROM breakroom_sync_attempts WHERE sync_outcome = 'no_matching_work_order';
+```
+
+The next scheduled poll (or a manual invocation) will retry these.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Likely Cause | Fix |
@@ -158,5 +189,7 @@ SELECT cron.schedule(
 | `students_found: 0`, 401 errors | Session tokens expired | Refresh all 3 session secrets |
 | Students found but `quizzes_found: 0` | No completed quizzes, or `breakroom_user_id` not set in `breakroom_identity` | Verify identity mapping |
 | Quizzes found but `synced: 0`, `already_synced: N` | All quizzes already processed | Expected behavior — no new completions |
+| `skipped_unmapped > 0` consistently | Breakroom quiz has no matching `work_orders.source_challenge_id` | Add the mapping, then DELETE matching rows from `breakroom_sync_attempts` |
 | `sync_errors > 0` | `breakroom-lms-sync` failures | Check sync function logs and error messages in results |
 | No audit log entries | Cron job not running or function not deployed | Check `cron.job` table and redeploy function |
+
