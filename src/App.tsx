@@ -44,6 +44,7 @@ import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
 import CourseBuilder from "./pages/admin/CourseBuilder";
 import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
+import SimIndustry from "./pages/SimIndustry";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
