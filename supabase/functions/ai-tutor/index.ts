@@ -63,7 +63,7 @@ async function getPersonaFromDB(
     const gameKey = `game_${gameTitle}`;
     const { data } = await supabaseAdmin
       .from("ai_persona_configs")
-      .select("system_prompt, model_override, notebook_url")
+      .select("id, system_prompt, model_override, notebook_url")
       .eq("context_type", gameKey)
       .eq("is_active", true)
       .single();
@@ -73,7 +73,7 @@ async function getPersonaFromDB(
   // Try context type directly
   const { data } = await supabaseAdmin
     .from("ai_persona_configs")
-    .select("system_prompt, model_override, notebook_url")
+    .select("id, system_prompt, model_override, notebook_url")
     .eq("context_type", contextType)
     .eq("is_active", true)
     .single();
