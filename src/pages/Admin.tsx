@@ -221,6 +221,8 @@ export default function Admin() {
         return isSuperAdmin ? <DiscordConnectionsManager /> : null;
       case 'ai-config':
         return isSuperAdmin ? <AIConfigManager /> : null;
+      case 'notebook-telemetry':
+        return isSuperAdmin ? <NotebookTelemetryDashboard /> : null;
       case 'sync-tester':
         return isSuperAdmin ? (
           <div className="space-y-6">
