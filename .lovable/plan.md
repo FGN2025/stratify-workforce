@@ -1,70 +1,89 @@
-# Breakroom poll — dedupe fix
+## Context
 
-## Problem
+Today the Breakroom integration is **admin-only**: identity linking (`BreakroomUsersTab`), the new `BreakroomMapperManager`, and back-end poll/sync functions. Students get **no visible signal** that Breakroom exists, that their spatial work counts, or how it relates to play.fgn.gg. Breakroom is the *enrichment layer* that turns a sim challenge into a verified spatial task feeding the Skill Passport — that story is invisible to learners and to anyone reviewing a passport.
 
-`breakroom-lms-poll` dedupes by checking `user_work_order_completions.metadata->>'breakroom_quiz_id'`. When a quiz can't be matched to a work order (current state: every quiz, since RacerX's quiz has no `source_challenge_id` mapping), `breakroom-lms-sync` returns `no_matching_work_order` and writes nothing. Next poll re-classifies the same quiz as new and re-syncs. Result: every 15 min the audit log shows `synced: 1, already_synced: 0` for the same quiz forever.
+Below is a prioritized menu of UX improvements. Pick what to ship; nothing here is a database/back-end refactor — most are presentation + a couple of small read-side hooks.
 
-This is currently harmless but will (a) mask the real "already synced" signal once mappings exist, (b) burn API calls against Breakroom + cross-platform BBW, and (c) make audit logs unreadable.
+---
 
-## Fix
+## Tier 1 — Make Breakroom visible to students (highest leverage)
 
-Track **sync attempts** separately from successful completions, so dedupe works regardless of match outcome.
+### 1A. "Spatial Task" badge on Work Order cards & detail
+When a work order has `metadata.breakroom_course_name` (or any `breakroom_*` mapping), show a small **"Spatial Task — Breakroom"** chip next to the existing play.fgn.gg / SCORM badges on:
+- `WorkOrderCard` (dashboard + marketplace)
+- `WorkOrderDetail` header
+- `EnrolledCourses` lesson rows when the lesson's WO is Breakroom-enriched
 
-### 1. New table: `breakroom_sync_attempts`
+Tooltip: *"This challenge has a metaverse extension in Breakroom. Completing it there awards XP + Skill Passport credit."*
 
-```text
-id                  uuid pk
-breakroom_quiz_id   integer    not null
-breakroom_user_id   integer    not null
-fgn_user_id         uuid       not null     -- resolved via breakroom_identity
-sync_outcome        text       not null     -- 'completed' | 'no_matching_work_order' | 'sync_error'
-fgn_result          text       null         -- mirror of sync response fgn_completion
-bbw_result          text       null         -- mirror of sync response bbw_quiz
-last_attempt_at     timestamptz not null default now()
-attempt_count       integer    not null default 1
-metadata            jsonb      null         -- quiz name, course id, completion date
-unique (breakroom_quiz_id, breakroom_user_id)
-```
+### 1B. "Open in Breakroom" CTA on Work Order Detail
+Mirror the existing "Play on play.fgn.gg" button. Two states:
+- **Identity linked** (`breakroom_identity` exists for the user) → launch button to `curator.sine.space` (or the specific room URL stored in WO metadata).
+- **Not linked** → "Connect your Breakroom account" CTA that opens a small dialog explaining how to link (admin-assisted today; eventually self-serve — see Tier 3).
 
-RLS: admins SELECT; no client writes (service-role only).
-Index on `(breakroom_user_id, breakroom_quiz_id)`.
+### 1C. Recent Spatial Completions feed on Profile
+A new section on `Profile` (and PublicPassport) titled **"Spatial Verifications"** that lists the latest `breakroom_sync_attempts` with `sync_outcome = 'completed'` for the viewing user. Each row: quiz name → matched Work Order → XP awarded → "verified in Breakroom" badge with timestamp. This is the user-visible proof that the loop closed.
 
-### 2. Poll function changes (`supabase/functions/breakroom-lms-poll/index.ts`)
+---
 
-Replace the existing dedupe check (currently a count query against `user_work_order_completions.metadata`) with a lookup against `breakroom_sync_attempts`:
+## Tier 2 — Close the feedback loop (real-time + clarity)
 
-- For each quiz, check `breakroom_sync_attempts` by `(breakroom_quiz_id, breakroom_user_id)`. If a row exists AND `sync_outcome = 'completed'` → skip, increment `already_synced`.
-- If row exists with `sync_outcome IN ('no_matching_work_order', 'sync_error')` → skip by default (don't retry every 15 min). Increment a new counter `skipped_unmapped` so it's visible in the audit log.
-- If no row → call sync as today.
-- After sync, **always** upsert into `breakroom_sync_attempts` with the outcome derived from the sync response body (`fgn_completion` / `bbw_quiz` fields). On conflict, bump `attempt_count` and update `last_attempt_at` + `sync_outcome`.
+### 2A. Toast / notification when a Breakroom completion lands
+Reuse `useNotifications`. When `breakroom-lms-sync` writes a completion, also insert a notification row (`type: 'spatial_verification'`). Student sees:
+> "✅ Spatial task verified — *ASE A1 Engine Repair* — +100 XP added to your Skill Passport."
 
-### 3. Retry policy (light touch)
+This converts a silent 15-min poll into a delightful in-app moment.
 
-To keep things simple: unmapped quizzes are skipped indefinitely once recorded. When an admin later registers the missing `source_challenge_id` mapping, they'll need a way to re-trigger. Two options — picking one is the only real decision in this plan:
+### 2B. Source attribution on Skill Passport credentials
+Credentials already track `source` (e.g., `module_milestone`, `course_completion`). Add display logic so credentials that originated from a Breakroom sync show a **"Verified in Breakroom"** ribbon vs. play.fgn.gg's existing chip. Same component (`CertificationCard` / `AchievementCard`), one new variant.
 
-- **(A) Manual reset**: admin deletes rows from `breakroom_sync_attempts` for that quiz; next poll picks them up. Simple, no new UI.
-- **(B) Time-based retry**: re-attempt unmapped rows older than N days (e.g., 7) automatically. Adds one `OR last_attempt_at < now() - interval '7 days'` to the skip check.
+### 2C. "How verification works" explainer
+Tiny component on Work Order Detail and Skill Passport: a 3-step diagram —
+`play.fgn.gg → Breakroom (spatial task) → Skill Passport`
+— making the bridge role of Academy explicit. Static content, helps onboarding.
 
-Recommendation: **(A)** for v1. It's one DELETE, matches the manual nature of mapping work, and avoids surprise re-syncs.
+---
 
-### 4. PollResults shape
+## Tier 3 — Reduce admin toil & user friction
 
-Add `skipped_unmapped: number` to the response and audit log so the dashboard view of `system_audit_logs` clearly separates "new completions landed" from "stuck unmapped quizzes still being seen by Breakroom."
+### 3A. Self-serve Breakroom identity linking
+Today admins link `breakroom_username` ↔ FGN user via `BreakroomUsersTab`. Add a **Settings → Connections** card next to Discord:
+- User enters their Breakroom username.
+- Edge function verifies it exists in Breakroom API.
+- Writes `breakroom_identity` with a `verification_status = 'pending_admin_review'` flag (to prevent identity hijack), or auto-approves if the email returned by Breakroom matches the FGN account email.
 
-## What this does NOT do
+### 3B. Admin "Suggested mappings" in the Mapper page
+Extend `BreakroomMapperManager` with a fuzzy-match suggestion column: for each unmapped quiz, show top 3 work orders ranked by title similarity (Levenshtein on quiz name vs. WO title) so admins can one-click instead of searching. Pure client-side compute on existing data.
 
-- Does not fix the underlying mapping gap (RacerX's quiz still has no matching `work_orders.source_challenge_id`). That's data work, separate from this code change. After this lands, the next poll's audit log will show `skipped_unmapped: 1` instead of looping `synced: 1` forever, making the gap explicit.
-- Does not touch `breakroom-lms-sync`. Sync still returns `no_matching_work_order` on miss; poll just records that outcome.
-- Does not affect the SCORM v0.2 contract — completely separate pipeline.
+### 3C. Bulk reset & retry filters
+`BreakroomMapperManager` already lets admins reset one row. Add: filter by outcome, multi-select, bulk reset. Useful after a bulk mapping pass.
 
-## Files touched
+---
 
-- `supabase/migrations/<new>.sql` — `breakroom_sync_attempts` table + RLS + index
-- `supabase/functions/breakroom-lms-poll/index.ts` — replace dedupe check, add upsert, add `skipped_unmapped` counter
-- `docs/breakroom-integration.md` — document the new table + manual-reset workflow under Troubleshooting
+## Tier 4 — Telemetry & trust
 
-No UI work, no changes to `breakroom-lms-sync`, no changes to `user_work_order_completions`.
+### 4A. Public passport: spatial verification counter
+On `PublicPassport` / `EmbedPassport`, show a stat: *"N spatial tasks verified in Breakroom"*. Reinforces that the passport is multi-source (not just sim playtime).
 
-## Decision needed before implementation
+### 4B. Audit log surfacing for admins
+Add `skipped_unmapped` and `synced` counters to the existing audit-log view (`useAuditLogs`) with a Breakroom filter. Already discussed earlier, still pending.
 
-Retry policy: **(A) manual reset** or **(B) time-based 7-day auto-retry**?
+### 4C. Health badge for Breakroom session tokens
+Tiny indicator in Admin → Breakroom Mapper header: green if last poll succeeded with `students_found > 0`, amber if 0 students, red if 401/403. Saves the "is the token expired?" debugging round-trip.
+
+---
+
+## Recommended first slice
+
+If you want a single, cohesive ship that *immediately* improves student UX:
+
+> **Tier 1 (1A + 1B + 1C) + Tier 2A.**
+> Students see the spatial task exists, can launch it, get notified when it completes, and see it on their profile. ~4 small frontend components + 1 small notification insert in `breakroom-lms-sync`.
+
+Tier 3 is the next-best chunk (admin sanity + self-serve linking) and unblocks scale beyond Darcy/RacerX.
+
+---
+
+## Decision needed
+
+Which tier(s) do you want me to plan in detail for implementation? Recommend confirming the **first slice above** or picking a different combination.
