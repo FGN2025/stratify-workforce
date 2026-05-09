@@ -9,6 +9,9 @@ export function Footer() {
           <NavLink to="/privacy" className="hover:text-foreground transition-colors">
             Privacy Policy
           </NavLink>
+          <NavLink to="/eula" className="hover:text-foreground transition-colors">
+            EULA
+          </NavLink>
         </nav>
       </div>
     </footer>
