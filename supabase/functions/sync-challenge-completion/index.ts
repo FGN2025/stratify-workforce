@@ -146,8 +146,9 @@ Deno.serve(async (req) => {
     if (ecosystemKey && ecosystemKeyExpected && ecosystemKey === ecosystemKeyExpected) {
       authHeaderUsed = 'x-ecosystem-key';
       // Ecosystem key represents the play.fgn.gg ecosystem peer — full sync rights.
+      // Slug must match an existing authorized_apps row (FK on skill_credentials.issuer_app_slug).
       app = {
-        app_slug: 'fgn-play-ecosystem',
+        app_slug: 'fgn-play',
         can_read: true,
         can_issue: true,
         types_allowed: ['skill_verification', 'course_completion'],
