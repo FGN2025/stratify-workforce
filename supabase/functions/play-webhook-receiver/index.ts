@@ -298,13 +298,24 @@ Deno.serve(async (req) => {
     });
   }
 
-  const eventType =
+  // Play's final envelope: { event_type, payload, timestamp }.
+  // We also still accept the legacy { event, data, delivery_id } shape and the
+  // X-Play-Event / X-FGN-Event headers as fallbacks.
+  const rawEvent =
+    (payload.event_type as string | undefined) ??
     (payload.event as string | undefined) ??
     (payload.type as string | undefined) ??
+    req.headers.get('x-fgn-event') ??
     req.headers.get('x-play-event') ??
     '';
+  const eventType = normalizeEvent(rawEvent);
+  const innerPayload =
+    (payload.payload as Record<string, unknown> | undefined) ??
+    (payload.data as Record<string, unknown> | undefined) ??
+    payload;
   const deliveryId =
     (payload.delivery_id as string | undefined) ??
+    (innerPayload.delivery_id as string | undefined) ??
     req.headers.get('x-play-delivery-id') ??
     null;
 
