@@ -1056,6 +1056,92 @@ export type Database = {
           },
         ]
       }
+      play_identity: {
+        Row: {
+          email: string | null
+          external_user_id: string
+          last_seen_at: string | null
+          linked_at: string
+          user_id: string
+        }
+        Insert: {
+          email?: string | null
+          external_user_id: string
+          last_seen_at?: string | null
+          linked_at?: string
+          user_id: string
+        }
+        Update: {
+          email?: string | null
+          external_user_id?: string
+          last_seen_at?: string | null
+          linked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_identity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      play_poll_cursor: {
+        Row: {
+          action: string
+          since: string | null
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          since?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          since?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      play_sync_attempts: {
+        Row: {
+          action: string
+          created_at: string
+          direction: Database["public"]["Enums"]["play_sync_direction"]
+          error: string | null
+          external_attempt_id: string | null
+          id: string
+          request: Json | null
+          response: Json | null
+          status: Database["public"]["Enums"]["play_sync_status"]
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          direction: Database["public"]["Enums"]["play_sync_direction"]
+          error?: string | null
+          external_attempt_id?: string | null
+          id?: string
+          request?: Json | null
+          response?: Json | null
+          status?: Database["public"]["Enums"]["play_sync_status"]
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          direction?: Database["public"]["Enums"]["play_sync_direction"]
+          error?: string | null
+          external_attempt_id?: string | null
+          id?: string
+          request?: Json | null
+          response?: Json | null
+          status?: Database["public"]["Enums"]["play_sync_status"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1699,6 +1785,8 @@ export type Database = {
           name: string
           owner_id: string | null
           parent_tenant_id: string | null
+          play_synced_at: string | null
+          play_tenant_id: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reviewer_notes: string | null
@@ -1725,6 +1813,8 @@ export type Database = {
           name: string
           owner_id?: string | null
           parent_tenant_id?: string | null
+          play_synced_at?: string | null
+          play_tenant_id?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
@@ -1751,6 +1841,8 @@ export type Database = {
           name?: string
           owner_id?: string | null
           parent_tenant_id?: string | null
+          play_synced_at?: string | null
+          play_tenant_id?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
@@ -2972,6 +3064,8 @@ export type Database = {
         | "community_approved"
         | "achievement_earned"
         | "system"
+      play_sync_direction: "inbound" | "outbound"
+      play_sync_status: "queued" | "completed" | "failed" | "duplicate"
       points_type: "xp" | "credits" | "tokens"
       progress_status: "not_started" | "in_progress" | "completed" | "failed"
       registration_status: "registered" | "confirmed" | "cancelled" | "no_show"
@@ -3194,6 +3288,8 @@ export const Constants = {
         "achievement_earned",
         "system",
       ],
+      play_sync_direction: ["inbound", "outbound"],
+      play_sync_status: ["queued", "completed", "failed", "duplicate"],
       points_type: ["xp", "credits", "tokens"],
       progress_status: ["not_started", "in_progress", "completed", "failed"],
       registration_status: ["registered", "confirmed", "cancelled", "no_show"],
