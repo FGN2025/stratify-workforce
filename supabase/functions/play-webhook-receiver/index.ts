@@ -93,6 +93,164 @@ function timingSafeEqual(a: string, b: string): boolean {
   return mismatch === 0;
 }
 
+// ---------------------------------------------------------------------------
+// Identity + Skill Passport helpers (achievement.earned handler)
+// ---------------------------------------------------------------------------
+
+type SupabaseSvc = ReturnType<typeof createClient>;
+
+type IdentityResolution =
+  | { ok: true; userId: string; matchedBy: 'play_identity' | 'email' }
+  | { ok: false; reason: string };
+
+async function resolveIdentity(
+  supabase: SupabaseSvc,
+  externalUserId: string | null,
+  email: string | null,
+): Promise<IdentityResolution> {
+  if (externalUserId) {
+    const { data } = await supabase
+      .from('play_identity')
+      .select('user_id')
+      .eq('external_user_id', externalUserId)
+      .maybeSingle();
+    if (data?.user_id) {
+      await supabase
+        .from('play_identity')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('external_user_id', externalUserId);
+      return { ok: true, userId: data.user_id as string, matchedBy: 'play_identity' };
+    }
+  }
+  if (email) {
+    const { data: userId, error } = await supabase.rpc('get_user_id_by_email', { p_email: email });
+    if (!error && userId) {
+      if (externalUserId) {
+        await supabase
+          .from('play_identity')
+          .upsert(
+            {
+              user_id: userId as string,
+              external_user_id: externalUserId,
+              email,
+              last_seen_at: new Date().toISOString(),
+            },
+            { onConflict: 'external_user_id' },
+          );
+      }
+      return { ok: true, userId: userId as string, matchedBy: 'email' };
+    }
+  }
+  return { ok: false, reason: 'unmapped_identity' };
+}
+
+async function ensurePassport(supabase: SupabaseSvc, userId: string): Promise<string | null> {
+  const { data: existing } = await supabase
+    .from('skill_passport')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  const hashSrc = `${userId}-${Date.now()}-${crypto.randomUUID()}`;
+  const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hashSrc));
+  const passportHash = Array.from(new Uint8Array(hashBuf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  const { data: created, error } = await supabase
+    .from('skill_passport')
+    .insert({ user_id: userId, passport_hash: passportHash })
+    .select('id')
+    .single();
+  if (error) {
+    console.error('[play-webhook-receiver] passport insert failed', error);
+    return null;
+  }
+  return created.id as string;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function handleAchievementEarned(
+  supabase: SupabaseSvc,
+  payload: Record<string, unknown>,
+): Promise<{ status: number; body: unknown }> {
+  const data = (payload.data as Record<string, unknown>) ?? payload;
+  const user = (data.user as Record<string, unknown>) ?? {};
+  const externalUserId =
+    (user.external_user_id as string | null) ??
+    (data.external_user_id as string | null) ?? null;
+  const email = (user.email as string | null) ?? (data.user_email as string | null) ?? null;
+  const externalRef = (data.achievement_id as string | null) ?? (data.id as string | null) ?? null;
+
+  if (!externalRef) return { status: 400, body: { error: 'missing achievement_id' } };
+
+  const ident = await resolveIdentity(supabase, externalUserId, email);
+  if (!ident.ok) {
+    return {
+      status: 202,
+      body: { credentialed: false, reason: ident.reason, external_user_id: externalUserId, email },
+    };
+  }
+
+  const passportId = await ensurePassport(supabase, ident.userId);
+  if (!passportId) return { status: 500, body: { error: 'passport upsert failed' } };
+
+  const verificationHash = await sha256Hex(`fgn-play|${externalRef}|${passportId}`);
+  const tenant = (data.tenant as Record<string, unknown>) ?? {};
+
+  const credentialRow = {
+    passport_id: passportId,
+    credential_type: 'badge',
+    credential_type_key: 'play_achievement',
+    title: (data.name as string | null) ?? 'Play Achievement',
+    issuer: 'play.fgn.gg',
+    issuer_app_slug: 'fgn-play',
+    source: 'external_api',
+    external_reference_id: externalRef,
+    skills_verified: Array.isArray(data.skills_verified) ? (data.skills_verified as string[]) : [],
+    xp_earned: typeof data.xp_reward === 'number' ? (data.xp_reward as number) : 0,
+    issued_at: (data.earned_at as string | null) ?? new Date().toISOString(),
+    verification_hash: verificationHash,
+    metadata: {
+      ...data,
+      _resolved: { matched_by: ident.matchedBy, external_user_id: externalUserId, email },
+      _tenant: tenant,
+    },
+  };
+
+  const { data: inserted, error } = await supabase
+    .from('skill_credentials')
+    .insert(credentialRow)
+    .select('id')
+    .single();
+
+  if (error) {
+    if ((error as { code?: string }).code === '23505') {
+      const { data: existing } = await supabase
+        .from('skill_credentials')
+        .select('id')
+        .eq('passport_id', passportId)
+        .eq('external_reference_id', externalRef)
+        .eq('credential_type_key', 'play_achievement')
+        .maybeSingle();
+      return {
+        status: 200,
+        body: { credentialed: true, duplicate: true, credential_id: existing?.id ?? null },
+      };
+    }
+    console.error('[play-webhook-receiver] credential insert failed', error);
+    return { status: 500, body: { error: 'credential insert failed', detail: error.message } };
+  }
+
+  return { status: 200, body: { credentialed: true, credential_id: inserted.id, was_new: true } };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') {
