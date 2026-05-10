@@ -23,6 +23,7 @@ import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
 import { CareerPathsManager } from '@/components/admin/CareerPathsManager';
 import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
 import { ChallengeLessonMappingsManager } from '@/components/admin/ChallengeLessonMappingsManager';
+import { ChallengeTrackMembershipManager } from '@/components/admin/ChallengeTrackMembershipManager';
 import { BreakroomMapperManager } from '@/components/admin/BreakroomMapperManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -232,6 +233,8 @@ export default function Admin() {
         ) : null;
       case 'challenge-mappings':
         return <ChallengeLessonMappingsManager />;
+      case 'challenge-tracks':
+        return <ChallengeTrackMembershipManager />;
       case 'breakroom-mapper':
         return <BreakroomMapperManager />;
       case 'super-admin':

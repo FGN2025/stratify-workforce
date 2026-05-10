@@ -440,102 +440,96 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 9. Track completion detection
-    // Track 3 (OSHA Safety): fires once ALL 4 challenges are completed (single quiz gate)
-    // Track 4 (Fiber Optics): fires per-challenge — each challenge unlocks its own module quiz
-    const TRACK3_CHALLENGES = [
-      'bcb4a446-d0b7-4432-bedb-4f7ce42ff557',
-      '452f8199-9e08-484c-bf8c-887cb24ad3ce',
-      '7c7ae072-81a1-4dac-8307-268266a786e6',
-      'd098fcac-09a6-41b3-b196-97b98e4435e1',
-    ];
-    const TRACK4_CHALLENGES = [
-      '02481a75-383c-485a-bdff-f0a4dd2b9121',
-      '1c899b1a-a527-4023-aeb4-43d387993578',
-      '260d4700-7f7a-431f-9768-097284293cd6',
-      'e18786a7-043f-4900-8a07-c892c36af1b9',
-      'ae4c4228-f107-4f31-ae3d-ec819b0b6863',
-      '2a7c0a85-8f05-4c15-965b-e94f72f3672f',
-      '858d2e0d-6d78-4d7f-8377-0dc40ab269dd',
-      '034e8cf3-8832-4c05-a572-67af46dc9971', // CS Fiber: Underground Conduit Systems
-      'c8298ef1-d359-4536-958f-533e66f7ee4a', // RC Fiber: Aerial Route Assessment
-      '5e9ace81-fcc3-49f9-9013-5321d2e04d56', // CS Fiber: Pre-Construction Safety
-      'd8b601c3-ff40-46c6-aa4b-55da7711c8ce', // CS Fiber: Directional Bore Planning
-      '57da5f29-5a4e-4148-a738-319e7a33252c', // CS Fiber: OSP Handoff
-      '4ce440c1-be75-4700-a8fa-4a80f6d1fbde', // RC Fiber: Cable Run Documentation
-    ];
-
-    const TRACK3_LESSON_ID = 'a1b2c3d4-0003-4000-8000-000000000001';
-
+    // 9. Track completion detection — driven by challenge_tracks + challenge_track_membership
     let trackCompletion: { track: string; lesson_id: string; challenge_id?: string } | null = null;
 
-    const isTrack3 = TRACK3_CHALLENGES.includes(challenge_id);
-    const isTrack4 = TRACK4_CHALLENGES.includes(challenge_id);
+    if (completionStatus === 'completed') {
+      const { data: memberships } = await supabase
+        .from('challenge_track_membership')
+        .select('track:challenge_tracks!inner(id, track_key, name, gate_mode, course_id, lesson_id, accent_color, icon_name, is_active)')
+        .eq('challenge_id', challenge_id);
 
-    if (completionStatus === 'completed' && isTrack3) {
-      // Track 3: gate on ALL challenges completed → single quiz
-      const { data: trackWOs } = await supabase
-        .from('work_orders')
-        .select('id, source_challenge_id')
-        .in('source_challenge_id', TRACK3_CHALLENGES);
+      const tracks = (memberships ?? [])
+        .map((m: any) => m.track)
+        .filter((t: any) => t && t.is_active);
 
-      if (trackWOs && trackWOs.length === TRACK3_CHALLENGES.length) {
-        const trackWOIds = trackWOs.map(wo => wo.id);
-        const { count: completedCount } = await supabase
-          .from('user_work_order_completions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'completed')
-          .in('work_order_id', trackWOIds);
+      for (const track of tracks) {
+        const courseId = track.course_id ?? CE_COURSE_ID;
+        const accent = track.accent_color ?? '#6366f1';
+        const icon = track.icon_name ?? 'graduation-cap';
 
-        if (completedCount && completedCount >= TRACK3_CHALLENGES.length) {
-          trackCompletion = { track: 'OSHA Safety Overlay', lesson_id: TRACK3_LESSON_ID };
+        if (track.gate_mode === 'all_completed') {
+          // Need ALL challenges in this track completed before firing
+          const { data: members } = await supabase
+            .from('challenge_track_membership')
+            .select('challenge_id')
+            .eq('track_id', track.id);
+          const memberChallengeIds = (members ?? []).map((m: any) => m.challenge_id);
+          if (memberChallengeIds.length === 0) continue;
+
+          const { data: trackWOs } = await supabase
+            .from('work_orders')
+            .select('id, source_challenge_id')
+            .in('source_challenge_id', memberChallengeIds);
+
+          if (!trackWOs || trackWOs.length !== memberChallengeIds.length) continue;
+          const trackWOIds = trackWOs.map(wo => wo.id);
+          const { count: completedCount } = await supabase
+            .from('user_work_order_completions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('status', 'completed')
+            .in('work_order_id', trackWOIds);
+
+          if (!completedCount || completedCount < memberChallengeIds.length) continue;
+
+          const lessonId = track.lesson_id ?? '';
+          trackCompletion = { track: track.name, lesson_id: lessonId };
           notifications.push({
             user_id: user.id,
             type: 'knowledge_check_available',
-            title: 'Track Complete: OSHA Safety Overlay',
-            message: 'You have completed the OSHA Safety Overlay track. Continue your skills development at fgn.academy to earn your credential.',
-            icon_name: 'graduation-cap',
-            accent_color: '#6366f1',
-            link_url: '/learn',
-            metadata: { track: 'OSHA Safety Overlay', lesson_id: TRACK3_LESSON_ID },
+            title: `Track Complete: ${track.name}`,
+            message: `You have completed the ${track.name} track. Continue your skills development at fgn.academy to earn your credential.`,
+            icon_name: icon,
+            accent_color: accent,
+            link_url: lessonId ? `/learn/${courseId}/lesson/${lessonId}` : '/learn',
+            metadata: { track: track.name, lesson_id: lessonId, course_id: courseId },
+          });
+        } else {
+          // per_challenge — fire on every completion
+          const lessonIds = await getLessonIdsForChallenge(supabase, challenge_id);
+          const primaryLessonId = lessonIds[0] ?? null;
+          const deepLink = primaryLessonId
+            ? `/learn/${courseId}/lesson/${primaryLessonId}`
+            : `/learn/${courseId}`;
+
+          trackCompletion = {
+            track: track.name,
+            lesson_id: primaryLessonId || challenge_id,
+            challenge_id,
+          };
+
+          notifications.push({
+            user_id: user.id,
+            type: 'knowledge_check_available',
+            title: `Knowledge Check Available: ${workOrder.title}`,
+            message: `You completed "${workOrder.title}" on play.fgn.gg — a knowledge check module is now available on fgn.academy to reinforce what you learned.`,
+            icon_name: icon,
+            accent_color: accent,
+            link_url: deepLink,
+            metadata: {
+              track: track.name,
+              challenge_id,
+              work_order_id: workOrder.id,
+              work_order_title: workOrder.title,
+              lesson_id: primaryLessonId,
+              lesson_ids: lessonIds,
+              course_id: courseId,
+              deep_link: deepLink,
+            },
           });
         }
       }
-    }
-
-    if (completionStatus === 'completed' && isTrack4) {
-      const lessonIds = await getLessonIdsForChallenge(supabase, challenge_id);
-      const primaryLessonId = lessonIds[0] ?? null;
-      const deepLink = primaryLessonId
-        ? `/learn/${CE_COURSE_ID}/lesson/${primaryLessonId}`
-        : `/learn/${CE_COURSE_ID}`;
-
-      trackCompletion = {
-        track: 'Fiber Optics Construction',
-        lesson_id: primaryLessonId || challenge_id,
-        challenge_id,
-      };
-
-      notifications.push({
-        user_id: user.id,
-        type: 'knowledge_check_available',
-        title: `Knowledge Check Available: ${workOrder.title}`,
-        message: `You completed "${workOrder.title}" on play.fgn.gg — a knowledge check module is now available on fgn.academy to reinforce what you learned.`,
-        icon_name: 'graduation-cap',
-        accent_color: '#6366f1',
-        link_url: deepLink,
-        metadata: {
-          track: 'Fiber Optics Construction',
-          challenge_id,
-          work_order_id: workOrder.id,
-          work_order_title: workOrder.title,
-          lesson_id: primaryLessonId,
-          lesson_ids: lessonIds,
-          course_id: CE_COURSE_ID,
-          deep_link: deepLink,
-        },
-      });
     }
 
     // Batch insert all notifications
