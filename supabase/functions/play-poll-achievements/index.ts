@@ -121,19 +121,36 @@ Deno.serve(async (req) => {
       { onConflict: 'action' },
     );
 
-  // TODO: map each achievement → skill_credentials insert. Holding until we
-  // have a real payload sample to type against.
+  // Reuse the webhook receiver's achievement handler so polled and pushed events
+  // converge on the same write path.
+  const { handleAchievementEarned } = await import('../play-webhook-receiver/index.ts');
   const items = Array.isArray((body as Record<string, unknown>)?.data)
-    ? ((body as Record<string, unknown>).data as unknown[])
+    ? ((body as Record<string, unknown>).data as Record<string, unknown>[])
     : [];
+
+  let credentialed = 0;
+  let duplicates = 0;
+  let unmapped = 0;
+  const errors: string[] = [];
+  for (const item of items) {
+    const result = await handleAchievementEarned(supabase, { event: 'achievement.earned', data: item });
+    const b = (result.body ?? {}) as Record<string, unknown>;
+    if (b.duplicate) duplicates++;
+    else if (b.credentialed === true) credentialed++;
+    else if (b.reason === 'unmapped_identity') unmapped++;
+    else if (result.status >= 400) errors.push(JSON.stringify(b));
+  }
 
   return new Response(
     JSON.stringify({
       ok: true,
       received: items.length,
+      credentialed,
+      duplicates,
+      unmapped,
+      errors: errors.slice(0, 5),
       previous_since: since,
       new_since: newSince,
-      note: 'mapping to skill_credentials pending — payload shape TBD',
     }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
   );
