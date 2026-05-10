@@ -3064,6 +3064,7 @@ export type Database = {
         | "community_approved"
         | "achievement_earned"
         | "system"
+        | "knowledge_check_available"
       play_sync_direction: "inbound" | "outbound"
       play_sync_status: "queued" | "completed" | "failed" | "duplicate"
       points_type: "xp" | "credits" | "tokens"
@@ -3287,6 +3288,7 @@ export const Constants = {
         "community_approved",
         "achievement_earned",
         "system",
+        "knowledge_check_available",
       ],
       play_sync_direction: ["inbound", "outbound"],
       play_sync_status: ["queued", "completed", "failed", "duplicate"],
