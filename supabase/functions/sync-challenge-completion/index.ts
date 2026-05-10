@@ -235,10 +235,12 @@ Deno.serve(async (req) => {
     // Use completed_at from payload if provided, otherwise server time
     const completionTimestamp = completed_at || new Date().toISOString();
 
-    // 4. Create work order completion record
+    // 4. Upsert work order completion record (uq_user_work_order constraint:
+    // one row per (user_id, work_order_id); attempts are tracked via the counter
+    // and metadata, not as separate rows).
     const { data: completion, error: completionError } = await supabase
       .from('user_work_order_completions')
-      .insert({
+      .upsert({
         user_id: user.id,
         work_order_id: workOrder.id,
         status: completionStatus,
@@ -247,7 +249,7 @@ Deno.serve(async (req) => {
         attempt_number: attemptNumber,
         completed_at: completionTimestamp,
         metadata: metadata || {},
-      })
+      }, { onConflict: 'user_id,work_order_id' })
       .select()
       .single();
 
