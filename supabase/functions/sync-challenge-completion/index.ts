@@ -146,8 +146,9 @@ Deno.serve(async (req) => {
     if (ecosystemKey && ecosystemKeyExpected && ecosystemKey === ecosystemKeyExpected) {
       authHeaderUsed = 'x-ecosystem-key';
       // Ecosystem key represents the play.fgn.gg ecosystem peer — full sync rights.
+      // Slug must match an existing authorized_apps row (FK on skill_credentials.issuer_app_slug).
       app = {
-        app_slug: 'fgn-play-ecosystem',
+        app_slug: 'fgn-play',
         can_read: true,
         can_issue: true,
         types_allowed: ['skill_verification', 'course_completion'],
@@ -352,7 +353,7 @@ Deno.serve(async (req) => {
           ? { tasks_synced: taskResults.filter(t => t.status === 'synced').length, tasks_total: taskResults.length }
           : undefined;
 
-        const { data: issuedCredential } = await supabase
+        const { data: issuedCredential, error: credentialError } = await supabase
           .from('skill_credentials')
           .insert({
             passport_id: passport.id,
@@ -376,6 +377,9 @@ Deno.serve(async (req) => {
           .select()
           .single();
 
+        if (credentialError) {
+          console.error('[sync-challenge-completion] credential insert failed', credentialError);
+        }
         credential = issuedCredential;
       }
     }
@@ -536,7 +540,12 @@ Deno.serve(async (req) => {
 
     // Batch insert all notifications
     if (notifications.length > 0) {
-      await supabase.from('user_notifications').insert(notifications);
+      const { error: notifError } = await supabase.from('user_notifications').insert(notifications);
+      if (notifError) {
+        console.error('[sync-challenge-completion] notifications insert failed', notifError, {
+          types: notifications.map(n => n.type),
+        });
+      }
     }
 
     return new Response(
