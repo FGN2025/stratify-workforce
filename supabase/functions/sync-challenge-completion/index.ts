@@ -353,7 +353,7 @@ Deno.serve(async (req) => {
           ? { tasks_synced: taskResults.filter(t => t.status === 'synced').length, tasks_total: taskResults.length }
           : undefined;
 
-        const { data: issuedCredential } = await supabase
+        const { data: issuedCredential, error: credentialError } = await supabase
           .from('skill_credentials')
           .insert({
             passport_id: passport.id,
@@ -377,6 +377,9 @@ Deno.serve(async (req) => {
           .select()
           .single();
 
+        if (credentialError) {
+          console.error('[sync-challenge-completion] credential insert failed', credentialError);
+        }
         credential = issuedCredential;
       }
     }
