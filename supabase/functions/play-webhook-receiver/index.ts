@@ -22,15 +22,28 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-play-signature, x-play-event, x-play-delivery-id, x-ecosystem-app',
+    'authorization, x-client-info, apikey, content-type, x-play-signature, x-play-event, x-fgn-event, x-play-delivery-id, x-ecosystem-app',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Canonical event names (dotted). Aliases from play's dispatcher map to these.
 const SUPPORTED_EVENTS = new Set([
   'challenge.completed',
   'evidence.approved',
   'achievement.earned',
 ]);
+
+const EVENT_ALIASES: Record<string, string> = {
+  'challenge_completion': 'challenge.completed',
+  'challenge.completion': 'challenge.completed',
+  'evidence_approved': 'evidence.approved',
+  'achievement_earned': 'achievement.earned',
+};
+
+function normalizeEvent(raw: string): string {
+  const v = (raw ?? '').trim();
+  return EVENT_ALIASES[v] ?? v;
+}
 
 type VerifyResult = {
   ok: boolean;
@@ -285,13 +298,24 @@ Deno.serve(async (req) => {
     });
   }
 
-  const eventType =
+  // Play's final envelope: { event_type, payload, timestamp }.
+  // We also still accept the legacy { event, data, delivery_id } shape and the
+  // X-Play-Event / X-FGN-Event headers as fallbacks.
+  const rawEvent =
+    (payload.event_type as string | undefined) ??
     (payload.event as string | undefined) ??
     (payload.type as string | undefined) ??
+    req.headers.get('x-fgn-event') ??
     req.headers.get('x-play-event') ??
     '';
+  const eventType = normalizeEvent(rawEvent);
+  const innerPayload =
+    (payload.payload as Record<string, unknown> | undefined) ??
+    (payload.data as Record<string, unknown> | undefined) ??
+    payload;
   const deliveryId =
     (payload.delivery_id as string | undefined) ??
+    (innerPayload.delivery_id as string | undefined) ??
     req.headers.get('x-play-delivery-id') ??
     null;
 
@@ -355,7 +379,6 @@ Deno.serve(async (req) => {
       // Forward to the existing receiver, which already owns the heavy lifting.
       const ecosystemKey = Deno.env.get('ECOSYSTEM_API_KEY');
       if (!ecosystemKey) throw new Error('ECOSYSTEM_API_KEY not configured');
-      const forwardBody = (payload.data as Record<string, unknown>) ?? payload;
       const resp = await fetch(`${supabaseUrl}/functions/v1/sync-challenge-completion`, {
         method: 'POST',
         headers: {
@@ -363,11 +386,11 @@ Deno.serve(async (req) => {
           'X-Ecosystem-Key': ecosystemKey,
           'X-Ecosystem-App': 'play-webhook',
         },
-        body: JSON.stringify(forwardBody),
+        body: JSON.stringify(innerPayload),
       });
       dispatchResult = { status: resp.status, body: await resp.json().catch(() => null) };
     } else if (eventType === 'achievement.earned') {
-      dispatchResult = await handleAchievementEarned(supabase, payload);
+      dispatchResult = await handleAchievementEarned(supabase, innerPayload);
     } else {
       // evidence.approved — handler TODO; record only for now.
       console.log('[play-webhook-receiver] received (handler pending)', eventType);
