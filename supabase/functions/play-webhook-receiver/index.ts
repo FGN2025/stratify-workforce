@@ -22,15 +22,28 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-play-signature, x-play-event, x-play-delivery-id, x-ecosystem-app',
+    'authorization, x-client-info, apikey, content-type, x-play-signature, x-play-event, x-fgn-event, x-play-delivery-id, x-ecosystem-app',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Canonical event names (dotted). Aliases from play's dispatcher map to these.
 const SUPPORTED_EVENTS = new Set([
   'challenge.completed',
   'evidence.approved',
   'achievement.earned',
 ]);
+
+const EVENT_ALIASES: Record<string, string> = {
+  'challenge_completion': 'challenge.completed',
+  'challenge.completion': 'challenge.completed',
+  'evidence_approved': 'evidence.approved',
+  'achievement_earned': 'achievement.earned',
+};
+
+function normalizeEvent(raw: string): string {
+  const v = (raw ?? '').trim();
+  return EVENT_ALIASES[v] ?? v;
+}
 
 type VerifyResult = {
   ok: boolean;
