@@ -14,7 +14,40 @@
 2. **`metadata.external_user_id`** — confirm it's on every push once PR **P-3** lands (we key `play_identity` on it).
 3. **PR P-2 rollout window** — how long do we accept both `X-App-Key` and `X-Ecosystem-Key` before hard-failing legacy? We proposed **14 days**.
 4. **PR P-3 tenant fields** — confirm shape: `metadata.tenant_id` (uuid), `metadata.tenant_slug`, `metadata.tenant_name`.
-5. **Webhook HMAC scheme** (for Phase E receiver) — header name + canonical string format when you're ready.
+5. ~~**Webhook HMAC scheme**~~ — **resolved by Academy (we're the receiver, we own the contract).** See §6 below for the spec to implement on the dispatch side.
+
+## 6. Webhook HMAC contract (Academy-defined, for `ecosystem-webhook-dispatch`)
+
+Academy's `play-webhook-receiver` is deployed and running in **unsigned/shadow mode** today. Use this spec to add signing on play's side; once verified end-to-end, Academy flips `PLAY_WEBHOOK_STRICT=true` to enforce.
+
+- **Receiver URL:** `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/play-webhook-receiver`
+- **Header:** `X-Play-Signature`
+- **Algorithm:** HMAC-SHA256, hex-encoded (lowercase, 64 chars), no prefix.
+- **Canonical string:** the **raw request body bytes, exactly as sent** (no re-serialization, no whitespace normalization, no header concatenation). Compute the signature over the bytes you put on the wire.
+- **Secret:** shared secret, distinct from `ECOSYSTEM_API_KEY`. Academy will store it as `PLAY_WEBHOOK_SECRET`. Generate a 32-byte random value and share via the usual secret-exchange channel; we'll provision both sides simultaneously.
+- **Recommended companion headers (already accepted by receiver):**
+  - `X-Play-Event: challenge.completed | evidence.approved | achievement.earned` (also read from `payload.event`/`payload.type`)
+  - `X-Play-Delivery-Id: <uuid>` — used as our idempotency key in `play_sync_attempts.external_attempt_id`. Stable across retries of the same delivery.
+- **Payload envelope (expected):**
+  ```json
+  {
+    "event": "challenge.completed",
+    "delivery_id": "uuid",
+    "data": { /* same shape sync-to-academy posts today */ }
+  }
+  ```
+  For `challenge.completed`, `data` is forwarded as-is to `sync-challenge-completion`. Other event types are recorded only until handlers ship.
+- **Rollout (shadow → strict):**
+  1. Academy stays in `unsigned` mode (current state). Play implements signing and starts sending `X-Play-Signature`.
+  2. Academy sets `PLAY_WEBHOOK_SECRET` and runs in `lenient` mode — verifies, logs mismatches in `play_sync_attempts.request.sig_mode`, still accepts.
+  3. After 48h of clean matches in lenient mode, Academy flips `PLAY_WEBHOOK_STRICT=true`. Mismatches then return `401`.
+- **Verification reference (TS, matches receiver):**
+  ```ts
+  const sig = hex(hmacSha256(secret, rawBody));
+  // header: X-Play-Signature: <sig>
+  ```
+
+Confirm receipt and we'll coordinate the secret handoff + dispatch-side implementation timing.
 
 ## Heads-up (not a blocker)
 
