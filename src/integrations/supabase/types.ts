@@ -430,6 +430,83 @@ export type Database = {
           },
         ]
       }
+      challenge_track_membership: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          track_id: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          track_id: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_track_membership_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_tracks: {
+        Row: {
+          accent_color: string
+          course_id: string | null
+          created_at: string
+          description: string | null
+          gate_mode: string
+          icon_name: string
+          id: string
+          is_active: boolean
+          lesson_id: string | null
+          name: string
+          track_key: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          course_id?: string | null
+          created_at?: string
+          description?: string | null
+          gate_mode?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          lesson_id?: string | null
+          name: string
+          track_key: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          course_id?: string | null
+          created_at?: string
+          description?: string | null
+          gate_mode?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          lesson_id?: string | null
+          name?: string
+          track_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       channel_posts: {
         Row: {
           channel_game: Database["public"]["Enums"]["game_title"]
