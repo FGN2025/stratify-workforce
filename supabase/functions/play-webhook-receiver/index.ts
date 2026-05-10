@@ -379,7 +379,6 @@ Deno.serve(async (req) => {
       // Forward to the existing receiver, which already owns the heavy lifting.
       const ecosystemKey = Deno.env.get('ECOSYSTEM_API_KEY');
       if (!ecosystemKey) throw new Error('ECOSYSTEM_API_KEY not configured');
-      const forwardBody = (payload.data as Record<string, unknown>) ?? payload;
       const resp = await fetch(`${supabaseUrl}/functions/v1/sync-challenge-completion`, {
         method: 'POST',
         headers: {
@@ -387,11 +386,11 @@ Deno.serve(async (req) => {
           'X-Ecosystem-Key': ecosystemKey,
           'X-Ecosystem-App': 'play-webhook',
         },
-        body: JSON.stringify(forwardBody),
+        body: JSON.stringify(innerPayload),
       });
       dispatchResult = { status: resp.status, body: await resp.json().catch(() => null) };
     } else if (eventType === 'achievement.earned') {
-      dispatchResult = await handleAchievementEarned(supabase, payload);
+      dispatchResult = await handleAchievementEarned(supabase, innerPayload);
     } else {
       // evidence.approved — handler TODO; record only for now.
       console.log('[play-webhook-receiver] received (handler pending)', eventType);
