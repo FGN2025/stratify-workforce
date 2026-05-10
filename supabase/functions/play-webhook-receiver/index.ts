@@ -38,12 +38,24 @@ type VerifyResult = {
   reason?: string;
 };
 
+// Per-source HMAC secret lookup. Defaults to PLAY_WEBHOOK_SECRET so the existing
+// Play deployment keeps working; future sources (e.g. broadbandworkforce.com) set
+// X-Ecosystem-App to a known slug and we look up the matching secret env var.
+const SOURCE_SECRET_ENV: Record<string, string> = {
+  'play-webhook': 'PLAY_WEBHOOK_SECRET',
+  'play': 'PLAY_WEBHOOK_SECRET',
+  'bbw-webhook': 'BBW_WEBHOOK_SECRET',
+  'broadband': 'BBW_WEBHOOK_SECRET',
+};
+
 async function verifySignature(rawBody: string, headers: Headers): Promise<VerifyResult> {
-  const secret = Deno.env.get('PLAY_WEBHOOK_SECRET');
+  const sourceApp = (headers.get('x-ecosystem-app') ?? 'play-webhook').toLowerCase();
+  const envName = SOURCE_SECRET_ENV[sourceApp] ?? 'PLAY_WEBHOOK_SECRET';
+  const secret = Deno.env.get(envName);
   const strict = (Deno.env.get('PLAY_WEBHOOK_STRICT') ?? 'false').toLowerCase() === 'true';
 
   if (!secret) {
-    return { ok: true, mode: 'unsigned', reason: 'PLAY_WEBHOOK_SECRET not configured' };
+    return { ok: true, mode: 'unsigned', reason: `${envName} not configured` };
   }
 
   // STUB SCHEME — replace when play confirms HMAC contract:
