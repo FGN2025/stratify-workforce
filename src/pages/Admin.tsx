@@ -233,6 +233,8 @@ export default function Admin() {
         ) : null;
       case 'challenge-mappings':
         return <ChallengeLessonMappingsManager />;
+      case 'challenge-tracks':
+        return <ChallengeTrackMembershipManager />;
       case 'breakroom-mapper':
         return <BreakroomMapperManager />;
       case 'super-admin':
