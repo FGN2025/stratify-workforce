@@ -133,27 +133,53 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify API key
-    const apiKey = req.headers.get('x-app-key');
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'Missing X-App-Key header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Verify API key — dual-header rollout: accept X-App-Key OR X-Ecosystem-Key.
+    // X-Ecosystem-Key is the new ecosystem-wide credential being rolled out across
+    // play.fgn.gg ↔ fgn.academy. X-App-Key remains supported during the 14-day window.
+    const appKey = req.headers.get('x-app-key');
+    const ecosystemKey = req.headers.get('x-ecosystem-key');
+    const ecosystemKeyExpected = Deno.env.get('ECOSYSTEM_API_KEY');
+
+    let app: { app_slug: string; can_read: boolean; can_issue: boolean; types_allowed: string[] } | null = null;
+    let authHeaderUsed: 'x-ecosystem-key' | 'x-app-key' | null = null;
+
+    if (ecosystemKey && ecosystemKeyExpected && ecosystemKey === ecosystemKeyExpected) {
+      authHeaderUsed = 'x-ecosystem-key';
+      // Ecosystem key represents the play.fgn.gg ecosystem peer — full sync rights.
+      app = {
+        app_slug: 'fgn-play-ecosystem',
+        can_read: true,
+        can_issue: true,
+        types_allowed: ['skill_verification', 'course_completion'],
+      };
+    } else if (appKey) {
+      const { data: appData, error: appError } = await supabase.rpc('verify_app_api_key', {
+        p_api_key: appKey,
       });
+      if (!appError && appData && appData.length > 0) {
+        authHeaderUsed = 'x-app-key';
+        app = appData[0];
+      }
     }
 
-    const { data: appData, error: appError } = await supabase.rpc('verify_app_api_key', {
-      p_api_key: apiKey,
+    if (!app) {
+      console.warn('[sync-challenge-completion] auth failed', {
+        had_x_app_key: !!appKey,
+        had_x_ecosystem_key: !!ecosystemKey,
+        ecosystem_key_configured: !!ecosystemKeyExpected,
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'Authentication failed: provide a valid X-App-Key or X-Ecosystem-Key header',
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    console.log('[sync-challenge-completion] authenticated', {
+      app_slug: app.app_slug,
+      auth_header: authHeaderUsed,
     });
-
-    if (appError || !appData || appData.length === 0) {
-      return new Response(JSON.stringify({ error: 'Invalid API key' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const app = appData[0];
 
     // Parse and normalize the payload
     const rawBody = await req.json();
