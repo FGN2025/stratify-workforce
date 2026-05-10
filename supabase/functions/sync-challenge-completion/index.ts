@@ -540,7 +540,12 @@ Deno.serve(async (req) => {
 
     // Batch insert all notifications
     if (notifications.length > 0) {
-      await supabase.from('user_notifications').insert(notifications);
+      const { error: notifError } = await supabase.from('user_notifications').insert(notifications);
+      if (notifError) {
+        console.error('[sync-challenge-completion] notifications insert failed', notifError, {
+          types: notifications.map(n => n.type),
+        });
+      }
     }
 
     return new Response(
