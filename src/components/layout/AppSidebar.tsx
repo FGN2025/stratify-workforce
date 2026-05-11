@@ -105,6 +105,7 @@ const superAdminSubItems = [
   { title: 'AI Config', url: '/admin/ai-config', icon: Bot },
   { title: 'Notebook Telemetry', url: '/admin/notebook-telemetry', icon: Bot },
   { title: 'FGN Play', url: '/admin/sync-tester', icon: Zap },
+  { title: 'Play Webhook Retry', url: '/admin/play-webhook-retry', icon: RotateCcw },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
 
