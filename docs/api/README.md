@@ -102,6 +102,7 @@ Error responses include HTTP status codes:
 - [Credential API Reference](./credential-api/README.md) - Full endpoint docs
 - [Public Catalog Reference](./public-catalog/README.md) - Full endpoint docs
 - [Integration Guides](./integration-guides/) - CDL Quest, CDL Exchange examples
+- **Skills Taxonomy (v1, May 2026)** — see [`docs/phase-f-status-and-open-asks.md` §7](../phase-f-status-and-open-asks.md#7-update--skills-taxonomy-v1-may-2026). Spans `cdl:`, `osha:`, `fiber:`, `gaming:` namespaces plus `difficulty:*`. Canonical reference for any payload field carrying skill tags (`skills_verified[]`, challenge `skill_tags`). Source of truth: Play's `src/lib/skillTaxonomy.ts`.
 
 ## Support
 
