@@ -210,19 +210,24 @@ const Profile = () => {
           </HorizontalCarousel>
         )}
 
-        {/* Certifications Carousel */}
+        {/* Completions Grid */}
         {credentials.length > 0 && (
-          <HorizontalCarousel
-            title="Certifications"
-            subtitle="Verified credentials and qualifications"
-            icon={<Award className="h-5 w-5" />}
-          >
-            {credentials.map((credential) => (
-              <div key={credential.id} className="shrink-0 snap-start">
-                <CertificationCard credential={credential} />
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <Award className="h-5 w-5" />
               </div>
-            ))}
-          </HorizontalCarousel>
+              <div>
+                <h2 className="text-xl font-display font-bold uppercase tracking-wide">Completions</h2>
+                <p className="text-sm text-muted-foreground">Verified credentials and qualifications</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {credentials.map((credential) => (
+                <CertificationCard key={credential.id} credential={credential} />
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Spatial verifications from Breakroom (owner-only via RLS) */}
