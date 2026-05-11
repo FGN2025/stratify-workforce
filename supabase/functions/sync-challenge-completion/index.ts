@@ -209,12 +209,15 @@ Deno.serve(async (req) => {
 
     const user = { id: userId };
 
-    // 2. Find the work order linked to this challenge
+    // 2. Find the work order linked to this challenge.
+    // Prioritize fgn_origin_challenge_id (Play's canonical id), fall back to source_challenge_id.
     const { data: workOrder, error: woError } = await supabase
       .from('work_orders')
       .select('*')
-      .eq('source_challenge_id', challenge_id)
-      .single();
+      .or(`fgn_origin_challenge_id.eq.${challenge_id},source_challenge_id.eq.${challenge_id}`)
+      .order('fgn_origin_challenge_id', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
 
     if (woError || !workOrder) {
       return new Response(
