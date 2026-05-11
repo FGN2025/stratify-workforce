@@ -90,6 +90,9 @@ export interface Credential {
   score: number | null;
   issuer: string;
   skills_verified: string[];
+  // Skill tags use the v1 namespaced taxonomy — `cdl:*` slice for this guide
+  // (`cdl:pre-trip`, `cdl:backing`, …). Full enumeration:
+  // ../../phase-f-status-and-open-asks.md §7.
   game_title: string;
   verification_hash: string;
 }
