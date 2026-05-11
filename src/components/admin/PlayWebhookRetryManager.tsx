@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, RefreshCw, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, RefreshCw, RotateCcw, ChevronDown, ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Attempt {
@@ -20,6 +20,8 @@ interface Attempt {
   response: any;
   created_at: string;
 }
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
 function extractIdentity(req: any): { email?: string; ext?: string; challengeId?: string; title?: string } {
   const inner = req?.payload?.payload ?? req?.payload?.data ?? req?.payload ?? {};
@@ -40,25 +42,49 @@ export function PlayWebhookRetryManager() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [retrying, setRetrying] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
 
-  const { data: attempts, isLoading, refetch } = useQuery({
-    queryKey: ['play-sync-attempts', statusFilter],
+  // Totals (failed + all) regardless of current filter
+  const { data: totals } = useQuery({
+    queryKey: ['play-sync-attempts-totals'],
     queryFn: async () => {
-      let q = supabase
-        .from('play_sync_attempts')
-        .select('id, action, status, external_attempt_id, error, request, response, created_at')
-        .eq('direction', 'inbound')
-        .order('created_at', { ascending: false })
-        .limit(200);
-      if (statusFilter === 'failed') q = q.eq('status', 'failed');
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as Attempt[];
+      const [{ count: total }, { count: failed }] = await Promise.all([
+        supabase
+          .from('play_sync_attempts')
+          .select('id', { count: 'exact', head: true })
+          .eq('direction', 'inbound'),
+        supabase
+          .from('play_sync_attempts')
+          .select('id', { count: 'exact', head: true })
+          .eq('direction', 'inbound')
+          .eq('status', 'failed'),
+      ]);
+      return { total: total ?? 0, failed: failed ?? 0 };
     },
   });
 
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['play-sync-attempts', statusFilter, page, pageSize],
+    queryFn: async () => {
+      let q = supabase
+        .from('play_sync_attempts')
+        .select('id, action, status, external_attempt_id, error, request, response, created_at', { count: 'exact' })
+        .eq('direction', 'inbound')
+        .order('created_at', { ascending: false })
+        .range(page * pageSize, page * pageSize + pageSize - 1);
+      if (statusFilter === 'failed') q = q.eq('status', 'failed');
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { rows: (data ?? []) as Attempt[], count: count ?? 0 };
+    },
+  });
+
+  const attempts = data?.rows ?? [];
+  const filteredCount = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(filteredCount / pageSize));
+
   const filtered = useMemo(() => {
-    if (!attempts) return [];
     const s = search.trim().toLowerCase();
     if (!s) return attempts;
     return attempts.filter((a) => {
@@ -91,6 +117,7 @@ export function PlayWebhookRetryManager() {
       });
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ['play-sync-attempts'] });
+      qc.invalidateQueries({ queryKey: ['play-sync-attempts-totals'] });
     },
     onError: (err: any) => {
       toast({ title: 'Replay failed', description: err.message, variant: 'destructive' });
@@ -113,6 +140,17 @@ export function PlayWebhookRetryManager() {
     next.has(id) ? next.delete(id) : next.add(id);
     setExpanded(next);
   };
+  const toggleAllOnPage = () => {
+    const ids = filtered.map((a) => a.id);
+    const allSelected = ids.every((id) => selected.has(id));
+    const next = new Set(selected);
+    if (allSelected) ids.forEach((id) => next.delete(id));
+    else ids.forEach((id) => next.add(id));
+    setSelected(next);
+  };
+
+  const rangeStart = filteredCount === 0 ? 0 : page * pageSize + 1;
+  const rangeEnd = Math.min(filteredCount, page * pageSize + filtered.length);
 
   return (
     <Card>
@@ -123,25 +161,39 @@ export function PlayWebhookRetryManager() {
           external user id, challenge id, or work order title to target a specific passport
           or work order.
         </CardDescription>
+        {totals && (
+          <div className="flex gap-3 pt-2 text-xs">
+            <Badge variant="destructive">{totals.failed} failed</Badge>
+            <Badge variant="secondary">{totals.total} total inbound</Badge>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2 items-center">
           <Input
-            placeholder="Search email, challenge id, work order, error…"
+            placeholder="Search current page (email, challenge, error)…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-md"
           />
           <Button
             variant="outline" size="sm"
-            onClick={() => setStatusFilter(statusFilter === 'failed' ? 'all' : 'failed')}
+            onClick={() => { setStatusFilter(statusFilter === 'failed' ? 'all' : 'failed'); setPage(0); }}
           >
             {statusFilter === 'failed' ? 'Showing: Failed only' : 'Showing: All'}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+          <Button variant="outline" size="sm" onClick={() => { refetch(); }}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${isFetching ? 'animate-spin' : ''}`} /> Refresh
           </Button>
           <div className="flex-1" />
+          <Button
+            variant="outline" size="sm"
+            disabled={filtered.length === 0}
+            onClick={toggleAllOnPage}
+          >
+            {filtered.every((a) => selected.has(a.id)) && filtered.length > 0
+              ? 'Deselect page' : 'Select page'}
+          </Button>
           <Button
             disabled={selected.size === 0 || retrying}
             onClick={() => handleRetry(Array.from(selected))}
@@ -222,6 +274,47 @@ export function PlayWebhookRetryManager() {
             })}
           </div>
         )}
+
+        {/* Pagination */}
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/50">
+          <div className="text-xs text-muted-foreground">
+            Showing <span className="font-medium text-foreground">{rangeStart}–{rangeEnd}</span> of{' '}
+            <span className="font-medium text-foreground">{filteredCount}</span>{' '}
+            {statusFilter === 'failed' ? 'failed' : 'inbound'} attempts
+          </div>
+          <div className="flex-1" />
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-muted-foreground">Per page:</span>
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <Button
+                key={n}
+                size="sm"
+                variant={pageSize === n ? 'default' : 'ghost'}
+                onClick={() => { setPageSize(n); setPage(0); }}
+                className="h-7 px-2"
+              >
+                {n}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button size="sm" variant="outline" onClick={() => setPage(0)} disabled={page === 0}>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground px-2">
+              Page {page + 1} / {totalPages}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
