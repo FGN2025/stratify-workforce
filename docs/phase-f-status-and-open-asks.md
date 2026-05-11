@@ -147,3 +147,58 @@ Re-flagging the one remaining ask, unchanged from §11 / plan v3:
 
 (Webhook HMAC scheme is **not** re-asked — finalized in §6, confirmed 2026-05-10.)
 
+## 9. P1 BLOCKER — Player Dashboard → Skill Passport URL contract
+
+**Asked by:** play, 2026-05-11. **Status:** awaiting Academy decision. **Owner:** Academy.
+
+Play wants to deep-link from the Player Dashboard tile straight into the user's Skill Passport on Academy. Need a stable, documented contract before play ships the link. Two options on the table — Academy picks one:
+
+### Option A — Canonical public URL pattern
+
+Publish a stable URL shape play can construct client-side. Academy must commit to:
+
+- The path template (current public route is `/passport/:slug` where `:slug` = `skill_passport.public_url_slug`, gated by `is_public=true`). Slug is opaque, not derivable from `email` or `external_user_id`.
+- Whether play should look up the slug via an Academy endpoint keyed on `email` or `external_user_id`, then build the URL — i.e. `GET /api/ecosystem/passport-slug?external_user_id=…` returning `{ slug, is_public }`.
+- Behavior when `is_public=false`: 404, "request access" page, or fall through to option B.
+
+**Pros:** simple, cacheable, no per-click round-trip. **Cons:** only works for users who've toggled their passport public. Doesn't preserve auth — viewer sees the public passport, not their authenticated owner view.
+
+### Option B — Magic-link endpoint *(preferred by play, cheap on both sides)*
+
+Play POSTs an HMAC-signed request; Academy mints a one-time URL.
+
+- **Endpoint (proposed):** `POST https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/credential-api/passport-link`
+- **Auth:** `X-Ecosystem-Key` + `X-Play-Signature` (HMAC-SHA256 of raw body, same scheme as §6 webhook receiver — reuse `PLAY_WEBHOOK_SECRET` or mint a new `ECOSYSTEM_LINK_SECRET`, Academy's call).
+- **Body:**
+  ```json
+  {
+    "external_user_id": "<uuid from challenge_completion.metadata>",
+    "intent": "view_passport",
+    "ttl_seconds": 300
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "url": "https://fgn.academy/passport/link?token=<one-time-jwt>",
+    "expires_at": "2026-05-11T12:39:00Z",
+    "user_resolved": true
+  }
+  ```
+- **Resolution:** Academy resolves `external_user_id` → `play_identity.user_id` → `profiles.id`. If unmatched, return `404 { error: "user_not_linked" }` so play can fall back to a "Connect your Academy account" CTA.
+- **Landing page:** `/passport/link` consumes the token, sets/refreshes the Academy session if the viewer is signed in as the same user (owner view), otherwise redirects to the public `/passport/:slug` (if public) or a sign-in prompt. Token is single-use, 5-min TTL.
+
+**Pros:** preserves Academy session/auth; works for private passports; no slug guessing; reuses `external_user_id` already flowing in `challenge_completion.metadata` (PR P-3); reuses the §6 HMAC primitives. **Cons:** one extra round-trip per click on play side, one new edge function route on Academy side.
+
+### Recommendation
+
+Academy should ship **Option B** and document Option A's `GET /passport-slug` lookup as a secondary read-only helper for embed/share cards. B is the only path that handles private passports and authenticated owner views without leaking slugs.
+
+### Decision needed from Academy
+
+- [ ] Confirm B as primary, or counter with A-only.
+- [ ] If B: confirm secret reuse (`PLAY_WEBHOOK_SECRET`) vs new `ECOSYSTEM_LINK_SECRET`.
+- [ ] Target ship date so play can schedule the dashboard tile rollout.
+
+**This is the P1 blocker on the Player Dashboard ↔ Skill Passport link work — supersedes §8 in priority until resolved.**
+
