@@ -239,3 +239,19 @@ Academy picks **Option B** (HMAC magic-link relay) as the primary contract and *
 
 This unblocks the Player Dashboard ↔ Skill Passport tile. §8 (PR P-2 14-day window) is now the sole remaining open ask.
 
+### Pre-strict-flip blocker (Play, 2026-05-11) — passport-link signature mismatch
+
+Play surfaced a `401 invalid_signature` on the passport-link smoke test. Because `passport-link` and `play-webhook-receiver` share the **same HMAC primitive** (`PLAY_WEBHOOK_SECRET`, lowercase hex HMAC-SHA256 over raw body, header `X-Play-Signature`), any root cause here will also trip `PLAY_WEBHOOK_STRICT=true` on 2026-05-26.
+
+**Owner:** joint (Play repros, Academy verifies receiver-side canonical bytes). **Must resolve before:** T0+14d strict flip (2026-05-26 16:00 UTC).
+
+Likely root causes to rule out, in order:
+
+1. **Body re-serialization on Play's side.** `JSON.stringify` after signing → bytes drift. Sign the exact `Uint8Array`/string you POST.
+2. **Charset / BOM / trailing newline** in the raw body buffer.
+3. **Secret drift** — confirm Play's `PLAY_WEBHOOK_SECRET` matches the rotated value Academy loaded (the pre-rotation hex is burned).
+4. **Header casing / extra whitespace** on `X-Play-Signature` (receiver does `timingSafeEqual` on lowercase hex, no `sha256=` prefix).
+5. **Encoding** — `hex` not `base64`, lowercase not uppercase.
+
+Academy will mirror the receiver's canonical-bytes assertion into `passport-link` logs (`sig_mode` + `sig_reason`) so the next smoke test surfaces the same diagnostic the webhook receiver already does. If the mismatch reproduces under shadow on `play_sync_attempts.request.sig_reason`, fix lands once and clears both surfaces.
+
