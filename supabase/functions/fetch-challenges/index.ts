@@ -96,7 +96,15 @@ Deno.serve(async (req) => {
         return json({ error: 'Failed to fetch challenges from play.fgn.gg', details: errText }, 502);
       }
 
-    // Determine new cursor = max updated_at/created_at across batch (no longer used here)
+      const data = await res.json();
+      const batch: Challenge[] = data?.challenges ?? data?.data ?? [];
+      all.push(...batch);
+
+      if (batch.length < PAGE_LIMIT) break;
+      page += 1;
+      if (page > 50) break; // safety
+    }
+
 
     // Build lossless play_source per challenge (only real fields).
     const enriched = all.map((c) => {
