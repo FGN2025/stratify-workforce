@@ -325,6 +325,7 @@ const WorkOrders = () => {
                 tenant_id: null,
                 evidence_requirements: null,
                 cover_image_url: importedData.coverImageUrl,
+                fgn_origin_challenge_id: importedData.fgnOriginChallengeId,
               } : null}
               onSave={() => {
                 setShowEditDialog(false);

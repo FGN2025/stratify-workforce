@@ -60,6 +60,7 @@ interface WorkOrder {
   tenant_id: string | null;
   evidence_requirements: EvidenceRequirements | null;
   cover_image_url: string | null;
+  fgn_origin_challenge_id?: string | null;
 }
 
 interface GameChannel {
@@ -152,6 +153,7 @@ export function WorkOrderEditDialog({
         setChannelId(workOrder.channel_id || '');
         setTenantId(workOrder.tenant_id || '');
         setCoverImageUrl(workOrder.cover_image_url || '');
+        setFgnOriginChallengeId(workOrder.fgn_origin_challenge_id || null);
         // Evidence requirements
         const evidence = workOrder.evidence_requirements;
         if (evidence) {
