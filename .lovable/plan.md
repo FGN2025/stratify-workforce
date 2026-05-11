@@ -1,44 +1,66 @@
-# Link Completion Cards Back to Play
+## Goal
 
-Add a deep-link CTA on each Skill Passport completion card that came from Play, so users can jump back to the source challenge (and its evidence) on play.fgn.gg.
+Mirror Play's v1 skills taxonomy on the Academy side. Drop the verbatim taxonomy block into our running asks thread, cross-link from our top-level ecosystem guide, deep-link per-track guides to their matching namespace, and re-flag the one remaining open ask (PR P-2 14-day legacy window).
 
-## What we already have
+The Phase E webhook HMAC scheme is already resolved in §6 of `docs/phase-f-status-and-open-asks.md` (FINAL, confirmed 2026-05-10) — no re-ask needed there.
 
-Every Play-issued row in `skill_credentials` carries the data we need — no schema change required:
+## Files to change
 
-- `issuer_app_slug = 'fgn-play'` — identifies Play as the source
-- `external_reference_id` — the Play challenge UUID (e.g. `40733510-…`)
-- `metadata.challenge_id`, `metadata.challenge_name`, `metadata.attempt_number`, `metadata.awarded_points`, `metadata.tasks_synced/tasks_total`, `metadata.completed_at`
+### 1. `docs/phase-f-status-and-open-asks.md` — append two new sections
 
-Play URL convention is already locked in project memory: plural `/challenges/:id`, so the link target is:
-`https://play.fgn.gg/challenges/{external_reference_id}`
+**`## 7. Update — skills taxonomy (v1, May 2026)`**
 
-## Scope
+- **Source of truth:** Play's `src/lib/skillTaxonomy.ts`. Academy mirrors via `skill_credentials.skills_verified[]` and the `/public-catalog/skills` consumers.
+- **Cross-reference:** Play's `docs/play-fgn-gg-integration-guide.md` §7 + "Skills Taxonomy (May 2026)".
+- **Full taxonomy snapshot (v1, May 2026)** — paste verbatim, formatted as four namespace tables (cdl, osha, fiber, gaming) with proper `| Tag | Label |` markdown so it renders cleanly (the user's pasted block came in as run-on text — we'll re-flow it).
+- **Difficulty rules** — `difficulty:beginner|intermediate|advanced|expert` always appended, mirrors `challenges.difficulty`.
+- **Legacy fallback shape** — `["game:<games.name>", "gaming-proficiency", "difficulty:<level>"]`, emitted only when `challenges.skill_tags` is empty/null. Curated + legacy coexist, no flag day.
+- **Format rules** — lowercase, namespace-prefixed `<namespace>:<skill>`; Skill Passport keys on prefix so unknown tags in a known namespace fail open; edge function does not filter unknown tags.
+- **Academy-side impact (3 bullets):**
+  1. `skill_credentials.skills_verified[]` accepts namespaced tags as-is.
+  2. Profile / Skill Passport renders `namespace:tag` via human-label lookup, falls back to title-cased tag.
+  3. `/public-catalog/skills` stays game-scoped today; adding a `namespace` field is a follow-up PR.
 
-Files:
-- `src/hooks/useProfile.ts` — extend the `SkillCredential` interface and select the extra columns
-- `src/components/profile/CertificationCard.tsx` — render the new CTA + small attempt/score chip when present
+**`## 8. Still open — PR P-2 legacy window`**
 
-No backend, edge function, RLS, or migration changes.
+Re-state the only remaining ask:
+- **PR P-2:** how long do we accept both `X-App-Key` and `X-Ecosystem-Key` before hard-failing legacy? Academy proposes **14 days** from cutover. Need play's confirmation so we can schedule the strict-mode flip.
 
-## UX
+(Webhook HMAC is intentionally NOT re-asked — already finalized in §6.)
 
-On each card that has `issuer_app_slug = 'fgn-play'` (and an `external_reference_id`):
+### 2. `docs/api/README.md` — add top-level cross-reference
 
-1. Add a small "View on Play" link button at the bottom-right of the card with an external-link icon.
-   - Opens `https://play.fgn.gg/challenges/{external_reference_id}` in a new tab (`target="_blank"`, `rel="noopener noreferrer"`).
-   - Styled as a ghost/link button using the Play pillar accent (cyan), not the Pathways amber, so it reads as a cross-app jump.
-2. Add a subtle metadata line under the existing "Issued …" line when Play metadata is present:
-   - `Attempt {n} • Score {awarded_points}/{max_points} • {tasks_synced}/{tasks_total} tasks`
-3. For non-Play credentials (FGN Academy course completions, FMCSA, etc.), the card renders unchanged — no CTA, no metadata line. This keeps the door open for a future BBW SCORM CTA without changing the layout contract.
+Add a new bullet to the doc index pointing at the taxonomy section:
 
-The user will land on the Play challenge page logged in (shared SSO), where their own evidence is already visible — so we don't need a deeper per-evidence URL today. If/when Play exposes a stable per-submission URL, we can swap the target without touching the card.
+> **Skills Taxonomy (v1, May 2026)** — see `docs/phase-f-status-and-open-asks.md` §7. Spans `cdl:`, `osha:`, `fiber:`, `gaming:` namespaces plus `difficulty:*`. Canonical reference for any payload field carrying skill tags (`skills_verified[]`, challenge `skill_tags`). Source of truth: Play's `src/lib/skillTaxonomy.ts`.
 
-## Future-proofing (not built now)
+This is the single top-level link Play asked for — not duplicated per-track.
 
-- When Play publishes a per-submission URL pattern, replace the link target with `…/challenges/{id}/submissions/{metadata.completion_id}` (Play hasn't confirmed the path yet — open ask).
-- Same pattern will apply to broadbandworkforce.com SCORM completions later: branch on `issuer_app_slug` and pick the right base URL + label ("View on Broadband Workforce").
+### 3. `docs/api/integration-guides/cdl-quest.md` — namespace deep-link
 
-## Open question
+Add one sentence near the existing `skills_verified` mention:
 
-The Profile screenshot shows two cards for the same Speed Management run (attempt #1 and attempt #2). That's a separate issue from this request — flag only, fix not in scope here. Want me to file it as a follow-up?
+> Skill tags use the v1 namespaced taxonomy — `cdl:*` slice for this guide (`cdl:pre-trip`, `cdl:backing`, `cdl:speed-management`, …). Full enumeration: `docs/phase-f-status-and-open-asks.md` §7.
+
+### 4. `docs/api/integration-guides/cdl-exchange.md` — namespace deep-link
+
+Same pattern, pointing at the `cdl:` slice + §7 anchor.
+
+### 5. `docs/api/public-catalog/skills.md` — short callout at top
+
+Add a one-paragraph note above the existing `GET /skills` section:
+
+> **v1 namespacing in effect (May 2026).** Skill `key` values returned here are the legacy game-scoped form. Cross-app payloads (e.g. `skills_verified[]` from Play) use namespace-prefixed tags — see `docs/phase-f-status-and-open-asks.md` §7 for the full enumeration. A `namespace` field on this endpoint is a planned follow-up.
+
+## Out of scope (deferred)
+
+- Adding `namespace` field to `/public-catalog/skills` response.
+- Migrating existing `skill_credentials.skills_verified[]` rows to namespaced form.
+- Profile UI namespace badges / colored chips.
+- Per-track companion guides for OSHA / Fiber (`osha-overlay.md`, `fiber-tech.md`) — Play mentioned these but they don't exist on our side yet; will create when those tracks ship integration partners.
+
+## Verification
+
+- `rg -n "Skills Taxonomy" docs/` returns hits in `docs/api/README.md`, both integration guides, `docs/api/public-catalog/skills.md`, and the new §7 in phase-f doc.
+- `rg -n "X-App-Key" docs/phase-f-status-and-open-asks.md` still surfaces the P-2 ask in §8.
+- Phase-f doc renders the four namespace tables as proper markdown tables (no run-on text).
