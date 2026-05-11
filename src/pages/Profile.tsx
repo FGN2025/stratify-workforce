@@ -210,25 +210,52 @@ const Profile = () => {
           </HorizontalCarousel>
         )}
 
-        {/* Completions Grid */}
-        {credentials.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                <Award className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-xl font-display font-bold uppercase tracking-wide">Completions</h2>
-                <p className="text-sm text-muted-foreground">Verified credentials and qualifications</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {credentials.map((credential) => (
-                <CertificationCard key={credential.id} credential={credential} />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Challenge Completions Grid */}
+        {(() => {
+          const challengeCreds = credentials.filter((c: any) => c.credential_type !== 'course_completion');
+          const courseCreds = credentials.filter((c: any) => c.credential_type === 'course_completion');
+          return (
+            <>
+              {challengeCreds.length > 0 && (
+                <section className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      <Award className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-display font-bold uppercase tracking-wide">Challenge Completions</h2>
+                      <p className="text-sm text-muted-foreground">Verified Play.fgn.gg challenge completions</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {challengeCreds.map((credential) => (
+                      <CertificationCard key={credential.id} credential={credential} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {courseCreds.length > 0 && (
+                <section className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      <Award className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-display font-bold uppercase tracking-wide">Course Completions</h2>
+                      <p className="text-sm text-muted-foreground">Academy and external SCORM course completions</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {courseCreds.map((credential) => (
+                      <CertificationCard key={credential.id} credential={credential} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          );
+        })()}
 
         {/* Spatial verifications from Breakroom (owner-only via RLS) */}
         <SpatialVerifications userId={profile.id} />
