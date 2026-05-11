@@ -12,7 +12,7 @@ export function CertificationCard({ credential }: CertificationCardProps) {
   const isVerified = !isExpired;
 
   return (
-    <Card className="glass-card min-w-[220px] hover:border-primary/50 transition-all">
+    <Card className="glass-card w-full hover:border-primary/50 transition-all">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
