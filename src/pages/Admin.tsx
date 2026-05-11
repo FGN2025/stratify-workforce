@@ -25,6 +25,7 @@ import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthChec
 import { ChallengeLessonMappingsManager } from '@/components/admin/ChallengeLessonMappingsManager';
 import { ChallengeTrackMembershipManager } from '@/components/admin/ChallengeTrackMembershipManager';
 import { BreakroomMapperManager } from '@/components/admin/BreakroomMapperManager';
+import { PlayWebhookRetryManager } from '@/components/admin/PlayWebhookRetryManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -237,6 +238,8 @@ export default function Admin() {
         return <ChallengeTrackMembershipManager />;
       case 'breakroom-mapper':
         return <BreakroomMapperManager />;
+      case 'play-webhook-retry':
+        return isSuperAdmin ? <PlayWebhookRetryManager /> : null;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : null;
       default:
