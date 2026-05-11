@@ -181,6 +181,9 @@ Deno.serve(async (req) => {
       external_reference_id: sessionId, // Link to your training session
     }),
   });
+  // Skill tags use the v1 namespaced taxonomy — `cdl:*` slice for this guide
+  // (`cdl:pre-trip`, `cdl:backing`, `cdl:speed-management`, …). Full enumeration:
+  // ../../phase-f-status-and-open-asks.md §7.
   
   if (!response.ok) {
     const error = await response.json();
