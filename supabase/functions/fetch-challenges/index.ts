@@ -96,20 +96,7 @@ Deno.serve(async (req) => {
         return json({ error: 'Failed to fetch challenges from play.fgn.gg', details: errText }, 502);
       }
 
-      const data = await res.json();
-      const batch: Challenge[] = data?.challenges ?? data?.data ?? [];
-      all.push(...batch);
-
-      if (batch.length < PAGE_LIMIT) break;
-      page += 1;
-      if (page > 50) break; // safety
-    }
-
-    // Determine new cursor = max updated_at/created_at across batch
-    for (const c of all) {
-      const ts = (c.updated_at as string) || (c.created_at as string) || null;
-      if (ts && (!nextSince || ts > nextSince)) nextSince = ts;
-    }
+    // Determine new cursor = max updated_at/created_at across batch (no longer used here)
 
     // Build lossless play_source per challenge (only real fields).
     const enriched = all.map((c) => {
@@ -138,18 +125,11 @@ Deno.serve(async (req) => {
       tasks: Array.isArray(c.tasks) ? c.tasks : [],
     }));
 
-    // Persist cursor + log success
-    if (nextSince) {
-      await localSupabase
-        .from('play_poll_cursor')
-        .upsert({ action: POLL_ACTION, since: nextSince, updated_at: new Date().toISOString() });
-    }
-
     await logAttempt(
       localSupabase,
       'completed',
-      { action: POLL_ACTION, since, started_at: startedAt },
-      { count: finalChallenges.length, new_since: nextSince },
+      { action: POLL_ACTION, started_at: startedAt },
+      { count: finalChallenges.length },
       null,
     );
 
