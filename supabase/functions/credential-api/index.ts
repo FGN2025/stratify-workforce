@@ -82,6 +82,149 @@ Deno.serve(async (req) => {
     // PUBLIC ENDPOINTS (no auth required)
     // ==========================================
 
+    // ------------------------------------------
+    // POST /passport-link  (Option B: HMAC magic-link relay for Player Dashboard → Skill Passport)
+    // Auth: X-Ecosystem-Key + X-Play-Signature (HMAC-SHA256 of raw body, hex)
+    // Body: { external_user_id, intent?: 'view_passport', ttl_seconds?: 60..900 }
+    // ------------------------------------------
+    if (req.method === 'POST' && path[0] === 'passport-link' && !path[1]) {
+      const ecoKey = req.headers.get('x-ecosystem-key') ?? req.headers.get('x-app-key');
+      const expectedEcoKey = Deno.env.get('ECOSYSTEM_API_KEY');
+      if (!ecoKey || !expectedEcoKey || ecoKey !== expectedEcoKey) {
+        return new Response(JSON.stringify({ error: 'invalid_ecosystem_key' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const rawBody = await req.text();
+      const sigHeader = req.headers.get('x-play-signature') ?? '';
+      const webhookSecret = Deno.env.get('PLAY_WEBHOOK_SECRET');
+      if (!webhookSecret) {
+        return new Response(JSON.stringify({ error: 'server_not_configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const expectedSig = await hmacSha256Hex(webhookSecret, rawBody);
+      if (!timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig)) {
+        return new Response(JSON.stringify({ error: 'invalid_signature' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      let parsed: any;
+      try { parsed = JSON.parse(rawBody); } catch {
+        return new Response(JSON.stringify({ error: 'invalid_json' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const externalUserId: string | undefined = parsed?.external_user_id;
+      const intent: string = parsed?.intent ?? 'view_passport';
+      const ttl = Math.min(Math.max(Number(parsed?.ttl_seconds ?? 300) || 300, 60), 900);
+      if (!externalUserId || typeof externalUserId !== 'string') {
+        return new Response(JSON.stringify({ error: 'missing_external_user_id' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: identity } = await supabase
+        .from('play_identity')
+        .select('user_id')
+        .eq('external_user_id', externalUserId)
+        .maybeSingle();
+
+      if (!identity) {
+        return new Response(JSON.stringify({ error: 'user_not_linked' }), {
+          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const token = newToken();
+      const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
+      const { error: insErr } = await supabase
+        .from('passport_link_tokens')
+        .insert({
+          token,
+          user_id: identity.user_id,
+          external_user_id: externalUserId,
+          intent,
+          issued_to_app: 'play.fgn.gg',
+          expires_at: expiresAt,
+        });
+      if (insErr) {
+        return new Response(JSON.stringify({ error: 'token_persist_failed' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const origin = appOriginFromReq(req);
+      return new Response(JSON.stringify({
+        url: `${origin}/passport/link?token=${token}`,
+        expires_at: expiresAt,
+        user_resolved: true,
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ------------------------------------------
+    // POST /passport-link/consume  (called by /passport/link landing page; single-use)
+    // Body: { token }
+    // ------------------------------------------
+    if (req.method === 'POST' && path[0] === 'passport-link' && path[1] === 'consume') {
+      let parsed: any;
+      try { parsed = await req.json(); } catch {
+        return new Response(JSON.stringify({ error: 'invalid_json' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const token: string | undefined = parsed?.token;
+      if (!token) {
+        return new Response(JSON.stringify({ error: 'missing_token' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: row } = await supabase
+        .from('passport_link_tokens')
+        .select('user_id, expires_at, consumed_at, intent')
+        .eq('token', token)
+        .maybeSingle();
+
+      if (!row) {
+        return new Response(JSON.stringify({ error: 'token_not_found' }), {
+          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (row.consumed_at) {
+        return new Response(JSON.stringify({ error: 'token_already_used' }), {
+          status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (new Date(row.expires_at).getTime() < Date.now()) {
+        return new Response(JSON.stringify({ error: 'token_expired' }), {
+          status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      await supabase
+        .from('passport_link_tokens')
+        .update({ consumed_at: new Date().toISOString() })
+        .eq('token', token);
+
+      const { data: passport } = await supabase
+        .from('skill_passport')
+        .select('public_url_slug, is_public')
+        .eq('user_id', row.user_id)
+        .maybeSingle();
+
+      return new Response(JSON.stringify({
+        user_id: row.user_id,
+        intent: row.intent,
+        passport_slug: passport?.public_url_slug ?? null,
+        is_public: passport?.is_public ?? false,
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+
     // GET /passport/:slug
     if (req.method === 'GET' && path[0] === 'passport' && path[1]) {
       const slug = path[1];
