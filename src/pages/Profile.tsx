@@ -183,7 +183,7 @@ const Profile = () => {
           stats={[
             { value: `${profile.employability_score?.toFixed(1) || '50.0'}`, label: 'Employability Score', highlight: true },
             { value: `${stats.totalXp.toLocaleString()}`, label: 'Total XP' },
-            { value: `${credentials.length}`, label: 'Completions' },
+            { value: `${credentials.length}`, label: 'Challenge Completions' },
           ]}
         />
 
