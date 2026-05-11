@@ -156,7 +156,7 @@ Per play's P0 status, Academy owes the T0 ping to flip `PHASE_E_ROUTING_MODE` `o
 
 1. ✅ Receiver live, `PLAY_WEBHOOK_SECRET` loaded, lenient mode (`PLAY_WEBHOOK_STRICT=false`). Verified zero signed webhook traffic in `play_sync_attempts` over the last 48h — clean baseline.
 2. ✅ §6 contract finalized; §9 magic-link relay shipped; §8 cutover dates locked above.
-3. ⏭️ **Sending T0 ping now (2026-05-11).** Play flips `PHASE_E_ROUTING_MODE=shadow`. Academy watches `play_sync_attempts` for paired rows (`challenge_completion` + `webhook:challenge.completed`, same `external_attempt_id` once PR P-3 lands; best-effort match until then).
+3. ✅ **T0 ping SENT (2026-05-11) via #ecosystem-ops.** Awaiting play ack + first dispatched webhook timestamp to anchor parity SQL window. Once `PHASE_E_ROUTING_MODE=shadow` flips, Academy watches `play_sync_attempts` for paired rows (`challenge_completion` + `webhook:challenge.completed`, same `external_attempt_id` once PR P-3 lands; best-effort match until then).
 4. **Parity window:** 24–48h. Pass thresholds (per runbook): zero signature mismatches in the last 6h rolling window, zero payload diffs on `metadata.tenant_*` / `metadata.external_user_id` / scoring fields, dispatch-status parity ≥ 99.5%, webhook-vs-direct latency p95 < 5s.
 5. **Promotion:** play flips dispatch to primary; direct POST stays as fallback. Academy holds another 48h of clean primary traffic.
 6. **Strict flip:** Academy sets `PLAY_WEBHOOK_STRICT=true`. This is bundled with the §8 T0+14d hard cutover (2026-05-26 16:00 UTC) **only if** primary has been clean for ≥ 48h by then. If not, strict flip slips and §8 hard cutover slips with it — Academy will re-ping play with the revised date.
