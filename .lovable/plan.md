@@ -1,36 +1,44 @@
-## Now (this turn)
+# Link Completion Cards Back to Play
 
-**Rename only.** In `src/pages/Profile.tsx`:
-- Section heading "Completions" → "Challenge Completions"
-- Stats label `'Completions'` → `'Challenge Completions'` (or short label `'Challenges'` if room is tight in `PageHero` stats — recommend `'Challenges'` for the stat chip, full name for the section header)
-- Subtitle "Verified credentials and qualifications" → "Verified Play.fgn.gg challenge completions"
+Add a deep-link CTA on each Skill Passport completion card that came from Play, so users can jump back to the source challenge (and its evidence) on play.fgn.gg.
 
-The current grid only sources from `skill_credentials` (populated today by `play-webhook-receiver` / Play challenge events). All existing rows are challenge-derived, so this rename is accurate and non-breaking.
+## What we already have
 
-## Recommended timing for the separate "Course Completions / External Completions" section
+Every Play-issued row in `skill_credentials` carries the data we need — no schema change required:
 
-**Build the UX shell now (hidden/empty state) — wire data when the SCORM ingest API lands.**
+- `issuer_app_slug = 'fgn-play'` — identifies Play as the source
+- `external_reference_id` — the Play challenge UUID (e.g. `40733510-…`)
+- `metadata.challenge_id`, `metadata.challenge_name`, `metadata.attempt_number`, `metadata.awarded_points`, `metadata.tasks_synced/tasks_total`, `metadata.completed_at`
 
-Rationale:
-- `skill_credentials.credential_type` already has `course_completion`, `certification`, `badge`, `skill_verification`. The data model supports segmentation today; only the source-of-truth ingestion for broadbandworkforce.com SCORM completions is missing.
-- Splitting the UI now (even with an empty state) sets user expectations and avoids a visual reshuffle later when records start landing.
-- A second Skills Radar requires a per-source skill taxonomy; that depends on what the SCORM API returns. **Don't build the second radar until the API contract is locked** — otherwise the axes will need to be reworked.
+Play URL convention is already locked in project memory: plural `/challenges/:id`, so the link target is:
+`https://play.fgn.gg/challenges/{external_reference_id}`
 
-### Proposed phased rollout
+## Scope
 
-**Phase 1 — Now (this PR):**
-1. Rename to "Challenge Completions" and filter the section to `credential_type IN ('skill_verification','badge')` AND/OR rows whose `external_source` indicates Play (e.g., `issuer = 'fgn-play'` / `external_source = 'play'`). Keep current grid layout.
-2. Add a sibling section `Course Completions` directly below, filtered to `credential_type = 'course_completion'`. Show today's 3 records there. Use the same stacked grid + `CertificationCard`.
-3. Keep the single existing Skills Radar; label it "Operator Skill Profile" (sources from all credentials for now).
+Files:
+- `src/hooks/useProfile.ts` — extend the `SkillCredential` interface and select the extra columns
+- `src/components/profile/CertificationCard.tsx` — render the new CTA + small attempt/score chip when present
 
-**Phase 2 — When the broadbandworkforce.com / external SCORM ingest API ships:**
-1. Introduce a source filter (Play / Academy SCORM / External SCORM) as tabs or chips on each section.
-2. Add a second radar: "External Training Skill Profile" sourced from external SCORM completions, beside the existing radar (2-col grid on `lg`).
-3. Add per-source attribution on each `CertificationCard` (already partially shown via `issuer` text).
+No backend, edge function, RLS, or migration changes.
 
-**Phase 3 — Later:**
-- Aggregated "Verified Skills" rollup that merges both radars into a unified competency score, gated by source-trust weighting.
+## UX
 
-## Open question for you
+On each card that has `issuer_app_slug = 'fgn-play'` (and an `external_reference_id`):
 
-Do you want me to proceed with Phase 1 now (rename + add empty/populated `Course Completions` section), or **only** the rename today and defer the new section to when the SCORM API is closer?
+1. Add a small "View on Play" link button at the bottom-right of the card with an external-link icon.
+   - Opens `https://play.fgn.gg/challenges/{external_reference_id}` in a new tab (`target="_blank"`, `rel="noopener noreferrer"`).
+   - Styled as a ghost/link button using the Play pillar accent (cyan), not the Pathways amber, so it reads as a cross-app jump.
+2. Add a subtle metadata line under the existing "Issued …" line when Play metadata is present:
+   - `Attempt {n} • Score {awarded_points}/{max_points} • {tasks_synced}/{tasks_total} tasks`
+3. For non-Play credentials (FGN Academy course completions, FMCSA, etc.), the card renders unchanged — no CTA, no metadata line. This keeps the door open for a future BBW SCORM CTA without changing the layout contract.
+
+The user will land on the Play challenge page logged in (shared SSO), where their own evidence is already visible — so we don't need a deeper per-evidence URL today. If/when Play exposes a stable per-submission URL, we can swap the target without touching the card.
+
+## Future-proofing (not built now)
+
+- When Play publishes a per-submission URL pattern, replace the link target with `…/challenges/{id}/submissions/{metadata.completion_id}` (Play hasn't confirmed the path yet — open ask).
+- Same pattern will apply to broadbandworkforce.com SCORM completions later: branch on `issuer_app_slug` and pick the right base URL + label ("View on Broadband Workforce").
+
+## Open question
+
+The Profile screenshot shows two cards for the same Speed Management run (attempt #1 and attempt #2). That's a separate issue from this request — flag only, fix not in scope here. Want me to file it as a follow-up?

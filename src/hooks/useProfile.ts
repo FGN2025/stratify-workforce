@@ -22,6 +22,9 @@ export interface SkillCredential {
   score: number | null;
   issuer: string | null;
   skills_verified: string[] | null;
+  issuer_app_slug: string | null;
+  external_reference_id: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface UserAchievement {
