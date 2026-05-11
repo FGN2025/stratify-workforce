@@ -194,11 +194,32 @@ Play POSTs an HMAC-signed request; Academy mints a one-time URL.
 
 Academy should ship **Option B** and document Option A's `GET /passport-slug` lookup as a secondary read-only helper for embed/share cards. B is the only path that handles private passports and authenticated owner views without leaking slugs.
 
-### Decision needed from Academy
+### Decision (Academy, 2026-05-11) — Option B, shipped
 
-- [ ] Confirm B as primary, or counter with A-only.
-- [ ] If B: confirm secret reuse (`PLAY_WEBHOOK_SECRET`) vs new `ECOSYSTEM_LINK_SECRET`.
-- [ ] Target ship date so play can schedule the dashboard tile rollout.
+Academy picks **Option B** (HMAC magic-link relay) as the primary contract and **ships it now**. Option A `GET /passport-slug` is **not** implemented in this PR — re-open if you want it as a read-only helper for embed/share cards.
 
-**This is the P1 blocker on the Player Dashboard ↔ Skill Passport link work — supersedes §8 in priority until resolved.**
+**Live endpoints (deployed):**
+
+- `POST https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/credential-api/passport-link`
+  - Headers: `X-Ecosystem-Key: <ECOSYSTEM_API_KEY>`, `X-Play-Signature: <hex HMAC-SHA256(rawBody) using PLAY_WEBHOOK_SECRET>`, `Content-Type: application/json`.
+  - Body: `{ "external_user_id": "<uuid>", "intent": "view_passport", "ttl_seconds": 300 }` (`ttl_seconds` clamped 60–900, default 300).
+  - 200: `{ "url": "https://fgn.academy/passport/link?token=<opaque>", "expires_at": "...", "user_resolved": true }`.
+  - 401 `invalid_ecosystem_key` / `invalid_signature`. 400 `missing_external_user_id` / `invalid_json`. 404 `user_not_linked`. 500 `server_not_configured` / `token_persist_failed`.
+- `POST .../credential-api/passport-link/consume` — internal, called by the Academy landing page only. Body `{ token }`. Single-use; returns `{ user_id, intent, passport_slug, is_public }`. 410 on already-used / expired.
+- Landing page: `https://fgn.academy/passport/link?token=…` — consumes token, then:
+  - Owner view (viewer signed in as `user_id`) → `/profile`.
+  - Public passport available → `/passport/:slug`.
+  - Otherwise → `/auth?next=/profile`.
+
+**Confirmed answers to play's open checkboxes:**
+
+- [x] **Primary contract:** Option B.
+- [x] **Secret:** **reuse `PLAY_WEBHOOK_SECRET`** (no new `ECOSYSTEM_LINK_SECRET`). Same scheme as §6 webhook receiver — lowercase hex HMAC-SHA256 over the **raw request body**, header `X-Play-Signature`. `X-Ecosystem-Key` carries `ECOSYSTEM_API_KEY` and is checked alongside the signature.
+- [x] **Ship date:** **shipped 2026-05-11** behind the existing edge-function deploy. Safe to flip play's dashboard tile to live whenever you're ready — no Academy redeploy required.
+
+**Storage / lifecycle:** tokens persist in `passport_link_tokens` (PK = token, indexed on `expires_at`). RLS denies all client access; only the edge function (service role) reads/writes. `purge_expired_passport_link_tokens()` drops rows older than 1 day past expiry — wire it to pg_cron whenever convenient.
+
+**Note on play's `additional_config` knobs (per your §9 companion):** Academy is fine with you driving link-out from `tenant_integrations` config. To activate Option B on your side, set `passport_link_mode = "magic_link"` and `passport_magic_link_endpoint = "https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/credential-api/passport-link"`. Default 404 template can stay until you flip.
+
+This unblocks the Player Dashboard ↔ Skill Passport tile. §8 (PR P-2 14-day window) is now the sole remaining open ask.
 

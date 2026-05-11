@@ -1133,6 +1133,47 @@ export type Database = {
           },
         ]
       }
+      passport_link_tokens: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          external_user_id: string | null
+          intent: string
+          issued_to_app: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          external_user_id?: string | null
+          intent?: string
+          issued_to_app: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          external_user_id?: string | null
+          intent?: string
+          issued_to_app?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passport_link_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       play_identity: {
         Row: {
           email: string | null
@@ -3025,6 +3066,7 @@ export type Database = {
         Returns: boolean
       }
       provision_fgn_scorm_toolkit_app: { Args: never; Returns: string }
+      purge_expired_passport_link_tokens: { Args: never; Returns: number }
       purge_expired_scorm_launch_tokens: { Args: never; Returns: number }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
       upsert_scorm_course_bundle: {
