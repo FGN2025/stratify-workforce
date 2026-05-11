@@ -251,7 +251,7 @@ export function WorkOrderEditDialog({
         fgn_origin_challenge_id: fgnOriginChallengeId || null,
       };
 
-      if (workOrder) {
+      if (workOrder?.id) {
         // Update existing
         const { error } = await supabase
           .from('work_orders')
