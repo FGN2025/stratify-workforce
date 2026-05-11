@@ -1,5 +1,7 @@
 # Public Catalog API - Skills
 
+> **v1 namespacing in effect (May 2026).** Skill `key` values returned here are the legacy game-scoped form. Cross-app payloads (e.g. `skills_verified[]` from play.fgn.gg `challenge_completion` events) use namespace-prefixed tags (`cdl:*`, `osha:*`, `fiber:*`, `gaming:*`) plus a `difficulty:*` secondary tag. Full enumeration: [`docs/phase-f-status-and-open-asks.md` §7](../../phase-f-status-and-open-asks.md#7-update--skills-taxonomy-v1-may-2026). A `namespace` field on this endpoint's response is a planned follow-up.
+
 ## GET /skills
 
 Get the skills taxonomy for a specific simulation game.
