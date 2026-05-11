@@ -60,6 +60,7 @@ interface WorkOrder {
   tenant_id: string | null;
   evidence_requirements: EvidenceRequirements | null;
   cover_image_url: string | null;
+  fgn_origin_challenge_id?: string | null;
 }
 
 interface GameChannel {
