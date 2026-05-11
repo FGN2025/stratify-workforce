@@ -2,9 +2,41 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app-key',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app-key, x-ecosystem-key, x-play-signature, x-fgn-event',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
 };
+
+// HMAC-SHA256(rawBody) → lowercase hex (matches §6 webhook receiver scheme)
+async function hmacSha256Hex(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function newToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function appOriginFromReq(req: Request): string {
+  const origin = req.headers.get('x-academy-origin');
+  if (origin) return origin.replace(/\/+$/, '');
+  return 'https://fgn.academy';
+}
 
 interface CredentialIssueRequest {
   user_email: string;
