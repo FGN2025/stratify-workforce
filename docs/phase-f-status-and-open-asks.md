@@ -139,13 +139,29 @@ Emitted only when `challenges.skill_tags` is empty/null. Curated and legacy payl
 2. Profile / Skill Passport renders `namespace:tag` via human-label lookup; falls back to title-cased tag for unknowns.
 3. `/public-catalog/skills` stays game-scoped today. Adding a `namespace` field to the response is a planned follow-up PR (out of scope for v1 rollout).
 
-## 8. Still open — PR P-2 legacy window
+## 8. PR P-2 legacy window — cutover dates LOCKED (Academy, 2026-05-11)
 
-Re-flagging the one remaining ask, unchanged from §11 / plan v3:
+Academy is committing the dates so play can schedule the strict-mode flip without further coordination. Pulling these out of "open asks" — no further confirm needed.
 
-- **PR P-2:** how long do we accept both `X-App-Key` and `X-Ecosystem-Key` before hard-failing legacy? Academy proposes **14 days** from cutover so we can schedule the strict-mode flip with confidence. Need play's confirm (or counter).
+- **T0 (cutover start):** **2026-05-12 16:00 UTC**. From T0, Academy outbound calls send `X-Ecosystem-Key` (new) on every request. Inbound: Academy accepts **both** `X-App-Key` (legacy) and `X-Ecosystem-Key` (new), and accepts both signed and unsigned bodies on the legacy direct-POST path.
+- **Dual-key window:** **14 days** (T0 → T0+14d).
+- **T0+14d (hard cutover):** **2026-05-26 16:00 UTC**. Academy drops `X-App-Key` acceptance on every inbound surface (`sync-challenge-completion`, `play-webhook-receiver`, `credential-api/passport-link`, `telemetry-ingest`) and stops accepting unsigned bodies on the webhook receiver (`PLAY_WEBHOOK_STRICT=true`). Mismatched/missing signatures return 401.
+- **Rollback:** if play surfaces a regression in the dual-key window, Academy can extend by re-flipping `PLAY_WEBHOOK_STRICT=false` and re-enabling the `X-App-Key` accept branch — both are env-flag gated, no redeploy.
 
-(Webhook HMAC scheme is **not** re-asked — finalized in §6, confirmed 2026-05-10.)
+Phase E shadow flip is the only remaining external trigger gating this timeline — see §10.
+
+## 10. Phase E shadow → live flip — Academy T0 ping (2026-05-11)
+
+Per play's P0 status, Academy owes the T0 ping to flip `PHASE_E_ROUTING_MODE` `off → shadow`. Runbook is mirrored on play side (`docs/phase-e-shadow-to-live-runbook.md`). Academy-side checklist:
+
+1. ✅ Receiver live, `PLAY_WEBHOOK_SECRET` loaded, lenient mode (`PLAY_WEBHOOK_STRICT=false`). Verified zero signed webhook traffic in `play_sync_attempts` over the last 48h — clean baseline.
+2. ✅ §6 contract finalized; §9 magic-link relay shipped; §8 cutover dates locked above.
+3. ⏭️ **Sending T0 ping now (2026-05-11).** Play flips `PHASE_E_ROUTING_MODE=shadow`. Academy watches `play_sync_attempts` for paired rows (`challenge_completion` + `webhook:challenge.completed`, same `external_attempt_id` once PR P-3 lands; best-effort match until then).
+4. **Parity window:** 24–48h. Pass thresholds (per runbook): zero signature mismatches in the last 6h rolling window, zero payload diffs on `metadata.tenant_*` / `metadata.external_user_id` / scoring fields, dispatch-status parity ≥ 99.5%, webhook-vs-direct latency p95 < 5s.
+5. **Promotion:** play flips dispatch to primary; direct POST stays as fallback. Academy holds another 48h of clean primary traffic.
+6. **Strict flip:** Academy sets `PLAY_WEBHOOK_STRICT=true`. This is bundled with the §8 T0+14d hard cutover (2026-05-26 16:00 UTC) **only if** primary has been clean for ≥ 48h by then. If not, strict flip slips and §8 hard cutover slips with it — Academy will re-ping play with the revised date.
+
+Webhook HMAC scheme is **not** re-asked — finalized in §6, confirmed 2026-05-10.
 
 ## 9. P1 BLOCKER — Player Dashboard → Skill Passport URL contract
 
