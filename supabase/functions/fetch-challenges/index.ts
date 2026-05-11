@@ -66,18 +66,11 @@ Deno.serve(async (req) => {
     });
     if (!isAdmin) return json({ error: 'Admin access required' }, 403);
 
-    // Read poll cursor
-    const { data: cursorRow } = await localSupabase
-      .from('play_poll_cursor')
-      .select('since')
-      .eq('action', POLL_ACTION)
-      .maybeSingle();
-    const since: string | null = cursorRow?.since ?? null;
-
-    // Page through ecosystem-data-api { action: 'challenges' }
+    // Admin browse endpoint: always fetch the full list (no cursor).
+    // The incremental `since` cursor is owned by play-poll-achievements / background sync,
+    // not the import UI — using it here causes the dialog to only show recently-changed challenges.
     const all: Challenge[] = [];
     let page = 0;
-    let nextSince = since;
     const startedAt = new Date().toISOString();
 
     while (true) {
@@ -86,7 +79,6 @@ Deno.serve(async (req) => {
         limit: PAGE_LIMIT,
         page,
       };
-      if (since) body.since = since;
 
       const res = await fetch(`${playUrl}/functions/v1/ecosystem-data-api`, {
         method: 'POST',
