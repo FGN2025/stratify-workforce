@@ -39,6 +39,7 @@ import {
   Calendar,
   Wrench,
   Link2,
+  RotateCcw,
 } from 'lucide-react';
 import {
   Sidebar,
