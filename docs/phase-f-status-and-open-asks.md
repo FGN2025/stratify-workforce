@@ -60,3 +60,90 @@ OSHA challenges don't have work orders in your prod feed — we seeded **4 stub 
 - `d098fcac…`
 
 …our seeded rows will collide on the unique index. **Ping us before you do** and we'll swap them out.
+
+## 7. Update — skills taxonomy (v1, May 2026)
+
+- **Source of truth:** Play's `src/lib/skillTaxonomy.ts`. Academy mirrors it via `skill_credentials.skills_verified[]` (accepts namespaced tags as-is) and `/public-catalog/skills` consumers.
+- **Cross-reference:** Play's `docs/play-fgn-gg-integration-guide.md` §7 + "Skills Taxonomy (May 2026)" — that doc remains the canonical end-to-end `challenge_completion` payload spec.
+
+### Full taxonomy snapshot (v1, May 2026)
+
+#### `cdl:` — Commercial Driving (FMCSA 49 CFR 383)
+
+| Tag | Label |
+|-----|-------|
+| `cdl:pre-trip` | Pre-Trip Inspection |
+| `cdl:backing` | Backing & Parking |
+| `cdl:speed-management` | Speed Management |
+| `cdl:logbook` | Hours of Service / Logbook |
+| `cdl:hazard-perception` | Hazard Perception |
+| `cdl:fuel-mgmt` | Fuel Management |
+| `cdl:cargo-securement` | Cargo Securement |
+| `cdl:hazmat-awareness` | Hazmat Awareness |
+
+#### `osha:` — Workplace Safety (OSHA 10/30)
+
+| Tag | Label |
+|-----|-------|
+| `osha:fall-protection` | Fall Protection |
+| `osha:ppe` | Personal Protective Equipment |
+| `osha:lockout-tagout` | Lockout / Tagout |
+| `osha:hazcom` | Hazard Communication |
+| `osha:electrical-safety` | Electrical Safety |
+| `osha:ladder-safety` | Ladder & Scaffold Safety |
+| `osha:confined-space` | Confined Space Entry |
+
+#### `fiber:` — Broadband Tech (OSP / ISP)
+
+| Tag | Label |
+|-----|-------|
+| `fiber:splicing` | Fusion Splicing |
+| `fiber:otdr` | OTDR Testing |
+| `fiber:installation` | Installation & Drop |
+| `fiber:troubleshooting` | Troubleshooting |
+| `fiber:termination` | Connector Termination |
+| `fiber:documentation` | As-Built Documentation |
+
+#### `gaming:` — Transferable Esports Skills
+
+| Tag | Label |
+|-----|-------|
+| `gaming:aim` | Aim & Mechanics |
+| `gaming:strategy` | Strategy & Game Sense |
+| `gaming:teamwork` | Teamwork & Communication |
+| `gaming:macro` | Macro / Map Awareness |
+| `gaming:micro` | Micro / Execution |
+| `gaming:vod-review` | VOD Review & Adaptation |
+
+### Difficulty (secondary metadata tag, always appended)
+
+`difficulty:beginner` | `difficulty:intermediate` | `difficulty:advanced` | `difficulty:expert` — mirrors `challenges.difficulty`.
+
+### Legacy fallback shape (untagged challenges only)
+
+```json
+"skills_verified": ["game:<games.name>", "gaming-proficiency", "difficulty:<level>"]
+```
+
+Emitted only when `challenges.skill_tags` is empty/null. Curated and legacy payloads coexist during rollout — no flag day.
+
+### Format rules
+
+- Lowercase, namespace-prefixed: `<namespace>:<skill>`.
+- Skill Passport keys on the **prefix** so unknown skills in a known namespace fail open instead of being dropped.
+- Edge function does not filter unknown tags — admins can introduce new ones ahead of taxonomy bumps.
+
+### Academy-side impact
+
+1. `skill_credentials.skills_verified[]` accepts namespaced tags as-is (no schema change).
+2. Profile / Skill Passport renders `namespace:tag` via human-label lookup; falls back to title-cased tag for unknowns.
+3. `/public-catalog/skills` stays game-scoped today. Adding a `namespace` field to the response is a planned follow-up PR (out of scope for v1 rollout).
+
+## 8. Still open — PR P-2 legacy window
+
+Re-flagging the one remaining ask, unchanged from §11 / plan v3:
+
+- **PR P-2:** how long do we accept both `X-App-Key` and `X-Ecosystem-Key` before hard-failing legacy? Academy proposes **14 days** from cutover so we can schedule the strict-mode flip with confidence. Need play's confirm (or counter).
+
+(Webhook HMAC scheme is **not** re-asked — finalized in §6, confirmed 2026-05-10.)
+
