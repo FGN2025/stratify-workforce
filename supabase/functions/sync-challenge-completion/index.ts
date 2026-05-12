@@ -604,24 +604,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        completion: {
-          id: completion.id,
-          status: completionStatus,
-          score,
-          xp_awarded: completionStatus === 'completed' ? workOrder.xp_reward : 0,
-          attempt_number: attemptNumber,
-        },
-        task_progress: taskResults.length > 0 ? taskResults : undefined,
-        credential: credential ? { id: credential.id, title: credential.title } : null,
-        track_completion: trackCompletion || undefined,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const responseBody = {
+      success: true,
+      completion: {
+        id: completion.id,
+        status: completionStatus,
+        score,
+        xp_awarded: completionStatus === 'completed' ? workOrder.xp_reward : 0,
+        attempt_number: attemptNumber,
+      },
+      task_progress: taskResults.length > 0 ? taskResults : undefined,
+      credential: credential ? { id: credential.id, title: credential.title } : null,
+      track_completion: trackCompletion || undefined,
+    };
+
+    await writeMirror('completed', { http_status: 200, ...responseBody }, null);
+
+    return new Response(JSON.stringify(responseBody), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Sync error:', error);
+    await writeMirror('failed', { http_status: 500 }, String(error));
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
