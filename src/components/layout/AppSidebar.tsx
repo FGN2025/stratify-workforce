@@ -80,20 +80,48 @@ const mainNavItems = [
   { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
 ];
 
-const adminSubItems = [
+type AdminLeaf = {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  badgeKey?: 'evidence' | 'community';
+};
+type AdminGroup = {
+  groupKey: 'sim' | 'challenges';
+  title: string;
+  icon: LucideIcon;
+  children: AdminLeaf[];
+};
+type AdminEntry = AdminLeaf | AdminGroup;
+
+const adminSubItems: AdminEntry[] = [
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Events', url: '/admin/events', icon: Calendar },
   { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
   { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const },
-  { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
-  { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box },
-  { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
+  {
+    groupKey: 'sim',
+    title: 'SIM',
+    icon: Gamepad2,
+    children: [
+      { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
+      { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box },
+      { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
+    ],
+  },
   { title: 'Media Library', url: '/admin/media', icon: Image },
   { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
   { title: 'Skills Paths', url: '/admin/career-paths', icon: Route },
-  { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
-  { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon },
-  { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route },
+  {
+    groupKey: 'challenges',
+    title: 'Challenges',
+    icon: FileCheck,
+    children: [
+      { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
+      { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon },
+      { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route },
+    ],
+  },
   { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench },
   { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2 },
 ];
