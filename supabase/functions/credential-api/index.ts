@@ -157,6 +157,15 @@ Deno.serve(async (req) => {
       const rawBodySha = Array.from(new Uint8Array(
         await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
       )).map(b => b.toString(16).padStart(2, '0')).join('');
+      // Anchor #7b: SHA-256(secret) fingerprint (first 12 hex) for cross-project
+      // secret-bytes comparison vs Play. UTF-8 encoded, matches Play's recipe.
+      const secretShaFull = Array.from(new Uint8Array(
+        await crypto.subtle.digest('SHA-256', new TextEncoder().encode(webhookSecret))
+      )).map(b => b.toString(16).padStart(2, '0')).join('');
+      const secretSha12 = secretShaFull.slice(0, 12);
+      const secretShaTrim12 = Array.from(new Uint8Array(
+        await crypto.subtle.digest('SHA-256', new TextEncoder().encode(webhookSecret.trim()))
+      )).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
       const sigOk = sigHeader.length > 0 && (
         timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig) ||
         timingSafeEqualHex(sigHeader.toLowerCase(), expectedSigTrim)
