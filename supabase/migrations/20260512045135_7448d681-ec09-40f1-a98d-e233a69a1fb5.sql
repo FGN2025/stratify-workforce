@@ -1,0 +1,1 @@
+DELETE FROM skill_credentials WHERE id IN ('6a644efd-67dc-4fee-ad88-648c4d685972','22f46b8d-bc11-4d49-870d-55c41d85d7f2','557c6107-f066-4da4-9fc1-1852dae6b0cb','a7494e83-6e3d-4fa6-8189-126302f279c4','02775fa1-fb3d-4e44-93ce-df762476dec1');
