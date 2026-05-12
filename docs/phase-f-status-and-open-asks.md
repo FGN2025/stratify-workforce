@@ -265,3 +265,22 @@ Likely root causes to rule out, in order:
 
 Academy will mirror the receiver's canonical-bytes assertion into `passport-link` logs (`sig_mode` + `sig_reason`) so the next smoke test surfaces the same diagnostic the webhook receiver already does. If the mismatch reproduces under shadow on `play_sync_attempts.request.sig_reason`, fix lands once and clears both surfaces.
 
+
+### Sender-side header parity shipped (Play, 2026-05-12) — anchor #3 expectations
+
+Play shipped sender-side header parity on `sync-to-academy` direct-path outbound to match Academy's new mirror surface (Flag 2 closure):
+
+- `X-Delivery-Id: <external_attempt_id>` + `X-Play-Delivery-Id: <external_attempt_id>` — slots 1 & 2 of receiver's 6-source `delivery_id` resolution chain (header-priority, no body parse needed for idempotency keying).
+- `X-Play-Path: direct` — surfaces under `request.headers.x_play_path` in mirror snapshot for log forensics; redundant with `direct:challenge.completed` action prefix at table level but useful when tailing.
+- Body slots 3 & 4 (`payload.delivery_id`, `payload.metadata.delivery_id`) continue riding for belt-and-suspenders.
+
+**T0+24h re-fire expectations (2026-05-12 23:09 UTC):** §3a parity SQL on `external_attempt_id=dbd3fc50…` should return **two rows**:
+
+| row | action | delivery_id source | response snapshot |
+|---|---|---|---|
+| `dfeb403a…` | `webhook:challenge.completed` | top-level body (already there from anchor #2) | dispatch leg 200 |
+| **new** | `direct:challenge.completed` | `X-Delivery-Id` header (new this anchor) | direct leg 200 with `completion.id`, `credential.id`, `score=100`, `xp_awarded=20` |
+
+**Sentinel flag:** if action prefix is `direct:challenge.completed:via-webhook-tag`, Play misrouted `X-Play-Path: webhook` onto the direct endpoint — ping Play to trace the dispatch path that injected it.
+
+**Sig parity:** Play's sender canonical string unchanged (`JSON.stringify(envelope)` once → exact bytes signed and shipped, no re-serialize). Passport-link `sig_mode`/`sig_reason` mirror still in flight Academy-side; canonical-string round-trip on Academy verifier remains prime suspect for the 401, secret rotation won't fix V8↔Academy-runtime key-order entropy.
