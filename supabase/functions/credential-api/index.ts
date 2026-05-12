@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app-key, x-ecosystem-key, x-play-signature, x-fgn-event',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app-key, x-ecosystem-key, x-play-signature, x-fgn-event, x-delivery-id, x-play-delivery-id, x-ecosystem-app, x-academy-origin',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
 };
 
