@@ -414,10 +414,8 @@ Deno.serve(async (req) => {
       dispatchResult = { status: resp.status, body: await resp.json().catch(() => null) };
     } else if (eventType === 'achievement.earned') {
       dispatchResult = await handleAchievementEarned(supabase, innerPayload);
-    } else {
-      // evidence.approved — handler TODO; record only for now.
-      console.log('[play-webhook-receiver] received (handler pending)', eventType);
-      dispatchResult = { status: 202, body: { dispatched: false, note: 'handler pending' } };
+    } else if (eventType === 'evidence.approved') {
+      dispatchResult = await handleEvidenceApproved(supabase, innerPayload);
     }
   } catch (err) {
     console.error('[play-webhook-receiver] dispatch failed', err);
