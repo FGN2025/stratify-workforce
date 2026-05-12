@@ -155,11 +155,17 @@ Deno.serve(async (req) => {
       ),
     );
 
-    const finalChallenges = enriched.map((c) => ({
-      ...c,
-      already_imported: importedIds.has(String(c.id)),
-      tasks: Array.isArray(c.tasks) ? c.tasks : [],
-    }));
+    const finalChallenges = enriched.map((c) => {
+      const gameId = c.game_id ? String(c.game_id) : null;
+      const existingGames = (c as { games?: { name?: string } }).games;
+      const gameName = existingGames?.name ?? (gameId ? gameIdToName.get(gameId) : undefined);
+      return {
+        ...c,
+        games: gameName ? { name: gameName } : existingGames ?? null,
+        already_imported: importedIds.has(String(c.id)),
+        tasks: Array.isArray(c.tasks) ? c.tasks : [],
+      };
+    });
 
     await logAttempt(
       localSupabase,
