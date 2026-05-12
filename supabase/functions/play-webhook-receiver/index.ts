@@ -13,6 +13,8 @@
 // Supported event types: challenge.completed, evidence.approved, achievement.earned.
 // All events are recorded in play_sync_attempts. challenge.completed is forwarded
 // to sync-challenge-completion (which holds all the existing track/credential logic).
+// achievement.earned and evidence.approved are handled inline (identity →
+// passport → skill_credentials insert with idempotency via unique partial index).
 //
 // Once play registers us in their Outbound Webhooks, the URL to give them is:
 //   https://<project-ref>.supabase.co/functions/v1/play-webhook-receiver
