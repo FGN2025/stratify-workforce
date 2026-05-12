@@ -40,6 +40,7 @@ import {
   Wrench,
   Link2,
   RotateCcw,
+  Activity,
 } from 'lucide-react';
 import {
   Sidebar,
