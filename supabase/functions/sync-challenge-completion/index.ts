@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app-key, x-ecosystem-key, x-delivery-id, x-play-path, x-play-delivery-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -128,10 +128,47 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Parity instrumentation: capture path + delivery id BEFORE entering main try,
+  // so play_sync_attempts mirrors the direct-POST leg distinctly from the
+  // play-webhook-receiver dispatch leg. This makes §3a parity SQL surface both
+  // legs of the shadow-window double-fire even when they share an external_attempt_id.
+  const playPathHeader = (req.headers.get('x-play-path') || '').toLowerCase();
+  const deliveryIdHeader =
+    req.headers.get('x-delivery-id') || req.headers.get('x-play-delivery-id') || null;
+  const mirrorAction =
+    playPathHeader === 'webhook' ? 'direct:challenge.completed:via-webhook-tag'
+                                 : 'direct:challenge.completed';
+  let mirrorDeliveryId: string | null = deliveryIdHeader;
+  let mirrorRequestSnapshot: Record<string, unknown> = {
+    headers: { x_play_path: playPathHeader || null, x_delivery_id: deliveryIdHeader },
+  };
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const mirrorClient = createClient(supabaseUrl, supabaseServiceKey);
+
+  const writeMirror = async (
+    status: 'completed' | 'failed',
+    responseSnapshot: Record<string, unknown> | null,
+    errorMsg: string | null,
+  ) => {
+    try {
+      await mirrorClient.from('play_sync_attempts').insert({
+        direction: 'inbound',
+        action: mirrorAction,
+        external_attempt_id: mirrorDeliveryId,
+        status,
+        request: mirrorRequestSnapshot,
+        response: responseSnapshot,
+        error: errorMsg,
+      });
+    } catch (e) {
+      console.error('[sync-challenge-completion] mirror insert failed', e);
+    }
+  };
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = mirrorClient;
 
     // Verify API key — dual-header rollout: accept X-App-Key OR X-Ecosystem-Key.
     // X-Ecosystem-Key is the new ecosystem-wide credential being rolled out across
@@ -145,8 +182,6 @@ Deno.serve(async (req) => {
 
     if (ecosystemKey && ecosystemKeyExpected && ecosystemKey === ecosystemKeyExpected) {
       authHeaderUsed = 'x-ecosystem-key';
-      // Ecosystem key represents the play.fgn.gg ecosystem peer — full sync rights.
-      // Slug must match an existing authorized_apps row (FK on skill_credentials.issuer_app_slug).
       app = {
         app_slug: 'fgn-play',
         can_read: true,
@@ -169,6 +204,7 @@ Deno.serve(async (req) => {
         had_x_ecosystem_key: !!ecosystemKey,
         ecosystem_key_configured: !!ecosystemKeyExpected,
       });
+      await writeMirror('failed', { http_status: 401 }, 'auth_failed');
       return new Response(
         JSON.stringify({
           error: 'Authentication failed: provide a valid X-App-Key or X-Ecosystem-Key header',
@@ -187,7 +223,30 @@ Deno.serve(async (req) => {
     const body = normalizePayload(rawBody);
     const { user_email, challenge_id, score, completed_at, skills_verified, task_progress, metadata } = body;
 
+    // Resolve delivery_id from payload if header missing — matches play-webhook-receiver
+    // 4-source extraction order: header → top-level → metadata → payload.payload.metadata.
+    if (!mirrorDeliveryId) {
+      const md = (metadata || {}) as Record<string, unknown>;
+      mirrorDeliveryId =
+        (rawBody as any)?.delivery_id ||
+        (md.delivery_id as string | undefined) ||
+        (rawBody as any)?.payload?.delivery_id ||
+        (rawBody as any)?.payload?.metadata?.delivery_id ||
+        null;
+    }
+    mirrorRequestSnapshot = {
+      ...mirrorRequestSnapshot,
+      auth_header: authHeaderUsed,
+      app_slug: app.app_slug,
+      user_email,
+      challenge_id,
+      score,
+      completed_at,
+      delivery_id: mirrorDeliveryId,
+    };
+
     if (!user_email || !challenge_id) {
+      await writeMirror('failed', { http_status: 400 }, 'missing user_email or challenge_id');
       return new Response(JSON.stringify({ error: 'user_email and challenge_id are required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -545,24 +604,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        completion: {
-          id: completion.id,
-          status: completionStatus,
-          score,
-          xp_awarded: completionStatus === 'completed' ? workOrder.xp_reward : 0,
-          attempt_number: attemptNumber,
-        },
-        task_progress: taskResults.length > 0 ? taskResults : undefined,
-        credential: credential ? { id: credential.id, title: credential.title } : null,
-        track_completion: trackCompletion || undefined,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const responseBody = {
+      success: true,
+      completion: {
+        id: completion.id,
+        status: completionStatus,
+        score,
+        xp_awarded: completionStatus === 'completed' ? workOrder.xp_reward : 0,
+        attempt_number: attemptNumber,
+      },
+      task_progress: taskResults.length > 0 ? taskResults : undefined,
+      credential: credential ? { id: credential.id, title: credential.title } : null,
+      track_completion: trackCompletion || undefined,
+    };
+
+    await writeMirror('completed', { http_status: 200, ...responseBody }, null);
+
+    return new Response(JSON.stringify(responseBody), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Sync error:', error);
+    await writeMirror('failed', { http_status: 500 }, String(error));
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
