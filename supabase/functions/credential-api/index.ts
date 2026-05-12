@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
         ? undefined
         : (!sigHeader
             ? 'missing x-play-signature header'
-            : `signature mismatch — provided=${sigHeader.slice(0, 8)}… expected=${expectedSig.slice(0, 8)}… body_len=${rawBody.length}`);
+            : `signature mismatch — provided=${sigHeader.slice(0, 8)}… expected=${expectedSig.slice(0, 8)}… expected_trim=${expectedSigTrim.slice(0, 8)}… body_sha=${rawBodySha.slice(0, 12)}… body_len=${rawBody.length} secret_len=${webhookSecret.length}`);
 
       console.log('[credential-api] passport-link sig check', {
         sig_mode: sigMode,
@@ -175,6 +175,8 @@ Deno.serve(async (req) => {
         sig_reason: sigReason,
         delivery_id: deliveryId,
         body_len: rawBody.length,
+        body_sha: rawBodySha,
+        body_preview: rawBody,
       });
 
       if (!sigOk && (strict || !sigHeader)) {
