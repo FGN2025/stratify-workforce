@@ -473,6 +473,69 @@ export function AppSidebar() {
                     <CollapsibleContent className="pl-4">
                       <SidebarMenu>
                         {adminSubItems.map((item) => {
+                          if ('children' in item) {
+                            const groupOpen = item.groupKey === 'sim' ? simOpen : challengesOpen;
+                            const setGroupOpen = item.groupKey === 'sim' ? setSimOpen : setChallengesOpen;
+                            const anyChildActive = item.children.some((c) => isActive(c.url));
+                            return (
+                              <Collapsible
+                                key={item.groupKey}
+                                open={groupOpen}
+                                onOpenChange={setGroupOpen}
+                              >
+                                <SidebarMenuItem>
+                                  <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton
+                                      tooltip={item.title}
+                                      className={cn(
+                                        "w-full justify-between",
+                                        anyChildActive
+                                          ? "text-primary"
+                                          : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <item.icon className="h-4 w-4" />
+                                        {!collapsed && <span>{item.title}</span>}
+                                      </div>
+                                      {!collapsed && (
+                                        <ChevronDown className={cn(
+                                          "h-4 w-4 transition-transform",
+                                          groupOpen && "rotate-180"
+                                        )} />
+                                      )}
+                                    </SidebarMenuButton>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="pl-4">
+                                    <SidebarMenu>
+                                      {item.children.map((child) => (
+                                        <SidebarMenuItem key={child.url}>
+                                          <SidebarMenuButton
+                                            asChild
+                                            isActive={isActive(child.url)}
+                                            tooltip={child.title}
+                                          >
+                                            <NavLink
+                                              to={child.url}
+                                              className={cn(
+                                                "flex items-center gap-3 transition-colors",
+                                                isActive(child.url)
+                                                  ? "text-primary bg-primary/10"
+                                                  : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                              )}
+                                            >
+                                              <child.icon className="h-4 w-4" />
+                                              {!collapsed && <span>{child.title}</span>}
+                                            </NavLink>
+                                          </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                      ))}
+                                    </SidebarMenu>
+                                  </CollapsibleContent>
+                                </SidebarMenuItem>
+                              </Collapsible>
+                            );
+                          }
                           const count = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
                           return (
                             <SidebarMenuItem key={item.url}>
