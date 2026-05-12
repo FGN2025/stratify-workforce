@@ -128,6 +128,45 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Parity instrumentation: capture path + delivery id BEFORE entering main try,
+  // so play_sync_attempts mirrors the direct-POST leg distinctly from the
+  // play-webhook-receiver dispatch leg. This makes §3a parity SQL surface both
+  // legs of the shadow-window double-fire even when they share an external_attempt_id.
+  const playPathHeader = (req.headers.get('x-play-path') || '').toLowerCase();
+  const deliveryIdHeader =
+    req.headers.get('x-delivery-id') || req.headers.get('x-play-delivery-id') || null;
+  const mirrorAction =
+    playPathHeader === 'webhook' ? 'direct:challenge.completed:via-webhook-tag'
+                                 : 'direct:challenge.completed';
+  let mirrorDeliveryId: string | null = deliveryIdHeader;
+  let mirrorRequestSnapshot: Record<string, unknown> = {
+    headers: { x_play_path: playPathHeader || null, x_delivery_id: deliveryIdHeader },
+  };
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const mirrorClient = createClient(supabaseUrl, supabaseServiceKey);
+
+  const writeMirror = async (
+    status: 'completed' | 'failed',
+    responseSnapshot: Record<string, unknown> | null,
+    errorMsg: string | null,
+  ) => {
+    try {
+      await mirrorClient.from('play_sync_attempts').insert({
+        direction: 'inbound',
+        action: mirrorAction,
+        external_attempt_id: mirrorDeliveryId,
+        status,
+        request: mirrorRequestSnapshot,
+        response: responseSnapshot,
+        error: errorMsg,
+      });
+    } catch (e) {
+      console.error('[sync-challenge-completion] mirror insert failed', e);
+    }
+  };
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
