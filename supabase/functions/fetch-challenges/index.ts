@@ -106,6 +106,34 @@ Deno.serve(async (req) => {
     }
 
 
+    // Try to fetch the games catalog so we can attach { games: { name } } per
+    // challenge — the import dialog filter relies on this nested shape. If the
+    // action is unsupported or fails, we silently fall back to no game mapping.
+    const gameIdToName = new Map<string, string>();
+    try {
+      const gRes = await fetch(`${playUrl}/functions/v1/ecosystem-data-api`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Ecosystem-Key': ecosystemKey,
+          'X-Ecosystem-App': 'academy',
+        },
+        body: JSON.stringify({ action: 'games' }),
+      });
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        const games: Array<Record<string, unknown>> =
+          gData?.games ?? gData?.data ?? [];
+        for (const g of games) {
+          const id = g.id ?? g.key;
+          const name = g.name ?? g.short_name ?? g.key;
+          if (id && name) gameIdToName.set(String(id), String(name));
+        }
+      }
+    } catch (e) {
+      console.warn('games catalog fetch failed:', e);
+    }
+
     // Build lossless play_source per challenge (only real fields).
     const enriched = all.map((c) => {
       const playSource: Record<string, unknown> = {};
