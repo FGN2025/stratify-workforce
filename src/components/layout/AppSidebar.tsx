@@ -80,20 +80,48 @@ const mainNavItems = [
   { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
 ];
 
-const adminSubItems = [
+type AdminLeaf = {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  badgeKey?: 'evidence' | 'community';
+};
+type AdminGroup = {
+  groupKey: 'sim' | 'challenges';
+  title: string;
+  icon: LucideIcon;
+  children: AdminLeaf[];
+};
+type AdminEntry = AdminLeaf | AdminGroup;
+
+const adminSubItems: AdminEntry[] = [
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Events', url: '/admin/events', icon: Calendar },
   { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
   { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const },
-  { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
-  { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box },
-  { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
+  {
+    groupKey: 'sim',
+    title: 'SIM',
+    icon: Gamepad2,
+    children: [
+      { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
+      { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box },
+      { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
+    ],
+  },
   { title: 'Media Library', url: '/admin/media', icon: Image },
   { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
   { title: 'Skills Paths', url: '/admin/career-paths', icon: Route },
-  { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
-  { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon },
-  { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route },
+  {
+    groupKey: 'challenges',
+    title: 'Challenges',
+    icon: FileCheck,
+    children: [
+      { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
+      { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon },
+      { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route },
+    ],
+  },
   { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench },
   { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2 },
 ];
@@ -166,6 +194,11 @@ export function AppSidebar() {
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
   const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
+
+  const simChildPaths = ['/admin/games', '/admin/sim-categories', '/admin/sim-resources'];
+  const challengeChildPaths = ['/admin/challenge-registry', '/admin/challenge-mappings', '/admin/challenge-tracks'];
+  const [simOpen, setSimOpen] = useState(simChildPaths.includes(location.pathname));
+  const [challengesOpen, setChallengesOpen] = useState(challengeChildPaths.includes(location.pathname));
 
   const toggleGame = (game: GameTitle) => {
     setOpenGames(prev => ({ ...prev, [game]: !prev[game] }));
@@ -440,6 +473,69 @@ export function AppSidebar() {
                     <CollapsibleContent className="pl-4">
                       <SidebarMenu>
                         {adminSubItems.map((item) => {
+                          if ('children' in item) {
+                            const groupOpen = item.groupKey === 'sim' ? simOpen : challengesOpen;
+                            const setGroupOpen = item.groupKey === 'sim' ? setSimOpen : setChallengesOpen;
+                            const anyChildActive = item.children.some((c) => isActive(c.url));
+                            return (
+                              <Collapsible
+                                key={item.groupKey}
+                                open={groupOpen}
+                                onOpenChange={setGroupOpen}
+                              >
+                                <SidebarMenuItem>
+                                  <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton
+                                      tooltip={item.title}
+                                      className={cn(
+                                        "w-full justify-between",
+                                        anyChildActive
+                                          ? "text-primary"
+                                          : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <item.icon className="h-4 w-4" />
+                                        {!collapsed && <span>{item.title}</span>}
+                                      </div>
+                                      {!collapsed && (
+                                        <ChevronDown className={cn(
+                                          "h-4 w-4 transition-transform",
+                                          groupOpen && "rotate-180"
+                                        )} />
+                                      )}
+                                    </SidebarMenuButton>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="pl-4">
+                                    <SidebarMenu>
+                                      {item.children.map((child) => (
+                                        <SidebarMenuItem key={child.url}>
+                                          <SidebarMenuButton
+                                            asChild
+                                            isActive={isActive(child.url)}
+                                            tooltip={child.title}
+                                          >
+                                            <NavLink
+                                              to={child.url}
+                                              className={cn(
+                                                "flex items-center gap-3 transition-colors",
+                                                isActive(child.url)
+                                                  ? "text-primary bg-primary/10"
+                                                  : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                              )}
+                                            >
+                                              <child.icon className="h-4 w-4" />
+                                              {!collapsed && <span>{child.title}</span>}
+                                            </NavLink>
+                                          </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                      ))}
+                                    </SidebarMenu>
+                                  </CollapsibleContent>
+                                </SidebarMenuItem>
+                              </Collapsible>
+                            );
+                          }
                           const count = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
                           return (
                             <SidebarMenuItem key={item.url}>
