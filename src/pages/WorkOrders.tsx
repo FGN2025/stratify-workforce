@@ -5,30 +5,20 @@ import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel'
 import { EventCard } from '@/components/marketplace/EventCard';
 import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { WorkOrderFilters, WorkOrderFilter } from '@/components/work-orders/WorkOrderFilters';
-import { useWorkOrders, WorkOrderWithXP } from '@/hooks/useWorkOrders';
+import { useWorkOrders } from '@/hooks/useWorkOrders';
 import { useChannelSubscriptions } from '@/hooks/useChannelSubscriptions';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useWorkOrderCompletions } from '@/hooks/useWorkOrderCompletion';
+import { useSimCategories, resolveCategoryKey } from '@/hooks/useSimCategories';
+import { getIconByKey } from '@/lib/sim-icons';
 import { ImportChallengeDialog, type MappedChallengeData } from '@/components/admin/ImportChallengeDialog';
 import { WorkOrderEditDialog } from '@/components/admin/WorkOrderEditDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { 
-  Plus, 
-  Filter, 
-  Flame, 
-  Clock, 
-  Trophy, 
-  Target,
-  Zap,
-  Truck,
-  GraduationCap,
-  Briefcase
-} from 'lucide-react';
-import type { Tenant, GameTitle } from '@/types/tenant';
+import { Plus, Filter, Flame, Clock, Trophy, Target, Zap } from 'lucide-react';
+import type { Tenant } from '@/types/tenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ATS_RESOURCES } from '@/config/simResources';
 
 const WorkOrders = () => {
   const [activeFilter, setActiveFilter] = useState<WorkOrderFilter>('all');
@@ -38,72 +28,58 @@ const WorkOrders = () => {
   const { subscribedGames } = useChannelSubscriptions();
   const { isAdmin } = useUserRole();
   const queryClient = useQueryClient();
-  
-  // Fetch all work orders
+
   const { data: allWorkOrders = [], isLoading: loadingWorkOrders } = useWorkOrders('all');
   const { data: completions = [] } = useWorkOrderCompletions();
-  
-  // Set of work order IDs the user has completed
-  const completedWorkOrderIds = useMemo(() => {
-    return new Set(
-      completions
-        .filter(c => c.status === 'completed')
-        .map(c => c.work_order_id)
-    );
-  }, [completions]);
-  
-  // Fetch communities for display
+  const { data: categories = [] } = useSimCategories();
+
+  const completedWorkOrderIds = useMemo(
+    () => new Set(completions.filter((c) => c.status === 'completed').map((c) => c.work_order_id)),
+    [completions]
+  );
+
   const { data: communities = [] } = useQuery({
     queryKey: ['tenants'],
     queryFn: async () => {
       const { data } = await supabase.from('tenants').select('*').order('name', { ascending: true });
-      return (data || []).map(t => ({
-        id: t.id,
-        name: t.name,
-        slug: t.slug,
-        brand_color: t.brand_color,
-        logo_url: t.logo_url,
-        created_at: t.created_at,
+      return (data || []).map((t) => ({
+        id: t.id, name: t.name, slug: t.slug, brand_color: t.brand_color,
+        logo_url: t.logo_url, created_at: t.created_at,
       })) as Tenant[];
     },
   });
 
-  // Filter work orders based on active filter
-  const filteredWorkOrders = useMemo(() => {
-    if (activeFilter === 'all') return allWorkOrders;
-    if (activeFilter === 'for-you') {
-      return allWorkOrders.filter(wo => subscribedGames.includes(wo.game_title));
-    }
-    return allWorkOrders.filter(wo => wo.game_title === activeFilter);
-  }, [allWorkOrders, activeFilter, subscribedGames]);
+  // Resolve category for each work order (override > default game mapping)
+  const woWithCategory = useMemo(
+    () =>
+      allWorkOrders.map((wo) => ({
+        ...wo,
+        resolved_category: resolveCategoryKey(
+          { game_title: wo.game_title, category_key: (wo as unknown as { category_key?: string | null }).category_key ?? null },
+          categories
+        ),
+      })),
+    [allWorkOrders, categories]
+  );
 
-  // Calculate counts for filter badges
+  const filteredWorkOrders = useMemo(() => {
+    if (activeFilter === 'all') return woWithCategory;
+    if (activeFilter === 'for-you') return woWithCategory.filter((wo) => subscribedGames.includes(wo.game_title));
+    return woWithCategory.filter((wo) => wo.resolved_category === activeFilter);
+  }, [woWithCategory, activeFilter, subscribedGames]);
+
   const workOrderCounts = useMemo(() => {
     const counts: Record<string, number> = {
-      all: allWorkOrders.length,
-      'for-you': allWorkOrders.filter(wo => subscribedGames.includes(wo.game_title)).length,
+      all: woWithCategory.length,
+      'for-you': woWithCategory.filter((wo) => subscribedGames.includes(wo.game_title)).length,
     };
-    
-    const gameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'];
-    gameTitles.forEach(game => {
-      counts[game] = allWorkOrders.filter(wo => wo.game_title === game).length;
+    categories.forEach((c) => {
+      counts[c.key] = woWithCategory.filter((wo) => wo.resolved_category === c.key).length;
     });
-    
     return counts;
-  }, [allWorkOrders, subscribedGames]);
+  }, [woWithCategory, subscribedGames, categories]);
 
-  const getRandomCommunity = () => {
-    if (communities.length === 0) return undefined;
-    return communities[Math.floor(Math.random() * communities.length)];
-  };
-
-  // Group work orders by game type
-  const atsWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'ATS');
-  const farmingWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Farming_Sim');
-  const constructionWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Construction_Sim');
-  const mechanicWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Mechanic_Sim');
-  const fiberTechWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Fiber_Tech');
-  const roadcraftWorkOrders = filteredWorkOrders.filter(wo => wo.game_title === 'Roadcraft');
+  const getRandomCommunity = () => (communities.length === 0 ? undefined : communities[Math.floor(Math.random() * communities.length)]);
 
   if (loadingWorkOrders) {
     return (
@@ -114,9 +90,7 @@ const WorkOrders = () => {
           <div className="space-y-4">
             <Skeleton className="h-8 w-48" />
             <div className="flex gap-4">
-              {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-72 w-72 shrink-0 rounded-xl" />
-              ))}
+              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-72 w-72 shrink-0 rounded-xl" />)}
             </div>
           </div>
         </div>
@@ -124,169 +98,122 @@ const WorkOrders = () => {
     );
   }
 
+  const heroStats = [
+    { value: `${allWorkOrders.length}`, label: 'Active Orders', highlight: true },
+    ...categories.map((c) => ({
+      value: `${woWithCategory.filter((wo) => wo.resolved_category === c.key).length}`,
+      label: c.title,
+    })),
+  ];
+
   return (
     <AppLayout>
       <div className="space-y-8">
-        {/* Hero Section */}
         <PageHero
           title="Work Orders"
           subtitle="Browse and manage training scenarios. Complete challenges, earn XP, and track your progress across all simulation platforms."
           backgroundImage="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1600&h=600&fit=crop"
-          {...(isAdmin ? {
-            primaryAction: {
-              label: 'New Work Order',
-              icon: <Plus className="h-4 w-4" />,
-              onClick: () => setShowImportDialog(true),
-            },
-          } : {})}
-          secondaryAction={{
-            label: 'Filter',
-            icon: <Filter className="h-4 w-4" />,
-          }}
-          stats={[
-            { value: `${allWorkOrders.length}`, label: 'Active Orders', highlight: true },
-            { value: `${atsWorkOrders.length}`, label: 'Trucking' },
-            { value: `${farmingWorkOrders.length}`, label: 'Farming' },
-            { value: `${constructionWorkOrders.length}`, label: 'Construction' },
-            { value: `${mechanicWorkOrders.length}`, label: 'Mechanic' },
-            { value: `${fiberTechWorkOrders.length}`, label: 'Fiber-Tech' },
-            { value: `${roadcraftWorkOrders.length}`, label: 'Roadcraft' },
-          ]}
+          {...(isAdmin
+            ? {
+                primaryAction: {
+                  label: 'New Work Order',
+                  icon: <Plus className="h-4 w-4" />,
+                  onClick: () => setShowImportDialog(true),
+                },
+              }
+            : {})}
+          secondaryAction={{ label: 'Filter', icon: <Filter className="h-4 w-4" /> }}
+          stats={heroStats}
         />
 
-        {/* Filters */}
         <WorkOrderFilters
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
           workOrderCounts={workOrderCounts}
         />
 
-        {/* Trending Work Orders */}
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel
-            title="Trending Now"
-            subtitle="Most popular training scenarios this week"
-            icon={<Flame className="h-5 w-5" />}
-          >
+          <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />}>
             {filteredWorkOrders.slice(0, 6).map((wo, idx) => (
               <div key={wo.id} className="w-72 shrink-0 snap-start">
-                <EventCard 
-                  workOrder={wo}
-                  isCompleted={completedWorkOrderIds.has(wo.id)}
-                  community={getRandomCommunity()}
-                  variant={idx === 0 ? 'featured' : 'default'}
-                />
+                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} variant={idx === 0 ? 'featured' : 'default'} />
               </div>
             ))}
           </HorizontalCarousel>
         )}
 
-        {/* Recently Added */}
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel
-            title="Recently Added"
-            subtitle="Fresh scenarios just dropped"
-            icon={<Zap className="h-5 w-5" />}
-          >
+          <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />}>
             {filteredWorkOrders.slice(0, 4).map((wo) => (
               <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
-                <EventCard 
-                  workOrder={wo}
-                  isCompleted={completedWorkOrderIds.has(wo.id)}
-                  community={getRandomCommunity()}
-                  variant="compact"
-                />
+                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} variant="compact" />
               </div>
             ))}
           </HorizontalCarousel>
         )}
 
-        {/* Trucking Scenarios */}
-        {atsWorkOrders.length > 0 && activeFilter !== 'ATS' && (
-          <HorizontalCarousel
-            title="Trucking & Logistics"
-            subtitle="American Truck Simulator scenarios"
-            icon={<Target className="h-5 w-5" />}
-          >
-            {atsWorkOrders.map((wo) => (
-              <div key={`ats-${wo.id}`} className="w-72 shrink-0 snap-start">
-                <EventCard 
-                  workOrder={wo}
-                  isCompleted={completedWorkOrderIds.has(wo.id)}
-                  community={getRandomCommunity()}
-                />
-              </div>
-            ))}
-          </HorizontalCarousel>
-        )}
-
-        {/* ATS Deep Dive Resources - Shows when ATS filter active or ATS work orders exist */}
-        {(activeFilter === 'ATS' || atsWorkOrders.length > 0) && (
-          <HorizontalCarousel
-            title="Deep Dive: American Truck Simulator"
-            subtitle="Extended training resources and career pathways"
-            icon={<Truck className="h-5 w-5" />}
-          >
-            <div className="w-80 shrink-0 snap-start">
-              <ExternalResourceCard
-                title={ATS_RESOURCES.cdlQuest.title}
-                description={ATS_RESOURCES.cdlQuest.description}
-                href={ATS_RESOURCES.cdlQuest.href}
-                icon={<GraduationCap className="h-6 w-6" />}
-                ctaLabel="Start Training"
-                accentColor={ATS_RESOURCES.cdlQuest.accentColor}
-              />
+        {/* Per-category carousels + Deep Dive resources */}
+        {categories.map((cat) => {
+          const catItems = filteredWorkOrders.filter((wo) => wo.resolved_category === cat.key);
+          if (catItems.length === 0 && cat.deep_dive_resources.length === 0) return null;
+          // Hide a category's main carousel when the user explicitly filtered to it (already shown via Trending/Recent above)
+          const showMain = catItems.length > 0 && activeFilter !== cat.key;
+          const Icon = getIconByKey(cat.icon_key);
+          return (
+            <div key={cat.key} className="space-y-6">
+              {showMain && (
+                <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
+                  {catItems.map((wo) => (
+                    <div key={`${cat.key}-${wo.id}`} className="w-72 shrink-0 snap-start">
+                      <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} />
+                    </div>
+                  ))}
+                </HorizontalCarousel>
+              )}
+              {cat.deep_dive_resources.length > 0 && (activeFilter === 'all' || activeFilter === cat.key || catItems.length > 0) && (
+                <HorizontalCarousel title={`Deep Dive: ${cat.title}`} subtitle="Extended training resources and career pathways" icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
+                  {cat.deep_dive_resources.map((r) => {
+                    const RIcon = getIconByKey(r.iconKey);
+                    return (
+                      <div key={r.key} className="w-80 shrink-0 snap-start">
+                        <ExternalResourceCard
+                          title={r.title}
+                          description={r.description}
+                          href={r.href}
+                          icon={<RIcon className="h-6 w-6" />}
+                          ctaLabel={r.ctaLabel || 'Open'}
+                          accentColor={r.accentColor}
+                        />
+                      </div>
+                    );
+                  })}
+                </HorizontalCarousel>
+              )}
             </div>
-            <div className="w-80 shrink-0 snap-start">
-              <ExternalResourceCard
-                title={ATS_RESOURCES.cdlExchange.title}
-                description={ATS_RESOURCES.cdlExchange.description}
-                href={ATS_RESOURCES.cdlExchange.href}
-                icon={<Briefcase className="h-6 w-6" />}
-                ctaLabel="View Opportunities"
-                accentColor={ATS_RESOURCES.cdlExchange.accentColor}
-              />
-            </div>
-          </HorizontalCarousel>
-        )}
+          );
+        })}
 
-        {/* Competitions Carousel */}
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel
-            title="Active Competitions"
-            subtitle="Compete with other operators for top rankings"
-            icon={<Trophy className="h-5 w-5" />}
-            viewAllLink="/work-orders?filter=competitions"
-          >
+          <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions">
             {filteredWorkOrders.slice(0, 6).map((wo) => (
               <div key={`competition-${wo.id}`} className="w-72 shrink-0 snap-start">
-                <EventCard 
-                  workOrder={wo}
-                  isCompleted={completedWorkOrderIds.has(wo.id)}
-                  community={getRandomCommunity()}
-                />
+                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} />
               </div>
             ))}
           </HorizontalCarousel>
         )}
 
-        {/* Empty State */}
         {filteredWorkOrders.length === 0 && (
           <section className="glass-card p-8 text-center">
             <Target className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">No Work Orders Found</h3>
             <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-              {activeFilter === 'for-you' 
-                ? "Subscribe to game channels to see personalized work orders."
-                : "No work orders match your current filter."}
+              {activeFilter === 'for-you' ? 'Subscribe to game channels to see personalized work orders.' : 'No work orders match your current filter.'}
             </p>
-            <Button variant="outline" onClick={() => setActiveFilter('all')}>
-              View All Work Orders
-            </Button>
+            <Button variant="outline" onClick={() => setActiveFilter('all')}>View All Work Orders</Button>
           </section>
         )}
 
-        {/* Coming Soon Teaser */}
         <section className="glass-card p-8 text-center">
           <Clock className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">More Scenarios Coming Soon</h3>
@@ -296,40 +223,31 @@ const WorkOrders = () => {
           <Button variant="outline">Enable Notifications</Button>
         </section>
 
-        {/* Admin Dialogs */}
         {isAdmin && (
           <>
             <ImportChallengeDialog
               open={showImportDialog}
               onOpenChange={setShowImportDialog}
-              onSelect={(data) => {
-                setImportedData(data);
-                setShowEditDialog(true);
-              }}
+              onSelect={(data) => { setImportedData(data); setShowEditDialog(true); }}
             />
             <WorkOrderEditDialog
               open={showEditDialog}
               onOpenChange={setShowEditDialog}
-              workOrder={importedData ? {
-                id: '',
-                title: importedData.title,
-                description: importedData.description,
-                game_title: importedData.gameTitle,
-                difficulty: importedData.difficulty,
-                xp_reward: importedData.xpReward,
-                estimated_time_minutes: importedData.estimatedTime,
-                max_attempts: null,
-                success_criteria: null,
-                is_active: true,
-                channel_id: null,
-                tenant_id: null,
-                evidence_requirements: null,
-                cover_image_url: importedData.coverImageUrl,
-                fgn_origin_challenge_id: importedData.fgnOriginChallengeId,
-              } : null}
+              workOrder={
+                importedData
+                  ? {
+                      id: '', title: importedData.title, description: importedData.description,
+                      game_title: importedData.gameTitle, difficulty: importedData.difficulty,
+                      xp_reward: importedData.xpReward, estimated_time_minutes: importedData.estimatedTime,
+                      max_attempts: null, success_criteria: null, is_active: true,
+                      channel_id: null, tenant_id: null, evidence_requirements: null,
+                      cover_image_url: importedData.coverImageUrl,
+                      fgn_origin_challenge_id: importedData.fgnOriginChallengeId,
+                    }
+                  : null
+              }
               onSave={() => {
-                setShowEditDialog(false);
-                setImportedData(null);
+                setShowEditDialog(false); setImportedData(null);
                 queryClient.invalidateQueries({ queryKey: ['work-orders'] });
               }}
             />
@@ -341,3 +259,4 @@ const WorkOrders = () => {
 };
 
 export default WorkOrders;
+
