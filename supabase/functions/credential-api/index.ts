@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
                 content_type: req.headers.get('content-type'),
               },
               raw_body_len: rawBody.length,
+              raw_body: rawBody,
               raw_body_sha_prefix: (await hmacSha256Hex('diag', rawBody)).slice(0, 12),
               sig_mode: sigMode,
               sig_reason: sigReason,
@@ -150,7 +151,16 @@ Deno.serve(async (req) => {
       }
 
       const expectedSig = await hmacSha256Hex(webhookSecret, rawBody);
-      const sigOk = sigHeader.length > 0 && timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig);
+      // Diagnostic: also compute with trimmed secret to detect whitespace drift,
+      // and a plain SHA-256 of raw bytes so sender can confirm byte-equality.
+      const expectedSigTrim = await hmacSha256Hex(webhookSecret.trim(), rawBody);
+      const rawBodySha = Array.from(new Uint8Array(
+        await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
+      )).map(b => b.toString(16).padStart(2, '0')).join('');
+      const sigOk = sigHeader.length > 0 && (
+        timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig) ||
+        timingSafeEqualHex(sigHeader.toLowerCase(), expectedSigTrim)
+      );
       const sigMode: 'strict' | 'lenient' | 'unsigned' = !sigHeader
         ? 'unsigned'
         : (strict ? 'strict' : 'lenient');
@@ -158,7 +168,7 @@ Deno.serve(async (req) => {
         ? undefined
         : (!sigHeader
             ? 'missing x-play-signature header'
-            : `signature mismatch — provided=${sigHeader.slice(0, 8)}… expected=${expectedSig.slice(0, 8)}… body_len=${rawBody.length}`);
+            : `signature mismatch — provided=${sigHeader.slice(0, 8)}… expected=${expectedSig.slice(0, 8)}… expected_trim=${expectedSigTrim.slice(0, 8)}… body_sha=${rawBodySha.slice(0, 12)}… body_len=${rawBody.length} secret_len=${webhookSecret.length}`);
 
       console.log('[credential-api] passport-link sig check', {
         sig_mode: sigMode,
@@ -166,6 +176,8 @@ Deno.serve(async (req) => {
         sig_reason: sigReason,
         delivery_id: deliveryId,
         body_len: rawBody.length,
+        body_sha: rawBodySha,
+        body_preview: rawBody,
       });
 
       if (!sigOk && (strict || !sigHeader)) {
