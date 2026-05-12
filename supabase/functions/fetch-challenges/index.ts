@@ -24,6 +24,7 @@ const PLAY_CHALLENGE_FIELDS = [
   'end_date',
   'requires_evidence',
   'cover_image_url',
+  'game_name',
   'is_active',
   'is_featured',
   'created_at',
@@ -158,7 +159,8 @@ Deno.serve(async (req) => {
     const finalChallenges = enriched.map((c) => {
       const gameId = c.game_id ? String(c.game_id) : null;
       const existingGames = (c as { games?: { name?: string } }).games;
-      const gameName = existingGames?.name ?? (gameId ? gameIdToName.get(gameId) : undefined);
+      const challengeGameName = typeof c.game_name === 'string' ? c.game_name : undefined;
+      const gameName = existingGames?.name ?? challengeGameName ?? (gameId ? gameIdToName.get(gameId) : undefined);
       return {
         ...c,
         games: gameName ? { name: gameName } : existingGames ?? null,

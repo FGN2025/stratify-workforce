@@ -44,6 +44,7 @@ export interface ExternalChallenge {
   cover_image_url: string | null;
   is_active: boolean;
   already_imported: boolean;
+  game_name?: string | null;
   games?: { name: string } | null;
   tasks?: ExternalTask[];
 }
@@ -79,6 +80,9 @@ export interface MappedChallengeData {
   fgnOriginChallengeId: string;
   tasks: ExternalTask[];
 }
+
+const getChallengeGameName = (challenge: ExternalChallenge) =>
+  challenge.games?.name || challenge.game_name || '';
 
 interface ImportChallengeDialogProps {
   open: boolean;
@@ -141,18 +145,18 @@ export function ImportChallengeDialog({
   };
 
   // Collect unique game names for filter
-  const gameNames = [...new Set(challenges.map(c => c.games?.name).filter(Boolean))] as string[];
+  const gameNames = [...new Set(challenges.map(getChallengeGameName).filter(Boolean))] as string[];
 
   const filtered = challenges.filter(c => {
     const matchesSearch = !searchQuery ||
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGame = gameFilter === 'all' || c.games?.name === gameFilter;
+    const matchesGame = gameFilter === 'all' || getChallengeGameName(c) === gameFilter;
     return matchesSearch && matchesGame;
   });
 
   const handleSelect = (challenge: ExternalChallenge) => {
-    const gameName = challenge.games?.name || '';
+    const gameName = getChallengeGameName(challenge);
     const mappedGame = GAME_NAME_MAP[gameName] || 'ATS';
     const mappedDifficulty = DIFFICULTY_MAP[challenge.difficulty?.toLowerCase() || ''] || 'beginner';
 
@@ -261,9 +265,9 @@ export function ImportChallengeDialog({
                         {challenge.description || 'No description'}
                       </p>
                       <div className="flex items-center gap-3 mt-1.5">
-                        {challenge.games?.name && (
+                        {getChallengeGameName(challenge) && (
                           <span className="text-xs text-muted-foreground">
-                            {challenge.games.name}
+                            {getChallengeGameName(challenge)}
                           </span>
                         )}
                         {challenge.difficulty && (
