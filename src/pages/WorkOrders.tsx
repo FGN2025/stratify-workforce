@@ -13,9 +13,13 @@ import { useSimCategories, resolveCategoryKey } from '@/hooks/useSimCategories';
 import { getIconByKey } from '@/lib/sim-icons';
 import { ImportChallengeDialog, type MappedChallengeData } from '@/components/admin/ImportChallengeDialog';
 import { WorkOrderEditDialog } from '@/components/admin/WorkOrderEditDialog';
+import { SimCategoryEditDialog } from '@/components/admin/SimCategoryEditDialog';
+import { useSaveSimCategory } from '@/hooks/useSaveSimCategory';
+import type { SimCategory } from '@/hooks/useSimCategories';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Filter, Flame, Clock, Trophy, Target, Zap } from 'lucide-react';
+import { Plus, Filter, Flame, Clock, Trophy, Target, Zap, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { Tenant } from '@/types/tenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,9 +29,13 @@ const WorkOrders = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [importedData, setImportedData] = useState<MappedChallengeData | null>(null);
+  const [editingCategory, setEditingCategory] = useState<SimCategory | null>(null);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const { subscribedGames } = useChannelSubscriptions();
   const { isAdmin } = useUserRole();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const saveCategory = useSaveSimCategory();
 
   const { data: allWorkOrders = [], isLoading: loadingWorkOrders } = useWorkOrders('all');
   const { data: completions = [] } = useWorkOrderCompletions();
@@ -161,6 +169,18 @@ const WorkOrders = () => {
           const Icon = getIconByKey(cat.icon_key);
           return (
             <div key={cat.key} className="space-y-6">
+              {isAdmin && (
+                <div className="container mx-auto px-4 -mb-4 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => { setEditingCategory(cat); setShowCategoryDialog(true); }}
+                  >
+                    <Edit className="h-3 w-3" /> Edit "{cat.title}"
+                  </Button>
+                </div>
+              )}
               {showMain && (
                 <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
                   {catItems.map((wo) => (
@@ -192,6 +212,17 @@ const WorkOrders = () => {
             </div>
           );
         })}
+
+        {isAdmin && (
+          <div className="container mx-auto px-4 flex justify-center gap-3">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEditingCategory(null); setShowCategoryDialog(true); }}>
+              <Plus className="h-4 w-4" /> Add Category
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => navigate('/admin?tab=sim-categories')}>
+              Manage all categories →
+            </Button>
+          </div>
+        )}
 
         {filteredWorkOrders.length > 0 && (
           <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions">
@@ -250,6 +281,16 @@ const WorkOrders = () => {
                 setShowEditDialog(false); setImportedData(null);
                 queryClient.invalidateQueries({ queryKey: ['work-orders'] });
               }}
+            />
+            <SimCategoryEditDialog
+              open={showCategoryDialog}
+              onOpenChange={setShowCategoryDialog}
+              category={editingCategory}
+              onSave={async (data) => {
+                const ok = await saveCategory(data, editingCategory);
+                if (ok) { setShowCategoryDialog(false); setEditingCategory(null); }
+              }}
+              onManageLibrary={() => navigate('/admin?tab=sim-categories')}
             />
           </>
         )}

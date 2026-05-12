@@ -1,66 +1,110 @@
 ## Goal
 
-Mirror Play's v1 skills taxonomy on the Academy side. Drop the verbatim taxonomy block into our running asks thread, cross-link from our top-level ecosystem guide, deep-link per-track guides to their matching namespace, and re-flag the one remaining open ask (PR P-2 14-day legacy window).
+Two admin upgrades to the SIM Categories system:
 
-The Phase E webhook HMAC scheme is already resolved in §6 of `docs/phase-f-status-and-open-asks.md` (FINAL, confirmed 2026-05-10) — no re-ask needed there.
+1. **Inline edit on `/work-orders`** — admins can hover any category section and click an "Edit" pencil that opens the existing category dialog without leaving the page.
+2. **Deep Dive resource library** — a central, reusable catalog of Deep Dive resources (CDL Quest, CDL Exchange, future ones). Each category activates resources from the library instead of re-typing them.
 
-## Files to change
+---
 
-### 1. `docs/phase-f-status-and-open-asks.md` — append two new sections
+## 1. Deep Dive Resource Library
 
-**`## 7. Update — skills taxonomy (v1, May 2026)`**
+### New table: `sim_deep_dive_resources`
+- `key` (text, unique) — stable identifier (`cdl_quest`, `cdl_exchange`, etc.)
+- `title`, `description`, `href`, `cta_label`
+- `icon_key`, `accent_color`
+- `is_active` (global on/off, default true)
+- `display_order`
 
-- **Source of truth:** Play's `src/lib/skillTaxonomy.ts`. Academy mirrors via `skill_credentials.skills_verified[]` and the `/public-catalog/skills` consumers.
-- **Cross-reference:** Play's `docs/play-fgn-gg-integration-guide.md` §7 + "Skills Taxonomy (May 2026)".
-- **Full taxonomy snapshot (v1, May 2026)** — paste verbatim, formatted as four namespace tables (cdl, osha, fiber, gaming) with proper `| Tag | Label |` markdown so it renders cleanly (the user's pasted block came in as run-on text — we'll re-flow it).
-- **Difficulty rules** — `difficulty:beginner|intermediate|advanced|expert` always appended, mirrors `challenges.difficulty`.
-- **Legacy fallback shape** — `["game:<games.name>", "gaming-proficiency", "difficulty:<level>"]`, emitted only when `challenges.skill_tags` is empty/null. Curated + legacy coexist, no flag day.
-- **Format rules** — lowercase, namespace-prefixed `<namespace>:<skill>`; Skill Passport keys on prefix so unknown tags in a known namespace fail open; edge function does not filter unknown tags.
-- **Academy-side impact (3 bullets):**
-  1. `skill_credentials.skills_verified[]` accepts namespaced tags as-is.
-  2. Profile / Skill Passport renders `namespace:tag` via human-label lookup, falls back to title-cased tag.
-  3. `/public-catalog/skills` stays game-scoped today; adding a `namespace` field is a follow-up PR.
+### New join table: `sim_category_deep_dive`
+- `category_id` (fk → sim_categories, cascade)
+- `resource_id` (fk → sim_deep_dive_resources, cascade)
+- `display_order`
+- PK: `(category_id, resource_id)`
 
-**`## 8. Still open — PR P-2 legacy window`**
+### Backfill
+- Seed library with `cdl_quest` and `cdl_exchange` (from `SIM_RESOURCES.ATS.resources`).
+- Migrate any existing `sim_categories.deep_dive_resources` JSONB entries into library + join rows (match by `key`, create if missing).
+- Keep the JSONB column on `sim_categories` for one release as a fallback, then drop in a follow-up migration.
 
-Re-state the only remaining ask:
-- **PR P-2:** how long do we accept both `X-App-Key` and `X-Ecosystem-Key` before hard-failing legacy? Academy proposes **14 days** from cutover. Need play's confirmation so we can schedule the strict-mode flip.
+### RLS
+- Public/authenticated SELECT on both tables.
+- Admin/super_admin ALL on both tables.
 
-(Webhook HMAC is intentionally NOT re-asked — already finalized in §6.)
+---
 
-### 2. `docs/api/README.md` — add top-level cross-reference
+## 2. Admin UI changes
 
-Add a new bullet to the doc index pointing at the taxonomy section:
+### `src/components/admin/DeepDiveLibraryManager.tsx` (new)
+- Grid of resource cards with edit/delete, "Add Resource" button.
+- Reuses an extracted `DeepDiveResourceForm` (icon, color, title, description, href, CTA, active toggle).
+- Shows usage count: "Used by N categories".
 
-> **Skills Taxonomy (v1, May 2026)** — see `docs/phase-f-status-and-open-asks.md` §7. Spans `cdl:`, `osha:`, `fiber:`, `gaming:` namespaces plus `difficulty:*`. Canonical reference for any payload field carrying skill tags (`skills_verified[]`, challenge `skill_tags`). Source of truth: Play's `src/lib/skillTaxonomy.ts`.
+### `src/components/admin/SimCategoriesManager.tsx`
+- Add a top-level tabs split: **Categories** | **Deep Dive Library**.
+- Each category card now shows attached library resources (read from join table) instead of inline JSONB.
 
-This is the single top-level link Play asked for — not duplicated per-track.
+### `src/components/admin/SimCategoryEditDialog.tsx`
+- Replace the freeform Deep Dive editor with a **multi-select picker** sourced from `sim_deep_dive_resources` (checkbox list with drag-handle for ordering).
+- Removes the inline create/edit UI for resources (those live in the Library tab now).
+- "Manage library →" link button that switches the parent tab.
 
-### 3. `docs/api/integration-guides/cdl-quest.md` — namespace deep-link
+### `src/hooks/useSimCategories.ts`
+- Update fetcher to LEFT JOIN `sim_category_deep_dive` + `sim_deep_dive_resources`, return `deep_dive_resources` shaped the same way the UI already consumes (key/title/href/iconKey/accentColor/ctaLabel/description), preserving display_order from the join.
+- Existing `SimDeepDiveResource` type unchanged → no consumer changes on `WorkOrders.tsx`.
 
-Add one sentence near the existing `skills_verified` mention:
+---
 
-> Skill tags use the v1 namespaced taxonomy — `cdl:*` slice for this guide (`cdl:pre-trip`, `cdl:backing`, `cdl:speed-management`, …). Full enumeration: `docs/phase-f-status-and-open-asks.md` §7.
+## 3. Inline edit on `/work-orders`
 
-### 4. `docs/api/integration-guides/cdl-exchange.md` — namespace deep-link
+### `src/pages/WorkOrders.tsx`
+- For admins (`useUserRole().isAdmin`), each category section header gets a small ghost `<Button>` with `Edit` icon (right-aligned, only renders when `isAdmin`).
+- Clicking opens `SimCategoryEditDialog` with the clicked category prefilled.
+- Same dialog component already used in admin — wired to the same save handler (extracted from `SimCategoriesManager` into `useSaveSimCategory()` hook so both surfaces share logic and React Query invalidation).
+- Add a "+ Add Category" affordance at the end of the category list, also admin-only.
 
-Same pattern, pointing at the `cdl:` slice + §7 anchor.
+### New: `src/hooks/useSaveSimCategory.ts`
+- Extracts the insert/update mutation currently inline in `SimCategoriesManager` so both `Admin → SIM Categories` and `WorkOrders` use the same code path.
 
-### 5. `docs/api/public-catalog/skills.md` — short callout at top
+---
 
-Add a one-paragraph note above the existing `GET /skills` section:
+## Technical details
 
-> **v1 namespacing in effect (May 2026).** Skill `key` values returned here are the legacy game-scoped form. Cross-app payloads (e.g. `skills_verified[]` from Play) use namespace-prefixed tags — see `docs/phase-f-status-and-open-asks.md` §7 for the full enumeration. A `namespace` field on this endpoint is a planned follow-up.
+```text
+sim_categories ──< sim_category_deep_dive >── sim_deep_dive_resources
+                       (join: display_order)
+```
 
-## Out of scope (deferred)
+Resolution flow on `/work-orders`:
+1. `useSimCategories()` returns categories with `deep_dive_resources[]` already hydrated from the join.
+2. `WorkOrders.tsx` renders category carousel → Deep Dive cards → admin sees inline `Edit` if `isAdmin`.
 
-- Adding `namespace` field to `/public-catalog/skills` response.
-- Migrating existing `skill_credentials.skills_verified[]` rows to namespaced form.
-- Profile UI namespace badges / colored chips.
-- Per-track companion guides for OSHA / Fiber (`osha-overlay.md`, `fiber-tech.md`) — Play mentioned these but they don't exist on our side yet; will create when those tracks ship integration partners.
+No changes to:
+- `WorkOrderFilters.tsx`
+- `resolveCategoryKey()` mapping
+- Public catalog edge function
 
-## Verification
+---
 
-- `rg -n "Skills Taxonomy" docs/` returns hits in `docs/api/README.md`, both integration guides, `docs/api/public-catalog/skills.md`, and the new §7 in phase-f doc.
-- `rg -n "X-App-Key" docs/phase-f-status-and-open-asks.md` still surfaces the P-2 ask in §8.
-- Phase-f doc renders the four namespace tables as proper markdown tables (no run-on text).
+## Files
+
+**New**
+- `supabase/migrations/<ts>_deep_dive_library.sql`
+- `src/hooks/useDeepDiveResources.ts`
+- `src/hooks/useSaveSimCategory.ts`
+- `src/components/admin/DeepDiveLibraryManager.tsx`
+- `src/components/admin/DeepDiveResourceEditDialog.tsx`
+
+**Edited**
+- `src/components/admin/SimCategoriesManager.tsx` — add tabs, swap card resource source
+- `src/components/admin/SimCategoryEditDialog.tsx` — replace inline editor with library picker
+- `src/hooks/useSimCategories.ts` — join library, hydrate `deep_dive_resources`
+- `src/pages/WorkOrders.tsx` — admin inline edit pencil + add-category button
+- `src/integrations/supabase/types.ts` — auto-regenerated post-migration
+
+---
+
+## Out of scope (defer)
+- Per-tenant category overrides
+- Drag-and-drop reordering (use number inputs for now)
+- Dropping the legacy `sim_categories.deep_dive_resources` JSONB column (follow-up after one release of dual-read)

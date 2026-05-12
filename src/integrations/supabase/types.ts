@@ -1599,6 +1599,87 @@ export type Database = {
         }
         Relationships: []
       }
+      sim_category_deep_dive: {
+        Row: {
+          category_id: string
+          created_at: string
+          display_order: number
+          resource_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          display_order?: number
+          resource_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          display_order?: number
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sim_category_deep_dive_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "sim_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sim_category_deep_dive_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "sim_deep_dive_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sim_deep_dive_resources: {
+        Row: {
+          accent_color: string
+          created_at: string
+          cta_label: string | null
+          description: string | null
+          display_order: number
+          href: string
+          icon_key: string
+          id: string
+          is_active: boolean
+          key: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          cta_label?: string | null
+          description?: string | null
+          display_order?: number
+          href: string
+          icon_key?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          cta_label?: string | null
+          description?: string | null
+          display_order?: number
+          href?: string
+          icon_key?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sim_resources: {
         Row: {
           accent_color: string
