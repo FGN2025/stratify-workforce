@@ -409,13 +409,24 @@ Deno.serve(async (req) => {
         // dispatch) collapse to the same completion.id via the
         // user_work_order_completions upsert above; we mirror that
         // idempotency here so we don't mint duplicate skill_credentials.
+        // Dedup keys: new canonical `completion:<uuid>` AND legacy raw
+        // challenge_id (pre-dedup-patch credentials used the source
+        // challenge UUID directly). Match either to avoid double-mint on
+        // retries against historically-synced challenges.
         const completionRefId = `completion:${completion.id}`;
-        const { data: existingCredential } = await supabase
+        const { data: existingCredentials } = await supabase
           .from('skill_credentials')
-          .select('id, title')
+          .select('id, title, external_reference_id, metadata, created_at')
           .eq('passport_id', passport.id)
-          .eq('external_reference_id', completionRefId)
-          .maybeSingle();
+          .or(`external_reference_id.eq.${completionRefId},external_reference_id.eq.${challenge_id}`)
+          .order('created_at', { ascending: true });
+
+        // Prefer a row that is already (or can be) bound to this completion.id
+        const existingCredential = (existingCredentials || []).find((c: any) => {
+          if (c.external_reference_id === completionRefId) return true;
+          const meta = (c.metadata || {}) as Record<string, unknown>;
+          return !meta.completion_id || meta.completion_id === completion.id;
+        }) || (existingCredentials || [])[0];
 
         if (existingCredential) {
           console.log('[sync-challenge-completion] credential already issued for completion', {
