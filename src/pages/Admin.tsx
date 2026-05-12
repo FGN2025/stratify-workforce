@@ -244,6 +244,8 @@ export default function Admin() {
         return <BreakroomMapperManager />;
       case 'play-webhook-retry':
         return isSuperAdmin ? <PlayWebhookRetryManager /> : null;
+      case 'parity-monitor':
+        return isSuperAdmin ? <ParityMonitorDashboard /> : null;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : null;
       default:
