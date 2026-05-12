@@ -282,6 +282,16 @@ const WorkOrders = () => {
                 queryClient.invalidateQueries({ queryKey: ['work-orders'] });
               }}
             />
+            <SimCategoryEditDialog
+              open={showCategoryDialog}
+              onOpenChange={setShowCategoryDialog}
+              category={editingCategory}
+              onSave={async (data) => {
+                const ok = await saveCategory(data, editingCategory);
+                if (ok) { setShowCategoryDialog(false); setEditingCategory(null); }
+              }}
+              onManageLibrary={() => navigate('/admin?tab=sim-categories')}
+            />
           </>
         )}
       </div>
