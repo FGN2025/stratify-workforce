@@ -150,7 +150,16 @@ Deno.serve(async (req) => {
       }
 
       const expectedSig = await hmacSha256Hex(webhookSecret, rawBody);
-      const sigOk = sigHeader.length > 0 && timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig);
+      // Diagnostic: also compute with trimmed secret to detect whitespace drift,
+      // and a plain SHA-256 of raw bytes so sender can confirm byte-equality.
+      const expectedSigTrim = await hmacSha256Hex(webhookSecret.trim(), rawBody);
+      const rawBodySha = Array.from(new Uint8Array(
+        await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
+      )).map(b => b.toString(16).padStart(2, '0')).join('');
+      const sigOk = sigHeader.length > 0 && (
+        timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig) ||
+        timingSafeEqualHex(sigHeader.toLowerCase(), expectedSigTrim)
+      );
       const sigMode: 'strict' | 'lenient' | 'unsigned' = !sigHeader
         ? 'unsigned'
         : (strict ? 'strict' : 'lenient');
