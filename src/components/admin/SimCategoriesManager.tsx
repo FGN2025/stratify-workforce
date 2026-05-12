@@ -32,10 +32,10 @@ export function SimCategoriesManager() {
         is_active: data.is_active ?? true,
       };
       if (editing) {
-        const { error } = await supabase.from('sim_categories' as never).update(payload).eq('id', editing.id);
+        const { error } = await supabase.from('sim_categories').update(payload).eq('id', editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('sim_categories' as never).insert(payload);
+        const { error } = await supabase.from('sim_categories').insert(payload);
         if (error) throw error;
       }
       toast({ title: editing ? 'Category updated' : 'Category created' });
@@ -49,7 +49,7 @@ export function SimCategoriesManager() {
 
   const handleDelete = async (cat: SimCategory) => {
     if (!confirm(`Delete category "${cat.title}"? Work orders with this override will revert to default mapping.`)) return;
-    const { error } = await supabase.from('sim_categories' as never).delete().eq('id', cat.id);
+    const { error } = await supabase.from('sim_categories').delete().eq('id', cat.id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;

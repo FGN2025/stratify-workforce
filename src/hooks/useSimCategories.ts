@@ -29,7 +29,7 @@ export function useSimCategories(includeInactive = false) {
   return useQuery({
     queryKey: ['sim-categories', includeInactive],
     queryFn: async (): Promise<SimCategory[]> => {
-      let q = supabase.from('sim_categories' as never).select('*').order('display_order', { ascending: true });
+      let q = supabase.from('sim_categories').select('*').order('display_order', { ascending: true });
       if (!includeInactive) q = q.eq('is_active', true) as typeof q;
       const { data, error } = await q;
       if (error) throw error;
