@@ -29,9 +29,13 @@ const WorkOrders = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [importedData, setImportedData] = useState<MappedChallengeData | null>(null);
+  const [editingCategory, setEditingCategory] = useState<SimCategory | null>(null);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const { subscribedGames } = useChannelSubscriptions();
   const { isAdmin } = useUserRole();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const saveCategory = useSaveSimCategory();
 
   const { data: allWorkOrders = [], isLoading: loadingWorkOrders } = useWorkOrders('all');
   const { data: completions = [] } = useWorkOrderCompletions();
