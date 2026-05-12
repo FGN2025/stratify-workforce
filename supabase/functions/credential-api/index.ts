@@ -97,19 +97,89 @@ Deno.serve(async (req) => {
       }
 
       const rawBody = await req.text();
-      const sigHeader = req.headers.get('x-play-signature') ?? '';
+      const sigHeader = (req.headers.get('x-play-signature') ?? '').trim();
       const webhookSecret = Deno.env.get('PLAY_WEBHOOK_SECRET');
+      const strict = (Deno.env.get('PLAY_WEBHOOK_STRICT') ?? 'true').toLowerCase() === 'true';
+      const deliveryId =
+        req.headers.get('x-delivery-id') ??
+        req.headers.get('x-play-delivery-id') ?? null;
+
+      // Mirror receiver's diagnostics surface: capture sig_mode / sig_reason
+      // for every passport-link verification attempt so 401s are debuggable.
+      const writePassportMirror = async (
+        sigMode: 'unsigned' | 'strict' | 'lenient' | 'misconfigured',
+        sigReason: string | undefined,
+        status: 'queued' | 'completed' | 'failed',
+        responseSnap: unknown,
+        errSnap?: string,
+      ) => {
+        try {
+          await supabase.from('play_sync_attempts').insert({
+            direction: 'inbound',
+            action: 'passport-link',
+            external_attempt_id: deliveryId,
+            status,
+            request: {
+              headers: {
+                x_play_signature_present: !!sigHeader,
+                x_play_signature_prefix: sigHeader ? sigHeader.slice(0, 8) : null,
+                x_play_signature_len: sigHeader.length,
+                x_delivery_id: req.headers.get('x-delivery-id'),
+                x_play_delivery_id: req.headers.get('x-play-delivery-id'),
+                x_ecosystem_app: req.headers.get('x-ecosystem-app'),
+                content_type: req.headers.get('content-type'),
+              },
+              raw_body_len: rawBody.length,
+              raw_body_sha_prefix: (await hmacSha256Hex('diag', rawBody)).slice(0, 12),
+              sig_mode: sigMode,
+              sig_reason: sigReason,
+            },
+            response: responseSnap,
+            error: errSnap,
+          });
+        } catch (e) {
+          console.error('[credential-api] passport-link mirror insert failed', e);
+        }
+      };
+
       if (!webhookSecret) {
+        await writePassportMirror('misconfigured', 'PLAY_WEBHOOK_SECRET not set', 'failed', { error: 'server_not_configured' });
         return new Response(JSON.stringify({ error: 'server_not_configured' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
       const expectedSig = await hmacSha256Hex(webhookSecret, rawBody);
-      if (!timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig)) {
-        return new Response(JSON.stringify({ error: 'invalid_signature' }), {
+      const sigOk = sigHeader.length > 0 && timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig);
+      const sigMode: 'strict' | 'lenient' | 'unsigned' = !sigHeader
+        ? 'unsigned'
+        : (strict ? 'strict' : 'lenient');
+      const sigReason = sigOk
+        ? undefined
+        : (!sigHeader
+            ? 'missing x-play-signature header'
+            : `signature mismatch — provided=${sigHeader.slice(0, 8)}… expected=${expectedSig.slice(0, 8)}… body_len=${rawBody.length}`);
+
+      console.log('[credential-api] passport-link sig check', {
+        sig_mode: sigMode,
+        sig_ok: sigOk,
+        sig_reason: sigReason,
+        delivery_id: deliveryId,
+        body_len: rawBody.length,
+      });
+
+      if (!sigOk && (strict || !sigHeader)) {
+        await writePassportMirror(sigMode, sigReason, 'failed', { error: 'invalid_signature', sig_mode: sigMode, sig_reason: sigReason });
+        return new Response(JSON.stringify({
+          error: 'invalid_signature',
+          sig_mode: sigMode,
+          sig_reason: sigReason,
+        }), {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
+      await writePassportMirror(sigMode, sigReason, 'queued', { sig_mode: sigMode, accepted: true });
 
       let parsed: any;
       try { parsed = JSON.parse(rawBody); } catch {
