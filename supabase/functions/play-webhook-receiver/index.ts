@@ -316,6 +316,8 @@ Deno.serve(async (req) => {
   const deliveryId =
     (payload.delivery_id as string | undefined) ??
     (innerPayload.delivery_id as string | undefined) ??
+    ((innerPayload.metadata as Record<string, unknown> | undefined)?.delivery_id as string | undefined) ??
+    req.headers.get('x-delivery-id') ??
     req.headers.get('x-play-delivery-id') ??
     null;
 
