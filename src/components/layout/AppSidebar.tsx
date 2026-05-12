@@ -195,6 +195,11 @@ export function AppSidebar() {
   const isOnAdminPage = location.pathname.startsWith('/admin');
   const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
 
+  const simChildPaths = ['/admin/games', '/admin/sim-categories', '/admin/sim-resources'];
+  const challengeChildPaths = ['/admin/challenge-registry', '/admin/challenge-mappings', '/admin/challenge-tracks'];
+  const [simOpen, setSimOpen] = useState(simChildPaths.includes(location.pathname));
+  const [challengesOpen, setChallengesOpen] = useState(challengeChildPaths.includes(location.pathname));
+
   const toggleGame = (game: GameTitle) => {
     setOpenGames(prev => ({ ...prev, [game]: !prev[game] }));
   };
