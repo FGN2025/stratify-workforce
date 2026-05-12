@@ -169,6 +169,18 @@ const WorkOrders = () => {
           const Icon = getIconByKey(cat.icon_key);
           return (
             <div key={cat.key} className="space-y-6">
+              {isAdmin && (
+                <div className="container mx-auto px-4 -mb-4 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => { setEditingCategory(cat); setShowCategoryDialog(true); }}
+                  >
+                    <Edit className="h-3 w-3" /> Edit "{cat.title}"
+                  </Button>
+                </div>
+              )}
               {showMain && (
                 <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
                   {catItems.map((wo) => (
@@ -200,6 +212,17 @@ const WorkOrders = () => {
             </div>
           );
         })}
+
+        {isAdmin && (
+          <div className="container mx-auto px-4 flex justify-center gap-3">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEditingCategory(null); setShowCategoryDialog(true); }}>
+              <Plus className="h-4 w-4" /> Add Category
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => navigate('/admin?tab=sim-categories')}>
+              Manage all categories →
+            </Button>
+          </div>
+        )}
 
         {filteredWorkOrders.length > 0 && (
           <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions">
