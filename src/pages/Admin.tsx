@@ -7,6 +7,7 @@ import { UserManagementTable } from '@/components/admin/UserManagementTable';
 import { MediaLibrary } from '@/components/admin/MediaLibrary';
 import { WorkOrdersManager } from '@/components/admin/WorkOrdersManager';
 import { SimGamesManager } from '@/components/admin/SimGamesManager';
+import { SimCategoriesManager } from '@/components/admin/SimCategoriesManager';
 import { SimResourcesManager } from '@/components/admin/SimResourcesManager';
 import { RegistrationCodeManager } from '@/components/admin/RegistrationCodeManager';
 import { EventsManager } from '@/components/admin/EventsManager';
@@ -203,6 +204,8 @@ export default function Admin() {
         return <EvidenceReviewQueue />;
       case 'games':
         return <SimGamesManager />;
+      case 'sim-categories':
+        return <SimCategoriesManager />;
       case 'sim-resources':
         return <SimResourcesManager />;
       case 'media':

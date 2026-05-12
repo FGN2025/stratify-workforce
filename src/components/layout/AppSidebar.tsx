@@ -86,6 +86,7 @@ const adminSubItems = [
   { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
   { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const },
   { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
+  { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box },
   { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
   { title: 'Media Library', url: '/admin/media', icon: Image },
   { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
