@@ -22,7 +22,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-play-signature, x-play-event, x-fgn-event, x-play-delivery-id, x-ecosystem-app',
+    'authorization, x-client-info, apikey, content-type, x-play-signature, x-play-event, x-fgn-event, x-play-delivery-id, x-delivery-id, x-ecosystem-app',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -316,6 +316,8 @@ Deno.serve(async (req) => {
   const deliveryId =
     (payload.delivery_id as string | undefined) ??
     (innerPayload.delivery_id as string | undefined) ??
+    ((innerPayload.metadata as Record<string, unknown> | undefined)?.delivery_id as string | undefined) ??
+    req.headers.get('x-delivery-id') ??
     req.headers.get('x-play-delivery-id') ??
     null;
 
