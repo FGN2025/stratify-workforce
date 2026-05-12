@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
                 content_type: req.headers.get('content-type'),
               },
               raw_body_len: rawBody.length,
+              raw_body: rawBody,
               raw_body_sha_prefix: (await hmacSha256Hex('diag', rawBody)).slice(0, 12),
               sig_mode: sigMode,
               sig_reason: sigReason,
