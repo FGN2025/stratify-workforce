@@ -404,45 +404,67 @@ Deno.serve(async (req) => {
       }
 
       if (passport) {
-        const encoder = new TextEncoder();
-        const credentialData = `${passport.id}-${workOrder.title}-${app.app_slug}-${Date.now()}`;
-        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(credentialData));
-        const verificationHash = Array.from(new Uint8Array(hashBuffer))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
-
-        const taskSummary = taskResults.length > 0
-          ? { tasks_synced: taskResults.filter(t => t.status === 'synced').length, tasks_total: taskResults.length }
-          : undefined;
-
-        const { data: issuedCredential, error: credentialError } = await supabase
+        // Dedup: one credential per (passport, completion). Retries (e.g.
+        // "Retry Academy Sync" button on Play, or webhook+direct dual-leg
+        // dispatch) collapse to the same completion.id via the
+        // user_work_order_completions upsert above; we mirror that
+        // idempotency here so we don't mint duplicate skill_credentials.
+        const completionRefId = `completion:${completion.id}`;
+        const { data: existingCredential } = await supabase
           .from('skill_credentials')
-          .insert({
-            passport_id: passport.id,
-            title: `Challenge Completed: ${workOrder.title}`,
-            credential_type: 'skill_verification',
-            game_title: workOrder.game_title,
-            score: score ?? null,
-            issuer: app.app_slug,
-            issuer_app_slug: app.app_slug,
-            skills_verified: skills_verified || [],
-            verification_hash: verificationHash,
-            external_reference_id: challenge_id,
-            metadata: {
-              challenge_id,
-              attempt_number: attemptNumber,
-              completed_at: completionTimestamp,
-              ...(taskSummary || {}),
-              ...(metadata || {}),
-            },
-          })
-          .select()
-          .single();
+          .select('id, title')
+          .eq('passport_id', passport.id)
+          .eq('external_reference_id', completionRefId)
+          .maybeSingle();
 
-        if (credentialError) {
-          console.error('[sync-challenge-completion] credential insert failed', credentialError);
+        if (existingCredential) {
+          console.log('[sync-challenge-completion] credential already issued for completion', {
+            completion_id: completion.id,
+            credential_id: existingCredential.id,
+          });
+          credential = existingCredential;
+        } else {
+          const encoder = new TextEncoder();
+          const credentialData = `${passport.id}-${workOrder.title}-${app.app_slug}-${completion.id}`;
+          const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(credentialData));
+          const verificationHash = Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+
+          const taskSummary = taskResults.length > 0
+            ? { tasks_synced: taskResults.filter(t => t.status === 'synced').length, tasks_total: taskResults.length }
+            : undefined;
+
+          const { data: issuedCredential, error: credentialError } = await supabase
+            .from('skill_credentials')
+            .insert({
+              passport_id: passport.id,
+              title: `Challenge Completed: ${workOrder.title}`,
+              credential_type: 'skill_verification',
+              game_title: workOrder.game_title,
+              score: score ?? null,
+              issuer: app.app_slug,
+              issuer_app_slug: app.app_slug,
+              skills_verified: skills_verified || [],
+              verification_hash: verificationHash,
+              external_reference_id: completionRefId,
+              metadata: {
+                challenge_id,
+                completion_id: completion.id,
+                attempt_number: attemptNumber,
+                completed_at: completionTimestamp,
+                ...(taskSummary || {}),
+                ...(metadata || {}),
+              },
+            })
+            .select()
+            .single();
+
+          if (credentialError) {
+            console.error('[sync-challenge-completion] credential insert failed', credentialError);
+          }
+          credential = issuedCredential;
         }
-        credential = issuedCredential;
       }
     }
 
