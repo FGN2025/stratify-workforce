@@ -285,6 +285,116 @@ export async function handleAchievementEarned(
   return { status: 200, body: { credentialed: true, credential_id: inserted.id, was_new: true } };
 }
 
+// ---------------------------------------------------------------------------
+// evidence.approved handler — mirrors achievement.earned but issues a
+// 'play_evidence' skill_verification credential keyed off the evidence id.
+// Expected payload shape (best-effort tolerant):
+//   {
+//     evidence_id | id: string,
+//     work_order_id?: string,
+//     work_order_title?: string,
+//     skill | skill_key?: string,
+//     skills_verified?: string[],
+//     score?: number,
+//     xp_reward?: number,
+//     approved_at?: string,
+//     reviewer?: { id?, name?, email? },
+//     user: { external_user_id?, email? } | external_user_id? | user_email?,
+//     tenant?: {...}
+//   }
+// ---------------------------------------------------------------------------
+export async function handleEvidenceApproved(
+  supabase: SupabaseSvc,
+  payload: Record<string, unknown>,
+): Promise<{ status: number; body: unknown }> {
+  const data = (payload.data as Record<string, unknown>) ?? payload;
+  const user = (data.user as Record<string, unknown>) ?? {};
+  const externalUserId =
+    (user.external_user_id as string | null) ??
+    (data.external_user_id as string | null) ?? null;
+  const email = (user.email as string | null) ?? (data.user_email as string | null) ?? null;
+  const externalRef =
+    (data.evidence_id as string | null) ??
+    (data.id as string | null) ?? null;
+
+  if (!externalRef) return { status: 400, body: { error: 'missing evidence_id' } };
+
+  const ident = await resolveIdentity(supabase, externalUserId, email);
+  if (!ident.ok) {
+    return {
+      status: 202,
+      body: { credentialed: false, reason: ident.reason, external_user_id: externalUserId, email },
+    };
+  }
+
+  const passportId = await ensurePassport(supabase, ident.userId);
+  if (!passportId) return { status: 500, body: { error: 'passport upsert failed' } };
+
+  const verificationHash = await sha256Hex(`fgn-play|evidence|${externalRef}|${passportId}`);
+  const tenant = (data.tenant as Record<string, unknown>) ?? {};
+  const reviewer = (data.reviewer as Record<string, unknown>) ?? {};
+
+  const explicitSkills = Array.isArray(data.skills_verified)
+    ? (data.skills_verified as string[])
+    : [];
+  const singleSkill = (data.skill as string | null) ?? (data.skill_key as string | null);
+  const skillsVerified = explicitSkills.length > 0
+    ? explicitSkills
+    : singleSkill ? [singleSkill] : [];
+
+  const title = (data.work_order_title as string | null)
+    ?? (data.title as string | null)
+    ?? (singleSkill ? `Verified: ${singleSkill}` : 'Play Evidence Verified');
+
+  const credentialRow = {
+    passport_id: passportId,
+    credential_type: 'skill_verification',
+    credential_type_key: 'play_evidence',
+    title,
+    issuer: 'play.fgn.gg',
+    issuer_app_slug: 'fgn-play',
+    source: 'external_api',
+    external_reference_id: externalRef,
+    skills_verified: skillsVerified,
+    score: typeof data.score === 'number' ? (data.score as number) : null,
+    xp_earned: typeof data.xp_reward === 'number' ? (data.xp_reward as number) : 0,
+    issued_at: (data.approved_at as string | null) ?? new Date().toISOString(),
+    verification_hash: verificationHash,
+    metadata: {
+      ...data,
+      _resolved: { matched_by: ident.matchedBy, external_user_id: externalUserId, email },
+      _tenant: tenant,
+      _reviewer: reviewer,
+    },
+  };
+
+  const { data: inserted, error } = await supabase
+    .from('skill_credentials')
+    .insert(credentialRow)
+    .select('id')
+    .single();
+
+  if (error) {
+    if ((error as { code?: string }).code === '23505') {
+      const { data: existing } = await supabase
+        .from('skill_credentials')
+        .select('id')
+        .eq('passport_id', passportId)
+        .eq('external_reference_id', externalRef)
+        .eq('credential_type_key', 'play_evidence')
+        .maybeSingle();
+      return {
+        status: 200,
+        body: { credentialed: true, duplicate: true, credential_id: existing?.id ?? null },
+      };
+    }
+    console.error('[play-webhook-receiver] evidence credential insert failed', error);
+    return { status: 500, body: { error: 'credential insert failed', detail: error.message } };
+  }
+
+  return { status: 200, body: { credentialed: true, credential_id: inserted.id, was_new: true } };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') {
