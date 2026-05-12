@@ -28,7 +28,7 @@ export function SimCategoriesManager() {
         accent_color: data.accent_color ?? '#F59E0B',
         display_order: data.display_order ?? 0,
         default_game_titles: data.default_game_titles ?? [],
-        deep_dive_resources: data.deep_dive_resources ?? [],
+        deep_dive_resources: (data.deep_dive_resources ?? []) as unknown as never,
         is_active: data.is_active ?? true,
       };
       if (editing) {
