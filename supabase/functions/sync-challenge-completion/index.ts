@@ -168,9 +168,7 @@ Deno.serve(async (req) => {
   };
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = mirrorClient;
 
     // Verify API key — dual-header rollout: accept X-App-Key OR X-Ecosystem-Key.
     // X-Ecosystem-Key is the new ecosystem-wide credential being rolled out across
@@ -184,8 +182,6 @@ Deno.serve(async (req) => {
 
     if (ecosystemKey && ecosystemKeyExpected && ecosystemKey === ecosystemKeyExpected) {
       authHeaderUsed = 'x-ecosystem-key';
-      // Ecosystem key represents the play.fgn.gg ecosystem peer — full sync rights.
-      // Slug must match an existing authorized_apps row (FK on skill_credentials.issuer_app_slug).
       app = {
         app_slug: 'fgn-play',
         can_read: true,
@@ -208,6 +204,7 @@ Deno.serve(async (req) => {
         had_x_ecosystem_key: !!ecosystemKey,
         ecosystem_key_configured: !!ecosystemKeyExpected,
       });
+      await writeMirror('failed', { http_status: 401 }, 'auth_failed');
       return new Response(
         JSON.stringify({
           error: 'Authentication failed: provide a valid X-App-Key or X-Ecosystem-Key header',
@@ -226,7 +223,30 @@ Deno.serve(async (req) => {
     const body = normalizePayload(rawBody);
     const { user_email, challenge_id, score, completed_at, skills_verified, task_progress, metadata } = body;
 
+    // Resolve delivery_id from payload if header missing — matches play-webhook-receiver
+    // 4-source extraction order: header → top-level → metadata → payload.payload.metadata.
+    if (!mirrorDeliveryId) {
+      const md = (metadata || {}) as Record<string, unknown>;
+      mirrorDeliveryId =
+        (rawBody as any)?.delivery_id ||
+        (md.delivery_id as string | undefined) ||
+        (rawBody as any)?.payload?.delivery_id ||
+        (rawBody as any)?.payload?.metadata?.delivery_id ||
+        null;
+    }
+    mirrorRequestSnapshot = {
+      ...mirrorRequestSnapshot,
+      auth_header: authHeaderUsed,
+      app_slug: app.app_slug,
+      user_email,
+      challenge_id,
+      score,
+      completed_at,
+      delivery_id: mirrorDeliveryId,
+    };
+
     if (!user_email || !challenge_id) {
+      await writeMirror('failed', { http_status: 400 }, 'missing user_email or challenge_id');
       return new Response(JSON.stringify({ error: 'user_email and challenge_id are required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
