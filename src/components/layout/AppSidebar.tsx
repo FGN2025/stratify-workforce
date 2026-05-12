@@ -136,6 +136,7 @@ const superAdminSubItems = [
   { title: 'Notebook Telemetry', url: '/admin/notebook-telemetry', icon: Bot },
   { title: 'FGN Play', url: '/admin/sync-tester', icon: Zap },
   { title: 'Play Webhook Retry', url: '/admin/play-webhook-retry', icon: RotateCcw },
+  { title: 'Parity Monitor', url: '/admin/parity-monitor', icon: Activity },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
 
