@@ -1554,6 +1554,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sim_categories: {
+        Row: {
+          accent_color: string
+          created_at: string
+          deep_dive_resources: Json
+          default_game_titles: Database["public"]["Enums"]["game_title"][]
+          display_order: number
+          icon_key: string
+          id: string
+          is_active: boolean
+          key: string
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          deep_dive_resources?: Json
+          default_game_titles?: Database["public"]["Enums"]["game_title"][]
+          display_order?: number
+          icon_key?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          deep_dive_resources?: Json
+          default_game_titles?: Database["public"]["Enums"]["game_title"][]
+          display_order?: number
+          icon_key?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sim_resources: {
         Row: {
           accent_color: string
@@ -2875,6 +2920,7 @@ export type Database = {
       }
       work_orders: {
         Row: {
+          category_key: string | null
           channel_id: string | null
           cover_image_url: string | null
           created_at: string
@@ -2895,6 +2941,7 @@ export type Database = {
           xp_reward: number
         }
         Insert: {
+          category_key?: string | null
           channel_id?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -2915,6 +2962,7 @@ export type Database = {
           xp_reward?: number
         }
         Update: {
+          category_key?: string | null
           channel_id?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -2935,6 +2983,13 @@ export type Database = {
           xp_reward?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "work_orders_category_key_fkey"
+            columns: ["category_key"]
+            isOneToOne: false
+            referencedRelation: "sim_categories"
+            referencedColumns: ["key"]
+          },
           {
             foreignKeyName: "work_orders_channel_id_fkey"
             columns: ["channel_id"]
