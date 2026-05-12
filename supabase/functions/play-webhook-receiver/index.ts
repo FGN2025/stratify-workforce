@@ -68,8 +68,17 @@ async function verifySignature(rawBody: string, headers: Headers): Promise<Verif
   const strict = (Deno.env.get('PLAY_WEBHOOK_STRICT') ?? 'false').toLowerCase() === 'true';
 
   if (!secret) {
+    console.warn('[play-webhook-receiver] secret not configured', { envName, sourceApp });
     return { ok: true, mode: 'unsigned', reason: `${envName} not configured` };
   }
+
+  // Anchor #7b: secret fingerprint for cross-project comparison vs Play.
+  const secretSha12 = Array.from(new Uint8Array(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret))
+  )).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
+  const secretShaTrim12 = Array.from(new Uint8Array(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret.trim()))
+  )).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
 
   // STUB SCHEME — replace when play confirms HMAC contract:
   //   header: x-play-signature
@@ -90,9 +99,21 @@ async function verifySignature(rawBody: string, headers: Headers): Promise<Verif
       .join('');
 
     const ok = timingSafeEqual(provided, expected);
+    console.log('[play-webhook-receiver] sig check', {
+      source_app: sourceApp,
+      env_name: envName,
+      sig_ok: ok,
+      provided_prefix: provided.slice(0, 8),
+      expected_prefix: expected.slice(0, 8),
+      body_len: rawBody.length,
+      academy_secret_sha256_12: secretSha12,
+      academy_secret_sha256_12_trim: secretShaTrim12,
+      secret_len: secret.length,
+    });
     if (ok) return { ok: true, mode: strict ? 'strict' : 'lenient' };
-    if (strict) return { ok: false, mode: 'strict', reason: 'signature mismatch' };
-    return { ok: true, mode: 'lenient', reason: 'signature mismatch (lenient mode)' };
+    const reason = `signature mismatch — provided=${provided.slice(0, 8)}… expected=${expected.slice(0, 8)}… body_len=${rawBody.length} secret_len=${secret.length} secret_sha12=${secretSha12} secret_sha12_trim=${secretShaTrim12}`;
+    if (strict) return { ok: false, mode: 'strict', reason };
+    return { ok: true, mode: 'lenient', reason: `${reason} (lenient mode)` };
   } catch (err) {
     if (strict) return { ok: false, mode: 'strict', reason: `verify failed: ${err}` };
     return { ok: true, mode: 'lenient', reason: `verify failed: ${err}` };

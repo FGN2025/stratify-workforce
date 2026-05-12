@@ -157,6 +157,15 @@ Deno.serve(async (req) => {
       const rawBodySha = Array.from(new Uint8Array(
         await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
       )).map(b => b.toString(16).padStart(2, '0')).join('');
+      // Anchor #7b: SHA-256(secret) fingerprint (first 12 hex) for cross-project
+      // secret-bytes comparison vs Play. UTF-8 encoded, matches Play's recipe.
+      const secretShaFull = Array.from(new Uint8Array(
+        await crypto.subtle.digest('SHA-256', new TextEncoder().encode(webhookSecret))
+      )).map(b => b.toString(16).padStart(2, '0')).join('');
+      const secretSha12 = secretShaFull.slice(0, 12);
+      const secretShaTrim12 = Array.from(new Uint8Array(
+        await crypto.subtle.digest('SHA-256', new TextEncoder().encode(webhookSecret.trim()))
+      )).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
       const sigOk = sigHeader.length > 0 && (
         timingSafeEqualHex(sigHeader.toLowerCase(), expectedSig) ||
         timingSafeEqualHex(sigHeader.toLowerCase(), expectedSigTrim)
@@ -168,7 +177,7 @@ Deno.serve(async (req) => {
         ? undefined
         : (!sigHeader
             ? 'missing x-play-signature header'
-            : `signature mismatch — provided=${sigHeader.slice(0, 8)}… expected=${expectedSig.slice(0, 8)}… expected_trim=${expectedSigTrim.slice(0, 8)}… body_sha=${rawBodySha.slice(0, 12)}… body_len=${rawBody.length} secret_len=${webhookSecret.length}`);
+            : `signature mismatch — provided=${sigHeader.slice(0, 8)}… expected=${expectedSig.slice(0, 8)}… expected_trim=${expectedSigTrim.slice(0, 8)}… body_sha=${rawBodySha.slice(0, 12)}… body_len=${rawBody.length} secret_len=${webhookSecret.length} secret_sha12=${secretSha12} secret_sha12_trim=${secretShaTrim12}`);
 
       console.log('[credential-api] passport-link sig check', {
         sig_mode: sigMode,
@@ -178,6 +187,9 @@ Deno.serve(async (req) => {
         body_len: rawBody.length,
         body_sha: rawBodySha,
         body_preview: rawBody,
+        academy_secret_sha256_12: secretSha12,
+        academy_secret_sha256_12_trim: secretShaTrim12,
+        secret_len: webhookSecret.length,
       });
 
       if (!sigOk && (strict || !sigHeader)) {
