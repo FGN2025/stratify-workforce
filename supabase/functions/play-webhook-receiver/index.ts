@@ -255,6 +255,7 @@ export async function handleAchievementEarned(
 
   const verificationHash = await sha256Hex(`fgn-play|${externalRef}|${passportId}`);
   const tenant = (data.tenant as Record<string, unknown>) ?? {};
+  const tagged = sanitizeSkillTags(data.skills_verified);
 
   const credentialRow = {
     passport_id: passportId,
@@ -265,7 +266,7 @@ export async function handleAchievementEarned(
     issuer_app_slug: 'fgn-play',
     source: 'external_api',
     external_reference_id: externalRef,
-    skills_verified: Array.isArray(data.skills_verified) ? (data.skills_verified as string[]) : [],
+    skills_verified: tagged.kept,
     xp_earned: typeof data.xp_reward === 'number' ? (data.xp_reward as number) : 0,
     issued_at: (data.earned_at as string | null) ?? new Date().toISOString(),
     verification_hash: verificationHash,
@@ -273,6 +274,7 @@ export async function handleAchievementEarned(
       ...data,
       _resolved: { matched_by: ident.matchedBy, external_user_id: externalUserId, email },
       _tenant: tenant,
+      _dropped_tags: tagged.dropped,
     },
   };
 
