@@ -1,1 +1,4 @@
 project_id = "vfzjfkcwromssjnlrhoo"
+
+[functions.process-play-replay-queue]
+verify_jwt = false
