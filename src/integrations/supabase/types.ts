@@ -880,6 +880,53 @@ export type Database = {
           },
         ]
       }
+      external_content_mappings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          external_id: string
+          id: string
+          is_active: boolean
+          lesson_id: string | null
+          notes: string | null
+          source_slug: string
+          updated_at: string
+          work_order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          external_id: string
+          id?: string
+          is_active?: boolean
+          lesson_id?: string | null
+          notes?: string | null
+          source_slug: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          external_id?: string
+          id?: string
+          is_active?: boolean
+          lesson_id?: string | null
+          notes?: string | null
+          source_slug?: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_content_mappings_source_slug_fkey"
+            columns: ["source_slug"]
+            isOneToOne: false
+            referencedRelation: "learning_sources"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       game_channels: {
         Row: {
           accent_color: string
@@ -981,6 +1028,162 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      learning_source_identity: {
+        Row: {
+          email: string | null
+          external_user_id: string
+          id: string
+          last_seen_at: string | null
+          linked_at: string
+          matched_via: string
+          source_slug: string
+          user_id: string
+        }
+        Insert: {
+          email?: string | null
+          external_user_id: string
+          id?: string
+          last_seen_at?: string | null
+          linked_at?: string
+          matched_via?: string
+          source_slug: string
+          user_id: string
+        }
+        Update: {
+          email?: string | null
+          external_user_id?: string
+          id?: string
+          last_seen_at?: string | null
+          linked_at?: string
+          matched_via?: string
+          source_slug?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_source_identity_source_slug_fkey"
+            columns: ["source_slug"]
+            isOneToOne: false
+            referencedRelation: "learning_sources"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      learning_source_pull_attempts: {
+        Row: {
+          action: string
+          created_at: string
+          direction: string
+          error: string | null
+          external_attempt_id: string | null
+          id: string
+          request: Json | null
+          response: Json | null
+          source_slug: string
+          status: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          external_attempt_id?: string | null
+          id?: string
+          request?: Json | null
+          response?: Json | null
+          source_slug: string
+          status?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          external_attempt_id?: string | null
+          id?: string
+          request?: Json | null
+          response?: Json | null
+          source_slug?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_source_pull_attempts_source_slug_fkey"
+            columns: ["source_slug"]
+            isOneToOne: false
+            referencedRelation: "learning_sources"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      learning_source_pull_cursor: {
+        Row: {
+          last_completed_at: string | null
+          last_external_id: string | null
+          source_slug: string
+          updated_at: string
+        }
+        Insert: {
+          last_completed_at?: string | null
+          last_external_id?: string | null
+          source_slug: string
+          updated_at?: string
+        }
+        Update: {
+          last_completed_at?: string | null
+          last_external_id?: string | null
+          source_slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_source_pull_cursor_source_slug_fkey"
+            columns: ["source_slug"]
+            isOneToOne: true
+            referencedRelation: "learning_sources"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      learning_sources: {
+        Row: {
+          created_at: string
+          display_name: string
+          hmac_secret_env_name: string | null
+          icon_url: string | null
+          ingestion_mode: string
+          is_active: boolean
+          skill_tag_pattern: string
+          slug: string
+          strict_mode: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          hmac_secret_env_name?: string | null
+          icon_url?: string | null
+          ingestion_mode?: string
+          is_active?: boolean
+          skill_tag_pattern?: string
+          slug: string
+          strict_mode?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          hmac_secret_env_name?: string | null
+          icon_url?: string | null
+          ingestion_mode?: string
+          is_active?: boolean
+          skill_tag_pattern?: string
+          slug?: string
+          strict_mode?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       lessons: {
         Row: {
