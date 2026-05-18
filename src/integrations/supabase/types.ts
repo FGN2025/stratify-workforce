@@ -1224,6 +1224,45 @@ export type Database = {
         }
         Relationships: []
       }
+      play_replay_queue: {
+        Row: {
+          attempts_matched: number | null
+          attempts_replayed: number | null
+          challenge_id: string | null
+          created_at: string
+          email: string | null
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          reason: string
+          status: string
+        }
+        Insert: {
+          attempts_matched?: number | null
+          attempts_replayed?: number | null
+          challenge_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          reason: string
+          status?: string
+        }
+        Update: {
+          attempts_matched?: number | null
+          attempts_replayed?: number | null
+          challenge_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          reason?: string
+          status?: string
+        }
+        Relationships: []
+      }
       play_sync_attempts: {
         Row: {
           action: string

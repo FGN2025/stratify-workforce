@@ -47,6 +47,22 @@ function normalizeEvent(raw: string): string {
   return EVENT_ALIASES[v] ?? v;
 }
 
+// Skill-tag validation: keep only namespaced tags from the v1 taxonomy
+// (fiber|osha|cdl|gaming|difficulty):<slug>. Anything else is dropped so it
+// can't pollute the Skill Passport. Dropped tags are logged on the caller.
+const VALID_SKILL_TAG = /^(fiber|osha|cdl|gaming|difficulty):[a-z0-9-]+$/;
+export function sanitizeSkillTags(tags: unknown): { kept: string[]; dropped: string[] } {
+  if (!Array.isArray(tags)) return { kept: [], dropped: [] };
+  const kept: string[] = [];
+  const dropped: string[] = [];
+  for (const raw of tags) {
+    if (typeof raw !== 'string') { dropped.push(String(raw)); continue; }
+    const v = raw.trim().toLowerCase();
+    if (VALID_SKILL_TAG.test(v)) kept.push(v); else dropped.push(raw);
+  }
+  return { kept, dropped };
+}
+
 type VerifyResult = {
   ok: boolean;
   mode: 'unsigned' | 'strict' | 'lenient';
@@ -239,6 +255,7 @@ export async function handleAchievementEarned(
 
   const verificationHash = await sha256Hex(`fgn-play|${externalRef}|${passportId}`);
   const tenant = (data.tenant as Record<string, unknown>) ?? {};
+  const tagged = sanitizeSkillTags(data.skills_verified);
 
   const credentialRow = {
     passport_id: passportId,
@@ -249,7 +266,7 @@ export async function handleAchievementEarned(
     issuer_app_slug: 'fgn-play',
     source: 'external_api',
     external_reference_id: externalRef,
-    skills_verified: Array.isArray(data.skills_verified) ? (data.skills_verified as string[]) : [],
+    skills_verified: tagged.kept,
     xp_earned: typeof data.xp_reward === 'number' ? (data.xp_reward as number) : 0,
     issued_at: (data.earned_at as string | null) ?? new Date().toISOString(),
     verification_hash: verificationHash,
@@ -257,6 +274,7 @@ export async function handleAchievementEarned(
       ...data,
       _resolved: { matched_by: ident.matchedBy, external_user_id: externalUserId, email },
       _tenant: tenant,
+      _dropped_tags: tagged.dropped,
     },
   };
 
@@ -340,9 +358,11 @@ export async function handleEvidenceApproved(
     ? (data.skills_verified as string[])
     : [];
   const singleSkill = (data.skill as string | null) ?? (data.skill_key as string | null);
-  const skillsVerified = explicitSkills.length > 0
+  const rawSkills = explicitSkills.length > 0
     ? explicitSkills
     : singleSkill ? [singleSkill] : [];
+  const tagged = sanitizeSkillTags(rawSkills);
+  const skillsVerified = tagged.kept;
 
   const title = (data.work_order_title as string | null)
     ?? (data.title as string | null)
@@ -367,6 +387,7 @@ export async function handleEvidenceApproved(
       _resolved: { matched_by: ident.matchedBy, external_user_id: externalUserId, email },
       _tenant: tenant,
       _reviewer: reviewer,
+      _dropped_tags: tagged.dropped,
     },
   };
 
@@ -514,6 +535,16 @@ Deno.serve(async (req) => {
       // Forward to the existing receiver, which already owns the heavy lifting.
       const ecosystemKey = Deno.env.get('ECOSYSTEM_API_KEY');
       if (!ecosystemKey) throw new Error('ECOSYSTEM_API_KEY not configured');
+      // Strip non-taxonomy skill tags before forwarding so they can't pollute
+      // the Skill Passport via the direct credential-issuance path downstream.
+      const taggedForward = sanitizeSkillTags(
+        (innerPayload as Record<string, unknown>).skills_verified,
+      );
+      const forwardPayload = {
+        ...innerPayload,
+        skills_verified: taggedForward.kept,
+        _dropped_tags: taggedForward.dropped,
+      };
       const resp = await fetch(`${supabaseUrl}/functions/v1/sync-challenge-completion`, {
         method: 'POST',
         headers: {
@@ -521,7 +552,7 @@ Deno.serve(async (req) => {
           'X-Ecosystem-Key': ecosystemKey,
           'X-Ecosystem-App': 'play-webhook',
         },
-        body: JSON.stringify(innerPayload),
+        body: JSON.stringify(forwardPayload),
       });
       dispatchResult = { status: resp.status, body: await resp.json().catch(() => null) };
     } else if (eventType === 'achievement.earned') {

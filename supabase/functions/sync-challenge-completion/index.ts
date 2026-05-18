@@ -98,12 +98,28 @@ function normalizePayload(raw: Record<string, unknown>): CompletionPayload {
     }
   }
 
+  // Skill-tag sanitization: only accept v1 namespaced tags
+  // (fiber|osha|cdl|gaming|difficulty):<slug>. Drops everything else so the
+  // direct-POST leg can't bypass the receiver's taxonomy guard.
+  const VALID = /^(fiber|osha|cdl|gaming|difficulty):[a-z0-9-]+$/;
+  const rawTags = Array.isArray(raw.skills_verified) ? (raw.skills_verified as unknown[]) : [];
+  const cleanTags: string[] = [];
+  const droppedTags: string[] = [];
+  for (const t of rawTags) {
+    if (typeof t !== 'string') { droppedTags.push(String(t)); continue; }
+    const v = t.trim().toLowerCase();
+    if (VALID.test(v)) cleanTags.push(v); else droppedTags.push(t);
+  }
+  if (droppedTags.length > 0) {
+    metadata._dropped_tags = [...((metadata._dropped_tags as string[]) ?? []), ...droppedTags];
+  }
+
   return {
     user_email: userEmail || '',
     challenge_id: challengeId || '',
     score,
     completed_at: raw.completed_at as string | undefined,
-    skills_verified: raw.skills_verified as string[] | undefined,
+    skills_verified: cleanTags,
     task_progress: raw.task_progress as TaskProgress[] | undefined,
     metadata,
   };
