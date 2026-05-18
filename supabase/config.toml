@@ -2,3 +2,9 @@ project_id = "vfzjfkcwromssjnlrhoo"
 
 [functions.process-play-replay-queue]
 verify_jwt = false
+
+[functions.learning-source-webhook]
+verify_jwt = false
+
+[functions.learning-source-pull-bbw]
+verify_jwt = false
