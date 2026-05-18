@@ -535,6 +535,16 @@ Deno.serve(async (req) => {
       // Forward to the existing receiver, which already owns the heavy lifting.
       const ecosystemKey = Deno.env.get('ECOSYSTEM_API_KEY');
       if (!ecosystemKey) throw new Error('ECOSYSTEM_API_KEY not configured');
+      // Strip non-taxonomy skill tags before forwarding so they can't pollute
+      // the Skill Passport via the direct credential-issuance path downstream.
+      const taggedForward = sanitizeSkillTags(
+        (innerPayload as Record<string, unknown>).skills_verified,
+      );
+      const forwardPayload = {
+        ...innerPayload,
+        skills_verified: taggedForward.kept,
+        _dropped_tags: taggedForward.dropped,
+      };
       const resp = await fetch(`${supabaseUrl}/functions/v1/sync-challenge-completion`, {
         method: 'POST',
         headers: {
@@ -542,7 +552,7 @@ Deno.serve(async (req) => {
           'X-Ecosystem-Key': ecosystemKey,
           'X-Ecosystem-App': 'play-webhook',
         },
-        body: JSON.stringify(innerPayload),
+        body: JSON.stringify(forwardPayload),
       });
       dispatchResult = { status: resp.status, body: await resp.json().catch(() => null) };
     } else if (eventType === 'achievement.earned') {
