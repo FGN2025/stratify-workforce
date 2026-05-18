@@ -47,6 +47,22 @@ function normalizeEvent(raw: string): string {
   return EVENT_ALIASES[v] ?? v;
 }
 
+// Skill-tag validation: keep only namespaced tags from the v1 taxonomy
+// (fiber|osha|cdl|gaming|difficulty):<slug>. Anything else is dropped so it
+// can't pollute the Skill Passport. Dropped tags are logged on the caller.
+const VALID_SKILL_TAG = /^(fiber|osha|cdl|gaming|difficulty):[a-z0-9-]+$/;
+export function sanitizeSkillTags(tags: unknown): { kept: string[]; dropped: string[] } {
+  if (!Array.isArray(tags)) return { kept: [], dropped: [] };
+  const kept: string[] = [];
+  const dropped: string[] = [];
+  for (const raw of tags) {
+    if (typeof raw !== 'string') { dropped.push(String(raw)); continue; }
+    const v = raw.trim().toLowerCase();
+    if (VALID_SKILL_TAG.test(v)) kept.push(v); else dropped.push(raw);
+  }
+  return { kept, dropped };
+}
+
 type VerifyResult = {
   ok: boolean;
   mode: 'unsigned' | 'strict' | 'lenient';
