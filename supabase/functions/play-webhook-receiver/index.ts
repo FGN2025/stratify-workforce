@@ -358,9 +358,11 @@ export async function handleEvidenceApproved(
     ? (data.skills_verified as string[])
     : [];
   const singleSkill = (data.skill as string | null) ?? (data.skill_key as string | null);
-  const skillsVerified = explicitSkills.length > 0
+  const rawSkills = explicitSkills.length > 0
     ? explicitSkills
     : singleSkill ? [singleSkill] : [];
+  const tagged = sanitizeSkillTags(rawSkills);
+  const skillsVerified = tagged.kept;
 
   const title = (data.work_order_title as string | null)
     ?? (data.title as string | null)
@@ -385,6 +387,7 @@ export async function handleEvidenceApproved(
       _resolved: { matched_by: ident.matchedBy, external_user_id: externalUserId, email },
       _tenant: tenant,
       _reviewer: reviewer,
+      _dropped_tags: tagged.dropped,
     },
   };
 
