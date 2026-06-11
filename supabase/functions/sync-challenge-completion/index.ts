@@ -301,30 +301,44 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Get current attempt count
-    const { count: attemptCount } = await supabase
+    // 3. Get current attempt count + prior completion (for best-attempt semantics)
+    const { data: priorCompletion } = await supabase
       .from('user_work_order_completions')
-      .select('*', { count: 'exact', head: true })
+      .select('id, status, score, xp_awarded, attempt_number')
       .eq('user_id', user.id)
-      .eq('work_order_id', workOrder.id);
+      .eq('work_order_id', workOrder.id)
+      .maybeSingle();
 
-    const attemptNumber = (attemptCount || 0) + 1;
-    const completionStatus = (score !== undefined && score >= 70) ? 'completed' : 'failed';
+    const attemptNumber = ((priorCompletion?.attempt_number ?? 0) || 0) + 1;
+    const isPass = (score !== undefined && score >= 70);
+    const completionStatus = isPass ? 'completed' : 'failed';
+
+    // Best-attempt semantics: once a learner has earned `completed`, later
+    // fail/stand-down runs MUST NOT downgrade the row. They still mirror
+    // into play_sync_attempts (above) and bump attempt_number on the
+    // completion row, but status/score/xp_awarded stay at the best result.
+    const wasAlreadyCompleted = priorCompletion?.status === 'completed';
+    const effectiveStatus = wasAlreadyCompleted ? 'completed' : completionStatus;
+    const effectiveScore = wasAlreadyCompleted
+      ? Math.max(priorCompletion!.score ?? 0, score ?? 0)
+      : (score ?? null);
+    const effectiveXp = wasAlreadyCompleted
+      ? (priorCompletion!.xp_awarded ?? 0)
+      : (isPass ? workOrder.xp_reward : 0);
 
     // Use completed_at from payload if provided, otherwise server time
     const completionTimestamp = completed_at || new Date().toISOString();
 
-    // 4. Upsert work order completion record (uq_user_work_order constraint:
-    // one row per (user_id, work_order_id); attempts are tracked via the counter
-    // and metadata, not as separate rows).
+    // 4. Upsert work order completion record. uq_user_work_order: one row per
+    // (user_id, work_order_id); attempts tracked via counter + metadata.
     const { data: completion, error: completionError } = await supabase
       .from('user_work_order_completions')
       .upsert({
         user_id: user.id,
         work_order_id: workOrder.id,
-        status: completionStatus,
-        score: score ?? null,
-        xp_awarded: completionStatus === 'completed' ? workOrder.xp_reward : 0,
+        status: effectiveStatus,
+        score: effectiveScore,
+        xp_awarded: effectiveXp,
         attempt_number: attemptNumber,
         completed_at: completionTimestamp,
         metadata: metadata || {},
@@ -334,8 +348,10 @@ Deno.serve(async (req) => {
 
     if (completionError) throw completionError;
 
-    // 5. Award XP if completed
-    if (completionStatus === 'completed' && workOrder.xp_reward > 0) {
+    // 5. Award WO XP — only on the FIRST transition into completed.
+    // Reruns of a passing challenge are idempotent: no duplicate XP rows.
+    const firstPassTransition = isPass && !wasAlreadyCompleted;
+    if (firstPassTransition && workOrder.xp_reward > 0) {
       await supabase.from('user_points').insert({
         user_id: user.id,
         points_type: 'xp',
@@ -345,6 +361,66 @@ Deno.serve(async (req) => {
         description: `Completed challenge: ${workOrder.title}`,
       });
     }
+
+    // 5b. Lesson-progress writes for every active mapped lesson.
+    // Pass only — fail/stand-down never write or downgrade.
+    // Idempotent: a row already at 'completed' is left alone; bump attempts
+    // counter on subsequent passing runs. No lesson-level XP (xp_earned: 0)
+    // — work-order XP is the single source of reward per platform rule.
+    let lessonProgressResults: Array<{ lesson_id: string; action: string }> = [];
+    if (isPass) {
+      const mappedLessonIds = await getLessonIdsForChallenge(supabase, challenge_id);
+      for (const lessonId of mappedLessonIds) {
+        const { data: existing } = await supabase
+          .from('user_lesson_progress')
+          .select('id, status, attempts, score')
+          .eq('lesson_id', lessonId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (existing?.status === 'completed') {
+          // Idempotent: only bump attempts + score-best, never re-trigger
+          // status transition (which would re-fire AFTER UPDATE triggers).
+          const bestScore = Math.max(existing.score ?? 0, score ?? 0);
+          await supabase
+            .from('user_lesson_progress')
+            .update({
+              attempts: (existing.attempts ?? 0) + 1,
+              score: bestScore,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+          lessonProgressResults.push({ lesson_id: lessonId, action: 'idempotent' });
+        } else if (existing) {
+          await supabase
+            .from('user_lesson_progress')
+            .update({
+              status: 'completed',
+              score: score ?? null,
+              attempts: (existing.attempts ?? 0) + 1,
+              xp_earned: 0,
+              completed_at: completionTimestamp,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+          lessonProgressResults.push({ lesson_id: lessonId, action: 'promoted' });
+        } else {
+          await supabase.from('user_lesson_progress').insert({
+            user_id: user.id,
+            lesson_id: lessonId,
+            status: 'completed',
+            score: score ?? null,
+            attempts: 1,
+            xp_earned: 0,
+            started_at: completionTimestamp,
+            completed_at: completionTimestamp,
+          });
+          lessonProgressResults.push({ lesson_id: lessonId, action: 'created' });
+        }
+      }
+    }
+
+
 
     // 6. Process task-level progress if provided
     let taskResults: Array<{ task_id: string; status: string }> = [];
