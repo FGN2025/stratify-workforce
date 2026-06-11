@@ -729,6 +729,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resolve canonical credential for the `record` mirror. When this attempt
+    // is a fail-after-pass, `credential` above is null (we only look it up on
+    // a passing run), but a credential persists from the earlier passing run.
+    let recordCredentialId: string | null = credential?.id ?? null;
+    if (!recordCredentialId && effectiveStatus === 'completed') {
+      const completionRefId = `completion:${completion.id}`;
+      const { data: persistedCred } = await supabase
+        .from('skill_credentials')
+        .select('id')
+        .or(`external_reference_id.eq.${completionRefId},external_reference_id.eq.${challenge_id}`)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      recordCredentialId = persistedCred?.id ?? null;
+    }
+
     const responseBody = {
       success: true,
       completion: {
@@ -741,6 +757,15 @@ Deno.serve(async (req) => {
       task_progress: taskResults.length > 0 ? taskResults : undefined,
       credential: credential ? { id: credential.id, title: credential.title } : null,
       track_completion: trackCompletion || undefined,
+      // Canonical persisted row mirror — callers needing best-attempt state
+      // (e.g. profile UIs) read `record`; callers rendering this run's
+      // outcome read the top-level fields. Additive, never overrides.
+      record: {
+        status: effectiveStatus,
+        best_score: effectiveScore,
+        xp_total: effectiveXp,
+        credential_id: recordCredentialId,
+      },
     };
 
     await writeMirror('completed', { http_status: 200, ...responseBody }, null);
