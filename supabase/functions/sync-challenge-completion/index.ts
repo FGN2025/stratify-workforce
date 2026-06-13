@@ -467,9 +467,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 7. Issue credential to Skill Passport if app has permission
+    // 7. Issue credential to Skill Passport if app has permission.
+    // Guard: do not mint credentials for completions whose mapped lesson(s)
+    // belong to an unpublished course. Mirrors handle_module_milestone_credential.
+    // Unmapped challenges (no lesson row) keep current behavior — credential mints.
+    // Doctrine: deliberate issuance for prior passes happens via
+    // backfill_credentials_for_course(course_id) at publish time.
+    let coursePublished = true;
+    if (mappedLessonIds.length > 0) {
+      const { data: pubRows } = await supabase
+        .from('lessons')
+        .select('module:modules!inner(course:courses!inner(is_published))')
+        .in('id', mappedLessonIds);
+      coursePublished = (pubRows ?? []).some(
+        (r: any) => r.module?.course?.is_published === true
+      );
+      if (!coursePublished) {
+        console.log('[sync-challenge-completion] credential suppressed: unpublished course', {
+          challenge_id,
+          mapped_lesson_ids: mappedLessonIds,
+        });
+      }
+    }
+
     let credential = null;
-    if (app.can_issue && completionStatus === 'completed') {
+    if (app.can_issue && completionStatus === 'completed' && coursePublished) {
       let { data: passport } = await supabase
         .from('skill_passport')
         .select('id')
