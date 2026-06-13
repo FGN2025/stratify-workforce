@@ -368,8 +368,9 @@ Deno.serve(async (req) => {
     // counter on subsequent passing runs. No lesson-level XP (xp_earned: 0)
     // — work-order XP is the single source of reward per platform rule.
     let lessonProgressResults: Array<{ lesson_id: string; action: string }> = [];
+    let mappedLessonIds: string[] = [];
     if (isPass) {
-      const mappedLessonIds = await getLessonIdsForChallenge(supabase, challenge_id);
+      mappedLessonIds = await getLessonIdsForChallenge(supabase, challenge_id);
       for (const lessonId of mappedLessonIds) {
         const { data: existing } = await supabase
           .from('user_lesson_progress')
