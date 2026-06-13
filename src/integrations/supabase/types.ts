@@ -2034,6 +2034,72 @@ export type Database = {
           },
         ]
       }
+      simulation_runs: {
+        Row: {
+          archetype: string
+          created_at: string
+          critical_hits: Json
+          debrief: Json
+          grade: string | null
+          id: string
+          item_selections: Json
+          max: number
+          percent: number
+          raw: number
+          simulation_id: string
+          stand_down: boolean
+          user_id: string
+          work_order_id: string | null
+        }
+        Insert: {
+          archetype: string
+          created_at?: string
+          critical_hits?: Json
+          debrief?: Json
+          grade?: string | null
+          id?: string
+          item_selections?: Json
+          max?: number
+          percent?: number
+          raw?: number
+          simulation_id: string
+          stand_down?: boolean
+          user_id: string
+          work_order_id?: string | null
+        }
+        Update: {
+          archetype?: string
+          created_at?: string
+          critical_hits?: Json
+          debrief?: Json
+          grade?: string | null
+          id?: string
+          item_selections?: Json
+          max?: number
+          percent?: number
+          raw?: number
+          simulation_id?: string
+          stand_down?: boolean
+          user_id?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_runs_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulation_runs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulations: {
         Row: {
           blurb: string | null
