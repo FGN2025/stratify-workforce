@@ -564,6 +564,9 @@ export default function WorkOrderDetail() {
             </Card>
           )}
 
+          {/* MSFS / studio simulations attached to this WO */}
+          <WorkOrderSimulationsCard workOrderId={id!} />
+
           {/* Your Progress with Credential */}
           {status?.hasAttempted && (
             <UserProgressCard
