@@ -1975,6 +1975,136 @@ export type Database = {
           },
         ]
       }
+      simulation_items: {
+        Row: {
+          cat_key: string | null
+          correct: boolean
+          created_at: string
+          critical: boolean
+          display_order: number
+          icon: string | null
+          id: string
+          item_key: string
+          name: string
+          seq: number | null
+          simulation_id: string
+          sub: string | null
+          updated_at: string
+          why: string | null
+        }
+        Insert: {
+          cat_key?: string | null
+          correct?: boolean
+          created_at?: string
+          critical?: boolean
+          display_order?: number
+          icon?: string | null
+          id?: string
+          item_key: string
+          name: string
+          seq?: number | null
+          simulation_id: string
+          sub?: string | null
+          updated_at?: string
+          why?: string | null
+        }
+        Update: {
+          cat_key?: string | null
+          correct?: boolean
+          created_at?: string
+          critical?: boolean
+          display_order?: number
+          icon?: string | null
+          id?: string
+          item_key?: string
+          name?: string
+          seq?: number | null
+          simulation_id?: string
+          sub?: string | null
+          updated_at?: string
+          why?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_items_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulations: {
+        Row: {
+          blurb: string | null
+          briefing: Json
+          cats: Json
+          config: Json
+          created_at: string
+          facts: Json
+          game_prefix: string | null
+          id: string
+          job_label: string | null
+          job_type: string | null
+          sim_id_external: string | null
+          sim_type: string
+          status: string
+          title: string
+          track_key: string
+          updated_at: string
+          wo_code: string
+          work_order_id: string
+        }
+        Insert: {
+          blurb?: string | null
+          briefing?: Json
+          cats?: Json
+          config?: Json
+          created_at?: string
+          facts?: Json
+          game_prefix?: string | null
+          id?: string
+          job_label?: string | null
+          job_type?: string | null
+          sim_id_external?: string | null
+          sim_type: string
+          status?: string
+          title: string
+          track_key?: string
+          updated_at?: string
+          wo_code: string
+          work_order_id: string
+        }
+        Update: {
+          blurb?: string | null
+          briefing?: Json
+          cats?: Json
+          config?: Json
+          created_at?: string
+          facts?: Json
+          game_prefix?: string | null
+          id?: string
+          job_label?: string | null
+          job_type?: string | null
+          sim_id_external?: string | null
+          sim_type?: string
+          status?: string
+          title?: string
+          track_key?: string
+          updated_at?: string
+          wo_code?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_media: {
         Row: {
           alt_text: string | null
