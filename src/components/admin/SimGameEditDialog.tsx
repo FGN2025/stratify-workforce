@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2, Map as MapIcon } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2, Map as MapIcon, Plane } from 'lucide-react';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import type { Database } from '@/integrations/supabase/types';
 
