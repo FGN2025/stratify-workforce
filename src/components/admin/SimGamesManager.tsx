@@ -18,6 +18,7 @@ import {
   Plus,
   Gamepad2,
   Map as MapIcon
+  Plane,
 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 

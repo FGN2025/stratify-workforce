@@ -42,6 +42,7 @@ import {
   Trophy,
   Target,
   Users,
+  Plane,
 } from 'lucide-react';
 import { useAllSimResources, useSimResourceMutations, type SimResource, type SimResourceInsert } from '@/hooks/useSimResources';
 import { useGameChannelColors, GAME_DEFAULT_COLORS } from '@/hooks/useGameChannelColors';
