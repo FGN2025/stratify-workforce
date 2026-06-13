@@ -1,72 +1,76 @@
-## Corrections folded in (reference `scoreRun()` / `gradeFor()` are normative)
+# Game Catalog Sync — Plan
 
-1. **Grade bands** — distance-from-max, top-down, exact names:
-   - `score ≥ max − 20` → **JOB READY**
-   - `score ≥ max − 60` → **ALMOST CREW-READY**
-   - `score ≥ max − 110` → **GREEN APPRENTICE**
-   - else → **BACK TO THE YARD**
-   - **Stand-down overrides everything** and uses the per-sim `critFailGrade` + `critFailLine` carried in `simulations.config` jsonb from the seed JSON. No generic "Stand-Down" label.
+## Problem
 
-2. **Critical semantics** — inclusion is the violation, in both archetypes:
-   - Loadout: critical item picked → `−25` + `stand_down=true`.
-   - Sequence: critical step added anywhere in the flow → `−25` + `stand_down=true`.
-   - Placement is irrelevant for critical.
-   - Critical items are always `correct=false`, never required. `simulation_items.critical` column comment reflects this.
+Three gaps surfaced from your screenshot and request:
 
-3. **Percent** — `percent = max(0, round(raw / max × 100))`. `round`, not `floor`. Stand-down forces `0`. Matches the deployed WO-2690 sync contract at the 70 gate.
+1. **Create Work Order → Game** dropdown in `WorkOrderEditDialog.tsx` (lines 473–480) is hardcoded. MSFS 2024 was wired everywhere else in Phase A but never made it into this list, and House Flipper variants don't exist anywhere yet.
+2. There is no way for an admin to see what games play.fgn.gg actually exposes vs. what academy knows about.
+3. Every new game today requires editing 8+ files. We want a single source of truth.
 
-4. **No `required` column** — studio model treats `correct` as required. Drop the column. Seed JSON carries `correct, critical, seq, why` + display fields (`name, sub, icon, cat`). Scoring uses `correct` as the single concept.
+Existing inventory confirmed: `game_channels` has 7 rows aligned 1:1 with the `game_title` enum (ATS, Farming_Sim, Construction_Sim, Mechanic_Sim, Fiber_Tech, Roadcraft, MSFS_2024). No House Flipper anywhere — play side either has it or it doesn't, we'll find out from the catalog.
 
-## Phase A — what merges first (this approval)
+## Approach
 
-### A1. Migration: add MSFS 2024 as a game
+Make `game_channels` the canonical "what games does academy support" list. The dropdown reads it. The new admin page diffs it against play.fgn.gg.
 
-```sql
-ALTER TYPE public.game_title ADD VALUE 'MSFS_2024';
--- + game_channels row anchored to play.fgn.gg
---   (name 'Microsoft Flight Simulator 2024', accent_color '#0EA5E9',
---    play_game_id 7a78dd57-9061-47d3-9ee7-436a48aba2f6, slug 'msfs-2024')
+## Phase 1 — One-shot play.fgn.gg catalog report (build mode, no merged code)
+
+Before adding any new enum values, I need to see what's actually on play. I'll:
+
+- Add a temporary `action: 'games'` passthrough inside `fetch-challenges` response (it already calls it internally — just stop discarding the result), deploy, call it once with my admin token.
+- Report back in chat the full list: `id`, `name`, `slug`, plus a diff column ("already on academy" / "missing").
+
+You confirm which missing games to add (House Flipper 1, House Flipper 2, anything else worth picking up). **No enum changes yet.**
+
+## Phase 2 — Per-game additions (one migration pair per game)
+
+For each game you green-light, two migrations in sequence (enum-safety rule from earlier turn):
+
+```text
+M1: ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS '<Enum_Name>';
+M2: INSERT INTO public.game_channels (game_title, name, accent_color, description)
+    VALUES ('<Enum_Name>', '<Display Name>', '<hex>', '<play_game_id reference>');
 ```
 
-I'll inspect `game_channels` columns before writing the insert so the anchor lands in the right field (column vs. jsonb).
+Enum names will follow the existing convention: `HouseFlipper_1`, `HouseFlipper_2`, etc. — PascalCase with underscore for variants. I'll propose the exact name + accent color for each before running the migrations.
 
-### A2. Frontend wiring for `MSFS_2024` (additive, no other game touched)
+## Phase 3 — Drop the hardcoded dropdown (one change, lasts forever)
 
-- `src/components/dashboard/GameIcon.tsx` — add `MSFS_2024` (Plane icon, sky-blue `text-sky-400 bg-sky-500/20`).
-- `src/config/simResources.ts` — add `MSFS_2024` block, empty `resources` (matches Farming / Construction / Mechanic).
-- `src/hooks/useGameChannelColors.ts` — add `MSFS_2024: '#0EA5E9'` to `DEFAULT_COLORS`.
-- `src/components/admin/ImportChallengeDialog.tsx` — extend `GAME_NAME_MAP` with `'Microsoft Flight Simulator 2024' → 'MSFS_2024'` (+ alias `'MSFS 2024'`).
-- `supabase/functions/public-catalog/index.ts` — append MSFS to the games list emitted by the public catalog (counts default to 0 until Phase B lands).
+**`src/components/admin/WorkOrderEditDialog.tsx`:**
+- Remove the hardcoded `<SelectItem>` list (lines 474–479).
+- Reuse the existing `channels` state (already loaded from `game_channels` at line 127 for the channel filter). Derive `availableGames = [...new Set(channels.map(c => ({ game_title, name })))]` and render those as `<SelectItem>` rows.
+- Result: any future `game_channels` insert auto-appears in the Game dropdown with no code change.
 
-### A3. Confirm `fgn_origin_challenge_id` stamping — no patch needed
+This is the only frontend file that needs touching for the dropdown fix. The other game-aware files (`GameIcon`, `simResources`, `useGameChannelColors`, `ImportChallengeDialog.GAME_NAME_MAP`, `AppSidebar.GAME_ORDER`, `SimGamesManager`, `SimResourcesManager`, `public-catalog`) still need a per-game entry — they encode icons, colors, sidebar order, and play-name mapping that the DB doesn't carry. I'll batch those edits per game in Phase 2.
 
-Verified path: `ImportChallengeDialog.handleSelect` → `MappedChallengeData.fgnOriginChallengeId = challenge.id` → `WorkOrderEditDialog.handleImportChallenge` → `setFgnOriginChallengeId(...)` → insert writes `fgn_origin_challenge_id`. Documented only.
+## Phase 4 — `/admin/games` sync page
 
-### A4. Default imported work orders to draft (one-line patch)
+New admin-only route. Lists every game on play.fgn.gg side-by-side with academy's `game_channels`:
 
-In `WorkOrderEditDialog.handleImportChallenge`, add `setIsActive(false)` alongside the other `setX(data.X)` calls so new imports save with `is_active=false`. XP Reward continues to inherit `points_reward` (your six values: 12, 13, 11, 15, 14, 16).
+```text
+| play.fgn.gg game        | play game_id | academy enum     | status        | action          |
+| Microsoft Flight Sim 24 | 7a78dd57…    | MSFS_2024        | synced        | —               |
+| House Flipper 2         | abc123…      | (none)           | missing       | [Add to academy]|
+| American Truck Simulator| def456…      | ATS              | synced        | —               |
+```
 
-### A5. Phase A acceptance
+- Read-only by default. The `[Add to academy]` button does **not** auto-write the migration (enum changes need approval); it copies a pre-filled SQL block to clipboard plus a checklist of frontend constants to update for that game. Keeps the enum-safety rule intact and keeps human review in the loop.
+- Backed by a new edge function `play-games-catalog` (admin-gated, just calls `ecosystem-data-api` with `action: 'games'` and joins against academy's `game_channels`).
+- Wired into Admin sidebar under SUPER ADMIN, next to "Authorized Apps".
 
-- Type regen succeeds with `MSFS_2024` present.
-- `/admin/work-orders` → Import from FGN renders MSFS 2024 challenges.
-- Importing one of the six produces a draft work order with `fgn_origin_challenge_id` set and `is_active=false`.
+## Acceptance
 
-**Stop point:** I report back when Phase A is merged. You run the six imports via the admin UI, then send me the six `fgn_origin_challenge_id` values + the sim definition JSON for Phase B.
+- `/admin/games` renders the diff table, shows every play game, flags missing ones.
+- Create Work Order → Game dropdown lists MSFS 2024 (proves it now reads `game_channels`).
+- Adding a new `game_channels` row through SQL makes the dropdown surface it without a code edit.
+- One-shot report posted in chat at end of Phase 1 lists every play.fgn.gg game with its slug and id.
 
-## Phase B — locked-in scope for after your imports (no work yet)
+## Stop points
 
-- **Stub course** `Microsoft Flight Simulator 2024 — Simulation Sync (Draft)` (`game_title='MSFS_2024'`, `is_published=false`), one module, **six stub lessons** (`lesson_type='simulation'`, `xp_reward=0`, `passing_score=70`), six `challenge_lesson_mappings` rows (`is_active=true`).
-- **Simulation schema** (no `required` column). `simulation_items` columns: `id, simulation_id, display_order, name, sub, icon, cat, correct, critical, seq, why`. Comment on `critical`: *"Inclusion is the violation. A critical item picked (loadout) or critical step added anywhere in the flow (sequence) scores −25 and forces stand_down. Always correct=false."* `simulations.config` jsonb carries `critFailGrade`, `critFailLine`, and any per-sim band overrides.
-- **RLS:** `simulation_items` base table denies SELECT to non-admins (`USING (false)`). Public reads via `simulation_items_public` view (security_invoker, simulation status='active') exposing only `id, simulation_id, display_order, name, sub, icon, cat`. `simulation_runs` insert via service role only; users read their own.
-- **`run-simulation` edge function** mirrors `scoreRun()` / `gradeFor()` verbatim. Loadout: `+10` per correct picked, `−10` per non-correct non-critical picked, `−25` + stand_down per critical picked. Sequence: `+10` per correct step included AND in correct relative order among included correct steps, `−10` per correct step included out of relative order, `−10` per included non-correct non-critical step, `−25` + stand_down per critical step included. `max` per reference. `percent = max(0, round(raw/max*100))`, stand_down → 0. Grade via the four bands; stand_down → `critFailGrade` + `critFailLine` from `simulations.config`. Then call `sync-challenge-completion` with `{ user_email, challenge_id: fgn_origin_challenge_id, score: percent }`. Response: `{ attempt, record, debrief }`.
-- **Player UI** at `/learn/:courseId/lesson/:lessonId/sim/:simulationId`. `LessonDetail` branches on `lesson_type='simulation'`: 1 sim → autoredirect, 2 sims (Cross-Country) → chooser, 0 sims (Working Pilot) → "Coming soon". `LoadoutBoard`, `SequenceBoard` (prerequisite-based relative-order grading among included correct steps; harmless insertions don't cascade), `DebriefPanel`. Pre-submit payload contains zero answer-key fields (enforced by the view, not by frontend discipline).
-- **Track membership** — `challenge_track` `track_key='msfs-2024'` (create if missing), six `challenge_track_membership` rows.
-- **Acceptance checks** (run after seeding, with cleanup + count confirmation):
-  1. Clean sequence pass → lesson `completed`, XP once, credential written, `simulation_runs` row has `user_id`.
-  2. Rerun worse → best-attempt semantics; nothing downgrades.
-  3. Critical step included → `stand_down=true, percent=0`, sync receives 0, no credential, no lesson progress write.
-  4. Anon + authenticated `select correct,critical,why,seq from simulation_items` both fail; `simulation_items_public` returns display columns only.
-  5. Network tab on the Player before Submit contains no answer-key fields in any payload.
+- After Phase 1 report → you pick which games to add.
+- After each pair of Phase 2 migrations → I update the frontend constant maps for that game.
+- After Phase 3 → screenshot confirmation that MSFS 2024 shows in the dropdown.
+- After Phase 4 → demo the /admin/games page.
 
-Proceeding to Phase A on approval to build.
+Ready to proceed on approval.
