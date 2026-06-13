@@ -471,12 +471,15 @@ export function WorkOrderEditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ATS">American Truck Simulator</SelectItem>
-                  <SelectItem value="Farming_Sim">Farming Simulator</SelectItem>
-                  <SelectItem value="Construction_Sim">Construction Simulator</SelectItem>
-                  <SelectItem value="Mechanic_Sim">Mechanic Simulator</SelectItem>
-                  <SelectItem value="Fiber_Tech">Fiber-Tech Simulator</SelectItem>
-                  <SelectItem value="Roadcraft">Roadcraft</SelectItem>
+                  {Array.from(
+                    new Map(
+                      channels.map((c) => [c.game_title, c.name] as const),
+                    ).entries(),
+                  ).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
