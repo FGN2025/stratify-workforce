@@ -43,6 +43,11 @@ const GAME_CONFIG = {
     short_name: "Roadcraft",
     accent_color: "#22C55E",
   },
+  MSFS_2024: {
+    name: "Microsoft Flight Simulator 2024",
+    short_name: "MSFS 2024",
+    accent_color: "#0EA5E9",
+  },
 };
 
 type GameTitle = keyof typeof GAME_CONFIG;

@@ -324,6 +324,7 @@ export function WorkOrderEditDialog({
     setEstimatedTime(data.estimatedTime?.toString() || '');
     setCoverImageUrl(data.coverImageUrl || '');
     setFgnOriginChallengeId(data.fgnOriginChallengeId);
+    setIsActive(false);
     setPendingTasks(data.tasks || []);
     toast({
       title: 'Challenge Imported',
