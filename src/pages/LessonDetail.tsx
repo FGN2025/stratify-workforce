@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle2, XCircle, Star, RotateCcw, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Star, RotateCcw, ArrowRight, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function LessonDetail() {
@@ -111,6 +111,37 @@ export default function LessonDetail() {
             )}
           </div>
         </div>
+
+        {/* Light-tier (sim stub) Frame / Play / Prove */}
+        {(lesson.content as any)?.tier === 'light' && (
+          <div className="space-y-4">
+            {(['frame', 'play', 'prove'] as const).map((key) => {
+              const body = (lesson.content as any)?.[key] as string | undefined;
+              if (!body) return null;
+              return (
+                <Card key={key}>
+                  <CardHeader className="pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{key}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">{body}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {(lesson.content as any)?.studio_sim_id && (
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => navigate(`/simulations/${(lesson.content as any).studio_sim_id}`)}
+              >
+                <PlayCircle className="mr-2 h-5 w-5" />
+                Launch Simulation
+              </Button>
+            )}
+          </div>
+        )}
+
 
         {/* Result banner */}
         {submitted && result && (
