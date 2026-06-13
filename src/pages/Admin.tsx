@@ -247,6 +247,8 @@ export default function Admin() {
         return isSuperAdmin ? <PlayWebhookRetryManager /> : null;
       case 'parity-monitor':
         return isSuperAdmin ? <ParityMonitorDashboard /> : null;
+      case 'play-sync':
+        return <PlayGamesSyncPanel />;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : null;
       default:
