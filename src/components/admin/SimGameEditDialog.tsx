@@ -25,7 +25,7 @@ import type { Database } from '@/integrations/supabase/types';
 type GameChannel = Database['public']['Tables']['game_channels']['Row'];
 type GameTitle = Database['public']['Enums']['game_title'];
 
-const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'];
+const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft', 'MSFS_2024'];
 
 const gameLabels: Record<GameTitle, string> = {
   ATS: 'American Truck Simulator',
@@ -34,6 +34,7 @@ const gameLabels: Record<GameTitle, string> = {
   Mechanic_Sim: 'Mechanic Simulator',
   Fiber_Tech: 'Fiber-Tech Simulator',
   Roadcraft: 'Roadcraft',
+  MSFS_2024: 'Microsoft Flight Simulator 2024',
 };
 
 const gameIcons: Record<GameTitle, React.ReactNode> = {
@@ -43,6 +44,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Mechanic_Sim: <Wrench className="h-4 w-4" />,
   Fiber_Tech: <Cable className="h-4 w-4" />,
   Roadcraft: <MapIcon className="h-4 w-4" />,
+  MSFS_2024: <Plane className="h-4 w-4" />,
 };
 
 interface SimGameEditDialogProps {

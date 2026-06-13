@@ -31,6 +31,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Mechanic_Sim: <Wrench className="h-6 w-6" />,
   Fiber_Tech: <Cable className="h-6 w-6" />,
   Roadcraft: <MapIcon className="h-6 w-6" />,
+  MSFS_2024: <Plane className="h-6 w-6" />,
 };
 
 const gameLabels: Record<GameTitle, string> = {
@@ -40,6 +41,7 @@ const gameLabels: Record<GameTitle, string> = {
   Mechanic_Sim: 'Mechanic Simulator',
   Fiber_Tech: 'Fiber-Tech Simulator',
   Roadcraft: 'Roadcraft',
+  MSFS_2024: 'Microsoft Flight Simulator 2024',
 };
 
 export function SimGamesManager() {

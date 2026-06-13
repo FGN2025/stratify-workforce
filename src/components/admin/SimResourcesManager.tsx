@@ -57,6 +57,7 @@ const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; d
   Mechanic_Sim: { title: 'Mechanic Simulator', icon: Wrench, defaultColor: '#EF4444' },
   Fiber_Tech: { title: 'Fiber-Tech Simulator', icon: Cable, defaultColor: '#3B82F6' },
   Roadcraft: { title: 'Roadcraft', icon: MapIcon, defaultColor: '#22C55E' },
+  MSFS_2024: { title: 'Microsoft Flight Simulator 2024', icon: Plane, defaultColor: '#0EA5E9' },
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {
