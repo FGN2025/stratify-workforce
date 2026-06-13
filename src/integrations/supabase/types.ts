@@ -3530,6 +3530,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backfill_credentials_for_course: {
+        Args: { p_course_id: string }
+        Returns: {
+          completions_scanned: number
+          minted_count: number
+          skipped_count: number
+        }[]
+      }
       calculate_readiness: {
         Args: { p_career_path_id?: string; p_user_id: string }
         Returns: {
