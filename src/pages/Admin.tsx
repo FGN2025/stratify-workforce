@@ -28,6 +28,7 @@ import { ChallengeTrackMembershipManager } from '@/components/admin/ChallengeTra
 import { BreakroomMapperManager } from '@/components/admin/BreakroomMapperManager';
 import { PlayWebhookRetryManager } from '@/components/admin/PlayWebhookRetryManager';
 import { ParityMonitorDashboard } from '@/components/admin/ParityMonitorDashboard';
+import { PlayGamesSyncPanel } from '@/components/admin/PlayGamesSyncPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -246,6 +247,8 @@ export default function Admin() {
         return isSuperAdmin ? <PlayWebhookRetryManager /> : null;
       case 'parity-monitor':
         return isSuperAdmin ? <ParityMonitorDashboard /> : null;
+      case 'play-sync':
+        return <PlayGamesSyncPanel />;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : null;
       default:
