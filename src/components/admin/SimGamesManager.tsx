@@ -17,7 +17,7 @@ import {
   Edit,
   Plus,
   Gamepad2,
-  Map as MapIcon
+  Map as MapIcon,
   Plane,
 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
