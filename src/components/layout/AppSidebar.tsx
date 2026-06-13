@@ -148,7 +148,7 @@ const standaloneAdminItems = [
 ];
 
 // Order of games in the sidebar
-const GAME_ORDER: GameTitle[] = ['ATS', 'Fiber_Tech', 'Roadcraft', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim'];
+const GAME_ORDER: GameTitle[] = ['ATS', 'Fiber_Tech', 'Roadcraft', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'MSFS_2024'];
 
 // Icon mapping for database resources
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -192,6 +192,7 @@ export function AppSidebar() {
     Mechanic_Sim: false,
     Fiber_Tech: false,
     Roadcraft: false,
+    MSFS_2024: false,
   });
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
@@ -230,6 +231,7 @@ export function AppSidebar() {
         Mechanic_Sim: [],
         Fiber_Tech: [],
         Roadcraft: [],
+        MSFS_2024: [],
       };
       dbResources.forEach((r) => {
         if (grouped[r.game_title]) {

@@ -24,6 +24,7 @@ const GAME_LABELS: Record<GameTitle, string> = {
   Mechanic_Sim: 'Mechanic Sim',
   Fiber_Tech: 'Fiber-Tech',
   Roadcraft: 'Roadcraft',
+  MSFS_2024: 'Microsoft Flight Simulator 2024',
 };
 
 interface WorkOrderRow {

@@ -23,6 +23,7 @@ const gameLabels: Record<GameTitle, string> = {
   Mechanic_Sim: 'Mechanic',
   Fiber_Tech: 'Fiber-Tech',
   Roadcraft: 'Roadcraft',
+  MSFS_2024: 'Microsoft Flight Simulator 2024',
 };
 
 export function ChannelSubscribeButton({

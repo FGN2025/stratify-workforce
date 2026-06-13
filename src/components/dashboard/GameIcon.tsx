@@ -1,4 +1,4 @@
-import { Truck, Tractor, HardHat, Wrench, Cable, Map } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Map, Plane } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +39,11 @@ const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; co
     icon: Map, 
     label: 'Roadcraft',
     color: 'text-emerald-400 bg-emerald-500/20'
+  },
+  MSFS_2024: {
+    icon: Plane,
+    label: 'Microsoft Flight Simulator 2024',
+    color: 'text-sky-400 bg-sky-500/20'
   },
 };
 

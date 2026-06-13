@@ -9,6 +9,7 @@ const DEFAULT_COLORS: Record<GameTitle, string> = {
   Mechanic_Sim: '#EF4444',
   Fiber_Tech: '#3B82F6',
   Roadcraft: '#12cabd',
+  MSFS_2024: '#0EA5E9',
 };
 
 export function useGameChannelColors() {

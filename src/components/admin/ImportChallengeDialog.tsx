@@ -57,6 +57,8 @@ const GAME_NAME_MAP: Record<string, GameTitle> = {
   'Mechanic Simulator': 'Mechanic_Sim',
   'Fiber-Tech Simulator': 'Fiber_Tech',
   'Roadcraft': 'Roadcraft',
+  'Microsoft Flight Simulator 2024': 'MSFS_2024',
+  'MSFS 2024': 'MSFS_2024',
 };
 
 // Map difficulty strings

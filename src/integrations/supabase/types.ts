@@ -3549,6 +3549,7 @@ export type Database = {
         | "Mechanic_Sim"
         | "Fiber_Tech"
         | "Roadcraft"
+        | "MSFS_2024"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
@@ -3772,6 +3773,7 @@ export const Constants = {
         "Mechanic_Sim",
         "Fiber_Tech",
         "Roadcraft",
+        "MSFS_2024",
       ],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
