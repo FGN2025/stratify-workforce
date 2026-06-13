@@ -71,7 +71,7 @@ export interface SkillSet {
   equipment_care: number;
 }
 
-export type GameTitle = 'ATS' | 'Farming_Sim' | 'Construction_Sim' | 'Mechanic_Sim' | 'Fiber_Tech' | 'Roadcraft';
+export type GameTitle = 'ATS' | 'Farming_Sim' | 'Construction_Sim' | 'Mechanic_Sim' | 'Fiber_Tech' | 'Roadcraft' | 'MSFS_2024';
 
 export interface WorkOrder {
   id: string;
