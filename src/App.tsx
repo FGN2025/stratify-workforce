@@ -101,6 +101,9 @@ const App = () => (
               <Route path="/work-orders/:id" element={
                 <ProtectedRoute><WorkOrderDetail /></ProtectedRoute>
               } />
+              <Route path="/simulations/:simulationId" element={
+                <ProtectedRoute><SimulationPlayer /></ProtectedRoute>
+              } />
               <Route path="/leaderboard" element={
                 <ProtectedRoute><Leaderboard /></ProtectedRoute>
               } />
