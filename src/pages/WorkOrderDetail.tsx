@@ -32,6 +32,7 @@ import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { WorkOrderAdminPanel } from '@/components/admin/WorkOrderAdminPanel';
 import { LearningResourcesCard } from '@/components/work-orders/LearningResourcesCard';
+import { WorkOrderSimulationsCard } from '@/components/simulations/WorkOrderSimulationsCard';
 import { SpatialTaskBadge } from '@/components/work-orders/SpatialTaskBadge';
 import { OpenInBreakroomButton } from '@/components/work-orders/OpenInBreakroomButton';
 import { toast } from '@/hooks/use-toast';
@@ -562,6 +563,9 @@ export default function WorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* MSFS / studio simulations attached to this WO */}
+          <WorkOrderSimulationsCard workOrderId={id!} />
 
           {/* Your Progress with Credential */}
           {status?.hasAttempted && (

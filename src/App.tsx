@@ -29,6 +29,7 @@ import Learn from "./pages/Learn";
 import CourseDetail from "./pages/CourseDetail";
 import LessonDetail from "./pages/LessonDetail";
 import WorkOrderDetail from "./pages/WorkOrderDetail";
+import SimulationPlayer from "./pages/SimulationPlayer";
 import Developers from "./pages/Developers";
 import AITest from "./pages/AITest";
 import HelpAdmin from "./pages/HelpAdmin";
@@ -99,6 +100,9 @@ const App = () => (
               } />
               <Route path="/work-orders/:id" element={
                 <ProtectedRoute><WorkOrderDetail /></ProtectedRoute>
+              } />
+              <Route path="/simulations/:simulationId" element={
+                <ProtectedRoute><SimulationPlayer /></ProtectedRoute>
               } />
               <Route path="/leaderboard" element={
                 <ProtectedRoute><Leaderboard /></ProtectedRoute>
