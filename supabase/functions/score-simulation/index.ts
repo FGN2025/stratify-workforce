@@ -38,11 +38,11 @@ interface Simulation {
   fgn_origin_challenge_id?: string | null;
 }
 
-function gradeFor(percent: number, max: number, standDown: boolean, critGrade?: string): string {
+function gradeFor(raw: number, max: number, standDown: boolean, critGrade?: string): string {
   if (standDown) return critGrade || 'STAND DOWN';
-  if (percent >= max - 20) return 'JOB READY';
-  if (percent >= max - 60) return 'ALMOST CREW-READY';
-  if (percent >= max - 110) return 'GREEN APPRENTICE';
+  if (raw >= max - 20) return 'JOB READY';
+  if (raw >= max - 60) return 'ALMOST CREW-READY';
+  if (raw >= max - 110) return 'GREEN APPRENTICE';
   return 'BACK TO THE YARD';
 }
 
