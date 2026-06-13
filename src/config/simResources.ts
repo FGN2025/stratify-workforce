@@ -1,7 +1,7 @@
 // Simulation Resources Configuration
 // Scalable architecture for all simulator game external resources
 
-import { Truck, Tractor, HardHat, Wrench, Cable, Map, GraduationCap, Briefcase } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Map, GraduationCap, Briefcase, Plane } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 
@@ -82,6 +82,13 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     shortTitle: 'Roadcraft',
     icon: Map,
     accentColor: '#12cabd',
+    resources: [],
+  },
+  MSFS_2024: {
+    title: 'Microsoft Flight Simulator 2024',
+    shortTitle: 'MSFS 2024',
+    icon: Plane,
+    accentColor: '#0EA5E9',
     resources: [],
   },
 };
