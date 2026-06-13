@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
       const ids = body.selections.map((s) => (typeof s === 'string' ? s : s.item_id));
       result = scoreLoadout(items, ids);
     }
-    result.grade = gradeFor(result.percent, result.max, result.stand_down, sim.config?.critFailGrade);
+    result.grade = gradeFor(result.raw, result.max, result.stand_down, sim.config?.critFailGrade);
 
     const critFailLine = sim.config?.critFailLine || null;
 
