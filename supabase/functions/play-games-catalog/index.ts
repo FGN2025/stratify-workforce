@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${ecosystemKey}`,
-        apikey: ecosystemKey,
+        'X-Ecosystem-Key': ecosystemKey,
+        apikey: Deno.env.get('FGN_PLAY_SUPABASE_ANON_KEY') ?? ecosystemKey,
       },
       body: JSON.stringify({ action: 'games' }),
     });
