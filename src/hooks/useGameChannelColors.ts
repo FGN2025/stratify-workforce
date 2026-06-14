@@ -10,6 +10,8 @@ const DEFAULT_COLORS: Record<GameTitle, string> = {
   Fiber_Tech: '#3B82F6',
   Roadcraft: '#12cabd',
   MSFS_2024: '#0EA5E9',
+  House_Flipper: '#EC4899',
+  House_Flipper_2: '#EC4899',
 };
 
 export function useGameChannelColors() {

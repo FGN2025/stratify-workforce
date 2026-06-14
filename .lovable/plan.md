@@ -1,76 +1,59 @@
-# Game Catalog Sync — Plan
 
-## Problem
+# House Flipper Track — Step 2: Work Orders
 
-Three gaps surfaced from your screenshot and request:
+Preflight confirmed (re-verified at build time): zero rows in `work_orders` match the six `fgn_origin_challenge_id` values. All six are net-new. No aviation rows touched.
 
-1. **Create Work Order → Game** dropdown in `WorkOrderEditDialog.tsx` (lines 473–480) is hardcoded. MSFS 2024 was wired everywhere else in Phase A but never made it into this list, and House Flipper variants don't exist anywhere yet.
-2. There is no way for an admin to see what games play.fgn.gg actually exposes vs. what academy knows about.
-3. Every new game today requires editing 8+ files. We want a single source of truth.
+## Step 1 — Migration: extend `game_title` enum
 
-Existing inventory confirmed: `game_channels` has 7 rows aligned 1:1 with the `game_title` enum (ATS, Farming_Sim, Construction_Sim, Mechanic_Sim, Fiber_Tech, Roadcraft, MSFS_2024). No House Flipper anywhere — play side either has it or it doesn't, we'll find out from the catalog.
+Idempotent guards so a re-run is safe and the enum order stays append-only.
 
-## Approach
-
-Make `game_channels` the canonical "what games does academy support" list. The dropdown reads it. The new admin page diffs it against play.fgn.gg.
-
-## Phase 1 — One-shot play.fgn.gg catalog report (build mode, no merged code)
-
-Before adding any new enum values, I need to see what's actually on play. I'll:
-
-- Add a temporary `action: 'games'` passthrough inside `fetch-challenges` response (it already calls it internally — just stop discarding the result), deploy, call it once with my admin token.
-- Report back in chat the full list: `id`, `name`, `slug`, plus a diff column ("already on academy" / "missing").
-
-You confirm which missing games to add (House Flipper 1, House Flipper 2, anything else worth picking up). **No enum changes yet.**
-
-## Phase 2 — Per-game additions (one migration pair per game)
-
-For each game you green-light, two migrations in sequence (enum-safety rule from earlier turn):
-
-```text
-M1: ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS '<Enum_Name>';
-M2: INSERT INTO public.game_channels (game_title, name, accent_color, description)
-    VALUES ('<Enum_Name>', '<Display Name>', '<hex>', '<play_game_id reference>');
+```sql
+ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS 'House_Flipper';
+ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS 'House_Flipper_2';
 ```
 
-Enum names will follow the existing convention: `HouseFlipper_1`, `HouseFlipper_2`, etc. — PascalCase with underscore for variants. I'll propose the exact name + accent color for each before running the migrations.
+Runs in its own migration (Postgres requires enum-add to commit before use in the same transaction as a subsequent insert that references the new label).
 
-## Phase 3 — Drop the hardcoded dropdown (one change, lasts forever)
+## Step 2 — Re-run preflight, then insert the six rows
 
-**`src/components/admin/WorkOrderEditDialog.tsx`:**
-- Remove the hardcoded `<SelectItem>` list (lines 474–479).
-- Reuse the existing `channels` state (already loaded from `game_channels` at line 127 for the channel filter). Derive `availableGames = [...new Set(channels.map(c => ({ game_title, name })))]` and render those as `<SelectItem>` rows.
-- Result: any future `game_channels` insert auto-appears in the Game dropdown with no code change.
+Before insert, the build will re-query:
 
-This is the only frontend file that needs touching for the dropdown fix. The other game-aware files (`GameIcon`, `simResources`, `useGameChannelColors`, `ImportChallengeDialog.GAME_NAME_MAP`, `AppSidebar.GAME_ORDER`, `SimGamesManager`, `SimResourcesManager`, `public-catalog`) still need a per-game entry — they encode icons, colors, sidebar order, and play-name mapping that the DB doesn't carry. I'll batch those edits per game in Phase 2.
-
-## Phase 4 — `/admin/games` sync page
-
-New admin-only route. Lists every game on play.fgn.gg side-by-side with academy's `game_channels`:
-
-```text
-| play.fgn.gg game        | play game_id | academy enum     | status        | action          |
-| Microsoft Flight Sim 24 | 7a78dd57…    | MSFS_2024        | synced        | —               |
-| House Flipper 2         | abc123…      | (none)           | missing       | [Add to academy]|
-| American Truck Simulator| def456…      | ATS              | synced        | —               |
+```sql
+SELECT fgn_origin_challenge_id, title FROM work_orders
+WHERE fgn_origin_challenge_id IN (<six UUIDs as text>);
 ```
 
-- Read-only by default. The `[Add to academy]` button does **not** auto-write the migration (enum changes need approval); it copies a pre-filled SQL block to clipboard plus a checklist of frontend constants to update for that game. Keeps the enum-safety rule intact and keeps human review in the loop.
-- Backed by a new edge function `play-games-catalog` (admin-gated, just calls `ecosystem-data-api` with `action: 'games'` and joins against academy's `game_channels`).
-- Wired into Admin sidebar under SUPER ADMIN, next to "Authorized Apps".
+Any UUID that comes back is skipped (no update, no duplicate). Only missing ones are inserted. Expected on a clean preflight: six inserts, zero skips.
 
-## Acceptance
+## Step 3 — Insert payload
 
-- `/admin/games` renders the diff table, shows every play game, flags missing ones.
-- Create Work Order → Game dropdown lists MSFS 2024 (proves it now reads `game_channels`).
-- Adding a new `game_channels` row through SQL makes the dropdown surface it without a code edit.
-- One-shot report posted in chat at end of Phase 1 lists every play.fgn.gg game with its slug and id.
+Keyed by `fgn_origin_challenge_id` (text). All rows: `is_active=true`, `metadata='{}'`, `success_criteria` left to column default, `tenant_id=null`, `estimated_time_minutes` default (30) — XP is the canonical metric per project doctrine, time is not surfaced.
 
-## Stop points
+| WO | Title | Game | Difficulty | XP | fgn_origin_challenge_id |
+|---|---|---|---|---|---|
+| WO-3010 | Strip the Room to a Safe Shell | House_Flipper_2 | beginner | 12 | 3b061d99-c5a8-418b-9fe6-03e2eb6118e9 |
+| WO-3020 | Load Out for a Paint and Patch Day | House_Flipper | beginner | 13 | ac805af3-9677-436c-9107-e3d4139e3ebd |
+| WO-3030 | Tile a Wet-Area Floor That Lasts | House_Flipper_2 | intermediate | 15 | 74175dec-85e9-4f00-992d-cbbcde24f6e5 |
+| WO-3110 | Frame a New Interior Wall | House_Flipper_2 | advanced | 20 | ee93f07b-4c2c-4788-be1a-67f02d750b47 |
+| WO-3120 | Load Out to Build a Roof | House_Flipper_2 | intermediate | 16 | d00bdfd0-6702-4e46-9ee8-6202aecf9005 |
+| WO-3130 | Price the Flip Before You Commit | House_Flipper | advanced | 18 | e1b8d879-24a4-498b-bbff-acf17a076eed |
 
-- After Phase 1 report → you pick which games to add.
-- After each pair of Phase 2 migrations → I update the frontend constant maps for that game.
-- After Phase 3 → screenshot confirmation that MSFS 2024 shows in the dropdown.
-- After Phase 4 → demo the /admin/games page.
+Two on `House_Flipper`, four on `House_Flipper_2`, matching parent challenge `game_id` on play.fgn.gg.
 
-Ready to proceed on approval.
+## Acceptance probes (reported after build)
+
+1. `SELECT title, game_title, difficulty, xp_reward, is_active, fgn_origin_challenge_id FROM work_orders WHERE fgn_origin_challenge_id IN (<six>) ORDER BY title;` — expect 6 rows matching the table above exactly.
+2. Created-new vs already-existing tally (expected 6/0 on a clean preflight, otherwise reconciled to existing).
+3. Aviation untouched: `SELECT count(*) FROM work_orders WHERE game_title = 'MSFS_2024';` — unchanged from prior inventory (6 active).
+4. Enum extended: `SELECT unnest(enum_range(NULL::game_title))::text;` includes both `House_Flipper` and `House_Flipper_2`.
+
+## Out of scope (held for later steps)
+
+- Step 3 sims (simulations + simulation_items)
+- Step 4 lessons (xp_reward=0, mapped via challenge_lesson_mappings)
+- Course publish + backfill
+- No edits to aviation, no edits to any non-House-Flipper row, no UI changes, no enum consumers updated yet (filters in WorkOrdersManager, GAME_LABELS, channel seeding — out of scope for Step 2; will be addressed when UI surfaces are needed).
+
+## Hold
+
+Plan held for your approval. On go, I'll run the enum migration first (separate approval surface), then the insert, then report the acceptance probes verbatim.

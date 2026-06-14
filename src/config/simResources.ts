@@ -91,6 +91,20 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     accentColor: '#0EA5E9',
     resources: [],
   },
+  House_Flipper: {
+    title: 'House Flipper',
+    shortTitle: 'House Flipper',
+    icon: HardHat,
+    accentColor: '#EC4899',
+    resources: [],
+  },
+  House_Flipper_2: {
+    title: 'House Flipper 2',
+    shortTitle: 'House Flipper 2',
+    icon: HardHat,
+    accentColor: '#EC4899',
+    resources: [],
+  },
 };
 
 // Helper to get resources for a specific game

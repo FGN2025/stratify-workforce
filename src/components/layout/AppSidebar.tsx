@@ -194,6 +194,8 @@ export function AppSidebar() {
     Fiber_Tech: false,
     Roadcraft: false,
     MSFS_2024: false,
+    House_Flipper: false,
+    House_Flipper_2: false,
   });
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
@@ -233,6 +235,8 @@ export function AppSidebar() {
         Fiber_Tech: [],
         Roadcraft: [],
         MSFS_2024: [],
+        House_Flipper: [],
+        House_Flipper_2: [],
       };
       dbResources.forEach((r) => {
         if (grouped[r.game_title]) {

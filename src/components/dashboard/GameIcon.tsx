@@ -45,6 +45,16 @@ const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; co
     label: 'Microsoft Flight Simulator 2024',
     color: 'text-sky-400 bg-sky-500/20'
   },
+  House_Flipper: {
+    icon: HardHat,
+    label: 'House Flipper',
+    color: 'text-pink-400 bg-pink-500/20'
+  },
+  House_Flipper_2: {
+    icon: HardHat,
+    label: 'House Flipper 2',
+    color: 'text-pink-400 bg-pink-500/20'
+  },
 };
 
 const sizeStyles = {

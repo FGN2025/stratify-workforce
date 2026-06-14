@@ -3754,6 +3754,8 @@ export type Database = {
         | "Fiber_Tech"
         | "Roadcraft"
         | "MSFS_2024"
+        | "House_Flipper"
+        | "House_Flipper_2"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
@@ -3978,6 +3980,8 @@ export const Constants = {
         "Fiber_Tech",
         "Roadcraft",
         "MSFS_2024",
+        "House_Flipper",
+        "House_Flipper_2",
       ],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
