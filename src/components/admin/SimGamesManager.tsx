@@ -33,6 +33,8 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   Fiber_Tech: <Cable className="h-6 w-6" />,
   Roadcraft: <MapIcon className="h-6 w-6" />,
   MSFS_2024: <Plane className="h-6 w-6" />,
+  House_Flipper: <HardHat className="h-6 w-6" />,
+  House_Flipper_2: <HardHat className="h-6 w-6" />,
 };
 
 const gameLabels: Record<GameTitle, string> = {
@@ -43,6 +45,8 @@ const gameLabels: Record<GameTitle, string> = {
   Fiber_Tech: 'Fiber-Tech Simulator',
   Roadcraft: 'Roadcraft',
   MSFS_2024: 'Microsoft Flight Simulator 2024',
+  House_Flipper: 'House Flipper',
+  House_Flipper_2: 'House Flipper 2',
 };
 
 export function SimGamesManager() {

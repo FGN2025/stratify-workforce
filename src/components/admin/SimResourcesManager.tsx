@@ -59,6 +59,8 @@ const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; d
   Fiber_Tech: { title: 'Fiber-Tech Simulator', icon: Cable, defaultColor: '#3B82F6' },
   Roadcraft: { title: 'Roadcraft', icon: MapIcon, defaultColor: '#22C55E' },
   MSFS_2024: { title: 'Microsoft Flight Simulator 2024', icon: Plane, defaultColor: '#0EA5E9' },
+  House_Flipper: { title: 'House Flipper', icon: HardHat, defaultColor: '#EC4899' },
+  House_Flipper_2: { title: 'House Flipper 2', icon: HardHat, defaultColor: '#EC4899' },
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {
