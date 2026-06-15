@@ -1,10 +1,11 @@
-# Cover Prompt Contract — v1.0
+# Cover Prompt Contract — v1.1
 
 Status: **Draft for review** (academy-side implementation conforms to this; Configurator implements against it after approval.)
 
 Source of truth for the work-order-aligned cover image generation pipeline. Both implementations (fgn.academy + Configurator) MUST conform to this contract. The contract is written so it could later back a hosted HTTP service with minimal change — function signatures already match an HTTP boundary.
 
 ## Changelog
+- **v1.1** — Switched from reject-on-off-ratio to center-crop-to-16:9 after generation. Reject only when the resulting crop would fall below the minimum usable banner resolution (1024×576). Motivation: Gemini image models ignore the `size` request parameter and return their own dimensions, so a strict ±3% reject gate failed nearly every generation. Cropping keeps the cheap default model viable while still guaranteeing 16:9 output.
 - **v1.0** — Initial. Two-step pipeline (synthesize prompt → generate image). Industry-neutral language rule. 16:9 enforcement. Server-enforced style wrapper.
 
 ---
@@ -201,10 +202,11 @@ The text stored to `work_orders.cover_image_prompt` is the admin-edited prompt o
 const IMAGE_CONFIG = {
   // Read from ai_platform_settings.cover_image_model; swappable without code change.
   default_model: "google/gemini-3.1-flash-image-preview",
-  // Alternate: "openai/gpt-image-2" for higher quality.
-  size: "1792x1024",          // 1.75:1, closest 16:9-ish supported by image models
+  // Alternate: "openai/gpt-image-2" for higher quality (honors `size` natively).
+  size: "1792x1024",          // Honored by gpt-image-2; ignored by Gemini (then cropped).
   aspect_ratio_target: 16 / 9,
-  aspect_ratio_tolerance: 0.03,  // ±3%; reject otherwise
+  min_cropped_width: 1024,
+  min_cropped_height: 576,
   storage_path: (work_order_id: string, ts: number) =>
     `work-orders/${work_order_id}/cover-${ts}.png`,
   storage_bucket: "media-assets",
@@ -214,11 +216,14 @@ const IMAGE_CONFIG = {
 Procedure:
 1. Build final string = `<admin-edited prompt>` + `\n\n` + `<STYLE_WRAPPER>`.
 2. Call AI Gateway `/v1/images/generations`. Use OpenAI-shape body for OpenAI models, Gemini chat-completions-image shape for Gemini models. `stream: false` (one-shot, server-side upload).
-3. Decode the returned `b64_json` PNG. Inspect actual width/height.
-4. Compute `actual_ratio = width / height`. If `|actual_ratio - 16/9| / (16/9) > tolerance`, REJECT. Do not store. Return a structured error: `{ code: "off_ratio", actual_ratio, target_ratio: 16/9 }`.
-5. Otherwise upload PNG to `media-assets/work-orders/<id>/cover-<ts>.png`.
-6. Update `work_orders` row: `cover_image_url = <public URL>`, `cover_image_prompt = <admin-edited prompt sans wrapper>`. Single transaction.
-7. Return `{ cover_image_url, cover_image_prompt }`.
+3. Decode the returned `b64_json` PNG (pixels + dimensions).
+4. **Center-crop the decoded PNG to 16:9.** When the model honors `size` natively (e.g. `openai/gpt-image-2` at `1792x1024`), the crop is a no-op or near-no-op. When the model ignores `size` (e.g. Gemini image models, which choose their own dimensions per prompt), crop whatever was returned to 16:9. Crop strategy is center-crop: if `width/height > 16/9`, keep full height and narrow the width symmetrically; if `width/height < 16/9`, keep full width and shorten the height symmetrically.
+5. Reject with `{ code: "off_ratio", actual_ratio, target_ratio }` ONLY when the resulting crop would fall below `1024×576` (the minimum usable banner resolution). This catches degenerate cases (tiny outputs, severely portrait images) without rejecting normal non-16:9-but-croppable output. The `off_ratio` code now means "uncroppable", not "outside ±3%".
+6. Otherwise upload the **cropped** PNG to `media-assets/work-orders/<id>/cover-<ts>.png`.
+7. Update `work_orders` row: `cover_image_url = <public URL>`, `cover_image_prompt = <admin-edited prompt sans wrapper>`. Single transaction.
+8. Return `{ cover_image_url, cover_image_prompt }`. Implementations MAY include a `debug` block with `raw_width`, `raw_height`, `raw_ratio`, `cropped_width`, `cropped_height`, `final_ratio` for observability.
+
+
 
 ---
 
@@ -236,7 +241,7 @@ type CoverError =
   | { code: "internal", message: string };
 ```
 
-4xx from the AI Gateway is terminal — do NOT retry. Surface `gateway`/`moderation` to the UI with the upstream message.
+4xx from the AI Gateway is terminal — do NOT retry. Surface `gateway`/`moderation` to the UI with the upstream message. As of v1.1, `off_ratio` means the returned image was **uncroppable** to 16:9 at the minimum usable resolution (`1024×576`) — not "outside ±3% of 16:9". Normal non-16:9 output from a model that ignores `size` (e.g. Gemini) is center-cropped to 16:9 and succeeds.
 
 ---
 
@@ -266,8 +271,9 @@ type CoverError =
 
 ---
 
-## 11. Known v1.0 limitations
+## 11. Known limitations
 
 - The six existing House Flipper work orders have empty `metadata.play_source`. They will synthesize from `title + description + trade context` only. Acceptable for v1. Re-importing those rows via `fetch-challenges` later will populate `metadata.play_source` and improve their synthesis quality. Not blocking.
-- Aspect ratio target is the closest 16:9-ish size supported by current image models (`1792x1024` ≈ 1.75:1). The ±3% tolerance accommodates this. If a model adds true 16:9, update `size`.
+- The `size: "1792x1024"` request parameter is honored by `openai/gpt-image-2` and ignored by Gemini image models. With the default Gemini model, the returned dimensions are model-chosen and then center-cropped server-side to 16:9 (contract §7 step 4). With `openai/gpt-image-2`, the returned image is already 1792×1024 (≈1.75:1) and the crop reduces it to 1792×1008 — a near-no-op.
+- v1.1 cropping is **center-crop only**. Saliency-aware cropping (face/subject-preserving) is out of scope; revisit in v1.2 if center-crop produces awkwardly framed results in practice.
 - Wrapper version is currently inlined. Future iterations may version the wrapper itself (`wrapper_version: "v1.0"`) and store that alongside the prompt for audit.
