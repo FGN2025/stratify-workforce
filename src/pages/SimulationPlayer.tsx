@@ -76,7 +76,7 @@ export default function SimulationPlayer() {
         {debrief ? (
           <DebriefPanel debrief={debrief} onBack={() => navigate(`/work-orders/${data.sim.work_order_id}`)} />
         ) : data.sim.sim_type === 'loadout' ? (
-          <LoadoutBoard items={data.items} onSubmit={handleSubmit} submitting={submitting} />
+          <LoadoutBoard items={data.items} cats={data.sim.cats} onSubmit={handleSubmit} submitting={submitting} />
         ) : (
           <SequenceBoard items={data.items} onSubmit={handleSubmit} submitting={submitting} />
         )}

@@ -33,7 +33,7 @@ export function SequenceBoard({ items, onSubmit, submitting }: SequenceBoardProp
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Plan the Route</CardTitle>
+        <CardTitle>Build the Procedure</CardTitle>
         <p className="text-sm text-muted-foreground">
           Build the procedure in the correct relative order. Required steps in the wrong order cost
           points; skipped required steps cost less; non-required steps cost points.
@@ -101,7 +101,7 @@ export function SequenceBoard({ items, onSubmit, submitting }: SequenceBoardProp
         <div className="md:col-span-2 flex justify-between items-center pt-2 border-t border-border">
           <span className="text-sm text-muted-foreground">{chosen.length} steps in sequence</span>
           <Button onClick={() => onSubmit(chosen)} disabled={submitting || chosen.length === 0}>
-            {submitting ? 'Scoring…' : 'Submit Sequence'}
+            {submitting ? 'Scoring…' : 'Submit Procedure'}
           </Button>
         </div>
       </CardContent>
