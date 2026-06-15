@@ -10,11 +10,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, Link, Image, Loader2, X, Check } from 'lucide-react';
+import { Upload, Link, Image, Loader2, X, Check, Sparkles, Wand2 } from 'lucide-react';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import { useAllSiteMedia } from '@/hooks/useSiteMedia';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface MediaPickerDialogProps {
@@ -23,6 +26,8 @@ interface MediaPickerDialogProps {
   onSelect: (url: string) => void;
   title?: string;
   currentImageUrl?: string;
+  /** When provided, enables the "Generate with AI" tab. Only work-order surfaces pass this. */
+  workOrderId?: string;
 }
 
 /**
