@@ -58,11 +58,13 @@ export interface BuildOptions {
    */
   knowledgeGateFrameworks?: string[];
   /**
-   * Phase 1.5 default: skip emitting the standalone `challenge` lesson
-   * type. The challenge step belongs to the Work Order layer; the
-   * course is post-completion content. Set true ONLY for legacy /
-   * back-compat usage where the SCORM is the canonical challenge
-   * experience (rare).
+   * Phase 1.6 default (true): always emit a `challenge` "Objective"
+   * lesson per challenge so the SCORM package is self-contained for
+   * external LMSes. The objective module carries the challenge
+   * description, framework context, and full task list with evidence
+   * specs — everything a learner needs without linking back to
+   * play.fgn.gg. Set false ONLY for niche back-compat exports that
+   * explicitly want the recap-only model.
    */
   includeChallengeModule?: boolean;
 }
@@ -75,7 +77,7 @@ export function buildCourseManifest(
 ): CourseManifest {
   const knowledgeGateFrameworks =
     options.knowledgeGateFrameworks ?? DEFAULT_KNOWLEDGE_GATE_FRAMEWORKS;
-  const includeChallenge = options.includeChallengeModule ?? false;
+  const includeChallenge = options.includeChallengeModule ?? true;
 
   const modules: CourseModule[] = [];
   let position = 0;
@@ -98,7 +100,28 @@ export function buildCourseManifest(
     const moduleIdPrefix = `c-${fc.challenge.id.slice(0, 8)}`;
     const challengeName = fc.challenge.name;
 
-    // 1. Briefing — post-completion recap + reinforcement
+    // 1. Objective — self-contained challenge body (description,
+    //    framework context, full task list with evidence specs).
+    //    Emitted BEFORE the recap so the learner sees the "what and
+    //    why" first, then runs the challenge, then reads the recap.
+    //    Phase 1.6: this is now always-on by default so SCORM packages
+    //    exported to external LMSes are self-contained.
+    if (includeChallenge) {
+      modules.push({
+        id: `${moduleIdPrefix}-objective`,
+        position: position++,
+        type: 'challenge',
+        title: `${challengeName}: Objective & Tasks`,
+        challengeId: fc.challenge.id,
+        challengeUrl: `https://play.fgn.gg/challenges/${fc.challenge.id}`,
+        ...(game !== undefined ? { game } : {}),
+        ...(framework !== undefined ? { credentialFramework: framework } : {}),
+        tasks: fc.tasks.map((t) => mapTask(t)),
+        preLaunchHtml: buildObjectiveHtml(fc, game, framework),
+      });
+    }
+
+    // 2. Briefing — post-completion recap + reinforcement
     const briefing = buildBriefing(fc, game, framework);
     modules.push({
       id: `${moduleIdPrefix}-briefing`,
@@ -107,24 +130,6 @@ export function buildCourseManifest(
       title: `${challengeName}: ${briefing.titleSuffix}`,
       html: briefing.bodyHtml,
     });
-
-    // 2. (Optional, default-off) Challenge — for back-compat only.
-    // Phase 1.5 content model: the challenge belongs to the Work Order
-    // layer on fgn.academy, not the SCORM/Learn layer. Set
-    // includeChallengeModule=true to override.
-    if (includeChallenge) {
-      modules.push({
-        id: `${moduleIdPrefix}-challenge`,
-        position: position++,
-        type: 'challenge',
-        title: `${challengeName}: Challenge Tasks`,
-        challengeId: fc.challenge.id,
-        challengeUrl: `https://play.fgn.gg/challenges/${fc.challenge.id}`,
-        ...(game !== undefined ? { game } : {}),
-        ...(framework !== undefined ? { credentialFramework: framework } : {}),
-        tasks: fc.tasks.map((t) => mapTask(t)),
-      });
-    }
 
     // 3. Quiz (only if framework gates knowledge)
     if (framework && knowledgeGateFrameworks.includes(framework)) {
@@ -242,6 +247,70 @@ function mapTask(t: PlayChallengeTask): {
     evidenceSpec,
     mechanicType,
   };
+}
+
+/**
+ * Build the pre-launch HTML for the always-on Objective module. Carries
+ * the challenge's own description + framework / certification context so
+ * the SCORM package is self-contained for external LMSes that have no
+ * link back to play.fgn.gg or fgn.academy's Work Order layer.
+ */
+function buildObjectiveHtml(
+  fc: FetchedChallenge,
+  game: GameTitle | undefined,
+  framework: string | undefined,
+): string {
+  const ch = fc.challenge;
+  const parts: string[] = [];
+
+  parts.push(`<h3>Objective</h3>`);
+  if (ch.description && ch.description.trim().length > 0) {
+    parts.push(`<p>${escapeObjHtml(ch.description)}</p>`);
+  } else {
+    parts.push(
+      `<p>Complete the tasks below in ${escapeObjHtml(fc.game?.name ?? 'the source simulator')} and submit evidence for each.</p>`,
+    );
+  }
+
+  const contextBits: string[] = [];
+  if (framework) {
+    contextBits.push(
+      `This challenge is part of the <strong>${escapeObjHtml(framework)}</strong> credential pathway.`,
+    );
+  }
+  if (ch.cfr_reference) {
+    contextBits.push(
+      `Referenced standard: <strong>${escapeObjHtml(ch.cfr_reference)}</strong>.`,
+    );
+  }
+  if (ch.cdl_domain) {
+    contextBits.push(
+      `FMCSA CDL knowledge domain: <strong>${escapeObjHtml(ch.cdl_domain)}</strong>.`,
+    );
+  }
+  if (contextBits.length > 0) {
+    parts.push(`<p>${contextBits.join(' ')}</p>`);
+  }
+
+  if (ch.certification_description && ch.certification_description.trim().length > 0) {
+    parts.push(`<p><em>${escapeObjHtml(ch.certification_description)}</em></p>`);
+  }
+
+  parts.push(`<h3>How this is evaluated</h3>`);
+  parts.push(
+    `<p>Each task lists the in-game action to perform and the evidence you must submit (screenshots, video, or annotation). Submit your evidence on fgn.academy — once your Work Order is verified, this course unlocks the post-completion recap and knowledge check.</p>`,
+  );
+
+  return parts.filter(Boolean).join('\n');
+}
+
+function escapeObjHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function buildCompletionHtml(

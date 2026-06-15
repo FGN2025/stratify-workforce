@@ -1,67 +1,74 @@
-# Step 5 E2E Smoke Test — Option B (Disposable User)
+# SCORM packages are missing the challenge body
 
-**Gate:** Hold until user confirms roof challenge `d00bdfd0-6702-4e46-9ee8-6202aecf9005` is `is_active=true` on play.fgn.gg. Re-verify all 6 HF challenge UUIDs return from anon `FGN_PLAY_SUPABASE_URL/rest/v1/challenges` before proceeding.
+## What's happening
 
-**Precedent:** This becomes the standard pattern for all future smoke tests. No real-user pollution, ever.
+Open Preview shows only the **post-completion briefing** and (for some frameworks) a knowledge-check quiz — never the challenge's own description, objective, or task list. That isn't a UI bug; it's exactly what the builder emits today.
 
-## Execution
+In `supabase/functions/scorm-build/_lib/scorm-builder/builder.ts`:
 
-### 1. Create disposable user
-- Service-role `auth.admin.createUser({ email: 'smoketest-hf-<ts>@fgn.internal', email_confirm: true, password: <random> })`.
-- Capture `user_id`. Record start timestamp for leftover-scan window.
-- Pre-snapshot row counts on every table this test can touch, keyed by `user_id` (always 0) and globally for aviation tables (must be unchanged at end).
+- Line 78: `const includeChallenge = options.includeChallengeModule ?? false;` — challenge modules are **off by default**.
+- Lines 101–109: the only always-on per-challenge slot is a `briefing` (a recap written *after* you've already done the work).
+- Lines 115–127: the `challenge` module (which carries `title`, `tasks[]`, `challengeUrl`, `game`, `credentialFramework`) is gated behind that flag and is never enabled by any caller.
+- Comment at 111–114 explicitly states the rationale: "the challenge belongs to the Work Order layer on fgn.academy, not the SCORM/Learn layer."
 
-### 2. SEQUENCE clean pass — WO-3010 (Gut the Room)
-- Mint a JWT for the disposable user (service-role `auth.admin.generateLink` or sign in with password).
-- POST `/functions/v1/score-simulation` with the correct seq order for sim-hf-3010's items. Pass-bar ≥70.
-- Expect response: `stand_down=false`, `percent≥70`, no `critFailGrade`.
-- POST `/functions/v1/sync-challenge-completion` with `challenge_id = hf-3010 UUID`, `score = percent`.
-- Assert:
-  - `simulation_runs` row exists, `passed=true`.
-  - `user_work_order_completions`: exactly **1** row for (user, WO-3010), `status=completed`.
-  - `user_points`: exactly **1** XP grant for `source_id=WO-3010` (no double-award).
-  - `user_lesson_progress`: WO-3010 lesson `status=completed`.
-  - `user_notifications`: a `knowledge_check_available` (or equivalent) entry routes to the HF lesson, not aviation.
-  - `skill_credentials`: **0** new rows for this user. ← critical proof guard holds.
+For the **fgn.academy native destination** that comment is defensible — the WO page renders the challenge details and the briefing is just the recap. But the same builder also produces **SCORM ZIPs intended for external LMSes** (Brand Mode = Arcade, Destination switch present on screen 1). An external LMS has no link back to play.fgn.gg's WO layer, so the package as currently built omits:
 
-### 3. LOADOUT clean pass — WO-3120 (Roof, clean)
-- Same flow with a fully correct loadout pick (no critical trap).
-- Same assertions as Step 2, scoped to WO-3120.
+- The challenge's own `description` (the "what you're doing and why")
+- `certification_description` / framework context
+- The full `tasks[]` list with each task's `title`, `description`, and the "Evidence: …" line that `mapTask()` already knows how to extract (builder.ts:214–245)
+- A pre-launch / objective slot before the recap
 
-### 4. CRITICAL pick — WO-3120 (skip fall protection)
-- POST `/score-simulation` with the loadout that includes the `critical=true` skip-fall-protection item.
-- Expect: `stand_down=true`, `percent=0`, `critFailGrade` line in response.
-- POST `/sync-challenge-completion` with `score=0`.
-- Assert:
-  - `simulation_runs` row, `passed=false`, crit-fail recorded.
-  - `user_work_order_completions`: row is `status=failed` (or no completed row) — **not** marked completed.
-  - `user_lesson_progress`: WO-3120 lesson **not** `completed`.
-  - `user_points`: no XP grant for this attempt.
-  - `skill_credentials`: still 0.
+Result: the SCORM package is not self-contained. A learner opening it in an external LMS sees a recap of work they were never told about.
 
-### 5. Hard-delete + cascade verify
-- `auth.admin.deleteUser(user_id)`.
-- Run leftover scan across: `simulation_runs`, `user_work_order_completions`, `user_lesson_progress`, `user_points`, `user_notifications`, `telemetry_sessions`, `user_game_stats`, `skill_passport`, `skill_credentials`, `breakroom_sync_attempts`, `play_sync_attempts` filtered to (a) the disposable `user_id`, and (b) the test email.
-- Required result: **0** rows in every table.
-- If any table lacks `ON DELETE CASCADE` from `auth.users`, manually DELETE leftovers and flag the missing cascade in the report (do not fix it in this step — separate ticket).
+There's a second, smaller issue layered on top: even when a `challenge` module exists in the manifest, the Course Builder Preview UI only iterates `briefing` and `quiz` modules (CourseBuilder.tsx:598–603, 674–688), so admins can't see or sanity-check the challenge body before publishing.
 
-### 6. Aviation untouched check
-- Re-count: aviation course lesson count = 7, aviation sims = 7, no new `skill_credentials` for any real user during the test window, no new mappings.
+## Fix
 
-## Acceptance Report
+Two changes, scoped to the SCORM build pipeline. No DB schema work. No changes to fgn.academy's native lesson model — those rows are written by `scorm-publish` and already carry tasks for `lesson_type='work_order'`.
 
-- Roof activation re-check: all 6 HF challenges visible to anon. ✓
-- Step 2 (WO-3010 sequence): response body, DB assertions, **0 credentials**. 
-- Step 3 (WO-3120 loadout clean): same.
-- Step 4 (WO-3120 critical): stand_down/percent/critFailGrade body, DB assertions, **lesson not completed**.
-- Step 5 leftover counts per table: all 0.
-- Aviation deltas: all 0.
-- Disposable user email + UUID, then confirmed deleted.
+### 1. Builder: emit a self-contained "objective" module per challenge, always
 
-## Guardrails
+In `builder.ts` `buildCourseManifest`, before the existing `briefing` push, emit a new always-on module per challenge that carries the full challenge body. Reuse the existing `mapTask` and `inferFramework` helpers:
 
-- All edge-function calls authenticate as the disposable user, **never** as the preview-logged-in super_admin. Authorization header explicitly set on every `supabase--curl_edge_functions` call.
-- No writes to real users' progress, points, notifications, or credentials at any point.
-- If any assertion fails mid-run, stop, delete the disposable user, and report state — do not retry on a real account.
+```ts
+modules.push({
+  id: `${moduleIdPrefix}-objective`,
+  position: position++,
+  type: 'challenge',
+  title: challengeName,
+  challengeId: fc.challenge.id,
+  challengeUrl: `https://play.fgn.gg/challenges/${fc.challenge.id}`,
+  ...(game !== undefined ? { game } : {}),
+  ...(framework !== undefined ? { credentialFramework: framework } : {}),
+  description: fc.challenge.description ?? '',
+  certificationDescription: fc.challenge.certification_description ?? null,
+  tasks: fc.tasks.map(mapTask),
+  preLaunchHtml: buildPreLaunchHtml(fc, game, framework), // small helper analogous to buildBriefing
+});
+```
 
-Hold for: (a) user confirmation that roof is active on play, (b) approval to enter build mode.
+- Retire the `includeChallengeModule` flag (or default it to `true` for back-compat callers that pass it explicitly). The "challenge layer lives on fgn.academy" assumption no longer holds for the SCORM destination.
+- Extend `CourseModule` of type `challenge` in `src/lib/scorm-player/types.ts` and the equivalent type in `supabase/functions/scorm-build/_lib/course-types.ts` to include `description` and `certificationDescription`. `tasks` and `preLaunchHtml` already exist (see `scorm-publish/index.ts:240–249` where the lesson insert reads them).
+- `scorm-publish` already maps `type:'challenge'` → `lesson_type:'work_order'` with `tasks` and `preLaunchHtml` written into `lessons.content` (scorm-publish/index.ts buildLessonInsert). So once the builder emits the module, fgn.academy native lessons get the body automatically; SCORM ZIP HTML pages get them via the existing SCORM pack/templating path that already understands `type:'challenge'`.
+
+### 2. Course Builder Preview: render and allow override of the challenge body
+
+In `src/pages/admin/CourseBuilder.tsx`:
+
+- Add a `challengeModules` memo alongside the existing `briefingModules` / `quizModules`.
+- Render a new read-only-by-default `ChallengeModuleCard` (mirrors `BriefingModuleCard` shape) that shows: title, description, framework, and a numbered task list with each task's description + evidence spec.
+- Phase 1: read-only display so admins can verify the body before publishing.
+- Phase 2 (separate ticket, only if requested): per-task description overrides plumbed through `useScormBuild` like `briefingHtml` / `quizQuestions` already are.
+
+### 3. Acceptance
+
+- Re-run the MSFS Preflight Walkaround preview. Confirm a new "Objective" / challenge card appears above the Briefing card, listing each task and its evidence spec.
+- Publish to `fgn.academy` (native). Confirm the work-order lesson row's `content` JSON now contains `description`, `tasks`, and `preLaunchHtml`.
+- Publish to `Arcade` (SCORM ZIP). Open the generated ZIP and confirm the challenge HTML page renders the description + task list with no link-out required.
+- Existing aviation/HF tracks: this is additive — no existing lessons are rewritten, and `is_published` state is untouched. New builds get the richer manifest; previously published courses are unaffected unless rebuilt.
+
+## Out of scope
+
+- Changes to native fgn.academy lesson rendering of `lesson_type='work_order'` (already reads `content.tasks` and `content.preLaunchHtml`).
+- Changes to the credential issuance doctrine. This is purely a SCORM/manifest content fix.
+- Per-task editing UX (Phase 2).
