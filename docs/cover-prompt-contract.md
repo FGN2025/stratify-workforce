@@ -1,10 +1,11 @@
-# Cover Prompt Contract — v1.0
+# Cover Prompt Contract — v1.1
 
 Status: **Draft for review** (academy-side implementation conforms to this; Configurator implements against it after approval.)
 
 Source of truth for the work-order-aligned cover image generation pipeline. Both implementations (fgn.academy + Configurator) MUST conform to this contract. The contract is written so it could later back a hosted HTTP service with minimal change — function signatures already match an HTTP boundary.
 
 ## Changelog
+- **v1.1** — Switched from reject-on-off-ratio to center-crop-to-16:9 after generation. Reject only when the resulting crop would fall below the minimum usable banner resolution (1024×576). Motivation: Gemini image models ignore the `size` request parameter and return their own dimensions, so a strict ±3% reject gate failed nearly every generation. Cropping keeps the cheap default model viable while still guaranteeing 16:9 output.
 - **v1.0** — Initial. Two-step pipeline (synthesize prompt → generate image). Industry-neutral language rule. 16:9 enforcement. Server-enforced style wrapper.
 
 ---
