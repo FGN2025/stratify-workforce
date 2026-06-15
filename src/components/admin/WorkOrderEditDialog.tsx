@@ -120,6 +120,9 @@ export function WorkOrderEditDialog({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [fgnOriginChallengeId, setFgnOriginChallengeId] = useState<string | null>(null);
   const [pendingTasks, setPendingTasks] = useState<ExternalTask[]>([]);
+  const [pendingPlaySource, setPendingPlaySource] = useState<Record<string, unknown> | null>(null);
+  const [evidenceUserOverridden, setEvidenceUserOverridden] = useState(false);
+
   // Fetch channels and tenants on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -190,6 +193,8 @@ export function WorkOrderEditDialog({
         setCoverImageUrl('');
         setFgnOriginChallengeId(null);
         setPendingTasks([]);
+        setPendingPlaySource(null);
+        setEvidenceUserOverridden(false);
         // Reset evidence
         setEvidenceRequired(false);
         setEvidenceMinUploads('1');
@@ -199,6 +204,7 @@ export function WorkOrderEditDialog({
         setEvidenceDeadlineHours('');
         setEvidenceOpen(false);
       }
+
     }
   }, [open, workOrder]);
 
@@ -236,7 +242,7 @@ export function WorkOrderEditDialog({
           }
         : null;
 
-      const data = {
+      const data: Record<string, unknown> = {
         title: title.trim(),
         description: description.trim() || null,
         game_title: gameTitle,
@@ -253,11 +259,17 @@ export function WorkOrderEditDialog({
         fgn_origin_challenge_id: fgnOriginChallengeId || null,
       };
 
+      // On create-path only, persist play_source snapshot for convergence-by-construction
+      if (!workOrder?.id) {
+        data.metadata = pendingPlaySource ? { play_source: pendingPlaySource } : null;
+      }
+
+
       if (workOrder?.id) {
         // Update existing
         const { error } = await supabase
           .from('work_orders')
-          .update(data)
+          .update(data as never)
           .eq('id', workOrder.id);
 
         if (error) throw error;
@@ -268,9 +280,10 @@ export function WorkOrderEditDialog({
         });
       } else {
         // Create new
-        const { data: newWO, error } = await supabase.from('work_orders').insert(data).select('id').single();
+        const { data: newWO, error } = await supabase.from('work_orders').insert(data as never).select('id').single();
 
         if (error) throw error;
+
 
         // Auto-register a game_channels row for this game_title if one doesn't
         // exist yet, so new sims become filterable / sidebar-visible the moment
@@ -298,9 +311,10 @@ export function WorkOrderEditDialog({
             work_order_id: newWO.id,
             title: t.title,
             description: t.description || null,
-            order_index: t.order_index ?? idx,
-            source_task_id: t.id,
+            order_index: t.display_order ?? idx,
+            source_task_id: t.id ?? null,
           }));
+
 
           const { error: taskError } = await supabase
             .from('work_order_tasks')
@@ -346,11 +360,29 @@ export function WorkOrderEditDialog({
     setFgnOriginChallengeId(data.fgnOriginChallengeId);
     setIsActive(false);
     setPendingTasks(data.tasks || []);
+    setPendingPlaySource(data.playSource ?? null);
+
+    // Evidence auto-prefill from upstream play_source.requires_evidence
+    // (only when admin hasn't manually toggled evidence in this session)
+    const requiresEvidence =
+      data.playSource &&
+      (data.playSource as { requires_evidence?: boolean }).requires_evidence === true;
+    if (requiresEvidence && !evidenceUserOverridden) {
+      setEvidenceRequired(true);
+      setEvidenceMinUploads('1');
+      setEvidenceMaxUploads('5');
+      setEvidenceAllowedTypes(['image', 'video', 'document']);
+      setEvidenceInstructions('');
+      setEvidenceDeadlineHours('');
+      setEvidenceOpen(true);
+    }
+
     toast({
       title: 'Challenge Imported',
       description: `"${data.title}" data loaded${data.tasks.length > 0 ? ` with ${data.tasks.length} tasks` : ''}. Review and save to create the work order.`,
     });
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
