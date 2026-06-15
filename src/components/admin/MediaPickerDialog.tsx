@@ -175,6 +175,8 @@ export function MediaPickerDialog({
         finalUrl = url;
       } else if (activeTab === 'library' && selectedLibraryUrl) {
         finalUrl = selectedLibraryUrl;
+      } else if (activeTab === 'ai' && aiGeneratedUrl) {
+        finalUrl = aiGeneratedUrl;
       }
 
       if (finalUrl) {
@@ -194,6 +196,7 @@ export function MediaPickerDialog({
     if (activeTab === 'upload') return !!file;
     if (activeTab === 'url') return !!url && isValidUrl(url);
     if (activeTab === 'library') return !!selectedLibraryUrl;
+    if (activeTab === 'ai') return !!aiGeneratedUrl;
     return false;
   };
 
