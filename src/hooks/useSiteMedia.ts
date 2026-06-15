@@ -97,7 +97,7 @@ export function useSiteMediaBatch(locationKeys: string[]) {
  * Hook to get game cover images with fallbacks
  */
 export function useGameCoverImages() {
-  const locationKeys = ['ats_cover', 'farming_sim_cover', 'construction_sim_cover', 'mechanic_sim_cover', 'fiber_tech_cover', 'roadcraft_cover'];
+  const locationKeys = ['ats_cover', 'farming_sim_cover', 'construction_sim_cover', 'mechanic_sim_cover', 'fiber_tech_cover', 'roadcraft_cover', 'house_flipper_cover', 'house_flipper_2_cover'];
   const { data, isLoading } = useSiteMediaBatch(locationKeys);
 
   const gameCoverImages: Record<string, string> = {
@@ -107,6 +107,8 @@ export function useGameCoverImages() {
     Mechanic_Sim: data?.mechanic_sim_cover?.url || fallbackMedia.mechanic_sim_cover,
     Fiber_Tech: data?.fiber_tech_cover?.url || fallbackMedia.fiber_tech_cover,
     Roadcraft: data?.roadcraft_cover?.url || fallbackMedia.roadcraft_cover,
+    House_Flipper: data?.house_flipper_cover?.url || fallbackMedia.house_flipper_cover,
+    House_Flipper_2: data?.house_flipper_2_cover?.url || fallbackMedia.house_flipper_2_cover,
   };
 
   return { gameCoverImages, isLoading };
