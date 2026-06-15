@@ -150,6 +150,26 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
               </Link>
             </Button>
 
+            {/* Refresh play_source */}
+            {workOrder.fgn_origin_challenge_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full justify-between"
+                onClick={openRefreshDialog}
+              >
+                <span className="flex items-center">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh play_source from play.fgn.gg
+                </span>
+                <Badge variant={currentPlaySource ? 'default' : 'secondary'} className="text-xs">
+                  {currentPlaySource ? 'present' : 'missing'}
+                </Badge>
+              </Button>
+            )}
+
+
+
             {/* Metadata rows */}
             <TooltipProvider>
               <div className="space-y-1">
