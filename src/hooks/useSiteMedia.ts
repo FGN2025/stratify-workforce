@@ -27,6 +27,8 @@ const fallbackMedia: Record<string, string> = {
   mechanic_sim_cover: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&h=400&fit=crop',
   fiber_tech_cover: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&h=400&fit=crop',
   roadcraft_cover: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&h=400&fit=crop',
+  house_flipper_cover: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&h=400&fit=crop',
+  house_flipper_2_cover: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&h=400&fit=crop',
 };
 
 /**
