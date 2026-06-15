@@ -249,6 +249,69 @@ function mapTask(t: PlayChallengeTask): {
   };
 }
 
+/**
+ * Build the pre-launch HTML for the always-on Objective module. Carries
+ * the challenge's own description + framework / certification context so
+ * the SCORM package is self-contained for external LMSes that have no
+ * link back to play.fgn.gg or fgn.academy's Work Order layer.
+ */
+function buildObjectiveHtml(
+  fc: FetchedChallenge,
+  game: GameTitle | undefined,
+  framework: string | undefined,
+): string {
+  const ch = fc.challenge;
+  const parts: string[] = [];
+
+  parts.push(`<h3>Objective</h3>`);
+  if (ch.description && ch.description.trim().length > 0) {
+    parts.push(`<p>${escapeObjHtml(ch.description)}</p>`);
+  } else {
+    parts.push(
+      `<p>Complete the tasks below in ${escapeObjHtml(fc.game?.name ?? 'the source simulator')} and submit evidence for each.</p>`,
+    );
+  }
+
+  const contextBits: string[] = [];
+  if (framework) {
+    contextBits.push(
+      `This challenge is part of the <strong>${escapeObjHtml(framework)}</strong> credential pathway.`,
+    );
+  }
+  if (ch.cfr_reference) {
+    contextBits.push(
+      `Referenced standard: <strong>${escapeObjHtml(ch.cfr_reference)}</strong>.`,
+    );
+  }
+  if (ch.cdl_domain) {
+    contextBits.push(
+      `FMCSA CDL knowledge domain: <strong>${escapeObjHtml(ch.cdl_domain)}</strong>.`,
+    );
+  }
+  if (contextBits.length > 0) {
+    parts.push(`<p>${contextBits.join(' ')}</p>`);
+  }
+
+  if (ch.certification_description && ch.certification_description.trim().length > 0) {
+    parts.push(`<p><em>${escapeObjHtml(ch.certification_description)}</em></p>`);
+  }
+
+  parts.push(`<h3>How this is evaluated</h3>`);
+  parts.push(
+    `<p>Each task lists the in-game action to perform and the evidence you must submit (screenshots, video, or annotation). Submit your evidence on fgn.academy — once your Work Order is verified, this course unlocks the post-completion recap and knowledge check.</p>`,
+  );
+
+  return parts.filter(Boolean).join('\n');
+}
+
+function escapeObjHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 function buildCompletionHtml(
   challenges: FetchedChallenge[],
   framework: string | undefined,
