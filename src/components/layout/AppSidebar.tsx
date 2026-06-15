@@ -193,10 +193,6 @@ export function AppSidebar() {
     }
     return order;
   }, [gameChannels]);
-  const channelByGame = useMemo(
-    () => new Map(gameChannels.map((g) => [g.game_title, g])),
-    [gameChannels]
-  );
 
   // Pending counts for badges
   const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
