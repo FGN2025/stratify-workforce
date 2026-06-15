@@ -241,7 +241,7 @@ type CoverError =
   | { code: "internal", message: string };
 ```
 
-4xx from the AI Gateway is terminal — do NOT retry. Surface `gateway`/`moderation` to the UI with the upstream message.
+4xx from the AI Gateway is terminal — do NOT retry. Surface `gateway`/`moderation` to the UI with the upstream message. As of v1.1, `off_ratio` means the returned image was **uncroppable** to 16:9 at the minimum usable resolution (`1024×576`) — not "outside ±3% of 16:9". Normal non-16:9 output from a model that ignores `size` (e.g. Gemini) is center-cropped to 16:9 and succeeds.
 
 ---
 
