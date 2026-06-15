@@ -18,7 +18,7 @@ import {
   BookOpen,
   Video,
   FileText,
-  Map,
+  Map as MapIcon,
   Target,
   Code,
   HelpCircle,
