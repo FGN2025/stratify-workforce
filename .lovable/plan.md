@@ -1,78 +1,66 @@
-# Build: backfill-play-source + Refresh button, then dry-run on 6 HF rows
 
-Approved scope locked. Two reporting additions baked in.
+# Convergence Pass — Approved Scope
 
-## 1. Edge function `supabase/functions/backfill-play-source/index.ts`
+Preflight confirmed: `work_order_tasks.source_task_id` is **nullable** (text). Safe to write null. Scope counts: 14 imported rows missing tasks, 5 rows with `play_source.requires_evidence=true` AND `evidence_requirements IS NULL`.
 
-Admin-only (Bearer token → `has_role(user,'admin')`). Mirrors `fetch-challenges` auth.
+---
 
-**Request**
-```json
-{ "work_order_ids": ["uuid", ...], "dry_run": true, "force": false }
-```
-Defaults: `dry_run=true`, `force=false`. Re-runs are no-ops on already-populated rows.
+## Phase A — Forward-fixes (ship in one batch, no data writes)
 
-**Logic**
-1. Select WOs: `id, fgn_origin_challenge_id, title, cover_image_url, difficulty, xp_reward, description, game_title, category_key, channel_id, skills_required, metadata`, filtered by `work_order_ids` when provided, plus `fgn_origin_challenge_id IS NOT NULL`. When `force=false`, also require `metadata->'play_source' IS NULL` (skipped rows reported as `skipped-already-present`).
-2. Single cached upstream call: `POST ${FGN_PLAY_SUPABASE_URL}/functions/v1/ecosystem-data-api` with `{ action: 'challenges' }` + `{ action: 'games' }` (for `game_name` resolution). Build a map keyed by challenge `id`.
-3. Per row, look up by `fgn_origin_challenge_id`. Not in map → `not-found-on-play`.
-4. Build `play_source` from the same `PLAY_CHALLENGE_FIELDS` whitelist as `fetch-challenges` (lossless): `id, name, description, game_id, challenge_type, difficulty, points_reward, estimated_minutes, start_date, end_date, requires_evidence, cover_image_url, game_name, is_active, is_featured, created_at, updated_at`.
-5. `dry_run=true`: return the full payload, no DB write.
-6. `dry_run=false`: `UPDATE work_orders SET metadata = jsonb_set(coalesce(metadata,'{}'::jsonb), '{play_source}', $snapshot::jsonb, true) WHERE id = $1`. Only `metadata` touched.
-7. Log into `play_sync_attempts` (`direction='outbound'`, `action='backfill-play-source'`).
+**Gap 1: `play_source` on INSERT** (additive, 2 files)
+- `src/components/admin/ImportChallengeDialog.tsx`:
+  - Add `play_source?: Record<string, unknown>` to `ExternalChallenge` and `MappedChallengeData`.
+  - Forward `play_source: challenge.play_source` from `handleSelect`.
+- `src/components/admin/WorkOrderEditDialog.tsx`:
+  - Hold `pendingPlaySource` in state, set from `handleImportChallenge(data)`.
+  - On create-path INSERT only: `metadata: pendingPlaySource ? { play_source: pendingPlaySource } : null`. Edit path untouched.
 
-**Response**
-```json
-{
-  "dry_run": true,
-  "summary": { "would_update": 6, "updated": 0, "skipped_already_present": 0, "not_found_on_play": 0 },
-  "rows": [
-    {
-      "work_order_id": "...",
-      "fgn_origin_challenge_id": "...",
-      "current_title": "...",
-      "current_cover_image_url": "...",   // leg-1 — preserved
-      "status": "would-update",
-      "play_source": { /* full snapshot */ },
-      "preview": {
-        "name": "...", "description": "...", "cover_image_url": "...",  // leg-2 fallback only
-        "difficulty": 0, "points_reward": 0, "game_name": "...",
-        "challenge_type": "...", "estimated_minutes": 0,
-        "requires_evidence": false, "is_active": true, "is_featured": false,
-        "start_date": null, "end_date": null,
-        "created_at": "...", "updated_at": "..."
-      }
-    }
-  ]
-}
-```
+**Gap 3a: `display_order` → `order_index` mapping fix**
+- `src/components/admin/ImportChallengeDialog.tsx`:
+  - Rename `ExternalTask.order_index` → `display_order` (match upstream truth).
+- `src/components/admin/WorkOrderEditDialog.tsx` task insert:
+  - Use `order_index: t.display_order ?? idx`. Upstream order wins; array index is fallback only.
+- Silent bug on all imports; this fixes it forward.
 
-## 2. Admin "Refresh play_source" button — `src/pages/WorkOrderDetail.tsx`
+**Gap 2: evidence auto-prefill on import**
+- `src/components/admin/WorkOrderEditDialog.tsx`:
+  - When `pendingPlaySource?.requires_evidence === true` and admin hasn't toggled, prefill `evidenceRequired = true` with platform-standard defaults:
+    ```
+    { min_uploads: 1, max_uploads: 5, allowed_types: ['image','video','document'], instructions: '', deadline_hours: null }
+    ```
+  - Admin override stays authoritative.
 
-Admin-only panel (gated via `useUserRole().isAdmin`).
-- Click → invokes function with `{ work_order_ids: [thisId], dry_run: true, force: true }`, opens a diff dialog (current `metadata.play_source` vs. fresh snapshot).
-- Confirm → re-invokes with `dry_run: false, force: true`, refetches the WO.
-- Uses `supabase.functions.invoke('backfill-play-source', ...)`.
+No migrations, no schema changes, no edge function changes. Confirm "Phase A shipped, byte-safe" after the edits compile.
 
-## 3. Execute the dry run on the six HF rows and report
+---
 
-After deploy, call `{ work_order_ids: [<6 HF ids>], dry_run: true }`. Report per row: name, description, cover_image_url, difficulty, points_reward, game_name, plus the full snapshot.
+## Phase B — Data backfills (dry-run first, hold for approval)
 
-Add to the dry-run report:
+**Task backfill (scope: all 14)**
+- Extend `supabase/functions/backfill-play-source/index.ts` with a `mode: 'tasks'` branch (or new sibling function `backfill-work-order-tasks`), reusing the cached `fetch-challenges` snapshot pattern.
+- Targets: all 14 work orders with `fgn_origin_challenge_id IS NOT NULL` AND zero `work_order_tasks` rows.
+- For each, read upstream `tasks[]` from the cached snapshot.
+- Skip rows with zero upstream tasks (legitimately empty; report them).
+- Per-task row: `{ work_order_id, title, description, order_index: t.display_order ?? idx, source_task_id: null }`.
+- **Dry-run report:** for each of 14 rows: `{ wo_id, title, upstream_task_count, would_skip: bool, tasks: [...] }`. Hold for approval.
 
-**Cover inheritance confirmation.** The `cover_image_url` inside each `play_source` snapshot is the **challenge's own cover from play.fgn.gg**. It lives at `metadata.play_source.cover_image_url` only — leg-2 fallback. The work order's `cover_image_url` column (leg-1, the dedicated covers you placed) is **not read, not written, not touched** by this function. Inheritance order downstream (cover-prompt synthesis, naming/provenance) stays: leg-1 `work_orders.cover_image_url` wins; leg-2 `metadata.play_source.cover_image_url` only used when leg-1 is null. The dry-run report will state this explicitly per row.
+**Evidence backfill (conditional, today's matches: 5)**
+- Same function or a sibling `backfill-evidence-requirements` branch.
+- Targets: `fgn_origin_challenge_id IS NOT NULL` AND `metadata->'play_source'->>'requires_evidence' = 'true'` AND `evidence_requirements IS NULL`.
+- Write the platform-standard JSONB above.
+- **Dry-run report:** the 5 rows with the JSONB that would be written. Hold for approval.
 
-**Then HOLD** for approval before any `dry_run: false` write.
+Both Phase B writes are gated on explicit "approve write" from user. Re-runnable later for more rows once `play_source` is swept platform-wide.
 
-## 4. Post-write report (after approval)
+---
 
-After running `dry_run: false`:
-1. SELECT the six rows; verify `metadata.play_source` populated and the nine other field columns (`title, cover_image_url, difficulty, xp_reward, description, game_title, category_key, channel_id, skills_required`) are byte-identical to pre-write.
-2. **Convergence statement.** Compare the post-backfill row shape to what a net-new INSERT from the import UI (`WorkOrderEditDialog`) produces. Report explicitly: is `metadata.play_source` the ONLY field a net-new import would populate that these six were missing? If yes → six are structurally identical to net-new imports (convergence achieved). If any other gap exists, list it.
+## Parked (noted, not this pass)
+- 35 of 41 work orders still lack `play_source` entirely. Run the existing `backfill-play-source` unscoped in a future pass; evidence conditional backfill will then pick up additional rows automatically.
+- Upstream tasks have no `id` today → `source_task_id` stays null as known limitation.
 
-## Scope guardrails (non-negotiable)
+---
 
-- Only column written: `work_orders.metadata` via `jsonb_set` on the `play_source` key.
-- Untouched: `simulations`, `simulation_items`, `lessons`, `challenge_lesson_mappings`, `user_work_order_completions`, `cover_image_url`, every other WO column, every relationship.
-- No schema migration. No change to `fetch-challenges`. No change to the `already_imported` import-UI gate.
-- Idempotent: default flags = no-op on populated rows.
+## Execution order
+1. Switch to build mode → ship Phase A (3 changes across 2 files).
+2. Build Phase B backfill function(s), run **dry-run only**, report payloads.
+3. Wait for user approval on each Phase B write.
