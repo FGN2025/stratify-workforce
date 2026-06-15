@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlayCircle, Plane } from 'lucide-react';
+import { PlayCircle, ListChecks } from 'lucide-react';
 import { useSimulationsForWorkOrder } from '@/hooks/useSimulations';
 
 interface Props {
@@ -18,14 +18,14 @@ export function WorkOrderSimulationsCard({ workOrderId }: Props) {
     <Card className="lg:col-span-3 border-primary/30">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Plane className="h-5 w-5 text-primary" />
+          <ListChecks className="h-5 w-5 text-primary" />
           {sims.length === 1 ? 'Simulation' : 'Choose Your Simulation'}
         </CardTitle>
       </CardHeader>
       <CardContent className="grid md:grid-cols-2 gap-3">
         {sims.map((s) => {
           const label =
-            s.sim_type === 'sequence' ? 'Plan the route' : 'Load the airplane';
+            s.sim_type === 'sequence' ? 'Procedure' : 'Resources';
           return (
             <button
               key={s.id}
