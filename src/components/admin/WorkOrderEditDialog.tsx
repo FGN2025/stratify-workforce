@@ -272,6 +272,26 @@ export function WorkOrderEditDialog({
 
         if (error) throw error;
 
+        // Auto-register a game_channels row for this game_title if one doesn't
+        // exist yet, so new sims become filterable / sidebar-visible the moment
+        // their first work order is imported. Best-effort; ignore failures.
+        try {
+          const { SIM_RESOURCES } = await import('@/config/simResources');
+          const cfg = SIM_RESOURCES[gameTitle];
+          await supabase
+            .from('game_channels')
+            .upsert(
+              {
+                game_title: gameTitle,
+                name: cfg?.title ?? gameTitle.replace(/_/g, ' '),
+                accent_color: cfg?.accentColor ?? '#94A3B8',
+              },
+              { onConflict: 'game_title', ignoreDuplicates: true },
+            );
+        } catch (e) {
+          console.warn('game_channels auto-upsert skipped:', e);
+        }
+
         // Insert tasks if imported from FGN challenge
         if (newWO && pendingTasks.length > 0) {
           const taskRows = pendingTasks.map((t, idx) => ({
