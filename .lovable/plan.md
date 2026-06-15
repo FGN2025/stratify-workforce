@@ -1,52 +1,78 @@
-## Build: crop-to-16:9 instead of reject; contract v1.1; live test
+# Build: backfill-play-source + Refresh button, then dry-run on 6 HF rows
 
-### 1. `generate-cover-image/index.ts` — replace ratio gate with center-crop
+Approved scope locked. Two reporting additions baked in.
 
-After decoding the returned PNG, decode pixels (use `npm:pngjs@7` — pure-JS, Deno-compatible), then:
+## 1. Edge function `supabase/functions/backfill-play-source/index.ts`
 
-- Compute `actual = width / height`, `target = 16/9 ≈ 1.7778`.
-- **If `|actual - target| / target <= 0.005`** (essentially on-target, e.g. gpt-image-2's 1792×1024 at 1.75 is within 1.5% — actually 1.75 is 1.5% off; we'll use a tighter "no-op" threshold of 0.5% so 1792×1024 still gets a tiny crop to true 16:9 OR we accept it as-is. Decision: skip crop only when `actual === target` to keep one code path; otherwise always crop. 1792×1024 → crop to 1792×1008, negligible loss).
-- **Else crop:**
-  - If `actual > target` (too wide): keep full height, new width = `round(height * target)`, x-offset = `round((width - newWidth) / 2)`.
-  - If `actual < target` (too tall/portrait): keep full width, new height = `round(width / target)`, y-offset = `round((height - newHeight) / 2)`.
-- **Uncroppable rejection** (narrow, per your spec): reject with `{ code: "off_ratio", actual_ratio, target_ratio }` only when:
-  - cropped width `< 1024` OR cropped height `< 576` (below acceptable banner resolution), OR
-  - `actual < 0.75` (severely portrait — Gemini occasionally returns 1:1 or square-ish; 1:1 → cropped 1024×576 from 1024×1024 = OK, so 1:1 passes; only block when crop would be < 576 tall from a portrait original).
-  - In practice: 1024×1024 → crops to 1024×576, passes. 768×1024 portrait → crops to 768×432, fails resolution gate.
-- Re-encode the cropped pixels back to PNG using `pngjs` and upload the cropped buffer (not the original).
-- Log raw dims, cropped dims, and final ratio for observability.
+Admin-only (Bearer token → `has_role(user,'admin')`). Mirrors `fetch-challenges` auth.
 
-### 2. Contract update — `docs/cover-prompt-contract.md` → v1.1
+**Request**
+```json
+{ "work_order_ids": ["uuid", ...], "dry_run": true, "force": false }
+```
+Defaults: `dry_run=true`, `force=false`. Re-runs are no-ops on already-populated rows.
 
-- Update changelog with a v1.1 line: "Switched from reject-on-off-ratio to center-crop-to-16:9 after generation. Reject only when uncroppable (resolution floor or degenerate aspect)."
-- §6 / §7: revise the procedure. Replace step 4's reject language with:
-  > 4. Center-crop the decoded PNG to 16:9. When the model honors `size` natively (e.g. `openai/gpt-image-2` at `1792x1024`), the crop is a no-op or near-no-op. When the model ignores `size` (e.g. Gemini image models), crop the returned dimensions to 16:9. Reject with `off_ratio` only when the resulting crop would fall below `1024×576` or the source is severely portrait such that no usable 16:9 region exists.
-- §7 `size: "1792x1024"` request stays (honored by OpenAI, ignored by Gemini → then cropped). Add a note clarifying this.
-- §8 `off_ratio` semantics updated: now means "uncroppable", not "outside ±3%".
+**Logic**
+1. Select WOs: `id, fgn_origin_challenge_id, title, cover_image_url, difficulty, xp_reward, description, game_title, category_key, channel_id, skills_required, metadata`, filtered by `work_order_ids` when provided, plus `fgn_origin_challenge_id IS NOT NULL`. When `force=false`, also require `metadata->'play_source' IS NULL` (skipped rows reported as `skipped-already-present`).
+2. Single cached upstream call: `POST ${FGN_PLAY_SUPABASE_URL}/functions/v1/ecosystem-data-api` with `{ action: 'challenges' }` + `{ action: 'games' }` (for `game_name` resolution). Build a map keyed by challenge `id`.
+3. Per row, look up by `fgn_origin_challenge_id`. Not in map → `not-found-on-play`.
+4. Build `play_source` from the same `PLAY_CHALLENGE_FIELDS` whitelist as `fetch-challenges` (lossless): `id, name, description, game_id, challenge_type, difficulty, points_reward, estimated_minutes, start_date, end_date, requires_evidence, cover_image_url, game_name, is_active, is_featured, created_at, updated_at`.
+5. `dry_run=true`: return the full payload, no DB write.
+6. `dry_run=false`: `UPDATE work_orders SET metadata = jsonb_set(coalesce(metadata,'{}'::jsonb), '{play_source}', $snapshot::jsonb, true) WHERE id = $1`. Only `metadata` touched.
+7. Log into `play_sync_attempts` (`direction='outbound'`, `action='backfill-play-source'`).
 
-### 3. Live end-to-end test
+**Response**
+```json
+{
+  "dry_run": true,
+  "summary": { "would_update": 6, "updated": 0, "skipped_already_present": 0, "not_found_on_play": 0 },
+  "rows": [
+    {
+      "work_order_id": "...",
+      "fgn_origin_challenge_id": "...",
+      "current_title": "...",
+      "current_cover_image_url": "...",   // leg-1 — preserved
+      "status": "would-update",
+      "play_source": { /* full snapshot */ },
+      "preview": {
+        "name": "...", "description": "...", "cover_image_url": "...",  // leg-2 fallback only
+        "difficulty": 0, "points_reward": 0, "game_name": "...",
+        "challenge_type": "...", "estimated_minutes": 0,
+        "requires_evidence": false, "is_active": true, "is_featured": false,
+        "start_date": null, "end_date": null,
+        "created_at": "...", "updated_at": "..."
+      }
+    }
+  ]
+}
+```
 
-Against work order `cb71ebac-b274-4a53-b968-a6c8f82f1800` (Fiber Line Installation):
-1. Call `synthesize-cover-prompt` → capture prompt.
-2. Call `generate-cover-image` with that prompt.
-3. Report: raw width × height returned by Gemini, cropped width × height, final ratio, stored `cover_image_url`, and visual eyeball of the result.
+## 2. Admin "Refresh play_source" button — `src/pages/WorkOrderDetail.tsx`
 
-If the result is awkwardly cropped (e.g. main subject sliced off), I will flag it and we can discuss either (a) accepting it for v1.1 and revisiting cropping strategy (e.g. saliency-based) in v1.2, or (b) switching that work order to gpt-image-2 via `ai_platform_settings` and regenerating to compare.
+Admin-only panel (gated via `useUserRole().isAdmin`).
+- Click → invokes function with `{ work_order_ids: [thisId], dry_run: true, force: true }`, opens a diff dialog (current `metadata.play_source` vs. fresh snapshot).
+- Confirm → re-invokes with `dry_run: false, force: true`, refetches the WO.
+- Uses `supabase.functions.invoke('backfill-play-source', ...)`.
 
-### Technical detail
+## 3. Execute the dry run on the six HF rows and report
 
-- `pngjs` import: `import { PNG } from "npm:pngjs@7";` — works in Deno via the npm: specifier; pure-JS, no native deps.
-- Decode: `PNG.sync.read(buffer)` returns `{ width, height, data: Uint8Array of RGBA }`.
-- Crop: allocate new RGBA buffer of `croppedW * croppedH * 4`, copy row by row from `srcY = yOffset` to `yOffset + croppedH`, starting at `xOffset * 4` for `croppedW * 4` bytes per row.
-- Encode: `PNG.sync.write(new PNG({ width, height, data }))` → Buffer; upload as `Uint8Array`.
-- No change to the storage path scheme, the prompt persistence, or the auth/admin checks.
-- No change to `synthesize-cover-prompt`.
-- No DB migration needed (semantics change, no schema change).
+After deploy, call `{ work_order_ids: [<6 HF ids>], dry_run: true }`. Report per row: name, description, cover_image_url, difficulty, points_reward, game_name, plus the full snapshot.
 
-### Out of scope (per your direction)
+Add to the dry-run report:
 
-- Saliency-aware cropping (face/subject detection). Center-crop only for v1.1.
-- Changing the default model. Gemini stays default; gpt-image-2 remains the premium swap via `ai_platform_settings.cover_image_model`.
-- Configurator-side work. Still on hold pending contract approval.
+**Cover inheritance confirmation.** The `cover_image_url` inside each `play_source` snapshot is the **challenge's own cover from play.fgn.gg**. It lives at `metadata.play_source.cover_image_url` only — leg-2 fallback. The work order's `cover_image_url` column (leg-1, the dedicated covers you placed) is **not read, not written, not touched** by this function. Inheritance order downstream (cover-prompt synthesis, naming/provenance) stays: leg-1 `work_orders.cover_image_url` wins; leg-2 `metadata.play_source.cover_image_url` only used when leg-1 is null. The dry-run report will state this explicitly per row.
 
-Approve and I'll implement, deploy, run the test, and paste raw dims / cropped dims / ratio / URL back here.
+**Then HOLD** for approval before any `dry_run: false` write.
+
+## 4. Post-write report (after approval)
+
+After running `dry_run: false`:
+1. SELECT the six rows; verify `metadata.play_source` populated and the nine other field columns (`title, cover_image_url, difficulty, xp_reward, description, game_title, category_key, channel_id, skills_required`) are byte-identical to pre-write.
+2. **Convergence statement.** Compare the post-backfill row shape to what a net-new INSERT from the import UI (`WorkOrderEditDialog`) produces. Report explicitly: is `metadata.play_source` the ONLY field a net-new import would populate that these six were missing? If yes → six are structurally identical to net-new imports (convergence achieved). If any other gap exists, list it.
+
+## Scope guardrails (non-negotiable)
+
+- Only column written: `work_orders.metadata` via `jsonb_set` on the `play_source` key.
+- Untouched: `simulations`, `simulation_items`, `lessons`, `challenge_lesson_mappings`, `user_work_order_completions`, `cover_image_url`, every other WO column, every relationship.
+- No schema migration. No change to `fetch-challenges`. No change to the `already_imported` import-UI gate.
+- Idempotent: default flags = no-op on populated rows.
