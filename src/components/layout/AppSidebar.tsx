@@ -178,6 +178,25 @@ export function AppSidebar() {
   
   // Fetch database resources
   const { data: dbResources } = useSimResources();
+  const { data: gameChannels = [] } = useGameChannels();
+
+  // Sidebar SIM CATEGORIES order: static base first, then any extra game_channels
+  // (e.g. House Flipper, future imports) appended so new games auto-appear.
+  const GAME_ORDER = useMemo<GameTitle[]>(() => {
+    const order = [...BASE_GAME_ORDER];
+    const seen = new Set<GameTitle>(order);
+    for (const ch of gameChannels) {
+      if (!seen.has(ch.game_title)) {
+        order.push(ch.game_title);
+        seen.add(ch.game_title);
+      }
+    }
+    return order;
+  }, [gameChannels]);
+  const channelByGame = useMemo(
+    () => new Map(gameChannels.map((g) => [g.game_title, g])),
+    [gameChannels]
+  );
 
   // Pending counts for badges
   const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
