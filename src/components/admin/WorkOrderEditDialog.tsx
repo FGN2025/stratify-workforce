@@ -699,8 +699,12 @@ export function WorkOrderEditDialog({
                     <Switch
                       id="evidence-required"
                       checked={evidenceRequired}
-                      onCheckedChange={setEvidenceRequired}
+                      onCheckedChange={(v) => {
+                        setEvidenceUserOverridden(true);
+                        setEvidenceRequired(v);
+                      }}
                     />
+
                   </div>
 
                   {evidenceRequired && (
