@@ -599,6 +599,10 @@ function PreviewStage({
     () => manifest.modules.filter((m): m is Extract<CourseModule, { type: 'briefing' }> => m.type === 'briefing'),
     [manifest]
   );
+  const challengeModules = useMemo(
+    () => manifest.modules.filter((m): m is Extract<CourseModule, { type: 'challenge' }> => m.type === 'challenge'),
+    [manifest]
+  );
   const quizModules = useMemo(
     () => manifest.modules.filter((m): m is Extract<CourseModule, { type: 'quiz' }> => m.type === 'quiz'),
     [manifest]
