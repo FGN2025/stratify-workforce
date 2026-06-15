@@ -67,7 +67,7 @@ import { usePendingCommunityCount } from '@/hooks/usePendingCommunityCount';
 import { cn } from '@/lib/utils';
 import { SIM_RESOURCES, hasResources } from '@/config/simResources';
 import type { GameTitle } from '@/types/tenant';
-import { Gamepad2 as DefaultGameIcon } from 'lucide-react';
+
 import type { LucideIcon } from 'lucide-react';
 
 const mainNavItems = [
