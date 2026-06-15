@@ -87,7 +87,20 @@ const WorkOrders = () => {
     return counts;
   }, [woWithCategory, subscribedGames, categories]);
 
-  const getRandomCommunity = () => (communities.length === 0 ? undefined : communities[Math.floor(Math.random() * communities.length)]);
+  // Stable, data-driven community badge:
+  //  - tenant_id IS NULL → fixed "FGN Global" first-party badge
+  //  - tenant_id IS SET  → that real tenant
+  // Never random — random assignment implied partner relationships that do not exist.
+  const communityMap = useMemo(
+    () => Object.fromEntries(communities.map((c) => [c.id, c])) as Record<string, Tenant>,
+    [communities]
+  );
+  const fgnGlobalCommunity = useMemo(
+    () => communities.find((c) => c.slug === 'fgn'),
+    [communities]
+  );
+  const resolveCommunity = (tenantId: string | null | undefined) =>
+    (tenantId ? communityMap[tenantId] : fgnGlobalCommunity) ?? fgnGlobalCommunity;
 
   if (loadingWorkOrders) {
     return (
@@ -144,7 +157,7 @@ const WorkOrders = () => {
           <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />}>
             {filteredWorkOrders.slice(0, 6).map((wo, idx) => (
               <div key={wo.id} className="w-72 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} variant={idx === 0 ? 'featured' : 'default'} />
+                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant={idx === 0 ? 'featured' : 'default'} />
               </div>
             ))}
           </HorizontalCarousel>
@@ -154,7 +167,7 @@ const WorkOrders = () => {
           <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />}>
             {filteredWorkOrders.slice(0, 4).map((wo) => (
               <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} variant="compact" />
+                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
               </div>
             ))}
           </HorizontalCarousel>
@@ -185,7 +198,7 @@ const WorkOrders = () => {
                 <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
                   {catItems.map((wo) => (
                     <div key={`${cat.key}-${wo.id}`} className="w-72 shrink-0 snap-start">
-                      <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} />
+                      <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
                     </div>
                   ))}
                 </HorizontalCarousel>
@@ -228,7 +241,7 @@ const WorkOrders = () => {
           <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions">
             {filteredWorkOrders.slice(0, 6).map((wo) => (
               <div key={`competition-${wo.id}`} className="w-72 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={getRandomCommunity()} />
+                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
               </div>
             ))}
           </HorizontalCarousel>
