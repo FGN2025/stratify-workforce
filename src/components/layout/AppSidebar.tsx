@@ -61,11 +61,13 @@ import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSimResources } from '@/hooks/useSimResources';
+import { useGameChannels } from '@/hooks/useGameChannels';
 import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
 import { usePendingCommunityCount } from '@/hooks/usePendingCommunityCount';
 import { cn } from '@/lib/utils';
 import { SIM_RESOURCES, hasResources } from '@/config/simResources';
 import type { GameTitle } from '@/types/tenant';
+import { Gamepad2 as DefaultGameIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const mainNavItems = [
@@ -148,8 +150,9 @@ const standaloneAdminItems = [
   { title: 'Developers', url: '/developers', icon: Code, developerOnly: true },
 ];
 
-// Order of games in the sidebar
-const GAME_ORDER: GameTitle[] = ['ATS', 'Fiber_Tech', 'Roadcraft', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'MSFS_2024'];
+// Static preferred ordering for the original sims. Any additional game_channels
+// rows (e.g. House Flipper, future imports) are appended automatically.
+const BASE_GAME_ORDER: GameTitle[] = ['ATS', 'Fiber_Tech', 'Roadcraft', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'MSFS_2024'];
 
 // Icon mapping for database resources
 const ICON_MAP: Record<string, LucideIcon> = {
