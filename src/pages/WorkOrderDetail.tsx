@@ -669,6 +669,7 @@ export default function WorkOrderDetail() {
         onSelect={handleCoverImageUpdate}
         title="Select Cover Image"
         currentImageUrl={coverImage}
+        workOrderId={workOrder?.id}
       />
     </AppLayout>
   );
