@@ -108,22 +108,50 @@ Deno.serve(async (req) => {
     const b64: string | undefined = payload?.data?.[0]?.b64_json;
     if (!b64) return json({ code: "internal", message: "No image data returned" }, 502);
 
-    // Decode + measure ratio.
-    const bytes = base64ToBytes(b64);
-    const dims = readPngDimensions(bytes);
-    if (!dims) return json({ code: "internal", message: "Could not parse PNG dimensions" }, 502);
-    const actual = dims.width / dims.height;
-    const diff = Math.abs(actual - TARGET_RATIO) / TARGET_RATIO;
-    if (diff > RATIO_TOLERANCE) {
-      return json({ code: "off_ratio", actual_ratio: actual, target_ratio: TARGET_RATIO }, 422);
+    // Decode PNG fully (pixels + metadata).
+    const rawBytes = base64ToBytes(b64);
+    let decoded: PNG;
+    try {
+      decoded = PNG.sync.read(Buffer.from(rawBytes));
+    } catch (e) {
+      return json({ code: "internal", message: `PNG decode failed: ${e instanceof Error ? e.message : String(e)}` }, 502);
     }
+    const rawWidth = decoded.width;
+    const rawHeight = decoded.height;
+    const rawRatio = rawWidth / rawHeight;
+
+    // Center-crop to 16:9 (contract v1.1).
+    const crop = centerCropTo16x9(decoded);
+    if (!crop.ok) {
+      console.warn("[generate-cover-image] uncroppable", { rawWidth, rawHeight, rawRatio });
+      return json(
+        {
+          code: "off_ratio",
+          actual_ratio: rawRatio,
+          target_ratio: TARGET_RATIO,
+          message: crop.reason,
+        },
+        422,
+      );
+    }
+    const finalBytes = new Uint8Array(crop.png);
+    const finalWidth = crop.width;
+    const finalHeight = crop.height;
+    const finalRatio = finalWidth / finalHeight;
+    console.log("[generate-cover-image] dims", {
+      raw: `${rawWidth}x${rawHeight}`,
+      raw_ratio: rawRatio.toFixed(4),
+      cropped: `${finalWidth}x${finalHeight}`,
+      final_ratio: finalRatio.toFixed(4),
+      target_ratio: TARGET_RATIO.toFixed(4),
+    });
 
     // Upload.
     const ts = Date.now();
     const path = `work-orders/${work_order_id}/cover-${ts}.png`;
     const { error: uploadErr } = await admin.storage
       .from(BUCKET)
-      .upload(path, bytes, { contentType: "image/png", upsert: false });
+      .upload(path, finalBytes, { contentType: "image/png", upsert: false });
     if (uploadErr) return json({ code: "storage", message: uploadErr.message }, 500);
 
     const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
@@ -137,7 +165,21 @@ Deno.serve(async (req) => {
       .eq("id", work_order_id);
     if (updErr) return json({ code: "internal", message: updErr.message }, 500);
 
-    return json({ cover_image_url, cover_image_prompt }, 200);
+    return json(
+      {
+        cover_image_url,
+        cover_image_prompt,
+        debug: {
+          raw_width: rawWidth,
+          raw_height: rawHeight,
+          raw_ratio: rawRatio,
+          cropped_width: finalWidth,
+          cropped_height: finalHeight,
+          final_ratio: finalRatio,
+        },
+      },
+      200,
+    );
   } catch (e) {
     return json({ code: "internal", message: e instanceof Error ? e.message : String(e) }, 500);
   }
@@ -157,16 +199,48 @@ function base64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
-// PNG IHDR: 8-byte signature, then 4-byte length, "IHDR", then width (4 BE), height (4 BE).
-function readPngDimensions(bytes: Uint8Array): { width: number; height: number } | null {
-  if (bytes.length < 24) return null;
-  // Signature check
-  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-  for (let i = 0; i < 8; i++) if (bytes[i] !== sig[i]) return null;
-  // IHDR starts at byte 8: 4 length + "IHDR" (12,13,14,15) + width@16-19 + height@20-23
-  if (bytes[12] !== 0x49 || bytes[13] !== 0x48 || bytes[14] !== 0x44 || bytes[15] !== 0x52) return null;
-  const width = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
-  const height = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
-  if (!width || !height) return null;
-  return { width, height };
+type CropResult =
+  | { ok: true; png: Buffer; width: number; height: number }
+  | { ok: false; reason: string };
+
+// Center-crop the decoded PNG to 16:9. When the source is already 16:9 (within
+// rounding), this is effectively a no-op. Rejects only when the resulting crop
+// would fall below the minimum usable banner resolution.
+function centerCropTo16x9(src: PNG): CropResult {
+  const { width: W, height: H } = src;
+  const ratio = W / H;
+
+  let cropW: number;
+  let cropH: number;
+  if (Math.abs(ratio - TARGET_RATIO) < 1e-6) {
+    cropW = W;
+    cropH = H;
+  } else if (ratio > TARGET_RATIO) {
+    // Too wide: keep height, narrow width.
+    cropH = H;
+    cropW = Math.round(H * TARGET_RATIO);
+  } else {
+    // Too tall: keep width, shorten height.
+    cropW = W;
+    cropH = Math.round(W / TARGET_RATIO);
+  }
+
+  if (cropW < MIN_CROPPED_WIDTH || cropH < MIN_CROPPED_HEIGHT) {
+    return {
+      ok: false,
+      reason: `cropped ${cropW}x${cropH} below minimum ${MIN_CROPPED_WIDTH}x${MIN_CROPPED_HEIGHT}`,
+    };
+  }
+
+  const xOffset = Math.floor((W - cropW) / 2);
+  const yOffset = Math.floor((H - cropH) / 2);
+
+  const out = new PNG({ width: cropW, height: cropH });
+  for (let y = 0; y < cropH; y++) {
+    const srcRowStart = ((yOffset + y) * W + xOffset) * 4;
+    const dstRowStart = y * cropW * 4;
+    src.data.copy(out.data, dstRowStart, srcRowStart, srcRowStart + cropW * 4);
+  }
+  const png = PNG.sync.write(out);
+  return { ok: true, png, width: cropW, height: cropH };
 }
