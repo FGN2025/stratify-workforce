@@ -162,7 +162,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'book-open': BookOpen,
   'video': Video,
   'file-text': FileText,
-  'map': Map,
+  'map': MapIcon,
   'target': Target,
   'users': Users,
   'trophy': Trophy,
