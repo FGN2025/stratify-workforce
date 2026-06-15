@@ -87,7 +87,20 @@ const WorkOrders = () => {
     return counts;
   }, [woWithCategory, subscribedGames, categories]);
 
-  const getRandomCommunity = () => (communities.length === 0 ? undefined : communities[Math.floor(Math.random() * communities.length)]);
+  // Stable, data-driven community badge:
+  //  - tenant_id IS NULL → fixed "FGN Global" first-party badge
+  //  - tenant_id IS SET  → that real tenant
+  // Never random — random assignment implied partner relationships that do not exist.
+  const communityMap = useMemo(
+    () => Object.fromEntries(communities.map((c) => [c.id, c])) as Record<string, Tenant>,
+    [communities]
+  );
+  const fgnGlobalCommunity = useMemo(
+    () => communities.find((c) => c.slug === 'fgn'),
+    [communities]
+  );
+  const resolveCommunity = (tenantId: string | null | undefined) =>
+    (tenantId ? communityMap[tenantId] : fgnGlobalCommunity) ?? fgnGlobalCommunity;
 
   if (loadingWorkOrders) {
     return (
