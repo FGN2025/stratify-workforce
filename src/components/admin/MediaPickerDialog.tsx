@@ -39,14 +39,25 @@ export function MediaPickerDialog({
   onSelect,
   title = 'Select Image',
   currentImageUrl,
+  workOrderId,
 }: MediaPickerDialogProps) {
-  const [activeTab, setActiveTab] = useState<'upload' | 'url' | 'library'>('upload');
+  const aiEnabled = !!workOrderId;
+  type TabKey = 'upload' | 'url' | 'library' | 'ai';
+  const [activeTab, setActiveTab] = useState<TabKey>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [url, setUrl] = useState('');
   const [urlPreviewError, setUrlPreviewError] = useState(false);
   const [selectedLibraryUrl, setSelectedLibraryUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // AI tab state
+  const [adminSteer, setAdminSteer] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiSynthesizing, setAiSynthesizing] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiGeneratedUrl, setAiGeneratedUrl] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { uploadFile } = useMediaLibrary();
   const { data: allMedia, isLoading: isLoadingMedia } = useAllSiteMedia();
@@ -61,7 +72,58 @@ export function MediaPickerDialog({
     setUrl('');
     setUrlPreviewError(false);
     setSelectedLibraryUrl(null);
+    setAdminSteer('');
+    setAiPrompt('');
+    setAiGeneratedUrl(null);
+    setAiSynthesizing(false);
+    setAiGenerating(false);
   }, []);
+
+  const handleSynthesize = async () => {
+    if (!workOrderId) return;
+    setAiSynthesizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('synthesize-cover-prompt', {
+        body: { work_order_id: workOrderId, admin_steer: adminSteer || undefined },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.prompt) throw new Error('No prompt returned');
+      setAiPrompt(data.prompt);
+    } catch (e) {
+      toast({
+        title: 'Could not synthesize prompt',
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'destructive',
+      });
+    } finally {
+      setAiSynthesizing(false);
+    }
+  };
+
+  const handleGenerateImage = async () => {
+    if (!workOrderId || !aiPrompt.trim()) return;
+    setAiGenerating(true);
+    setAiGeneratedUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-cover-image', {
+        body: { work_order_id: workOrderId, prompt: aiPrompt.trim() },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.code === 'off_ratio') {
+        throw new Error(`Off-ratio result (${data.actual_ratio?.toFixed(3)}) rejected. Try again.`);
+      }
+      if (!data?.cover_image_url) throw new Error('No image URL returned');
+      setAiGeneratedUrl(data.cover_image_url);
+    } catch (e) {
+      toast({
+        title: 'Could not generate image',
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'destructive',
+      });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
