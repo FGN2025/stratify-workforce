@@ -77,7 +77,7 @@ export function buildCourseManifest(
 ): CourseManifest {
   const knowledgeGateFrameworks =
     options.knowledgeGateFrameworks ?? DEFAULT_KNOWLEDGE_GATE_FRAMEWORKS;
-  const includeChallenge = options.includeChallengeModule ?? false;
+  const includeChallenge = options.includeChallengeModule ?? true;
 
   const modules: CourseModule[] = [];
   let position = 0;
