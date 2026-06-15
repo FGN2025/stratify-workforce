@@ -100,7 +100,28 @@ export function buildCourseManifest(
     const moduleIdPrefix = `c-${fc.challenge.id.slice(0, 8)}`;
     const challengeName = fc.challenge.name;
 
-    // 1. Briefing — post-completion recap + reinforcement
+    // 1. Objective — self-contained challenge body (description,
+    //    framework context, full task list with evidence specs).
+    //    Emitted BEFORE the recap so the learner sees the "what and
+    //    why" first, then runs the challenge, then reads the recap.
+    //    Phase 1.6: this is now always-on by default so SCORM packages
+    //    exported to external LMSes are self-contained.
+    if (includeChallenge) {
+      modules.push({
+        id: `${moduleIdPrefix}-objective`,
+        position: position++,
+        type: 'challenge',
+        title: `${challengeName}: Objective & Tasks`,
+        challengeId: fc.challenge.id,
+        challengeUrl: `https://play.fgn.gg/challenges/${fc.challenge.id}`,
+        ...(game !== undefined ? { game } : {}),
+        ...(framework !== undefined ? { credentialFramework: framework } : {}),
+        tasks: fc.tasks.map((t) => mapTask(t)),
+        preLaunchHtml: buildObjectiveHtml(fc, game, framework),
+      });
+    }
+
+    // 2. Briefing — post-completion recap + reinforcement
     const briefing = buildBriefing(fc, game, framework);
     modules.push({
       id: `${moduleIdPrefix}-briefing`,
@@ -109,24 +130,6 @@ export function buildCourseManifest(
       title: `${challengeName}: ${briefing.titleSuffix}`,
       html: briefing.bodyHtml,
     });
-
-    // 2. (Optional, default-off) Challenge — for back-compat only.
-    // Phase 1.5 content model: the challenge belongs to the Work Order
-    // layer on fgn.academy, not the SCORM/Learn layer. Set
-    // includeChallengeModule=true to override.
-    if (includeChallenge) {
-      modules.push({
-        id: `${moduleIdPrefix}-challenge`,
-        position: position++,
-        type: 'challenge',
-        title: `${challengeName}: Challenge Tasks`,
-        challengeId: fc.challenge.id,
-        challengeUrl: `https://play.fgn.gg/challenges/${fc.challenge.id}`,
-        ...(game !== undefined ? { game } : {}),
-        ...(framework !== undefined ? { credentialFramework: framework } : {}),
-        tasks: fc.tasks.map((t) => mapTask(t)),
-      });
-    }
 
     // 3. Quiz (only if framework gates knowledge)
     if (framework && knowledgeGateFrameworks.includes(framework)) {
