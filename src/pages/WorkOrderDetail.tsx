@@ -184,8 +184,10 @@ export default function WorkOrderDetail() {
     );
   }
 
-  // Cover image with game fallback
-  const coverImage = workOrder.cover_image_url || gameCoverImages[workOrder.game_title];
+  // Cover image priority: own cover -> origin challenge snapshot -> game-level default
+  const playSourceCover = (workOrder as { metadata?: { play_source?: { cover_image_url?: string | null } } })
+    .metadata?.play_source?.cover_image_url ?? null;
+  const coverImage = workOrder.cover_image_url || playSourceCover || gameCoverImages[workOrder.game_title];
 
   const handleCoverImageUpdate = async (url: string) => {
     try {
