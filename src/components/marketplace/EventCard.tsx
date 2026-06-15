@@ -49,10 +49,12 @@ export function EventCard({
   const difficulty: WorkOrderDifficulty = 'difficulty' in workOrder ? workOrder.difficulty : 'beginner';
   const estimatedTime = 'estimated_time_minutes' in workOrder ? workOrder.estimated_time_minutes : null;
   const workOrderCoverUrl = 'cover_image_url' in workOrder ? workOrder.cover_image_url : null;
-  
+  const playSourceCover = (workOrder as { metadata?: { play_source?: { cover_image_url?: string | null } } })
+    .metadata?.play_source?.cover_image_url ?? null;
+
   const { gameCoverImages } = useGameCoverImages();
-  // Use work order's custom cover if available, otherwise fall back to game cover
-  const coverImage = workOrderCoverUrl || gameCoverImages[workOrder.game_title];
+  // Priority: own cover -> origin challenge snapshot -> game-level default
+  const coverImage = workOrderCoverUrl || playSourceCover || gameCoverImages[workOrder.game_title];
 
   const handleCoverImageUpdate = async (url: string) => {
     try {
