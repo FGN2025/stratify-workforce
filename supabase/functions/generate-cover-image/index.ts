@@ -1,13 +1,16 @@
 // supabase/functions/generate-cover-image/index.ts
-// Implements docs/cover-prompt-contract.md §2.2 + §6 + §7 + §8 + §9.
+// Implements docs/cover-prompt-contract.md §2.2 + §6 + §7 + §8 + §9 (v1.1: crop-to-16:9).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { PNG } from "npm:pngjs@7";
+import { Buffer } from "node:buffer";
 
 const STYLE_WRAPPER = `. Style: cinematic 16:9 cover banner, photoreal, dramatic natural lighting, shallow depth of field, industrial color palette (deep blues, warm ambers, weathered metal, concrete, dust in light). Wide composition with strong negative space on one side suitable for an overlay. Any people present appear as workers in context with faces not clearly identifiable (turned away, in profile, distant, partially obscured by safety gear, or framed below the shoulders). No text, no typography, no logos, no watermarks, no UI overlays, no game HUD elements.`;
 
 const TARGET_RATIO = 16 / 9;
-const RATIO_TOLERANCE = 0.03;
+const MIN_CROPPED_WIDTH = 1024;
+const MIN_CROPPED_HEIGHT = 576;
 const IMAGE_SIZE = "1792x1024";
 const BUCKET = "media-assets";
 
