@@ -261,8 +261,9 @@ export function WorkOrderEditDialog({
 
       // On create-path only, persist play_source snapshot for convergence-by-construction
       if (!workOrder?.id) {
-        data.metadata = pendingPlaySource ? { play_source: pendingPlaySource } : null;
+        data.metadata = pendingPlaySource ? { play_source: pendingPlaySource } : {};
       }
+
 
 
       if (workOrder?.id) {
