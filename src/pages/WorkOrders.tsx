@@ -70,9 +70,28 @@ const WorkOrders = () => {
     [allWorkOrders, categories]
   );
 
+  // Games that have work orders but aren't covered by any sim category.
+  // Drives auto-appearing filter chips (e.g. House Flipper).
+  const uncategorizedGameTitles = useMemo(() => {
+    const covered = new Set(categories.flatMap((c) => c.default_game_titles));
+    const seen = new Set<string>();
+    const out: typeof allWorkOrders[number]['game_title'][] = [];
+    for (const wo of allWorkOrders) {
+      if (covered.has(wo.game_title)) continue;
+      if (seen.has(wo.game_title)) continue;
+      seen.add(wo.game_title);
+      out.push(wo.game_title);
+    }
+    return out;
+  }, [allWorkOrders, categories]);
+
   const filteredWorkOrders = useMemo(() => {
     if (activeFilter === 'all') return woWithCategory;
     if (activeFilter === 'for-you') return woWithCategory.filter((wo) => subscribedGames.includes(wo.game_title));
+    if (activeFilter.startsWith('game:')) {
+      const gt = activeFilter.slice('game:'.length);
+      return woWithCategory.filter((wo) => wo.game_title === gt);
+    }
     return woWithCategory.filter((wo) => wo.resolved_category === activeFilter);
   }, [woWithCategory, activeFilter, subscribedGames]);
 
@@ -84,8 +103,11 @@ const WorkOrders = () => {
     categories.forEach((c) => {
       counts[c.key] = woWithCategory.filter((wo) => wo.resolved_category === c.key).length;
     });
+    uncategorizedGameTitles.forEach((gt) => {
+      counts[`game:${gt}`] = woWithCategory.filter((wo) => wo.game_title === gt).length;
+    });
     return counts;
-  }, [woWithCategory, subscribedGames, categories]);
+  }, [woWithCategory, subscribedGames, categories, uncategorizedGameTitles]);
 
   // Stable, data-driven community badge:
   //  - tenant_id IS NULL → fixed "FGN Global" first-party badge
@@ -151,6 +173,7 @@ const WorkOrders = () => {
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
           workOrderCounts={workOrderCounts}
+          uncategorizedGameTitles={uncategorizedGameTitles}
         />
 
         {filteredWorkOrders.length > 0 && (
