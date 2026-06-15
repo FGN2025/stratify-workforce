@@ -1,59 +1,67 @@
+# Step 5 E2E Smoke Test — Option B (Disposable User)
 
-# House Flipper Track — Step 2: Work Orders
+**Gate:** Hold until user confirms roof challenge `d00bdfd0-6702-4e46-9ee8-6202aecf9005` is `is_active=true` on play.fgn.gg. Re-verify all 6 HF challenge UUIDs return from anon `FGN_PLAY_SUPABASE_URL/rest/v1/challenges` before proceeding.
 
-Preflight confirmed (re-verified at build time): zero rows in `work_orders` match the six `fgn_origin_challenge_id` values. All six are net-new. No aviation rows touched.
+**Precedent:** This becomes the standard pattern for all future smoke tests. No real-user pollution, ever.
 
-## Step 1 — Migration: extend `game_title` enum
+## Execution
 
-Idempotent guards so a re-run is safe and the enum order stays append-only.
+### 1. Create disposable user
+- Service-role `auth.admin.createUser({ email: 'smoketest-hf-<ts>@fgn.internal', email_confirm: true, password: <random> })`.
+- Capture `user_id`. Record start timestamp for leftover-scan window.
+- Pre-snapshot row counts on every table this test can touch, keyed by `user_id` (always 0) and globally for aviation tables (must be unchanged at end).
 
-```sql
-ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS 'House_Flipper';
-ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS 'House_Flipper_2';
-```
+### 2. SEQUENCE clean pass — WO-3010 (Gut the Room)
+- Mint a JWT for the disposable user (service-role `auth.admin.generateLink` or sign in with password).
+- POST `/functions/v1/score-simulation` with the correct seq order for sim-hf-3010's items. Pass-bar ≥70.
+- Expect response: `stand_down=false`, `percent≥70`, no `critFailGrade`.
+- POST `/functions/v1/sync-challenge-completion` with `challenge_id = hf-3010 UUID`, `score = percent`.
+- Assert:
+  - `simulation_runs` row exists, `passed=true`.
+  - `user_work_order_completions`: exactly **1** row for (user, WO-3010), `status=completed`.
+  - `user_points`: exactly **1** XP grant for `source_id=WO-3010` (no double-award).
+  - `user_lesson_progress`: WO-3010 lesson `status=completed`.
+  - `user_notifications`: a `knowledge_check_available` (or equivalent) entry routes to the HF lesson, not aviation.
+  - `skill_credentials`: **0** new rows for this user. ← critical proof guard holds.
 
-Runs in its own migration (Postgres requires enum-add to commit before use in the same transaction as a subsequent insert that references the new label).
+### 3. LOADOUT clean pass — WO-3120 (Roof, clean)
+- Same flow with a fully correct loadout pick (no critical trap).
+- Same assertions as Step 2, scoped to WO-3120.
 
-## Step 2 — Re-run preflight, then insert the six rows
+### 4. CRITICAL pick — WO-3120 (skip fall protection)
+- POST `/score-simulation` with the loadout that includes the `critical=true` skip-fall-protection item.
+- Expect: `stand_down=true`, `percent=0`, `critFailGrade` line in response.
+- POST `/sync-challenge-completion` with `score=0`.
+- Assert:
+  - `simulation_runs` row, `passed=false`, crit-fail recorded.
+  - `user_work_order_completions`: row is `status=failed` (or no completed row) — **not** marked completed.
+  - `user_lesson_progress`: WO-3120 lesson **not** `completed`.
+  - `user_points`: no XP grant for this attempt.
+  - `skill_credentials`: still 0.
 
-Before insert, the build will re-query:
+### 5. Hard-delete + cascade verify
+- `auth.admin.deleteUser(user_id)`.
+- Run leftover scan across: `simulation_runs`, `user_work_order_completions`, `user_lesson_progress`, `user_points`, `user_notifications`, `telemetry_sessions`, `user_game_stats`, `skill_passport`, `skill_credentials`, `breakroom_sync_attempts`, `play_sync_attempts` filtered to (a) the disposable `user_id`, and (b) the test email.
+- Required result: **0** rows in every table.
+- If any table lacks `ON DELETE CASCADE` from `auth.users`, manually DELETE leftovers and flag the missing cascade in the report (do not fix it in this step — separate ticket).
 
-```sql
-SELECT fgn_origin_challenge_id, title FROM work_orders
-WHERE fgn_origin_challenge_id IN (<six UUIDs as text>);
-```
+### 6. Aviation untouched check
+- Re-count: aviation course lesson count = 7, aviation sims = 7, no new `skill_credentials` for any real user during the test window, no new mappings.
 
-Any UUID that comes back is skipped (no update, no duplicate). Only missing ones are inserted. Expected on a clean preflight: six inserts, zero skips.
+## Acceptance Report
 
-## Step 3 — Insert payload
+- Roof activation re-check: all 6 HF challenges visible to anon. ✓
+- Step 2 (WO-3010 sequence): response body, DB assertions, **0 credentials**. 
+- Step 3 (WO-3120 loadout clean): same.
+- Step 4 (WO-3120 critical): stand_down/percent/critFailGrade body, DB assertions, **lesson not completed**.
+- Step 5 leftover counts per table: all 0.
+- Aviation deltas: all 0.
+- Disposable user email + UUID, then confirmed deleted.
 
-Keyed by `fgn_origin_challenge_id` (text). All rows: `is_active=true`, `metadata='{}'`, `success_criteria` left to column default, `tenant_id=null`, `estimated_time_minutes` default (30) — XP is the canonical metric per project doctrine, time is not surfaced.
+## Guardrails
 
-| WO | Title | Game | Difficulty | XP | fgn_origin_challenge_id |
-|---|---|---|---|---|---|
-| WO-3010 | Strip the Room to a Safe Shell | House_Flipper_2 | beginner | 12 | 3b061d99-c5a8-418b-9fe6-03e2eb6118e9 |
-| WO-3020 | Load Out for a Paint and Patch Day | House_Flipper | beginner | 13 | ac805af3-9677-436c-9107-e3d4139e3ebd |
-| WO-3030 | Tile a Wet-Area Floor That Lasts | House_Flipper_2 | intermediate | 15 | 74175dec-85e9-4f00-992d-cbbcde24f6e5 |
-| WO-3110 | Frame a New Interior Wall | House_Flipper_2 | advanced | 20 | ee93f07b-4c2c-4788-be1a-67f02d750b47 |
-| WO-3120 | Load Out to Build a Roof | House_Flipper_2 | intermediate | 16 | d00bdfd0-6702-4e46-9ee8-6202aecf9005 |
-| WO-3130 | Price the Flip Before You Commit | House_Flipper | advanced | 18 | e1b8d879-24a4-498b-bbff-acf17a076eed |
+- All edge-function calls authenticate as the disposable user, **never** as the preview-logged-in super_admin. Authorization header explicitly set on every `supabase--curl_edge_functions` call.
+- No writes to real users' progress, points, notifications, or credentials at any point.
+- If any assertion fails mid-run, stop, delete the disposable user, and report state — do not retry on a real account.
 
-Two on `House_Flipper`, four on `House_Flipper_2`, matching parent challenge `game_id` on play.fgn.gg.
-
-## Acceptance probes (reported after build)
-
-1. `SELECT title, game_title, difficulty, xp_reward, is_active, fgn_origin_challenge_id FROM work_orders WHERE fgn_origin_challenge_id IN (<six>) ORDER BY title;` — expect 6 rows matching the table above exactly.
-2. Created-new vs already-existing tally (expected 6/0 on a clean preflight, otherwise reconciled to existing).
-3. Aviation untouched: `SELECT count(*) FROM work_orders WHERE game_title = 'MSFS_2024';` — unchanged from prior inventory (6 active).
-4. Enum extended: `SELECT unnest(enum_range(NULL::game_title))::text;` includes both `House_Flipper` and `House_Flipper_2`.
-
-## Out of scope (held for later steps)
-
-- Step 3 sims (simulations + simulation_items)
-- Step 4 lessons (xp_reward=0, mapped via challenge_lesson_mappings)
-- Course publish + backfill
-- No edits to aviation, no edits to any non-House-Flipper row, no UI changes, no enum consumers updated yet (filters in WorkOrdersManager, GAME_LABELS, channel seeding — out of scope for Step 2; will be addressed when UI surfaces are needed).
-
-## Hold
-
-Plan held for your approval. On go, I'll run the enum migration first (separate approval surface), then the insert, then report the acceptance probes verbatim.
+Hold for: (a) user confirmation that roof is active on play, (b) approval to enter build mode.
