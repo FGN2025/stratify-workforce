@@ -230,8 +230,8 @@ export function MediaPickerDialog({
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
+          <TabsList className={cn('grid w-full', aiEnabled ? 'grid-cols-4' : 'grid-cols-3')}>
             <TabsTrigger value="upload" className="gap-2">
               <Upload className="h-4 w-4" />
               Upload
@@ -244,7 +244,14 @@ export function MediaPickerDialog({
               <Image className="h-4 w-4" />
               Library
             </TabsTrigger>
+            {aiEnabled && (
+              <TabsTrigger value="ai" className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </TabsTrigger>
+            )}
           </TabsList>
+
 
           {/* Upload Tab */}
           <TabsContent value="upload" className="mt-4">
