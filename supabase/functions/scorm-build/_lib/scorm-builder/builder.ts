@@ -58,11 +58,13 @@ export interface BuildOptions {
    */
   knowledgeGateFrameworks?: string[];
   /**
-   * Phase 1.5 default: skip emitting the standalone `challenge` lesson
-   * type. The challenge step belongs to the Work Order layer; the
-   * course is post-completion content. Set true ONLY for legacy /
-   * back-compat usage where the SCORM is the canonical challenge
-   * experience (rare).
+   * Phase 1.6 default (true): always emit a `challenge` "Objective"
+   * lesson per challenge so the SCORM package is self-contained for
+   * external LMSes. The objective module carries the challenge
+   * description, framework context, and full task list with evidence
+   * specs — everything a learner needs without linking back to
+   * play.fgn.gg. Set false ONLY for niche back-compat exports that
+   * explicitly want the recap-only model.
    */
   includeChallengeModule?: boolean;
 }
