@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Settings2, ChevronDown, Copy, ExternalLink, Wrench } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Settings2, ChevronDown, Copy, ExternalLink, Wrench, RefreshCw, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -19,7 +20,61 @@ interface WorkOrderAdminPanelProps {
 export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
   const [open, setOpen] = useState(false);
   const [isActive, setIsActive] = useState(workOrder.is_active);
+  const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  const [refreshWriting, setRefreshWriting] = useState(false);
+  const [refreshPreview, setRefreshPreview] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  const currentPlaySource =
+    (workOrder as any).metadata && typeof (workOrder as any).metadata === 'object'
+      ? (workOrder as any).metadata.play_source ?? null
+      : null;
+
+  const openRefreshDialog = async () => {
+    setRefreshDialogOpen(true);
+    setRefreshLoading(true);
+    setRefreshPreview(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-play-source', {
+        body: { work_order_ids: [workOrder.id], dry_run: true, force: true },
+      });
+      if (error) throw error;
+      setRefreshPreview(data);
+    } catch (e: any) {
+      toast({ title: 'Refresh failed', description: e.message ?? String(e), variant: 'destructive' });
+      setRefreshDialogOpen(false);
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
+  const confirmRefreshWrite = async () => {
+    setRefreshWriting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-play-source', {
+        body: { work_order_ids: [workOrder.id], dry_run: false, force: true },
+      });
+      if (error) throw error;
+      const row = data?.rows?.[0];
+      if (row?.status === 'updated') {
+        toast({ title: 'play_source refreshed' });
+        queryClient.invalidateQueries({ queryKey: ['work-order', workOrder.id] });
+        setRefreshDialogOpen(false);
+      } else {
+        toast({
+          title: 'Refresh did not update',
+          description: `status: ${row?.status ?? 'unknown'}`,
+          variant: 'destructive',
+        });
+      }
+    } catch (e: any) {
+      toast({ title: 'Refresh write failed', description: e.message ?? String(e), variant: 'destructive' });
+    } finally {
+      setRefreshWriting(false);
+    }
+  };
+
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -95,6 +150,26 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
               </Link>
             </Button>
 
+            {/* Refresh play_source */}
+            {workOrder.fgn_origin_challenge_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full justify-between"
+                onClick={openRefreshDialog}
+              >
+                <span className="flex items-center">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh play_source from play.fgn.gg
+                </span>
+                <Badge variant={currentPlaySource ? 'default' : 'secondary'} className="text-xs">
+                  {currentPlaySource ? 'present' : 'missing'}
+                </Badge>
+              </Button>
+            )}
+
+
+
             {/* Metadata rows */}
             <TooltipProvider>
               <div className="space-y-1">
@@ -149,6 +224,61 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      <Dialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Refresh play_source</DialogTitle>
+            <DialogDescription>
+              This writes only <code>metadata.play_source</code>. The work order's <code>cover_image_url</code>,
+              title, difficulty, XP, description, and all relationships are untouched. The cover inside
+              <code> play_source.cover_image_url</code> is leg-2 fallback only; leg-1
+              (<code>work_orders.cover_image_url</code>) keeps winning.
+            </DialogDescription>
+          </DialogHeader>
+
+          {refreshLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
+              <Loader2 className="h-4 w-4 animate-spin" /> Fetching snapshot from play.fgn.gg...
+            </div>
+          )}
+
+          {!refreshLoading && refreshPreview && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded border p-2">
+                  <div className="text-xs uppercase text-muted-foreground mb-1">Current play_source</div>
+                  <pre className="text-xs overflow-x-auto max-h-64">
+                    {currentPlaySource ? JSON.stringify(currentPlaySource, null, 2) : '— (none)'}
+                  </pre>
+                </div>
+                <div className="rounded border p-2">
+                  <div className="text-xs uppercase text-muted-foreground mb-1">New snapshot</div>
+                  <pre className="text-xs overflow-x-auto max-h-64">
+                    {JSON.stringify(refreshPreview?.rows?.[0]?.play_source ?? refreshPreview?.rows?.[0], null, 2)}
+                  </pre>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Status: {refreshPreview?.rows?.[0]?.status}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRefreshDialogOpen(false)} disabled={refreshWriting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRefreshWrite}
+              disabled={refreshLoading || refreshWriting || !refreshPreview?.rows?.[0]?.play_source}
+            >
+              {refreshWriting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Write play_source
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Collapsible>
   );
 }
