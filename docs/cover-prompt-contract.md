@@ -271,8 +271,9 @@ type CoverError =
 
 ---
 
-## 11. Known v1.0 limitations
+## 11. Known limitations
 
 - The six existing House Flipper work orders have empty `metadata.play_source`. They will synthesize from `title + description + trade context` only. Acceptable for v1. Re-importing those rows via `fetch-challenges` later will populate `metadata.play_source` and improve their synthesis quality. Not blocking.
-- Aspect ratio target is the closest 16:9-ish size supported by current image models (`1792x1024` ≈ 1.75:1). The ±3% tolerance accommodates this. If a model adds true 16:9, update `size`.
+- The `size: "1792x1024"` request parameter is honored by `openai/gpt-image-2` and ignored by Gemini image models. With the default Gemini model, the returned dimensions are model-chosen and then center-cropped server-side to 16:9 (contract §7 step 4). With `openai/gpt-image-2`, the returned image is already 1792×1024 (≈1.75:1) and the crop reduces it to 1792×1008 — a near-no-op.
+- v1.1 cropping is **center-crop only**. Saliency-aware cropping (face/subject-preserving) is out of scope; revisit in v1.2 if center-crop produces awkwardly framed results in practice.
 - Wrapper version is currently inlined. Future iterations may version the wrapper itself (`wrapper_version: "v1.0"`) and store that alongside the prompt for audit.
