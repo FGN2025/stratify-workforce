@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.learning-source-pull-bbw]
 verify_jwt = false
+
+[functions.synthesize-cover-prompt]
+verify_jwt = true
+
+[functions.generate-cover-image]
+verify_jwt = true
