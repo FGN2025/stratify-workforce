@@ -26,12 +26,22 @@ export interface BaseModule {
   title: string;
 }
 
+export type GameTitle =
+  | 'ATS'
+  | 'Farming_Sim'
+  | 'Construction_Sim'
+  | 'Mechanic_Sim'
+  | 'Roadcraft'
+  | 'Fiber_Tech';
+
 export type CourseModule =
   | (BaseModule & { type: 'briefing'; html: string })
   | (BaseModule & {
       type: 'challenge';
       challengeId: string;
       challengeUrl: string;
+      game?: GameTitle;
+      credentialFramework?: string;
       tasks: ChallengeTask[];
       preLaunchHtml?: string;
     })
