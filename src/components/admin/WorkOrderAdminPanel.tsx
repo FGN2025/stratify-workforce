@@ -20,7 +20,61 @@ interface WorkOrderAdminPanelProps {
 export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
   const [open, setOpen] = useState(false);
   const [isActive, setIsActive] = useState(workOrder.is_active);
+  const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  const [refreshWriting, setRefreshWriting] = useState(false);
+  const [refreshPreview, setRefreshPreview] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  const currentPlaySource =
+    (workOrder as any).metadata && typeof (workOrder as any).metadata === 'object'
+      ? (workOrder as any).metadata.play_source ?? null
+      : null;
+
+  const openRefreshDialog = async () => {
+    setRefreshDialogOpen(true);
+    setRefreshLoading(true);
+    setRefreshPreview(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-play-source', {
+        body: { work_order_ids: [workOrder.id], dry_run: true, force: true },
+      });
+      if (error) throw error;
+      setRefreshPreview(data);
+    } catch (e: any) {
+      toast({ title: 'Refresh failed', description: e.message ?? String(e), variant: 'destructive' });
+      setRefreshDialogOpen(false);
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
+  const confirmRefreshWrite = async () => {
+    setRefreshWriting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-play-source', {
+        body: { work_order_ids: [workOrder.id], dry_run: false, force: true },
+      });
+      if (error) throw error;
+      const row = data?.rows?.[0];
+      if (row?.status === 'updated') {
+        toast({ title: 'play_source refreshed' });
+        queryClient.invalidateQueries({ queryKey: ['work-order', workOrder.id] });
+        setRefreshDialogOpen(false);
+      } else {
+        toast({
+          title: 'Refresh did not update',
+          description: `status: ${row?.status ?? 'unknown'}`,
+          variant: 'destructive',
+        });
+      }
+    } catch (e: any) {
+      toast({ title: 'Refresh write failed', description: e.message ?? String(e), variant: 'destructive' });
+    } finally {
+      setRefreshWriting(false);
+    }
+  };
+
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
