@@ -224,6 +224,61 @@ export function WorkOrderAdminPanel({ workOrder }: WorkOrderAdminPanelProps) {
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      <Dialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Refresh play_source</DialogTitle>
+            <DialogDescription>
+              This writes only <code>metadata.play_source</code>. The work order's <code>cover_image_url</code>,
+              title, difficulty, XP, description, and all relationships are untouched. The cover inside
+              <code> play_source.cover_image_url</code> is leg-2 fallback only; leg-1
+              (<code>work_orders.cover_image_url</code>) keeps winning.
+            </DialogDescription>
+          </DialogHeader>
+
+          {refreshLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
+              <Loader2 className="h-4 w-4 animate-spin" /> Fetching snapshot from play.fgn.gg...
+            </div>
+          )}
+
+          {!refreshLoading && refreshPreview && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded border p-2">
+                  <div className="text-xs uppercase text-muted-foreground mb-1">Current play_source</div>
+                  <pre className="text-xs overflow-x-auto max-h-64">
+                    {currentPlaySource ? JSON.stringify(currentPlaySource, null, 2) : '— (none)'}
+                  </pre>
+                </div>
+                <div className="rounded border p-2">
+                  <div className="text-xs uppercase text-muted-foreground mb-1">New snapshot</div>
+                  <pre className="text-xs overflow-x-auto max-h-64">
+                    {JSON.stringify(refreshPreview?.rows?.[0]?.play_source ?? refreshPreview?.rows?.[0], null, 2)}
+                  </pre>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Status: {refreshPreview?.rows?.[0]?.status}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRefreshDialogOpen(false)} disabled={refreshWriting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRefreshWrite}
+              disabled={refreshLoading || refreshWriting || !refreshPreview?.rows?.[0]?.play_source}
+            >
+              {refreshWriting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Write play_source
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Collapsible>
   );
 }
