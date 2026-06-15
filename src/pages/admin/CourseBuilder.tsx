@@ -668,12 +668,15 @@ function PreviewStage({
         </div>
       )}
 
-      {briefingModules.length === 0 && quizModules.length === 0 && (
+      {briefingModules.length === 0 && quizModules.length === 0 && challengeModules.length === 0 && (
         <Card className="p-6 text-sm text-muted-foreground text-center">
-          This course has no editable briefing or quiz modules. Click <strong>Publish</strong> when
-          ready.
+          This course has no editable modules. Click <strong>Publish</strong> when ready.
         </Card>
       )}
+
+      {challengeModules.map((m) => (
+        <ChallengeModuleCard key={m.id} module={m} />
+      ))}
 
       {briefingModules.map((m) => (
         <BriefingEditor
@@ -693,6 +696,65 @@ function PreviewStage({
         />
       ))}
     </div>
+  );
+}
+
+function ChallengeModuleCard({
+  module,
+}: {
+  module: Extract<CourseModule, { type: 'challenge' }>;
+}) {
+  const sanitizedPreLaunch = useMemo(
+    () => (module.preLaunchHtml ? sanitizeBriefing(module.preLaunchHtml) : ''),
+    [module.preLaunchHtml]
+  );
+  return (
+    <Card className="p-5 bg-card/50 backdrop-blur border-border space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h3 className="font-semibold">Objective · {module.title}</h3>
+          <p className="text-xs text-muted-foreground font-mono">challenge.{module.id}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {module.credentialFramework && (
+            <Badge variant="outline" className="text-xs">{module.credentialFramework}</Badge>
+          )}
+          <Badge variant="outline" className="text-xs">challenge · {module.tasks.length} tasks</Badge>
+        </div>
+      </div>
+
+      {sanitizedPreLaunch && (
+        <div
+          className="prose prose-invert max-w-none text-sm"
+          dangerouslySetInnerHTML={{ __html: sanitizedPreLaunch }}
+        />
+      )}
+
+      <div>
+        <h4 className="font-semibold text-sm mb-2">Tasks</h4>
+        <ol className="space-y-3 list-decimal list-inside">
+          {module.tasks.map((t) => (
+            <li key={t.id} className="text-sm">
+              <span className="font-medium">{t.title}</span>
+              {t.description && (
+                <p className="text-muted-foreground text-xs mt-1 ml-5 whitespace-pre-line">{t.description}</p>
+              )}
+              {t.evidenceSpec && (
+                <p className="text-xs mt-1 ml-5">
+                  <span className="text-primary font-medium">Evidence: </span>
+                  <span className="text-muted-foreground">{t.evidenceSpec}</span>
+                </p>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Snapshot of the play.fgn.gg challenge at build time. Read-only here — edit the source challenge
+        on play.fgn.gg and re-preview to pick up changes.
+      </p>
+    </Card>
   );
 }
 
