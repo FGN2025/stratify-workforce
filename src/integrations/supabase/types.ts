@@ -3441,6 +3441,7 @@ export type Database = {
         Row: {
           category_key: string | null
           channel_id: string | null
+          cover_image_prompt: string | null
           cover_image_url: string | null
           created_at: string
           description: string | null
@@ -3462,6 +3463,7 @@ export type Database = {
         Insert: {
           category_key?: string | null
           channel_id?: string | null
+          cover_image_prompt?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -3483,6 +3485,7 @@ export type Database = {
         Update: {
           category_key?: string | null
           channel_id?: string | null
+          cover_image_prompt?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null

@@ -10,11 +10,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, Link, Image, Loader2, X, Check } from 'lucide-react';
+import { Upload, Link, Image, Loader2, X, Check, Sparkles, Wand2 } from 'lucide-react';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import { useAllSiteMedia } from '@/hooks/useSiteMedia';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface MediaPickerDialogProps {
@@ -23,6 +26,8 @@ interface MediaPickerDialogProps {
   onSelect: (url: string) => void;
   title?: string;
   currentImageUrl?: string;
+  /** When provided, enables the "Generate with AI" tab. Only work-order surfaces pass this. */
+  workOrderId?: string;
 }
 
 /**
@@ -34,14 +39,25 @@ export function MediaPickerDialog({
   onSelect,
   title = 'Select Image',
   currentImageUrl,
+  workOrderId,
 }: MediaPickerDialogProps) {
-  const [activeTab, setActiveTab] = useState<'upload' | 'url' | 'library'>('upload');
+  const aiEnabled = !!workOrderId;
+  type TabKey = 'upload' | 'url' | 'library' | 'ai';
+  const [activeTab, setActiveTab] = useState<TabKey>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [url, setUrl] = useState('');
   const [urlPreviewError, setUrlPreviewError] = useState(false);
   const [selectedLibraryUrl, setSelectedLibraryUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // AI tab state
+  const [adminSteer, setAdminSteer] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiSynthesizing, setAiSynthesizing] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiGeneratedUrl, setAiGeneratedUrl] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { uploadFile } = useMediaLibrary();
   const { data: allMedia, isLoading: isLoadingMedia } = useAllSiteMedia();
@@ -56,7 +72,58 @@ export function MediaPickerDialog({
     setUrl('');
     setUrlPreviewError(false);
     setSelectedLibraryUrl(null);
+    setAdminSteer('');
+    setAiPrompt('');
+    setAiGeneratedUrl(null);
+    setAiSynthesizing(false);
+    setAiGenerating(false);
   }, []);
+
+  const handleSynthesize = async () => {
+    if (!workOrderId) return;
+    setAiSynthesizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('synthesize-cover-prompt', {
+        body: { work_order_id: workOrderId, admin_steer: adminSteer || undefined },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.prompt) throw new Error('No prompt returned');
+      setAiPrompt(data.prompt);
+    } catch (e) {
+      toast({
+        title: 'Could not synthesize prompt',
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'destructive',
+      });
+    } finally {
+      setAiSynthesizing(false);
+    }
+  };
+
+  const handleGenerateImage = async () => {
+    if (!workOrderId || !aiPrompt.trim()) return;
+    setAiGenerating(true);
+    setAiGeneratedUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-cover-image', {
+        body: { work_order_id: workOrderId, prompt: aiPrompt.trim() },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.code === 'off_ratio') {
+        throw new Error(`Off-ratio result (${data.actual_ratio?.toFixed(3)}) rejected. Try again.`);
+      }
+      if (!data?.cover_image_url) throw new Error('No image URL returned');
+      setAiGeneratedUrl(data.cover_image_url);
+    } catch (e) {
+      toast({
+        title: 'Could not generate image',
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'destructive',
+      });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -108,6 +175,8 @@ export function MediaPickerDialog({
         finalUrl = url;
       } else if (activeTab === 'library' && selectedLibraryUrl) {
         finalUrl = selectedLibraryUrl;
+      } else if (activeTab === 'ai' && aiGeneratedUrl) {
+        finalUrl = aiGeneratedUrl;
       }
 
       if (finalUrl) {
@@ -127,6 +196,7 @@ export function MediaPickerDialog({
     if (activeTab === 'upload') return !!file;
     if (activeTab === 'url') return !!url && isValidUrl(url);
     if (activeTab === 'library') return !!selectedLibraryUrl;
+    if (activeTab === 'ai') return !!aiGeneratedUrl;
     return false;
   };
 
@@ -160,8 +230,8 @@ export function MediaPickerDialog({
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
+          <TabsList className={cn('grid w-full', aiEnabled ? 'grid-cols-4' : 'grid-cols-3')}>
             <TabsTrigger value="upload" className="gap-2">
               <Upload className="h-4 w-4" />
               Upload
@@ -174,7 +244,14 @@ export function MediaPickerDialog({
               <Image className="h-4 w-4" />
               Library
             </TabsTrigger>
+            {aiEnabled && (
+              <TabsTrigger value="ai" className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </TabsTrigger>
+            )}
           </TabsList>
+
 
           {/* Upload Tab */}
           <TabsContent value="upload" className="mt-4">
@@ -318,6 +395,77 @@ export function MediaPickerDialog({
               </ScrollArea>
             )}
           </TabsContent>
+
+          {/* AI Tab */}
+          {aiEnabled && (
+            <TabsContent value="ai" className="mt-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-steer" className="text-xs text-muted-foreground">
+                  Optional guidance (e.g. "emphasize night work")
+                </Label>
+                <Input
+                  id="admin-steer"
+                  placeholder="Leave blank to synthesize from work order alone"
+                  value={adminSteer}
+                  onChange={(e) => setAdminSteer(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSynthesize}
+                  disabled={aiSynthesizing}
+                  className="gap-2"
+                >
+                  {aiSynthesizing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4" />
+                  )}
+                  {aiPrompt ? 'Regenerate prompt' : 'Synthesize prompt'}
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai-prompt" className="text-xs text-muted-foreground">
+                  Prompt (editable). The style wrapper is added server-side and cannot be removed.
+                </Label>
+                <Textarea
+                  id="ai-prompt"
+                  rows={6}
+                  placeholder="Click Synthesize to generate a prompt from the work order…"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  onClick={handleGenerateImage}
+                  disabled={!aiPrompt.trim() || aiGenerating}
+                  className="gap-2"
+                >
+                  {aiGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  Generate cover
+                </Button>
+              </div>
+
+              {aiGeneratedUrl && (
+                <div className="rounded border overflow-hidden">
+                  <img
+                    src={aiGeneratedUrl}
+                    alt="Generated cover preview"
+                    className="w-full aspect-video object-cover"
+                  />
+                  <p className="text-xs text-muted-foreground p-2">
+                    Click "Select Image" below to use this cover.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
 
         <DialogFooter>

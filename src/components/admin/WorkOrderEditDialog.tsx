@@ -805,6 +805,7 @@ export function WorkOrderEditDialog({
           }}
           title="Select Cover Image"
           currentImageUrl={coverImageUrl}
+          workOrderId={workOrder?.id}
         />
 
         <ImportChallengeDialog
