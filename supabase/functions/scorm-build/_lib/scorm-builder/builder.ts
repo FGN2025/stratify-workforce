@@ -311,6 +311,7 @@ function escapeObjHtml(s: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
 
 function buildCompletionHtml(
   challenges: FetchedChallenge[],
