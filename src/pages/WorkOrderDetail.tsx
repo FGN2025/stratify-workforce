@@ -271,6 +271,27 @@ export default function WorkOrderDetail() {
                 <h1 className="text-2xl font-bold mb-2">{workOrder.title}</h1>
                 <p className="text-muted-foreground">{workOrder.description}</p>
 
+                {(() => {
+                  const playSource = (workOrder.metadata as { play_source?: { name?: string } } | null)?.play_source;
+                  const challengeName = playSource?.name;
+                  const challengeId = workOrder.fgn_origin_challenge_id;
+                  if (!challengeId || !challengeName) return null;
+                  return (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      From the challenge:{' '}
+                      <a
+                        href={`https://play.fgn.gg/challenges/${challengeId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        {challengeName}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </p>
+                  );
+                })()}
+
                 <div className="flex flex-wrap items-center gap-4 mt-4">
                   <XPRewardBadge xp={workOrder.xp_reward} size="lg" />
                   {workOrder.estimated_time_minutes && (
