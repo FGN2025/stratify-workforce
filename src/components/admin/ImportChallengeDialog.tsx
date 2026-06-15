@@ -31,7 +31,7 @@ export interface ExternalTask {
   challenge_id: string;
   title: string;
   description: string | null;
-  order_index: number;
+  display_order: number;
 }
 
 export interface ExternalChallenge {
@@ -47,7 +47,9 @@ export interface ExternalChallenge {
   game_name?: string | null;
   games?: { name: string } | null;
   tasks?: ExternalTask[];
+  play_source?: Record<string, unknown> | null;
 }
+
 
 // Map play.fgn.gg game names to our enum values
 const GAME_NAME_MAP: Record<string, GameTitle> = {
@@ -81,7 +83,9 @@ export interface MappedChallengeData {
   coverImageUrl: string | null;
   fgnOriginChallengeId: string;
   tasks: ExternalTask[];
+  playSource: Record<string, unknown> | null;
 }
+
 
 const getChallengeGameName = (challenge: ExternalChallenge) =>
   challenge.games?.name || challenge.game_name || '';
@@ -172,10 +176,12 @@ export function ImportChallengeDialog({
       coverImageUrl: challenge.cover_image_url,
       fgnOriginChallengeId: challenge.id,
       tasks: challenge.tasks || [],
+      playSource: challenge.play_source ?? null,
     });
 
     onOpenChange(false);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
