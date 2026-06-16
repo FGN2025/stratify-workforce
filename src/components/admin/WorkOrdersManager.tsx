@@ -343,7 +343,7 @@ export function WorkOrdersManager() {
                         state={{ from: 'admin' }}
                         className="hover:text-primary hover:underline underline-offset-4 transition-colors truncate block"
                       >
-                        {wo.title}
+                        {getWorkOrderDisplayName(wo)}
                       </NavLink>
                     </TableCell>
                     <TableCell>
@@ -446,7 +446,7 @@ export function WorkOrdersManager() {
                   {wo.cover_image_url ? (
                     <img
                       src={wo.cover_image_url}
-                      alt={wo.title}
+                      alt={getWorkOrderDisplayName(wo)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
@@ -485,7 +485,7 @@ export function WorkOrdersManager() {
                     state={{ from: 'admin' }}
                     className="font-semibold text-sm hover:text-primary transition-colors line-clamp-2 block"
                   >
-                    {wo.title}
+                    {getWorkOrderDisplayName(wo)}
                   </NavLink>
 
                   {/* Game label */}
