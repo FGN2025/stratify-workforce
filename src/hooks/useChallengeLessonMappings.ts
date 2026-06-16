@@ -40,13 +40,14 @@ export function useChallengeLessonMappings() {
       if (challengeIds.length) {
         const { data: wos } = await supabase
           .from('work_orders')
-          .select('title, fgn_origin_challenge_id, source_challenge_id')
+          .select('title, generated_name, metadata, fgn_origin_challenge_id, source_challenge_id')
           .or(
             `fgn_origin_challenge_id.in.(${challengeIds.join(',')}),source_challenge_id.in.(${challengeIds.join(',')})`
           );
+        const { getWorkOrderDisplayName } = await import('@/lib/work-order-display');
         for (const w of wos ?? []) {
           const key = (w.fgn_origin_challenge_id as string | null) ?? (w.source_challenge_id as string | null);
-          if (key) woMap.set(key, w.title as string);
+          if (key) woMap.set(key, getWorkOrderDisplayName(w as Parameters<typeof getWorkOrderDisplayName>[0]));
         }
       }
 
