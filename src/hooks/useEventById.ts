@@ -23,12 +23,14 @@ export function useEventById(id: string | undefined) {
           work_orders (
             id,
             title,
+            generated_name,
             description,
             game_title,
             xp_reward,
             difficulty,
             success_criteria,
-            estimated_time_minutes
+            estimated_time_minutes,
+            metadata
           )
         `)
         .eq('id', id!)
@@ -79,9 +81,12 @@ export function useEventById(id: string | undefined) {
         work_order: event.work_orders ? {
           id: event.work_orders.id,
           title: event.work_orders.title,
+          generated_name: (event.work_orders as { generated_name?: string | null }).generated_name ?? null,
+          description: event.work_orders.description,
           game_title: event.work_orders.game_title as GameTitle,
           xp_reward: event.work_orders.xp_reward,
           difficulty: event.work_orders.difficulty,
+          metadata: (event.work_orders.metadata as Record<string, unknown> | null) ?? null,
         } : null,
         registration_count: count || 0,
         winner: winnerProfile,

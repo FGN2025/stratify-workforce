@@ -34,10 +34,15 @@ export interface Event {
 export interface EventWithDetails extends Event {
   work_order?: {
     id: string;
-    title: string;
+    title: string | null;
+    generated_name?: string | null;
+    description?: string | null;
     game_title: GameTitle;
     xp_reward: number;
     difficulty: Database['public']['Enums']['work_order_difficulty'];
+    success_criteria?: Record<string, number>;
+    estimated_time_minutes?: number | null;
+    metadata?: Record<string, unknown> | null;
   } | null;
   registration_count?: number;
   winner?: {
