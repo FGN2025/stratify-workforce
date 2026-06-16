@@ -76,13 +76,15 @@ export type GameTitle = 'ATS' | 'Farming_Sim' | 'Construction_Sim' | 'Mechanic_S
 export interface WorkOrder {
   id: string;
   tenant_id: string | null;
-  title: string;
+  title: string | null;
+  generated_name?: string | null;
   description: string | null;
   game_title: GameTitle;
   success_criteria: Record<string, number>;
   is_active: boolean;
   created_at: string;
   cover_image_url: string | null;
+  metadata?: Record<string, unknown> | null;
   tenant?: Tenant;
 }
 
