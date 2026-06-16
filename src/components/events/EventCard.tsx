@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { XPRewardBadge } from '@/components/work-orders/XPRewardBadge';
 import { GameIcon } from '@/components/dashboard/GameIcon';
 import { cn } from '@/lib/utils';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import type { EventWithDetails, EventStatus } from '@/types/events';
 
 interface EventCardProps {
@@ -126,7 +127,7 @@ export function EventCard({ event, onClick, isSelected, compact = false }: Event
             <h3 className="font-semibold text-foreground truncate mb-1">{event.title}</h3>
             {event.work_order && (
               <p className="text-xs text-muted-foreground">
-                {event.work_order.title}
+                {getWorkOrderDisplayName(event.work_order)}
               </p>
             )}
           </div>

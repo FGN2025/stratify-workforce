@@ -16,6 +16,7 @@ import type { WorkOrderWithXP } from '@/hooks/useWorkOrders';
 import type { Database } from '@/integrations/supabase/types';
 import { Users, Monitor, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 
 type WorkOrderDifficulty = Database['public']['Enums']['work_order_difficulty'];
 
@@ -91,7 +92,7 @@ export function EventCard({
                 <div className="relative w-full h-full">
                   <img 
                     src={coverImage} 
-                    alt={workOrder.title}
+                    alt={getWorkOrderDisplayName(workOrder)}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
@@ -122,7 +123,7 @@ export function EventCard({
                 )}
                 
                 <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
-                  {workOrder.title}
+                  {getWorkOrderDisplayName(workOrder)}
                 </h3>
                 
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
@@ -168,7 +169,7 @@ export function EventCard({
         >
           <img 
             src={coverImage} 
-            alt={workOrder.title}
+            alt={getWorkOrderDisplayName(workOrder)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
@@ -235,7 +236,7 @@ export function EventCard({
           
           {/* Title */}
           <h3 className="font-semibold text-base group-hover:text-primary transition-colors line-clamp-1">
-            {workOrder.title}
+            {getWorkOrderDisplayName(workOrder)}
           </h3>
           
           {/* Difficulty + Time */}
