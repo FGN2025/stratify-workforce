@@ -116,6 +116,7 @@ export function WorkOrdersManager() {
       const workOrdersData = (data || []).map((wo) => ({
         ...wo,
         evidence_requirements: wo.evidence_requirements as unknown as EvidenceRequirements | null,
+        metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
       }));
       setWorkOrders(workOrdersData);
     } catch (error) {
