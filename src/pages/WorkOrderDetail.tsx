@@ -36,6 +36,7 @@ import { WorkOrderSimulationsCard } from '@/components/simulations/WorkOrderSimu
 import { SpatialTaskBadge } from '@/components/work-orders/SpatialTaskBadge';
 import { OpenInBreakroomButton } from '@/components/work-orders/OpenInBreakroomButton';
 import { toast } from '@/hooks/use-toast';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import * as LucideIcons from 'lucide-react';
 import {
   ArrowLeft,
