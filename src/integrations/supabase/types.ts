@@ -3450,6 +3450,7 @@ export type Database = {
           evidence_requirements: Json | null
           fgn_origin_challenge_id: string | null
           game_title: Database["public"]["Enums"]["game_title"]
+          generated_name: string | null
           id: string
           is_active: boolean | null
           max_attempts: number | null
@@ -3457,7 +3458,7 @@ export type Database = {
           source_challenge_id: string | null
           success_criteria: Json | null
           tenant_id: string | null
-          title: string
+          title: string | null
           xp_reward: number
         }
         Insert: {
@@ -3472,6 +3473,7 @@ export type Database = {
           evidence_requirements?: Json | null
           fgn_origin_challenge_id?: string | null
           game_title: Database["public"]["Enums"]["game_title"]
+          generated_name?: string | null
           id?: string
           is_active?: boolean | null
           max_attempts?: number | null
@@ -3479,7 +3481,7 @@ export type Database = {
           source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null
-          title: string
+          title?: string | null
           xp_reward?: number
         }
         Update: {
@@ -3494,6 +3496,7 @@ export type Database = {
           evidence_requirements?: Json | null
           fgn_origin_challenge_id?: string | null
           game_title?: Database["public"]["Enums"]["game_title"]
+          generated_name?: string | null
           id?: string
           is_active?: boolean | null
           max_attempts?: number | null
@@ -3501,7 +3504,7 @@ export type Database = {
           source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null
-          title?: string
+          title?: string | null
           xp_reward?: number
         }
         Relationships: [
