@@ -445,6 +445,12 @@ export function WorkOrderEditDialog({
       if (error) throw error;
       setGeneratedName(next ?? '');
       toast({ title: 'Saved', description: next ? 'Generated name saved.' : 'Generated name cleared.' });
+      // Trigger parent list refetch so the row reflects the new (or cleared)
+      // generated_name immediately. Side effect: this also closes the dialog,
+      // matching the main Save Changes behavior. Noted refinement: a lighter
+      // onRowChanged callback that refetches without closing would be better
+      // long-term UX for sub-actions — revisit if close-on-save proves annoying.
+      onSave();
     } catch (e) {
       toast({
         title: 'Save failed',

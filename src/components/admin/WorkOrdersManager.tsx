@@ -52,7 +52,8 @@ type Json = Database['public']['Tables']['work_orders']['Row']['success_criteria
 
 interface WorkOrder {
   id: string;
-  title: string;
+  title: string | null;
+  generated_name: string | null;
   description: string | null;
   game_title: GameTitle;
   difficulty: WorkOrderDifficulty;
@@ -66,6 +67,7 @@ interface WorkOrder {
   created_at: string;
   evidence_requirements: EvidenceRequirements | null;
   cover_image_url: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 const GAME_LABELS: Record<GameTitle, string> = {
@@ -114,6 +116,7 @@ export function WorkOrdersManager() {
       const workOrdersData = (data || []).map((wo) => ({
         ...wo,
         evidence_requirements: wo.evidence_requirements as unknown as EvidenceRequirements | null,
+        metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
       }));
       setWorkOrders(workOrdersData);
     } catch (error) {
