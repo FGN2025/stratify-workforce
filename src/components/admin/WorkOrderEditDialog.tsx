@@ -518,15 +518,70 @@ export function WorkOrderEditDialog({
 
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="title">Title (optional)</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter work order title"
-              required
+              placeholder="Leave blank to use the AI-generated name or source challenge name"
             />
+            <p className="text-xs text-muted-foreground">
+              Title is the authored display name. If blank, the work order shows the generated name, then the source challenge name.
+            </p>
           </div>
+
+          {/* Generated Name (edit mode only) */}
+          {workOrder?.id && (
+            <div className="space-y-2 rounded-lg border border-border/50 p-4 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium">Generated Name</Label>
+                {generatedName && (
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    saved: <span className="text-foreground font-medium">{generatedName}</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Trade-framed neutral name. Used as the display fallback when Title is blank. Never overrides Title.
+              </p>
+              <Input
+                value={generatedNameDraft}
+                onChange={(e) => setGeneratedNameDraft(e.target.value)}
+                placeholder={generatedName || 'Not generated yet'}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateName}
+                  disabled={isGeneratingName}
+                >
+                  {isGeneratingName && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                  Generate
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveGeneratedName}
+                  disabled={isSavingGeneratedName || generatedNameDraft.trim() === (generatedName ?? '')}
+                >
+                  {isSavingGeneratedName && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                  Save generated name
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleUseGeneratedAsTitle}
+                  disabled={!generatedNameDraft.trim()}
+                >
+                  Use as title
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-2">
