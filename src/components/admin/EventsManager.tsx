@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -333,7 +334,7 @@ export function EventsManager() {
                     <div className="truncate">{event.title}</div>
                     {event.work_order && (
                       <div className="text-xs text-muted-foreground truncate">
-                        {event.work_order.title}
+                        {getWorkOrderDisplayName(event.work_order)}
                       </div>
                     )}
                   </TableCell>

@@ -1,31 +1,31 @@
-// supabase/functions/synthesize-cover-prompt/index.ts
-// Implements docs/cover-prompt-contract.md §2.1 + §3 + §4 + §5.
-// Trade-context lookup and neutral-language rules are imported from
-// shared modules so cover and work-order-name synthesis share one
-// source of truth.
+// supabase/functions/synthesize-work-order-name/index.ts
+// Implements docs/work-order-name-contract.md.
+// Synthesizes a short, trade-framed, neutral-language display name for a
+// work order. Returns the candidate; the admin reviews/edits/persists
+// separately via a normal work_orders UPDATE.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { getTradeContext } from "../_shared/trade-context.ts";
-import { NEUTRAL_LANGUAGE_RULES } from "../_shared/neutral-language.ts";
+import { NEUTRAL_LANGUAGE_RULES, findBannedTerms } from "../_shared/neutral-language.ts";
 
-const SYSTEM_PROMPT = `You write single-paragraph image prompts for cinematic 16:9 cover banners that depict real-world industrial and trade work.
+const SYSTEM_PROMPT = `You write short display names for work orders that describe real-world industrial and trade work.
 
-You will be given a work order's metadata. Translate it into a vivid, concrete scene description suitable for an image model.
+Each work order represents a real job. Translate its metadata into a concise, trade-framed name suitable as a card heading and page heading on a learning platform.
 
 ${NEUTRAL_LANGUAGE_RULES}
 
-HARD RULES — these are non-negotiable:
+HARD RULES (non-negotiable):
 
-1. People may appear in the scene as workers, but faces must not be clearly identifiable. Acceptable: face turned away, in profile, distant, partially obscured by safety gear, in shadow, or framed below the shoulders. Empty scenes are also acceptable.
+1. Length: 3 to 8 words. Title Case. No trailing punctuation. No quotes. No emoji. No markdown.
 
-2. Single paragraph. No markdown. No lists. No headings. No quotes around the prompt. <= 1200 characters total.
+2. Trade-framed: name the real-world work (e.g. "Build a Pitched Asphalt-Shingle Roof", "Long-Haul Refrigerated Delivery to Phoenix"). NEVER name the sim, game, archetype, or platform mechanic.
 
-3. Concrete, photoreal, cinematic. Specific time of day, lighting, weather, materials, tools, vantage point. Industrial palette.
+3. Specific over generic. Prefer the concrete job ("Replace a Fiber Drop at a Service Pedestal") over the abstract category ("Fiber Work").
 
-4. Do not mention aspect ratio, resolution, or camera specs — those are handled by the style wrapper appended downstream. Do not include the words "16:9", "cinematic", or "photoreal" in your output; the wrapper adds those.
+4. Do not echo banned terms even if they appear in the input title or description. Rewrite them.
 
-OUTPUT: only the prompt paragraph. Nothing else.`;
+OUTPUT: only the name. Nothing else. No preface, no explanation.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -53,12 +53,14 @@ Deno.serve(async (req) => {
     if (!body || typeof body !== "object") {
       return json({ code: "validation", field: "body", message: "JSON body required" }, 400);
     }
-    const { work_order_id, admin_steer } = body as { work_order_id?: string; admin_steer?: string };
+    const { work_order_id, admin_steer } = body as {
+      work_order_id?: string;
+      admin_steer?: string;
+    };
     if (!work_order_id || typeof work_order_id !== "string") {
       return json({ code: "validation", field: "work_order_id", message: "required" }, 400);
     }
 
-    // Service-role client to read the work order (RLS bypass for admin-validated request).
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -71,35 +73,27 @@ Deno.serve(async (req) => {
     if (woErr) return json({ code: "internal", message: woErr.message }, 500);
     if (!wo) return json({ code: "not_found", entity: "work_order" }, 404);
 
-    const playSource = (wo.metadata as any)?.play_source;
-    const playSourceBlurb: string | null =
-      typeof playSource?.description === "string" ? playSource.description :
-      typeof playSource?.blurb === "string" ? playSource.blurb :
-      typeof playSource?.summary === "string" ? playSource.summary :
-      null;
+    const playSource = (wo.metadata as { play_source?: Record<string, unknown> } | null)?.play_source;
+    const playSourceName =
+      typeof playSource?.name === "string" ? (playSource.name as string).trim() : null;
+    const playSourceBlurb =
+      typeof playSource?.description === "string" ? (playSource.description as string).trim() : null;
 
     const trade = getTradeContext(wo.game_title as string | null);
 
     const userParts: string[] = [
       `TRADE CONTEXT: ${trade}`,
-      `TITLE: ${wo.title ?? ""}`,
+      `CURRENT TITLE (if any, may be empty): ${wo.title ?? ""}`,
     ];
+    if (playSourceName) userParts.push(`SOURCE CHALLENGE NAME: ${playSourceName}`);
     if (wo.description) userParts.push(`DESCRIPTION: ${wo.description}`);
+    if (playSourceBlurb) userParts.push(`SOURCE BLURB: ${playSourceBlurb}`);
     if (wo.category_key) userParts.push(`CATEGORY: ${wo.category_key}`);
     if (wo.difficulty) userParts.push(`DIFFICULTY: ${wo.difficulty}`);
-    if (playSourceBlurb) userParts.push(`SCENE REFERENCE (preferred): ${playSourceBlurb}`);
     if (admin_steer && typeof admin_steer === "string" && admin_steer.trim()) {
       userParts.push(`ADMIN GUIDANCE: ${admin_steer.trim()}`);
     }
     const userMsg = userParts.join("\n");
-
-    // Read model from ai_platform_settings (default fallback per contract §7).
-    const { data: settingRow } = await admin
-      .from("ai_platform_settings")
-      .select("value")
-      .eq("key", "cover_prompt_model")
-      .maybeSingle();
-    const model = (settingRow?.value as string | null) ?? "google/gemini-3-flash-preview";
 
     const aiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!aiKey) return json({ code: "internal", message: "Missing LOVABLE_API_KEY" }, 500);
@@ -111,7 +105,7 @@ Deno.serve(async (req) => {
         "Lovable-API-Key": aiKey,
       },
       body: JSON.stringify({
-        model,
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMsg },
@@ -121,14 +115,52 @@ Deno.serve(async (req) => {
 
     if (!gwResp.ok) {
       const text = await gwResp.text().catch(() => "");
-      return json({ code: "gateway", status: gwResp.status, message: text || gwResp.statusText }, gwResp.status >= 500 ? 502 : 400);
+      return json(
+        { code: "gateway", status: gwResp.status, message: text || gwResp.statusText },
+        gwResp.status >= 500 ? 502 : 400,
+      );
     }
 
     const payload = await gwResp.json();
-    const prompt: string = payload?.choices?.[0]?.message?.content?.toString().trim() ?? "";
-    if (!prompt) return json({ code: "internal", message: "Empty prompt from model" }, 502);
+    let candidate: string = payload?.choices?.[0]?.message?.content?.toString().trim() ?? "";
+    if (!candidate) {
+      return json({ code: "internal", message: "Empty name from model" }, 502);
+    }
 
-    return json({ prompt }, 200);
+    // Light cleanup: strip surrounding quotes/markdown, trailing punctuation.
+    candidate = candidate
+      .replace(/^["'`*_]+|["'`*_]+$/g, "")
+      .replace(/[.!?,;:]+$/, "")
+      .trim();
+
+    const hits = findBannedTerms(candidate);
+    if (hits.length > 0) {
+      return json(
+        {
+          code: "validation",
+          field: "output",
+          message: `Generated name contains banned terms: ${hits.join(", ")}. Regenerate or edit.`,
+          generated_name: candidate,
+          banned_hits: hits,
+        },
+        422,
+      );
+    }
+
+    const wordCount = candidate.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 2 || wordCount > 12) {
+      return json(
+        {
+          code: "validation",
+          field: "output",
+          message: `Generated name has ${wordCount} words; expected 3–8. Regenerate or edit.`,
+          generated_name: candidate,
+        },
+        422,
+      );
+    }
+
+    return json({ generated_name: candidate }, 200);
   } catch (e) {
     return json({ code: "internal", message: e instanceof Error ? e.message : String(e) }, 500);
   }

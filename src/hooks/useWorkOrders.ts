@@ -10,7 +10,8 @@ type WorkOrderDifficulty = Database['public']['Enums']['work_order_difficulty'];
 export interface WorkOrderWithXP {
   id: string;
   tenant_id: string | null;
-  title: string;
+  title: string | null;
+  generated_name: string | null;
   description: string | null;
   game_title: GameTitle;
   success_criteria: Record<string, number>;
@@ -64,6 +65,7 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
         id: wo.id,
         tenant_id: wo.tenant_id,
         title: wo.title,
+        generated_name: (wo as { generated_name?: string | null }).generated_name ?? null,
         description: wo.description,
         game_title: wo.game_title,
         success_criteria: (wo.success_criteria as Record<string, number>) || {},
@@ -101,6 +103,7 @@ export function useWorkOrderById(id: string) {
         id: data.id,
         tenant_id: data.tenant_id,
         title: data.title,
+        generated_name: (data as { generated_name?: string | null }).generated_name ?? null,
         description: data.description,
         game_title: data.game_title,
         success_criteria: (data.success_criteria as Record<string, number>) || {},

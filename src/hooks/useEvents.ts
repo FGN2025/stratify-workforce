@@ -20,9 +20,11 @@ export function useEvents(filters?: EventFilters) {
           work_orders (
             id,
             title,
+            generated_name,
             game_title,
             xp_reward,
-            difficulty
+            difficulty,
+            metadata
           )
         `)
         .order('scheduled_start', { ascending: true });
@@ -98,9 +100,11 @@ export function useEvents(filters?: EventFilters) {
         work_order: event.work_orders ? {
           id: event.work_orders.id,
           title: event.work_orders.title,
+          generated_name: (event.work_orders as { generated_name?: string | null }).generated_name ?? null,
           game_title: event.work_orders.game_title as GameTitle,
           xp_reward: event.work_orders.xp_reward,
           difficulty: event.work_orders.difficulty,
+          metadata: ((event.work_orders as { metadata?: Record<string, unknown> | null }).metadata) ?? null,
         } : null,
         registration_count: regCounts[event.id] || 0,
       })) as EventWithDetails[];
@@ -123,9 +127,11 @@ export function useUpcomingEvents(limit = 5) {
           work_orders (
             id,
             title,
+            generated_name,
             game_title,
             xp_reward,
-            difficulty
+            difficulty,
+            metadata
           )
         `)
         .in('status', ['published', 'registration_open', 'in_progress'])
@@ -160,9 +166,11 @@ export function useUpcomingEvents(limit = 5) {
         work_order: event.work_orders ? {
           id: event.work_orders.id,
           title: event.work_orders.title,
+          generated_name: (event.work_orders as { generated_name?: string | null }).generated_name ?? null,
           game_title: event.work_orders.game_title as GameTitle,
           xp_reward: event.work_orders.xp_reward,
           difficulty: event.work_orders.difficulty,
+          metadata: ((event.work_orders as { metadata?: Record<string, unknown> | null }).metadata) ?? null,
         } : null,
       })) as EventWithDetails[];
     },
@@ -188,9 +196,11 @@ export function useEventsByDate(date: Date) {
           work_orders (
             id,
             title,
+            generated_name,
             game_title,
             xp_reward,
-            difficulty
+            difficulty,
+            metadata
           )
         `)
         .neq('status', 'draft')
@@ -225,9 +235,11 @@ export function useEventsByDate(date: Date) {
         work_order: event.work_orders ? {
           id: event.work_orders.id,
           title: event.work_orders.title,
+          generated_name: (event.work_orders as { generated_name?: string | null }).generated_name ?? null,
           game_title: event.work_orders.game_title as GameTitle,
           xp_reward: event.work_orders.xp_reward,
           difficulty: event.work_orders.difficulty,
+          metadata: ((event.work_orders as { metadata?: Record<string, unknown> | null }).metadata) ?? null,
         } : null,
       })) as EventWithDetails[];
     },

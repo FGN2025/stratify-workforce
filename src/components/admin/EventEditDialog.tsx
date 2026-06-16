@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -316,7 +317,7 @@ export function EventEditDialog({
                   <SelectItem value="__none__">None</SelectItem>
                   {workOrders.map(wo => (
                     <SelectItem key={wo.id} value={wo.id}>
-                      {wo.title} ({wo.game_title.replace('_', ' ')})
+                      {getWorkOrderDisplayName(wo)} ({wo.game_title.replace('_', ' ')})
                     </SelectItem>
                   ))}
                 </SelectContent>

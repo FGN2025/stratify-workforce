@@ -26,8 +26,10 @@ export interface EvidenceItem {
     avatar_url: string | null;
   };
   work_order?: {
-    title: string;
+    title: string | null;
+    generated_name?: string | null;
     game_title: string;
+    metadata?: Record<string, unknown> | null;
   };
 }
 
@@ -73,7 +75,7 @@ export function useEvidenceReview(options: UseEvidenceReviewOptions = {}) {
           ? supabase.from('profiles').select('id, username, avatar_url').in('id', userIds)
           : Promise.resolve({ data: [] }),
         workOrderIds.length > 0
-          ? supabase.from('work_orders').select('id, title, game_title').in('id', workOrderIds)
+          ? supabase.from('work_orders').select('id, title, generated_name, game_title, metadata').in('id', workOrderIds)
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -81,7 +83,15 @@ export function useEvidenceReview(options: UseEvidenceReviewOptions = {}) {
         (profilesRes.data || []).map(p => [p.id, { username: p.username, avatar_url: p.avatar_url }])
       );
       const workOrdersMap = new Map(
-        (workOrdersRes.data || []).map(w => [w.id, { title: w.title, game_title: w.game_title }])
+        (workOrdersRes.data || []).map(w => [
+          w.id,
+          {
+            title: w.title,
+            generated_name: (w as { generated_name?: string | null }).generated_name ?? null,
+            game_title: w.game_title,
+            metadata: ((w as { metadata?: Record<string, unknown> | null }).metadata) ?? null,
+          },
+        ])
       );
 
       const formattedEvidence: EvidenceItem[] = (evidenceData || []).map((item) => ({

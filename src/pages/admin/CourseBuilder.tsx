@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -400,7 +401,7 @@ function ConfigureStage({
                       <SelectItem value="none">— Select —</SelectItem>
                       {workOrders.map((w) => (
                         <SelectItem key={w.id} value={w.id}>
-                          {w.title} {w.game_title ? `· ${w.game_title}` : ''}
+                          {getWorkOrderDisplayName(w)} {w.game_title ? `· ${w.game_title}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

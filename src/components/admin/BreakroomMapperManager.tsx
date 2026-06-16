@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -286,7 +287,7 @@ export function BreakroomMapperManager() {
                       return (
                         <SelectItem key={wo.id} value={wo.id}>
                           <span className="flex items-center gap-2">
-                            <span className="font-medium">{wo.title}</span>
+                            <span className="font-medium">{getWorkOrderDisplayName(wo)}</span>
                             {wo.game_title && (
                               <Badge variant="outline" className="text-[10px]">
                                 {String(wo.game_title)}

@@ -31,6 +31,7 @@ import {
   Loader2,
   Search,
 } from 'lucide-react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import type { WorkOrder, GameTitle } from '@/types/tenant';
 
 interface WorkOrderAssignmentManagerProps {
@@ -60,11 +61,11 @@ export function WorkOrderAssignmentManager({ tenantId }: WorkOrderAssignmentMana
     queryFn: async () => {
       const { data, error } = await supabase
         .from('work_orders')
-        .select('id, title, game_title, is_active')
+        .select('id, title, generated_name, metadata, game_title, is_active')
         .eq('is_active', true)
         .order('title');
       if (error) throw error;
-      return data as { id: string; title: string; game_title: string; is_active: boolean }[];
+      return data as { id: string; title: string | null; generated_name: string | null; metadata: Record<string, unknown> | null; game_title: string; is_active: boolean }[];
     },
   });
 
@@ -93,7 +94,7 @@ export function WorkOrderAssignmentManager({ tenantId }: WorkOrderAssignmentMana
   const filteredWOs = useMemo(() => {
     if (!searchWO) return allWorkOrders;
     const q = searchWO.toLowerCase();
-    return allWorkOrders.filter(wo => wo.title.toLowerCase().includes(q));
+    return allWorkOrders.filter(wo => getWorkOrderDisplayName(wo).toLowerCase().includes(q));
   }, [allWorkOrders, searchWO]);
 
   // Already-assigned WO ids for community
@@ -102,7 +103,7 @@ export function WorkOrderAssignmentManager({ tenantId }: WorkOrderAssignmentMana
   // WO title lookup
   const woTitleMap = useMemo(() => {
     const map: Record<string, string> = {};
-    allWorkOrders.forEach(wo => { map[wo.id] = wo.title; });
+    allWorkOrders.forEach(wo => { map[wo.id] = getWorkOrderDisplayName(wo); });
     return map;
   }, [allWorkOrders]);
 
@@ -202,7 +203,7 @@ export function WorkOrderAssignmentManager({ tenantId }: WorkOrderAssignmentMana
                         value={wo.id}
                         disabled={assignMode === 'community' && communityAssignedIds.has(wo.id)}
                       >
-                        {wo.title}
+                        {getWorkOrderDisplayName(wo)}
                         {assignMode === 'community' && communityAssignedIds.has(wo.id) && ' (assigned)'}
                       </SelectItem>
                     ))}

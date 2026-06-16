@@ -36,6 +36,7 @@ import { WorkOrderSimulationsCard } from '@/components/simulations/WorkOrderSimu
 import { SpatialTaskBadge } from '@/components/work-orders/SpatialTaskBadge';
 import { OpenInBreakroomButton } from '@/components/work-orders/OpenInBreakroomButton';
 import { toast } from '@/hooks/use-toast';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import * as LucideIcons from 'lucide-react';
 import {
   ArrowLeft,
@@ -239,7 +240,7 @@ export default function WorkOrderDetail() {
                 {coverImage ? (
                   <img
                     src={coverImage}
-                    alt={workOrder.title}
+                    alt={getWorkOrderDisplayName(workOrder)}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -268,7 +269,7 @@ export default function WorkOrderDetail() {
                   )}
                 </div>
 
-                <h1 className="text-2xl font-bold mb-2">{workOrder.title}</h1>
+                <h1 className="text-2xl font-bold mb-2">{getWorkOrderDisplayName(workOrder)}</h1>
                 <p className="text-muted-foreground">{workOrder.description}</p>
 
                 {(() => {

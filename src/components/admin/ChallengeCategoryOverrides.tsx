@@ -8,11 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useSimCategories, resolveCategoryKey, type SimCategory } from '@/hooks/useSimCategories';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import type { GameTitle } from '@/types/tenant';
 
 interface WORow {
   id: string;
-  title: string;
+  title: string | null;
+  generated_name?: string | null;
+  metadata?: Record<string, unknown> | null;
   game_title: GameTitle;
   category_key: string | null;
 }
@@ -28,7 +31,7 @@ export function ChallengeCategoryOverrides() {
     queryFn: async (): Promise<WORow[]> => {
       const { data, error } = await supabase
         .from('work_orders')
-        .select('id, title, game_title, category_key')
+        .select('id, title, generated_name, metadata, game_title, category_key')
         .order('title', { ascending: true });
       if (error) throw error;
       return (data || []) as WORow[];
@@ -37,7 +40,8 @@ export function ChallengeCategoryOverrides() {
 
   const filtered = useMemo(() => {
     return workOrders.filter((w) => {
-      if (search && !w.title.toLowerCase().includes(search.toLowerCase())) return false;
+      const displayName = getWorkOrderDisplayName(w);
+      if (search && !displayName.toLowerCase().includes(search.toLowerCase())) return false;
       if (filter === 'all') return true;
       if (filter === 'overridden') return !!w.category_key;
       if (filter === 'uncategorized') return !resolveCategoryKey(w, categories);
@@ -97,7 +101,7 @@ export function ChallengeCategoryOverrides() {
             return (
               <div key={w.id} className="flex items-center gap-3 p-3 hover:bg-muted/30">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{w.title}</p>
+                  <p className="text-sm font-medium truncate">{getWorkOrderDisplayName(w)}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-[10px]">{w.game_title.replace('_', ' ')}</Badge>
                     {resolved ? (
