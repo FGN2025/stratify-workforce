@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { GameIcon, getGameLabel } from './GameIcon';
 import { SpatialTaskBadge } from '@/components/work-orders/SpatialTaskBadge';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import type { WorkOrder } from '@/types/tenant';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +32,7 @@ export function WorkOrderCard({ workOrder, tenantColor }: WorkOrderCardProps) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                {workOrder.title}
+                {getWorkOrderDisplayName(workOrder)}
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {getGameLabel(workOrder.game_title)}

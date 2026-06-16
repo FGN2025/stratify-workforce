@@ -37,12 +37,14 @@ export function ActiveWorkOrders() {
         id: wo.id,
         tenant_id: wo.tenant_id,
         title: wo.title,
+        generated_name: (wo as { generated_name?: string | null }).generated_name ?? null,
         description: wo.description,
         game_title: wo.game_title as GameTitle,
         success_criteria: (wo.success_criteria as Record<string, number>) || {},
         is_active: wo.is_active ?? true,
         created_at: wo.created_at,
         cover_image_url: wo.cover_image_url,
+        metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
       }));
 
       setWorkOrders(typedWorkOrders);
