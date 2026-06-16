@@ -47,7 +47,8 @@ export interface EvidenceRequirements {
 
 interface WorkOrder {
   id: string;
-  title: string;
+  title: string | null;
+  generated_name?: string | null;
   description: string | null;
   game_title: GameTitle;
   difficulty: WorkOrderDifficulty;
@@ -61,6 +62,7 @@ interface WorkOrder {
   evidence_requirements: EvidenceRequirements | null;
   cover_image_url: string | null;
   fgn_origin_challenge_id?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface GameChannel {
@@ -123,6 +125,12 @@ export function WorkOrderEditDialog({
   const [pendingPlaySource, setPendingPlaySource] = useState<Record<string, unknown> | null>(null);
   const [evidenceUserOverridden, setEvidenceUserOverridden] = useState(false);
 
+  // Generated name (display fallback when title is empty)
+  const [generatedName, setGeneratedName] = useState<string>('');
+  const [generatedNameDraft, setGeneratedNameDraft] = useState<string>('');
+  const [isGeneratingName, setIsGeneratingName] = useState(false);
+  const [isSavingGeneratedName, setIsSavingGeneratedName] = useState(false);
+
   // Fetch channels and tenants on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -141,7 +149,9 @@ export function WorkOrderEditDialog({
   useEffect(() => {
     if (open) {
       if (workOrder) {
-        setTitle(workOrder.title);
+        setTitle(workOrder.title ?? '');
+        setGeneratedName(workOrder.generated_name ?? '');
+        setGeneratedNameDraft(workOrder.generated_name ?? '');
         setDescription(workOrder.description || '');
         setGameTitle(workOrder.game_title);
         setDifficulty(workOrder.difficulty);
@@ -179,6 +189,8 @@ export function WorkOrderEditDialog({
       } else {
         // Reset to defaults for create mode
         setTitle('');
+        setGeneratedName('');
+        setGeneratedNameDraft('');
         setDescription('');
         setGameTitle('ATS');
         setDifficulty('beginner');
@@ -214,14 +226,8 @@ export function WorkOrderEditDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!title.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Title is required.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // Title is now optional — leaving it blank persists NULL and lets the
+    // display resolver fall back to generated_name then play_source.name.
 
     setIsSaving(true);
 
@@ -243,7 +249,7 @@ export function WorkOrderEditDialog({
         : null;
 
       const data: Record<string, unknown> = {
-        title: title.trim(),
+        title: title.trim() || null,
         description: description.trim() || null,
         game_title: gameTitle,
         difficulty,
@@ -351,7 +357,10 @@ export function WorkOrderEditDialog({
   };
 
   const handleImportChallenge = (data: MappedChallengeData) => {
-    setTitle(data.title);
+    // Leave title BLANK on import — the work order lands with title NULL and
+    // the display resolver falls back to play_source.name (and later the
+    // admin-generated name). See docs/work-order-name-contract.md.
+    setTitle('');
     setDescription(data.description);
     setGameTitle(data.gameTitle);
     setDifficulty(data.difficulty);
@@ -380,8 +389,77 @@ export function WorkOrderEditDialog({
 
     toast({
       title: 'Challenge Imported',
-      description: `"${data.title}" data loaded${data.tasks.length > 0 ? ` with ${data.tasks.length} tasks` : ''}. Review and save to create the work order.`,
+      description: `Data loaded${data.tasks.length > 0 ? ` with ${data.tasks.length} tasks` : ''}. Title left blank intentionally — author it or use the AI-generated name. Review and save to create.`,
     });
+  };
+
+  const handleGenerateName = async () => {
+    if (!workOrder?.id) {
+      toast({ title: 'Save first', description: 'Save the work order before generating a name.', variant: 'destructive' });
+      return;
+    }
+    setIsGeneratingName(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('synthesize-work-order-name', {
+        body: { work_order_id: workOrder.id },
+      });
+      if (error) throw error;
+      const candidate = (data as { generated_name?: string })?.generated_name;
+      if (!candidate) {
+        // Edge function may have returned a 422 with a candidate; supabase-js
+        // surfaces the body on `data` even when status is non-2xx for invoke.
+        const fallback = (data as { generated_name?: string; message?: string })?.generated_name;
+        if (fallback) {
+          setGeneratedNameDraft(fallback);
+          toast({
+            title: 'Name needs review',
+            description: (data as { message?: string })?.message ?? 'Edit and save manually.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        throw new Error('Empty response from synthesizer');
+      }
+      setGeneratedNameDraft(candidate);
+      toast({ title: 'Name generated', description: 'Review, edit if needed, then click Save generated name.' });
+    } catch (e) {
+      toast({
+        title: 'Generation failed',
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingName(false);
+    }
+  };
+
+  const handleSaveGeneratedName = async () => {
+    if (!workOrder?.id) return;
+    const next = generatedNameDraft.trim() || null;
+    setIsSavingGeneratedName(true);
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({ generated_name: next })
+        .eq('id', workOrder.id);
+      if (error) throw error;
+      setGeneratedName(next ?? '');
+      toast({ title: 'Saved', description: next ? 'Generated name saved.' : 'Generated name cleared.' });
+    } catch (e) {
+      toast({
+        title: 'Save failed',
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingGeneratedName(false);
+    }
+  };
+
+  const handleUseGeneratedAsTitle = () => {
+    if (!generatedNameDraft.trim()) return;
+    setTitle(generatedNameDraft.trim());
+    toast({ title: 'Copied to title', description: 'Click Save Changes to persist.' });
   };
 
 
