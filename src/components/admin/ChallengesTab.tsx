@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Copy, Terminal, Code, Search, Download, FileText, Minus } from 'lucide-react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameTitle = Database['public']['Enums']['game_title'];
@@ -31,7 +32,8 @@ const GAME_LABELS: Record<GameTitle, string> = {
 
 interface WorkOrderRow {
   id: string;
-  title: string;
+  title: string | null;
+  generated_name: string | null;
   game_title: GameTitle;
   source_challenge_id: string | null;
   is_active: boolean | null;
@@ -70,7 +72,7 @@ export function ChallengesTab() {
       if (gameFilter !== 'all' && wo.game_title !== gameFilter) return false;
       if (activeFilter === 'active' && !wo.is_active) return false;
       if (activeFilter === 'inactive' && wo.is_active) return false;
-      if (search && !wo.title.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !getWorkOrderDisplayName(wo).toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
   }, [workOrders, gameFilter, activeFilter, search]);
@@ -120,7 +122,7 @@ export function ChallengesTab() {
   };
 
   const getLuaEntry = (wo: WorkOrderRow) => {
-    const name = getBreakroomCourseName(wo) || wo.title;
+    const name = getBreakroomCourseName(wo) || getWorkOrderDisplayName(wo);
     const sid = wo.source_challenge_id || wo.id;
     return `["${name}"] = "${sid}",`;
   };
@@ -138,7 +140,7 @@ export function ChallengesTab() {
   const exportCSV = () => {
     const headers = ['Title', 'Game Title', 'Source Challenge ID', 'Is Active', 'XP Reward', 'Breakroom Course Name'];
     const rows = filtered.map(wo => [
-      wo.title,
+      getWorkOrderDisplayName(wo),
       wo.game_title,
       wo.source_challenge_id || '',
       wo.is_active ? 'Yes' : 'No',
@@ -238,7 +240,7 @@ export function ChallengesTab() {
             <TableBody>
               {filtered.map(wo => (
                 <TableRow key={wo.id}>
-                  <TableCell className="font-medium max-w-[200px] truncate">{wo.title}</TableCell>
+                  <TableCell className="font-medium max-w-[200px] truncate">{getWorkOrderDisplayName(wo)}</TableCell>
                   <TableCell>
                     <Badge
                       variant="secondary"
