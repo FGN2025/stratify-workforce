@@ -55,7 +55,7 @@ export function ChallengesTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('work_orders')
-        .select('id, title, game_title, source_challenge_id, is_active, xp_reward, metadata')
+        .select('id, title, generated_name, game_title, source_challenge_id, is_active, xp_reward, metadata')
         .order('game_title')
         .order('title');
       if (error) throw error;
