@@ -153,7 +153,7 @@ export function EvidenceReviewDialog({
             {evidence.work_order && (
               <div className="space-y-1">
                 <Label className="text-muted-foreground">Work Order</Label>
-                <p className="font-medium">{evidence.work_order.title}</p>
+                <p className="font-medium">{getWorkOrderDisplayName(evidence.work_order)}</p>
                 <Badge variant="secondary" className="text-xs">
                   {evidence.work_order.game_title.replace('_', ' ')}
                 </Badge>

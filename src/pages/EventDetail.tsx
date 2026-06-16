@@ -159,7 +159,7 @@ export default function EventDetail() {
                     <h1 className="text-2xl font-bold text-foreground mb-2">{event.title}</h1>
                     {event.work_order && (
                       <p className="text-muted-foreground">
-                        Work Order: {event.work_order.title}
+                        Work Order: {getWorkOrderDisplayName(event.work_order)}
                       </p>
                     )}
                   </div>

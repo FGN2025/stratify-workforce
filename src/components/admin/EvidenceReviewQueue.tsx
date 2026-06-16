@@ -193,7 +193,7 @@ export function EvidenceReviewQueue() {
                     </TableCell>
                     <TableCell>
                       <div className="max-w-[200px]">
-                        <p className="font-medium truncate">{item.work_order?.title || '—'}</p>
+                        <p className="font-medium truncate">{item.work_order ? getWorkOrderDisplayName(item.work_order) : '—'}</p>
                         {item.work_order?.game_title && (
                           <p className="text-xs text-muted-foreground">
                             {item.work_order.game_title.replace('_', ' ')}

@@ -400,7 +400,7 @@ function ConfigureStage({
                       <SelectItem value="none">— Select —</SelectItem>
                       {workOrders.map((w) => (
                         <SelectItem key={w.id} value={w.id}>
-                          {w.title} {w.game_title ? `· ${w.game_title}` : ''}
+                          {getWorkOrderDisplayName(w)} {w.game_title ? `· ${w.game_title}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

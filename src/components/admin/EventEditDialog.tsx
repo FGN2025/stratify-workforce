@@ -316,7 +316,7 @@ export function EventEditDialog({
                   <SelectItem value="__none__">None</SelectItem>
                   {workOrders.map(wo => (
                     <SelectItem key={wo.id} value={wo.id}>
-                      {wo.title} ({wo.game_title.replace('_', ' ')})
+                      {getWorkOrderDisplayName(wo)} ({wo.game_title.replace('_', ' ')})
                     </SelectItem>
                   ))}
                 </SelectContent>
