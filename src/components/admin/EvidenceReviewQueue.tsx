@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { format } from 'date-fns';
 import { useEvidenceReview, type EvidenceItem } from '@/hooks/useEvidenceReview';
 import { EvidenceReviewDialog } from './EvidenceReviewDialog';

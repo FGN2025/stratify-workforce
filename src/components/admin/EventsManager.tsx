@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';

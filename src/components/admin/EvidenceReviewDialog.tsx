@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

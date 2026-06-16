@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { format, formatDistanceToNow, isPast, isFuture } from 'date-fns';
 import { 
   Calendar, 
