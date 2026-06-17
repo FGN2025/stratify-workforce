@@ -79,7 +79,11 @@ Deno.serve(async (req) => {
         action: 'challenges',
         limit: PAGE_LIMIT,
         page,
+        // Admin import UI: include inactive challenges so admins can import
+        // unpublished/staged work (e.g. fresh tracks before they go live on play).
+        include_inactive: true,
       };
+
 
       const res = await fetch(`${playUrl}/functions/v1/ecosystem-data-api`, {
         method: 'POST',
