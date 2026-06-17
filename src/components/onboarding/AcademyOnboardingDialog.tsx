@@ -11,12 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AddressValidationForm } from './AddressValidationForm';
-import { OverrideCodeInput } from './OverrideCodeInput';
+import { InviteCodeInput } from './InviteCodeInput';
 import { useOnboardingStatus, SaveAddressInput } from '@/hooks/useOnboardingStatus';
 import { useRegistrationCode, ValidatedCode } from '@/hooks/useRegistrationCode';
 import { AddressInput, ValidatedAddress } from '@/hooks/useAddressValidation';
 import { toast } from '@/hooks/use-toast';
-import { User, MapPin, Check, MessageCircle } from 'lucide-react';
+import { User, MapPin, Check, MessageCircle, IdCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcademyOnboardingDialogProps {
