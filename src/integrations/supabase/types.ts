@@ -615,9 +615,11 @@ export type Database = {
           game_title: Database["public"]["Enums"]["game_title"] | null
           id: string
           is_published: boolean
+          owner_tenant_id: string | null
           tenant_id: string | null
           title: string
           updated_at: string
+          visibility: string
           xp_reward: number
         }
         Insert: {
@@ -629,9 +631,11 @@ export type Database = {
           game_title?: Database["public"]["Enums"]["game_title"] | null
           id?: string
           is_published?: boolean
+          owner_tenant_id?: string | null
           tenant_id?: string | null
           title: string
           updated_at?: string
+          visibility?: string
           xp_reward?: number
         }
         Update: {
@@ -643,12 +647,21 @@ export type Database = {
           game_title?: Database["public"]["Enums"]["game_title"] | null
           id?: string
           is_published?: boolean
+          owner_tenant_id?: string | null
           tenant_id?: string | null
           title?: string
           updated_at?: string
+          visibility?: string
           xp_reward?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "courses_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "courses_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -815,6 +828,7 @@ export type Database = {
           id: string
           max_participants: number | null
           min_participants: number | null
+          owner_tenant_id: string | null
           registration_deadline: string | null
           scheduled_end: string
           scheduled_start: string
@@ -822,6 +836,7 @@ export type Database = {
           tenant_id: string | null
           title: string
           updated_at: string
+          visibility: string
           winner_id: string | null
           work_order_id: string | null
         }
@@ -834,6 +849,7 @@ export type Database = {
           id?: string
           max_participants?: number | null
           min_participants?: number | null
+          owner_tenant_id?: string | null
           registration_deadline?: string | null
           scheduled_end: string
           scheduled_start: string
@@ -841,6 +857,7 @@ export type Database = {
           tenant_id?: string | null
           title: string
           updated_at?: string
+          visibility?: string
           winner_id?: string | null
           work_order_id?: string | null
         }
@@ -853,6 +870,7 @@ export type Database = {
           id?: string
           max_participants?: number | null
           min_participants?: number | null
+          owner_tenant_id?: string | null
           registration_deadline?: string | null
           scheduled_end?: string
           scheduled_start?: string
@@ -860,10 +878,18 @@ export type Database = {
           tenant_id?: string | null
           title?: string
           updated_at?: string
+          visibility?: string
           winner_id?: string | null
           work_order_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "events_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -2447,6 +2473,123 @@ export type Database = {
           },
         ]
       }
+      tenant_course_curation: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          course_id: string
+          included: boolean
+          tenant_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          course_id: string
+          included?: boolean
+          tenant_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          course_id?: string
+          included?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_course_curation_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_course_curation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_event_curation: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          event_id: string
+          included: boolean
+          tenant_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          event_id: string
+          included?: boolean
+          tenant_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          event_id?: string
+          included?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_event_curation_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_event_curation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_work_order_curation: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          included: boolean
+          tenant_id: string
+          work_order_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          included?: boolean
+          tenant_id: string
+          work_order_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          included?: boolean
+          tenant_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_work_order_curation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_work_order_curation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           approval_status: Database["public"]["Enums"]["community_approval_status"]
@@ -2644,6 +2787,32 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_active_tenant: {
+        Row: {
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_active_tenant_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -3455,10 +3624,12 @@ export type Database = {
           is_active: boolean | null
           max_attempts: number | null
           metadata: Json
+          owner_tenant_id: string | null
           source_challenge_id: string | null
           success_criteria: Json | null
           tenant_id: string | null
           title: string | null
+          visibility: string
           xp_reward: number
         }
         Insert: {
@@ -3478,10 +3649,12 @@ export type Database = {
           is_active?: boolean | null
           max_attempts?: number | null
           metadata?: Json
+          owner_tenant_id?: string | null
           source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null
           title?: string | null
+          visibility?: string
           xp_reward?: number
         }
         Update: {
@@ -3501,10 +3674,12 @@ export type Database = {
           is_active?: boolean | null
           max_attempts?: number | null
           metadata?: Json
+          owner_tenant_id?: string | null
           source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null
           title?: string | null
+          visibility?: string
           xp_reward?: number
         }
         Relationships: [
@@ -3520,6 +3695,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "game_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
           {
@@ -3562,6 +3744,7 @@ export type Database = {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
       }
+      current_tenant_id: { Args: { p_user?: string }; Returns: string }
       ensure_skill_passport: { Args: { p_user_id: string }; Returns: string }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
       get_ai_model_configs_safe: {
@@ -3649,14 +3832,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_course_visible: {
+        Args: { p_id: string; p_user: string }
+        Returns: boolean
+      }
+      is_event_visible: {
+        Args: { p_id: string; p_user: string }
+        Returns: boolean
+      }
       is_tenant_admin: {
         Args: { p_tenant_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_work_order_visible: {
+        Args: { p_id: string; p_user: string }
         Returns: boolean
       }
       provision_fgn_scorm_toolkit_app: { Args: never; Returns: string }
       purge_expired_passport_link_tokens: { Args: never; Returns: number }
       purge_expired_scorm_launch_tokens: { Args: never; Returns: number }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
+      tenant_curation_enforced: { Args: never; Returns: boolean }
       upsert_scorm_course_bundle: {
         Args: {
           p_ai_enhanced: Json
