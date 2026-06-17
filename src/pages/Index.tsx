@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { HeroSection } from '@/components/marketplace/HeroSection';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
@@ -6,65 +6,60 @@ import { EventCard } from '@/components/marketplace/EventCard';
 import { CommunityCard } from '@/components/marketplace/CommunityCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
+import { useWorkOrders } from '@/hooks/useWorkOrders';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, Flame, Users, Zap } from 'lucide-react';
-import type { WorkOrder, GameTitle, Tenant } from '@/types/tenant';
+import type { WorkOrder, Tenant } from '@/types/tenant';
 
 const Index = () => {
   const { tenant } = useTenant();
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const { data: curatedWorkOrders, isLoading: workOrdersLoading } = useWorkOrders('all');
   const [communities, setCommunities] = useState<Tenant[]>([]);
   const [communityMap, setCommunityMap] = useState<Record<string, Tenant>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [communitiesLoading, setCommunitiesLoading] = useState(true);
 
+  // Featured Communities intentionally stays global — every tenant can discover
+  // the others at a basic card level (no cross-tenant content sharing).
   useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
-      
-      const [workOrdersRes, tenantsRes] = await Promise.all([
-        supabase
-          .from('work_orders')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('tenants')
-          .select('*')
-          .eq('approval_status', 'approved')
-          .order('name', { ascending: true })
-      ]);
+    async function fetchCommunities() {
+      setCommunitiesLoading(true);
+      const { data } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('approval_status', 'approved')
+        .order('name', { ascending: true });
 
-      if (workOrdersRes.data) {
-        const typedWorkOrders: WorkOrder[] = workOrdersRes.data.map(wo => ({
-          id: wo.id,
-          tenant_id: wo.tenant_id,
-          title: wo.title,
-          generated_name: (wo as { generated_name?: string | null }).generated_name ?? null,
-          description: wo.description,
-          game_title: wo.game_title as GameTitle,
-          success_criteria: (wo.success_criteria as Record<string, number>) || {},
-          is_active: wo.is_active ?? true,
-          created_at: wo.created_at,
-          cover_image_url: wo.cover_image_url,
-          metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
-        }));
-        setWorkOrders(typedWorkOrders);
-      }
-
-      if (tenantsRes.data) {
-        const typed = tenantsRes.data as unknown as Tenant[];
+      if (data) {
+        const typed = data as unknown as Tenant[];
         setCommunities(typed);
-        // Build lookup map by id for O(1) access
         const map: Record<string, Tenant> = {};
         typed.forEach(t => { map[t.id] = t; });
         setCommunityMap(map);
       }
-
-      setIsLoading(false);
+      setCommunitiesLoading(false);
     }
-
-    fetchData();
+    fetchCommunities();
   }, []);
+
+  // Map curated work orders (filtered server-side by RLS / curation) to the
+  // shape the marketplace cards expect.
+  const workOrders: WorkOrder[] = useMemo(() => {
+    return (curatedWorkOrders ?? []).map(wo => ({
+      id: wo.id,
+      tenant_id: wo.tenant_id,
+      title: wo.title,
+      generated_name: wo.generated_name,
+      description: wo.description,
+      game_title: wo.game_title,
+      success_criteria: wo.success_criteria,
+      is_active: wo.is_active,
+      created_at: wo.created_at,
+      cover_image_url: wo.cover_image_url,
+      metadata: wo.metadata,
+    }));
+  }, [curatedWorkOrders]);
+
+  const isLoading = workOrdersLoading || communitiesLoading;
 
   if (isLoading) {
     return (
@@ -89,10 +84,14 @@ const Index = () => {
       <div className="space-y-10">
         <HeroSection />
 
-        {/* Trending Work Orders */}
+        {/* Trending Work Orders (curated per tenant) */}
         <HorizontalCarousel
           title="Trending Work Orders"
-          subtitle="Discover the most popular training scenarios filling up fast!"
+          subtitle={
+            workOrders.length === 0
+              ? `No work orders in ${tenant?.name ?? 'this community'} yet — admins can curate the catalog in Admin → Curation.`
+              : 'Discover the most popular training scenarios filling up fast!'
+          }
           viewAllLink="/work-orders"
           icon={<Flame className="h-5 w-5" />}
         >
