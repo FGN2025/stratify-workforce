@@ -1,0 +1,1 @@
+ALTER TYPE public.game_title ADD VALUE IF NOT EXISTS 'Electrician_Sim';
