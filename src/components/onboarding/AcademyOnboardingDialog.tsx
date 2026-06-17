@@ -122,8 +122,9 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
     setCurrentStep('personal');
     setFullName('');
     setDiscordId('');
-    setOverrideCode('');
-    setValidatedOverrideCode(null);
+    setCustomerId('');
+    setInviteCode('');
+    setValidatedInviteCode(null);
   };
 
   const handleClose = () => {
