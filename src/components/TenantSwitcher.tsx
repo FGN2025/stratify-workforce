@@ -1,3 +1,4 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
 import {
   Select,
@@ -10,13 +11,20 @@ import { Building2 } from 'lucide-react';
 
 export function TenantSwitcher() {
   const { tenant, tenants, setTenantBySlug } = useTenant();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   if (tenants.length === 0) return null;
 
   const handleValueChange = (value: string) => {
-    // Prevent crashes / bad state if a tenant has a missing slug.
     if (value.startsWith('__missing_slug__')) return;
     setTenantBySlug(value);
+    // If the URL is currently tenant-prefixed, swap the slug in the URL so it
+    // stays shareable.
+    const m = location.pathname.match(/^\/t\/[^/]+(\/.*)?$/);
+    if (m) {
+      navigate(`/t/${value}${m[1] || ''}${location.search}${location.hash}`, { replace: true });
+    }
   };
 
   return (
