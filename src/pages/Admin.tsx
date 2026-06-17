@@ -29,6 +29,7 @@ import { BreakroomMapperManager } from '@/components/admin/BreakroomMapperManage
 import { PlayWebhookRetryManager } from '@/components/admin/PlayWebhookRetryManager';
 import { ParityMonitorDashboard } from '@/components/admin/ParityMonitorDashboard';
 import { PlayGamesSyncPanel } from '@/components/admin/PlayGamesSyncPanel';
+import { CurationManager } from '@/components/admin/CurationManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -202,6 +203,8 @@ export default function Admin() {
         return <EventsManager />;
       case 'work-orders':
         return <WorkOrdersManager />;
+      case 'curation':
+        return <CurationManager />;
       case 'evidence':
         return <EvidenceReviewQueue />;
       case 'games':

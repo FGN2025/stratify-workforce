@@ -27,13 +27,8 @@ export function ActiveWorkOrders() {
         return;
       }
 
-      // Filter to show tenant-specific or global work orders
-      const filtered = (data || []).filter(
-        wo => wo.tenant_id === null || wo.tenant_id === tenant?.id
-      );
-
-      // Transform to match our WorkOrder type
-      const typedWorkOrders: WorkOrder[] = filtered.map(wo => ({
+      // Tenant visibility is enforced by RLS via is_work_order_visible().
+      const typedWorkOrders: WorkOrder[] = (data || []).map(wo => ({
         id: wo.id,
         tenant_id: wo.tenant_id,
         title: wo.title,
@@ -46,6 +41,7 @@ export function ActiveWorkOrders() {
         cover_image_url: wo.cover_image_url,
         metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
       }));
+
 
       setWorkOrders(typedWorkOrders);
       setIsLoading(false);
