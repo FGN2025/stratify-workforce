@@ -7,6 +7,7 @@ import { useTenantAdminGuard } from '@/hooks/useTenantAdminGuard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, ShieldAlert } from 'lucide-react';
@@ -112,6 +113,47 @@ function CurationList({ kind, tenantId }: { kind: Kind; tenantId: string }) {
     },
   });
 
+  const enableCuratedMutation = useMutation({
+    mutationFn: async () => {
+      const all = (itemsQuery.data ?? []).filter(it => it.visibility === 'public');
+      if (all.length === 0) return;
+      const client = supabase as unknown as {
+        from: (t: string) => {
+          upsert: (v: Record<string, unknown>[]) => Promise<{ error: { message: string } | null }>;
+        }
+      };
+      const rows = all.map(it => ({
+        tenant_id: tenantId,
+        [fkCol]: it.id,
+        included: true,
+        added_by: user?.id ?? null,
+      }));
+      const { error } = await client.from(curationTable).upsert(rows);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['curation-rows', kind, tenantId] });
+      toast({ title: 'Curated mode enabled', description: 'All current items included. Toggle any item off to hide it.' });
+    },
+    onError: (err: Error) => toast({ title: 'Failed', description: err.message, variant: 'destructive' }),
+  });
+
+  const revertMutation = useMutation({
+    mutationFn: async () => {
+      const client = supabase as unknown as {
+        from: (t: string) => {
+          delete: () => { eq: (c: string, v: string) => Promise<{ error: { message: string } | null }> };
+        }
+      };
+      const { error } = await client.from(curationTable).delete().eq('tenant_id', tenantId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['curation-rows', kind, tenantId] });
+      toast({ title: 'Reverted to default', description: 'Members now see the full public catalog.' });
+    },
+    onError: (err: Error) => toast({ title: 'Failed', description: err.message, variant: 'destructive' }),
+  });
 
   if (itemsQuery.isLoading || curationQuery.isLoading) {
     return (
@@ -143,12 +185,30 @@ function CurationList({ kind, tenantId }: { kind: Kind; tenantId: string }) {
             ? `Curated mode (${curatedSet.size} included)`
             : 'Default: full public catalog'}
         </Badge>
+        {hasAnyCuration ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => revertMutation.mutate()}
+            disabled={revertMutation.isPending}
+          >
+            Revert to default
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => enableCuratedMutation.mutate()}
+            disabled={enableCuratedMutation.isPending}
+          >
+            Enable curated mode
+          </Button>
+        )}
       </div>
 
       {!hasAnyCuration && (
         <p className="text-xs text-muted-foreground">
-          You have not curated this catalog yet. Members currently see all public items.
-          Toggle any item to switch to allow-list mode.
+          Currently in default mode — members see all public items. Click "Enable curated mode" to start
+          picking which items appear, then toggle individual items off to hide them.
         </p>
       )}
 
@@ -178,7 +238,7 @@ function CurationList({ kind, tenantId }: { kind: Kind; tenantId: string }) {
               ) : (
                 <Switch
                   checked={hasAnyCuration ? included : true}
-                  disabled={toggleMutation.isPending}
+                  disabled={!hasAnyCuration || toggleMutation.isPending}
                   onCheckedChange={(v) => toggleMutation.mutate({ itemId: item.id, include: v })}
                 />
               )}
@@ -192,6 +252,7 @@ function CurationList({ kind, tenantId }: { kind: Kind; tenantId: string }) {
     </div>
   );
 }
+
 
 export function CurationManager() {
   const { tenant } = useTenant();
