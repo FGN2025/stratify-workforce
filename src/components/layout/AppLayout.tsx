@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { TopNav } from './TopNav';
 import { Footer } from './Footer';
+import { TenantSetupGate } from '@/components/TenantSetupGate';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <Footer />
         </SidebarInset>
       </div>
+      <TenantSetupGate />
     </SidebarProvider>
   );
 }
