@@ -98,6 +98,7 @@ type AdminGroup = {
 type AdminEntry = AdminLeaf | AdminGroup;
 
 const adminSubItems: AdminEntry[] = [
+  { title: 'Community Setup', url: '/admin/community-setup', icon: Shield },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Events', url: '/admin/events', icon: Calendar },
   { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },

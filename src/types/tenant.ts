@@ -36,6 +36,20 @@ export interface Tenant {
   privacy_url?: string | null;
   tagline?: string | null;
   scorm_destinations?: Record<string, unknown> | null;
+  // Community Setup (corporate info + wizard state)
+  legal_name?: string | null;
+  dba?: string | null;
+  primary_contact_name?: string | null;
+  primary_contact_email?: string | null;
+  primary_contact_phone?: string | null;
+  hq_street?: string | null;
+  hq_city?: string | null;
+  hq_state?: string | null;
+  hq_zip?: string | null;
+  hq_country?: string | null;
+  industries?: string[];
+  setup_completed_at?: string | null;
+  setup_step?: number;
   children?: Tenant[];
   parent?: Tenant;
 }
