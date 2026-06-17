@@ -168,6 +168,7 @@ export type Database = {
           id: string
           is_active: boolean
           owner_id: string | null
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -182,6 +183,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           owner_id?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -196,9 +198,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           owner_id?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "authorized_apps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       badges: {
         Row: {
@@ -2141,6 +2152,7 @@ export type Database = {
           sim_id_external: string | null
           sim_type: string
           status: string
+          tenant_id: string | null
           title: string
           track_key: string
           updated_at: string
@@ -2161,6 +2173,7 @@ export type Database = {
           sim_id_external?: string | null
           sim_type: string
           status?: string
+          tenant_id?: string | null
           title: string
           track_key?: string
           updated_at?: string
@@ -2181,6 +2194,7 @@ export type Database = {
           sim_id_external?: string | null
           sim_type?: string
           status?: string
+          tenant_id?: string | null
           title?: string
           track_key?: string
           updated_at?: string
@@ -2188,6 +2202,13 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "simulations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "simulations_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -2258,6 +2279,7 @@ export type Database = {
           score: number | null
           skills_verified: string[] | null
           source: string | null
+          tenant_id: string | null
           title: string
           verification_hash: string
           xp_earned: number
@@ -2283,6 +2305,7 @@ export type Database = {
           score?: number | null
           skills_verified?: string[] | null
           source?: string | null
+          tenant_id?: string | null
           title: string
           verification_hash: string
           xp_earned?: number
@@ -2308,6 +2331,7 @@ export type Database = {
           score?: number | null
           skills_verified?: string[] | null
           source?: string | null
+          tenant_id?: string | null
           title?: string
           verification_hash?: string
           xp_earned?: number
@@ -2332,6 +2356,13 @@ export type Database = {
             columns: ["passport_id"]
             isOneToOne: false
             referencedRelation: "skill_passport"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -2442,6 +2473,7 @@ export type Database = {
           id: string
           raw_data: Json | null
           started_at: string
+          tenant_id: string | null
           user_id: string
           work_order_id: string | null
         }
@@ -2451,6 +2483,7 @@ export type Database = {
           id?: string
           raw_data?: Json | null
           started_at?: string
+          tenant_id?: string | null
           user_id: string
           work_order_id?: string | null
         }
@@ -2460,10 +2493,18 @@ export type Database = {
           id?: string
           raw_data?: Json | null
           started_at?: string
+          tenant_id?: string | null
           user_id?: string
           work_order_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "telemetry_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "telemetry_sessions_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -2694,6 +2735,7 @@ export type Database = {
           id: string
           is_active: boolean
           message_count: number
+          tenant_id: string | null
           title: string | null
           updated_at: string
           user_id: string
@@ -2706,6 +2748,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           message_count?: number
+          tenant_id?: string | null
           title?: string | null
           updated_at?: string
           user_id: string
@@ -2718,11 +2761,20 @@ export type Database = {
           id?: string
           is_active?: boolean
           message_count?: number
+          tenant_id?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tutor_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tutor_messages: {
         Row: {
@@ -3421,6 +3473,7 @@ export type Database = {
           id: string
           is_active: boolean
           secret: string
+          tenant_id: string | null
           updated_at: string
           webhook_url: string
         }
@@ -3431,6 +3484,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           secret: string
+          tenant_id?: string | null
           updated_at?: string
           webhook_url: string
         }
@@ -3441,6 +3495,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           secret?: string
+          tenant_id?: string | null
           updated_at?: string
           webhook_url?: string
         }
@@ -3451,6 +3506,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "authorized_apps"
             referencedColumns: ["app_slug"]
+          },
+          {
+            foreignKeyName: "webhook_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3513,6 +3575,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           reviewer_notes: string | null
+          tenant_id: string | null
           uploaded_at: string
           user_id: string
           work_order_id: string
@@ -3530,6 +3593,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
+          tenant_id?: string | null
           uploaded_at?: string
           user_id: string
           work_order_id: string
@@ -3547,6 +3611,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
+          tenant_id?: string | null
           uploaded_at?: string
           user_id?: string
           work_order_id?: string
@@ -3557,6 +3622,13 @@ export type Database = {
             columns: ["completion_id"]
             isOneToOne: false
             referencedRelation: "user_work_order_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
           {
@@ -3744,6 +3816,7 @@ export type Database = {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
       }
+      current_or_user_tenant: { Args: { p_user?: string }; Returns: string }
       current_tenant_id: { Args: { p_user?: string }; Returns: string }
       ensure_skill_passport: { Args: { p_user_id: string }; Returns: string }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
@@ -3872,6 +3945,7 @@ export type Database = {
         }
         Returns: string
       }
+      user_tenant_id: { Args: { p_user: string }; Returns: string }
       validate_registration_code: {
         Args: { p_code: string }
         Returns: {
