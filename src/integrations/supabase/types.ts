@@ -4122,6 +4122,7 @@ export type Database = {
         | "MSFS_2024"
         | "House_Flipper"
         | "House_Flipper_2"
+        | "Electrician_Sim"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       lesson_type: "video" | "reading" | "quiz" | "simulation" | "work_order"
       match_status: "pending" | "in_progress" | "completed"
@@ -4348,6 +4349,7 @@ export const Constants = {
         "MSFS_2024",
         "House_Flipper",
         "House_Flipper_2",
+        "Electrician_Sim",
       ],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       lesson_type: ["video", "reading", "quiz", "simulation", "work_order"],
