@@ -84,10 +84,14 @@ const Index = () => {
       <div className="space-y-10">
         <HeroSection />
 
-        {/* Trending Work Orders */}
+        {/* Trending Work Orders (curated per tenant) */}
         <HorizontalCarousel
           title="Trending Work Orders"
-          subtitle="Discover the most popular training scenarios filling up fast!"
+          subtitle={
+            workOrders.length === 0
+              ? `No work orders in ${tenant?.name ?? 'this community'} yet — admins can curate the catalog in Admin → Curation.`
+              : 'Discover the most popular training scenarios filling up fast!'
+          }
           viewAllLink="/work-orders"
           icon={<Flame className="h-5 w-5" />}
         >
