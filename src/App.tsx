@@ -48,6 +48,7 @@ import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
 import SimIndustry from "./pages/SimIndustry";
 import NotFound from "./pages/NotFound";
+import { TenantRouteRedirect } from "@/components/TenantRouteRedirect";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,10 @@ const App = () => (
           <BrowserRouter>
             <TutorProvider>
             <Routes>
+              {/* Tenant-prefixed URL — sets active tenant then redirects to stripped path */}
+              <Route path="/t/:tenantSlug/*" element={<TenantRouteRedirect />} />
+              <Route path="/t/:tenantSlug" element={<TenantRouteRedirect />} />
+
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/discord/callback" element={<AuthDiscordCallback />} />

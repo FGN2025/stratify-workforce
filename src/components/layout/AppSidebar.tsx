@@ -270,6 +270,9 @@ export function AppSidebar() {
     return ICON_MAP[iconName] || LinkIcon;
   };
 
+  const appName = tenant?.nav_app_name || tenant?.name || 'FGN Academy';
+  const logoSrc = tenant?.logo_url || '/fgn-logo.png';
+
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border p-0 h-16">
@@ -277,8 +280,8 @@ export function AppSidebar() {
           "flex items-center justify-center h-full w-full overflow-hidden",
         )}>
           <img
-            src="/fgn-logo.png"
-            alt="FGN Academy"
+            src={logoSrc}
+            alt={appName}
             className={cn("object-contain", collapsed ? "h-9 w-9" : "h-full w-auto max-w-full")}
           />
         </div>

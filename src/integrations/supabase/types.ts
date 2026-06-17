@@ -2633,6 +2633,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          accent_color: string | null
           approval_status: Database["public"]["Enums"]["community_approval_status"]
           brand_color: string
           category_type:
@@ -2641,26 +2642,38 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           description: string | null
+          favicon_url: string | null
+          font_body: string | null
+          font_heading: string | null
           game_titles: Database["public"]["Enums"]["game_title"][] | null
           hierarchy_level: number
           id: string
           is_verified: boolean
           location: string | null
+          logo_dark_url: string | null
           logo_url: string | null
           member_count: number
           name: string
+          nav_app_name: string | null
+          og_image_url: string | null
           owner_id: string | null
           parent_tenant_id: string | null
           play_synced_at: string | null
           play_tenant_id: string | null
+          privacy_url: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reviewer_notes: string | null
+          scorm_destinations: Json | null
           slug: string
           submitted_at: string | null
+          support_email: string | null
+          tagline: string | null
+          terms_url: string | null
           website_url: string | null
         }
         Insert: {
+          accent_color?: string | null
           approval_status?: Database["public"]["Enums"]["community_approval_status"]
           brand_color?: string
           category_type?:
@@ -2669,26 +2682,38 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          favicon_url?: string | null
+          font_body?: string | null
+          font_heading?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
           hierarchy_level?: number
           id?: string
           is_verified?: boolean
           location?: string | null
+          logo_dark_url?: string | null
           logo_url?: string | null
           member_count?: number
           name: string
+          nav_app_name?: string | null
+          og_image_url?: string | null
           owner_id?: string | null
           parent_tenant_id?: string | null
           play_synced_at?: string | null
           play_tenant_id?: string | null
+          privacy_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
+          scorm_destinations?: Json | null
           slug: string
           submitted_at?: string | null
+          support_email?: string | null
+          tagline?: string | null
+          terms_url?: string | null
           website_url?: string | null
         }
         Update: {
+          accent_color?: string | null
           approval_status?: Database["public"]["Enums"]["community_approval_status"]
           brand_color?: string
           category_type?:
@@ -2697,23 +2722,34 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          favicon_url?: string | null
+          font_body?: string | null
+          font_heading?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
           hierarchy_level?: number
           id?: string
           is_verified?: boolean
           location?: string | null
+          logo_dark_url?: string | null
           logo_url?: string | null
           member_count?: number
           name?: string
+          nav_app_name?: string | null
+          og_image_url?: string | null
           owner_id?: string | null
           parent_tenant_id?: string | null
           play_synced_at?: string | null
           play_tenant_id?: string | null
+          privacy_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
+          scorm_destinations?: Json | null
           slug?: string
           submitted_at?: string | null
+          support_email?: string | null
+          tagline?: string | null
+          terms_url?: string | null
           website_url?: string | null
         }
         Relationships: [
