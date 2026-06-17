@@ -6,7 +6,7 @@ import { JoinFGNAcademyDialog } from './JoinFGNAcademyDialog';
 import { ArrowRight, Play } from 'lucide-react';
 
 export function HeroSection() {
-  const { tenant } = useTenant();
+  const { tenant, appName } = useTenant();
   const heroImageUrl = useSiteMediaUrl('home_hero_image');
   const [showSkillsDialog, setShowSkillsDialog] = useState(false);
 
