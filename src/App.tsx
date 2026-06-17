@@ -48,6 +48,7 @@ import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
 import SimIndustry from "./pages/SimIndustry";
 import NotFound from "./pages/NotFound";
+import { TenantRouteRedirect } from "@/components/TenantRouteRedirect";
 
 const queryClient = new QueryClient();
 
