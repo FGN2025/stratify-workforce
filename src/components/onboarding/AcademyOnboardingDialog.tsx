@@ -70,19 +70,21 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
       // Both ValidatedAddress and AddressInput have zipCode
       const zipCode = address.zipCode;
       
-      // If we have a valid override code, redeem it and mark as validated
+      // If we have a valid invite code, redeem it and mark as validated
       let overrideCodeId: string | undefined;
       let tenantId: string | undefined;
       
-      if (validatedOverrideCode) {
-        const redeemedId = await redeemCode(overrideCode);
+      if (validatedInviteCode) {
+        const redeemedId = await redeemCode(inviteCode);
         if (redeemedId) {
           overrideCodeId = redeemedId;
-          tenantId = validatedOverrideCode.tenantId ?? undefined;
-          isValidated = true; // Override marks as validated
+          tenantId = validatedInviteCode.tenantId ?? undefined;
+          isValidated = true; // Invite code marks as validated
         }
       }
       
+      // TODO: when customerId is present and no invite code matched, run a
+      // tenant-directory lookup edge function to auto-assign membership.
       const saveData: SaveAddressInput = {
         fullName: fullName.trim(),
         streetAddress: address.street,
@@ -90,6 +92,7 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
         state: address.state,
         zipCode,
         discordId: discordId.trim() || undefined,
+        customerId: customerId.trim() || undefined,
         isValidated,
         smartyResponse,
         overrideCodeId,
