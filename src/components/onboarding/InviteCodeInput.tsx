@@ -7,13 +7,13 @@ import { Check, X, Loader2, ChevronDown, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 
-interface OverrideCodeInputProps {
+interface InviteCodeInputProps {
   value: string;
   onChange: (value: string) => void;
   onValidCode: (code: ValidatedCode | null) => void;
 }
 
-export function OverrideCodeInput({ value, onChange, onValidCode }: OverrideCodeInputProps) {
+export function InviteCodeInput({ value, onChange, onValidCode }: InviteCodeInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { validateCode, isValidating, validatedCode, error, clearValidation } = useRegistrationCode();
   const debouncedCode = useDebounce(value, 500);
@@ -39,7 +39,7 @@ export function OverrideCodeInput({ value, onChange, onValidCode }: OverrideCode
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full py-2">
         <Key className="h-4 w-4" />
-        <span>Have an override code?</span>
+        <span>Have an invite code?</span>
         <ChevronDown className={cn(
           "h-4 w-4 ml-auto transition-transform",
           isOpen && "rotate-180"
@@ -48,10 +48,10 @@ export function OverrideCodeInput({ value, onChange, onValidCode }: OverrideCode
       
       <CollapsibleContent className="space-y-2 pt-2">
         <div className="space-y-2">
-          <Label htmlFor="overrideCode">Override Code</Label>
+          <Label htmlFor="inviteCode">Invite Code</Label>
           <div className="relative">
             <Input
-              id="overrideCode"
+              id="inviteCode"
               placeholder="ACADEMY2025"
               value={value}
               onChange={handleChange}
@@ -89,7 +89,7 @@ export function OverrideCodeInput({ value, onChange, onValidCode }: OverrideCode
           )}
           
           <p className="text-xs text-muted-foreground">
-            Enter a code provided by your organization to skip address verification
+            Enter the invite code provided by your community to skip address verification.
           </p>
         </div>
       </CollapsibleContent>
