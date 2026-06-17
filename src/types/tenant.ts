@@ -7,7 +7,6 @@ export interface Tenant {
   brand_color: string;
   logo_url: string | null;
   created_at: string;
-  // Hierarchy fields
   parent_tenant_id: string | null;
   hierarchy_level: number;
   category_type: CategoryType | null;
@@ -19,13 +18,24 @@ export interface Tenant {
   website_url: string | null;
   owner_id: string | null;
   game_titles: GameTitle[] | null;
-  // Approval workflow fields
   approval_status: CommunityApprovalStatus;
   reviewed_by: string | null;
   reviewed_at: string | null;
   reviewer_notes: string | null;
   submitted_at: string | null;
-  // For tree display
+  // Branding (PR 4 — white-label)
+  logo_dark_url?: string | null;
+  favicon_url?: string | null;
+  og_image_url?: string | null;
+  accent_color?: string | null;
+  font_heading?: string | null;
+  font_body?: string | null;
+  nav_app_name?: string | null;
+  support_email?: string | null;
+  terms_url?: string | null;
+  privacy_url?: string | null;
+  tagline?: string | null;
+  scorm_destinations?: Record<string, unknown> | null;
   children?: Tenant[];
   parent?: Tenant;
 }
