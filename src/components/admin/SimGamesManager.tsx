@@ -19,6 +19,7 @@ import {
   Gamepad2,
   Map as MapIcon,
   Plane,
+  Zap,
 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -35,6 +36,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   MSFS_2024: <Plane className="h-6 w-6" />,
   House_Flipper: <HardHat className="h-6 w-6" />,
   House_Flipper_2: <HardHat className="h-6 w-6" />,
+  Electrician_Sim: <Zap className="h-6 w-6" />,
 };
 
 const gameLabels: Record<GameTitle, string> = {
@@ -47,6 +49,7 @@ const gameLabels: Record<GameTitle, string> = {
   MSFS_2024: 'Microsoft Flight Simulator 2024',
   House_Flipper: 'House Flipper',
   House_Flipper_2: 'House Flipper 2',
+  Electrician_Sim: 'Electrician Simulator',
 };
 
 export function SimGamesManager() {

@@ -105,6 +105,13 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     accentColor: '#EC4899',
     resources: [],
   },
+  Electrician_Sim: {
+    title: 'Electrician Simulator',
+    shortTitle: 'Electrician',
+    icon: Zap,
+    accentColor: '#FACC15',
+    resources: [],
+  },
 };
 
 // Helper to get resources for a specific game

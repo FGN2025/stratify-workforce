@@ -43,6 +43,7 @@ import {
   Target,
   Users,
   Plane,
+  Zap,
 } from 'lucide-react';
 import { useAllSimResources, useSimResourceMutations, type SimResource, type SimResourceInsert } from '@/hooks/useSimResources';
 import { useGameChannelColors, GAME_DEFAULT_COLORS } from '@/hooks/useGameChannelColors';
@@ -61,6 +62,7 @@ const GAME_CONFIG: Record<GameTitle, { title: string; icon: React.ElementType; d
   MSFS_2024: { title: 'Microsoft Flight Simulator 2024', icon: Plane, defaultColor: '#0EA5E9' },
   House_Flipper: { title: 'House Flipper', icon: HardHat, defaultColor: '#EC4899' },
   House_Flipper_2: { title: 'House Flipper 2', icon: HardHat, defaultColor: '#EC4899' },
+  Electrician_Sim: { title: 'Electrician Simulator', icon: Zap, defaultColor: '#FACC15' },
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {

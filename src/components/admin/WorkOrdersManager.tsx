@@ -80,6 +80,7 @@ const GAME_LABELS: Record<GameTitle, string> = {
   MSFS_2024: 'Microsoft Flight Simulator 2024',
   House_Flipper: 'House Flipper',
   House_Flipper_2: 'House Flipper 2',
+  Electrician_Sim: 'Electrician Simulator',
 };
 
 const DIFFICULTY_COLORS: Record<WorkOrderDifficulty, string> = {
