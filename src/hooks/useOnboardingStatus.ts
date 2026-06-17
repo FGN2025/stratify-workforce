@@ -25,6 +25,7 @@ export interface SaveAddressInput {
   state: string;
   zipCode: string;
   discordId?: string;
+  customerId?: string;
   isValidated: boolean;
   smartyResponse?: unknown;
   overrideCodeId?: string;
@@ -68,6 +69,7 @@ export function useOnboardingStatus() {
         state: input.state,
         zip_code: input.zipCode,
         discord_id: input.discordId ?? null,
+        customer_id: input.customerId ?? null,
         is_validated: input.isValidated,
         smarty_response: (input.smartyResponse ?? {}) as Json,
         override_code_id: input.overrideCodeId ?? null,

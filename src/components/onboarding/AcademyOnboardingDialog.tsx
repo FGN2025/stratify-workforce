@@ -11,12 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AddressValidationForm } from './AddressValidationForm';
-import { OverrideCodeInput } from './OverrideCodeInput';
+import { InviteCodeInput } from './InviteCodeInput';
 import { useOnboardingStatus, SaveAddressInput } from '@/hooks/useOnboardingStatus';
 import { useRegistrationCode, ValidatedCode } from '@/hooks/useRegistrationCode';
 import { AddressInput, ValidatedAddress } from '@/hooks/useAddressValidation';
 import { toast } from '@/hooks/use-toast';
-import { User, MapPin, Check, MessageCircle } from 'lucide-react';
+import { User, MapPin, Check, MessageCircle, IdCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcademyOnboardingDialogProps {
@@ -37,15 +37,16 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
   const [currentStep, setCurrentStep] = useState<Step>('personal');
   const [fullName, setFullName] = useState('');
   const [discordId, setDiscordId] = useState('');
-  const [overrideCode, setOverrideCode] = useState('');
-  const [validatedOverrideCode, setValidatedOverrideCode] = useState<ValidatedCode | null>(null);
+  const [customerId, setCustomerId] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [validatedInviteCode, setValidatedInviteCode] = useState<ValidatedCode | null>(null);
   const [nameError, setNameError] = useState('');
   
   const { saveAddress, isSaving } = useOnboardingStatus();
   const { redeemCode } = useRegistrationCode();
   
   const handleValidCode = useCallback((code: ValidatedCode | null) => {
-    setValidatedOverrideCode(code);
+    setValidatedInviteCode(code);
   }, []);
 
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep);
@@ -69,19 +70,21 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
       // Both ValidatedAddress and AddressInput have zipCode
       const zipCode = address.zipCode;
       
-      // If we have a valid override code, redeem it and mark as validated
+      // If we have a valid invite code, redeem it and mark as validated
       let overrideCodeId: string | undefined;
       let tenantId: string | undefined;
       
-      if (validatedOverrideCode) {
-        const redeemedId = await redeemCode(overrideCode);
+      if (validatedInviteCode) {
+        const redeemedId = await redeemCode(inviteCode);
         if (redeemedId) {
           overrideCodeId = redeemedId;
-          tenantId = validatedOverrideCode.tenantId ?? undefined;
-          isValidated = true; // Override marks as validated
+          tenantId = validatedInviteCode.tenantId ?? undefined;
+          isValidated = true; // Invite code marks as validated
         }
       }
       
+      // TODO: when customerId is present and no invite code matched, run a
+      // tenant-directory lookup edge function to auto-assign membership.
       const saveData: SaveAddressInput = {
         fullName: fullName.trim(),
         streetAddress: address.street,
@@ -89,6 +92,7 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
         state: address.state,
         zipCode,
         discordId: discordId.trim() || undefined,
+        customerId: customerId.trim() || undefined,
         isValidated,
         smartyResponse,
         overrideCodeId,
@@ -118,8 +122,9 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
     setCurrentStep('personal');
     setFullName('');
     setDiscordId('');
-    setOverrideCode('');
-    setValidatedOverrideCode(null);
+    setCustomerId('');
+    setInviteCode('');
+    setValidatedInviteCode(null);
   };
 
   const handleClose = () => {
@@ -216,9 +221,26 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
                 </p>
               </div>
 
-              <OverrideCodeInput
-                value={overrideCode}
-                onChange={setOverrideCode}
+              <div className="space-y-2">
+                <Label htmlFor="customerId" className="flex items-center gap-2">
+                  <IdCard className="h-4 w-4" />
+                  Customer ID
+                  <span className="text-xs text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="customerId"
+                  placeholder="ACME-00123"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If your provider gave you a Customer ID, enter it here to be linked to your community automatically. (Linking coming soon.)
+                </p>
+              </div>
+
+              <InviteCodeInput
+                value={inviteCode}
+                onChange={setInviteCode}
                 onValidCode={handleValidCode}
               />
 
@@ -233,7 +255,7 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
               onAddressValidated={handleAddressValidated}
               onBack={() => setCurrentStep('personal')}
               isSubmitting={isSaving}
-              overrideCode={validatedOverrideCode}
+              overrideCode={validatedInviteCode}
             />
           )}
 
