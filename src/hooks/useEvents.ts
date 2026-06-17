@@ -54,10 +54,8 @@ export function useEvents(filters?: EventFilters) {
 
       if (error) throw error;
 
-      // Filter by tenant (show global events + tenant-specific)
-      let filtered = (events || []).filter(
-        event => event.tenant_id === null || event.tenant_id === tenant?.id
-      );
+      // Tenant visibility is enforced by RLS via is_event_visible().
+      let filtered = events || [];
 
       // Filter by game title if specified (via work order)
       if (filters?.game_title && filters.game_title !== 'all') {
@@ -141,10 +139,9 @@ export function useUpcomingEvents(limit = 5) {
 
       if (error) throw error;
 
-      // Filter by tenant
-      const filtered = (events || []).filter(
-        event => event.tenant_id === null || event.tenant_id === tenant?.id
-      );
+      // Tenant visibility is enforced by RLS via is_event_visible().
+      const filtered = events || [];
+
 
       return filtered.map(event => ({
         id: event.id,
@@ -210,10 +207,9 @@ export function useEventsByDate(date: Date) {
 
       if (error) throw error;
 
-      // Filter by tenant
-      const filtered = (events || []).filter(
-        event => event.tenant_id === null || event.tenant_id === tenant?.id
-      );
+      // Tenant visibility is enforced by RLS via is_event_visible().
+      const filtered = events || [];
+
 
       return filtered.map(event => ({
         id: event.id,

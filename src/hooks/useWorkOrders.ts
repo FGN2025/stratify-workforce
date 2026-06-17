@@ -51,15 +51,14 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
 
       if (error) throw error;
 
-      // Filter by tenant
-      let filtered = (data || []).filter(
-        wo => wo.tenant_id === null || wo.tenant_id === tenant?.id
-      );
+      // Tenant visibility is enforced by RLS via is_work_order_visible().
+      // Client only filters by user-facing channel subscription preference.
+      let filtered = data || [];
 
-      // Filter by subscribed channels
       if (filter === 'subscribed' && subscribedGames.length > 0) {
         filtered = filtered.filter(wo => subscribedGames.includes(wo.game_title));
       }
+
 
       return filtered.map(wo => ({
         id: wo.id,
