@@ -3820,6 +3820,10 @@ export type Database = {
       current_tenant_id: { Args: { p_user?: string }; Returns: string }
       ensure_skill_passport: { Args: { p_user_id: string }; Returns: string }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
+      get_accessible_tenants: {
+        Args: { p_user_id?: string }
+        Returns: string[]
+      }
       get_ai_model_configs_safe: {
         Args: never
         Returns: {
@@ -3898,6 +3902,14 @@ export type Database = {
         Returns: boolean
       }
       has_tenant_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["community_membership_role"]
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      has_tenant_role_inherited: {
         Args: {
           p_role: Database["public"]["Enums"]["community_membership_role"]
           p_tenant_id: string
