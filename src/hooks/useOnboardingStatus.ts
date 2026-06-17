@@ -25,6 +25,7 @@ export interface SaveAddressInput {
   state: string;
   zipCode: string;
   discordId?: string;
+  customerId?: string;
   isValidated: boolean;
   smartyResponse?: unknown;
   overrideCodeId?: string;
