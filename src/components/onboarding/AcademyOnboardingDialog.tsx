@@ -37,15 +37,16 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
   const [currentStep, setCurrentStep] = useState<Step>('personal');
   const [fullName, setFullName] = useState('');
   const [discordId, setDiscordId] = useState('');
-  const [overrideCode, setOverrideCode] = useState('');
-  const [validatedOverrideCode, setValidatedOverrideCode] = useState<ValidatedCode | null>(null);
+  const [customerId, setCustomerId] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [validatedInviteCode, setValidatedInviteCode] = useState<ValidatedCode | null>(null);
   const [nameError, setNameError] = useState('');
   
   const { saveAddress, isSaving } = useOnboardingStatus();
   const { redeemCode } = useRegistrationCode();
   
   const handleValidCode = useCallback((code: ValidatedCode | null) => {
-    setValidatedOverrideCode(code);
+    setValidatedInviteCode(code);
   }, []);
 
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep);
