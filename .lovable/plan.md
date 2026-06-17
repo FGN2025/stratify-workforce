@@ -1,47 +1,50 @@
-# Tenant-Curate the Home Page Carousels
+# Rename "Override Code" → "Invite Code" and Add Customer ID Field
 
-## Problem
-The home page (`/`) shows the same Trending Work Orders, Recently Added, and Popular This Week to every tenant. `src/pages/Index.tsx` queries `work_orders` directly with no tenant dependency and no curation awareness, so switching between FGN, Cox, and Oil & Gas shows identical lists.
+## Scope
+Update the onboarding dialog (the "Join FGN Academy" popup) to:
+1. Re-label the existing override-code section as **Invite Code** in all user-visible copy.
+2. Add a new optional **Customer ID** input on the Personal Info step. Stored now for future use; matching against the tenant directory will be wired later.
 
-Curation infrastructure from PR 1–3 (`tenant_work_order_curation`, `is_work_order_visible`, plus the `CurationManager` UI in Admin) is already wired into `useWorkOrders` via RLS, but the home page bypasses that hook.
-
-Featured Communities should stay global (every tenant can discover the others at a basic level) — that part already pulls from `tenants` and is correct.
+No change to the underlying `registration_codes` table or redemption logic — only labels and a new captured field.
 
 ## Changes
 
-### 1. `src/pages/Index.tsx` — use curation-aware data
-- Replace the inline `supabase.from('work_orders')` fetch with `useWorkOrders('all')` so:
-  - RLS `is_work_order_visible()` filters out items the current tenant has hidden via curation.
-  - Query refetches on tenant switch (hook already keys on `tenant?.id`).
-- Keep the Featured Communities query as-is (global list of approved tenants — intentional cross-tenant discovery surface).
-- Derive each carousel from the same curated list:
-  - **Trending** — first 6 by `created_at desc` (current behavior, now curated).
-  - **Recently Added** — first 4 (curated).
-  - **Popular This Week** — first 6 (curated; sort can be refined later when completion counts land).
-- Loading state: use the hook's `isLoading` plus the existing communities fetch.
+### Frontend — relabel
+- `src/components/onboarding/OverrideCodeInput.tsx`
+  - Collapsible trigger: "Have an override code?" → **"Have an invite code?"**
+  - Label: "Override Code" → **"Invite Code"**
+  - Helper text: "Enter a code provided by your organization to skip address verification" → **"Enter the invite code provided by your community to skip address verification."**
+  - Rename component file/exports to `InviteCodeInput` (and update the single import in `AcademyOnboardingDialog.tsx`). Internal state variable `overrideCode` → `inviteCode` for clarity. The DB column `override_code_id` on `user_addresses` and the `redeemCode` hook stay as-is (internal naming) to avoid an unrelated migration.
 
-### 2. Empty-state copy
-When a tenant has curated a small catalog (or zero items pass visibility), show the existing carousel empty message rather than a blank rail. Add a one-line hint for tenant admins: "No items yet — curate your catalog in Admin → Curation."
+### Frontend — new Customer ID field
+- `src/components/onboarding/AcademyOnboardingDialog.tsx`
+  - Add a `customerId` state value.
+  - Add an optional input below Discord ID on the Personal Info step:
+    - Label: "Customer ID" with "(optional)" hint and an `IdCard`/`Hash` icon.
+    - Placeholder: e.g. "ACME-00123".
+    - Helper text: "If your provider gave you a Customer ID, enter it here to be linked to your community automatically. (Linking coming soon.)"
+  - Pass `customerId` through `handleAddressValidated` → `saveAddress` so it persists with the rest of the profile data.
 
-### 3. No DB / RLS changes
-PR 1–3 already cover:
-- `tenant_work_order_curation` permissive-default semantics.
-- `is_work_order_visible(work_order_id, tenant_id)` RLS predicate.
-- Admin `CurationManager` for picking included items.
+### Hook + persistence
+- `src/hooks/useOnboardingStatus.ts` — extend `SaveAddressInput` with optional `customerId` and write it to the new column.
+- Migration: add `customer_id text` column to `public.user_addresses` (nullable, no constraint). No RLS changes needed — existing user-scoped policies cover it.
 
-So this is a frontend-only change.
+### Future hook-up (documented, not built now)
+Add a short inline TODO in the dialog and hook noting that on save, an edge function will look up `customer_id` + `full_name` against a future per-tenant directory and auto-create a `community_memberships` row when matched. No backend code shipped this PR.
 
 ## Out of scope
-- Cross-tenant private sharing (explicit hard-no per prior decision).
-- Curation inheritance from parent tenants (explicitly disabled in PR 3).
-- New "Popular This Week" ranking signal — keeping current ordering until completion telemetry is aggregated.
+- Tenant-side directory of customer IDs (table + admin UI) — separate PR.
+- Auto-join based on Customer ID match — separate PR.
+- Renaming the DB column `override_code_id`.
 
 ## Verification
-1. Open `/` as FGN — note the work orders listed.
-2. Switch to Oil & Gas via the tenant switcher.
-3. As an Oil & Gas admin, open Admin → Curation, enable curated mode, and toggle a couple work orders off.
-4. Return to `/` — the toggled-off items disappear from Trending / Recent / Popular while Featured Communities still shows all three tenants.
-5. Switch back to FGN — full catalog still visible (FGN remains permissive).
+1. Open the join dialog from the hero CTA.
+2. Confirm the collapsible reads "Have an invite code?" and the field is labeled "Invite Code".
+3. Confirm the new "Customer ID (optional)" input appears under Discord ID with helper text about future linking.
+4. Complete onboarding with a Customer ID; verify the value lands in `user_addresses.customer_id` via a quick read query.
 
 ## Files touched
-- `src/pages/Index.tsx` (only)
+- `src/components/onboarding/OverrideCodeInput.tsx` → renamed to `InviteCodeInput.tsx`
+- `src/components/onboarding/AcademyOnboardingDialog.tsx`
+- `src/hooks/useOnboardingStatus.ts`
+- New migration adding `customer_id` to `user_addresses`
