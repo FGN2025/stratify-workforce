@@ -12,6 +12,7 @@ const DEFAULT_COLORS: Record<GameTitle, string> = {
   MSFS_2024: '#0EA5E9',
   House_Flipper: '#EC4899',
   House_Flipper_2: '#EC4899',
+  Electrician_Sim: '#FACC15',
 };
 
 export function useGameChannelColors() {

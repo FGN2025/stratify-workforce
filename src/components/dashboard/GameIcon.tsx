@@ -1,4 +1,4 @@
-import { Truck, Tractor, HardHat, Wrench, Cable, Map, Plane } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Map, Plane, Zap } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 import { cn } from '@/lib/utils';
 
@@ -54,6 +54,11 @@ const gameConfig: Record<GameTitle, { icon: React.ElementType; label: string; co
     icon: HardHat,
     label: 'House Flipper 2',
     color: 'text-pink-400 bg-pink-500/20'
+  },
+  Electrician_Sim: {
+    icon: Zap,
+    label: 'Electrician Simulator',
+    color: 'text-yellow-400 bg-yellow-500/20'
   },
 };
 

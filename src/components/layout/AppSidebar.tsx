@@ -215,6 +215,7 @@ export function AppSidebar() {
     MSFS_2024: false,
     House_Flipper: false,
     House_Flipper_2: false,
+    Electrician_Sim: false,
   });
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
@@ -256,6 +257,7 @@ export function AppSidebar() {
         MSFS_2024: [],
         House_Flipper: [],
         House_Flipper_2: [],
+        Electrician_Sim: [],
       };
       dbResources.forEach((r) => {
         if (grouped[r.game_title]) {
