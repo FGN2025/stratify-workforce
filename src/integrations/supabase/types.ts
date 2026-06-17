@@ -2909,6 +2909,7 @@ export type Database = {
         Row: {
           city: string
           created_at: string
+          customer_id: string | null
           discord_id: string | null
           full_name: string
           id: string
@@ -2925,6 +2926,7 @@ export type Database = {
         Insert: {
           city: string
           created_at?: string
+          customer_id?: string | null
           discord_id?: string | null
           full_name: string
           id?: string
@@ -2941,6 +2943,7 @@ export type Database = {
         Update: {
           city?: string
           created_at?: string
+          customer_id?: string | null
           discord_id?: string | null
           full_name?: string
           id?: string

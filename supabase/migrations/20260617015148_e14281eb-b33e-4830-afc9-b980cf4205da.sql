@@ -1,0 +1,2 @@
+ALTER TABLE public.user_addresses ADD COLUMN IF NOT EXISTS customer_id text;
+COMMENT ON COLUMN public.user_addresses.customer_id IS 'Optional provider-issued customer identifier. Used in a future PR to auto-match a user to a tenant via a per-tenant customer directory.';
