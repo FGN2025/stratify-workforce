@@ -36,24 +36,37 @@ function CurationList({ kind, tenantId }: { kind: Kind; tenantId: string }) {
   const itemsQuery = useQuery({
     queryKey: ['curation-items', kind],
     queryFn: async () => {
+      const client = supabase as unknown as {
+        from: (t: string) => {
+          select: (s: string) => { order: (c: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: { message: string } | null }> }
+        }
+      };
       const select = kind === 'events'
         ? 'id, title, visibility, owner_tenant_id'
         : 'id, title, game_title, visibility, owner_tenant_id';
-      const { data, error } = await supabase.from(kind).select(select).order('title', { ascending: true });
-      if (error) throw error;
-      return data as Array<{ id: string; title: string | null; game_title?: string | null; visibility: string; owner_tenant_id: string | null }>;
+      const { data, error } = await client.from(kind).select(select).order('title', { ascending: true });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Array<{
+        id: string;
+        title: string | null;
+        game_title?: string | null;
+        visibility: string;
+        owner_tenant_id: string | null;
+      }>;
     },
   });
 
   const curationQuery = useQuery({
     queryKey: ['curation-rows', kind, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from(curationTable)
-        .select(`${fkCol}, included`)
-        .eq('tenant_id', tenantId);
-      if (error) throw error;
-      return data as Array<Record<string, unknown>>;
+      const client = supabase as unknown as {
+        from: (t: string) => {
+          select: (s: string) => { eq: (c: string, v: string) => Promise<{ data: unknown; error: { message: string } | null }> }
+        }
+      };
+      const { data, error } = await client.from(curationTable).select(`${fkCol}, included`).eq('tenant_id', tenantId);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Array<Record<string, unknown>>;
     },
   });
 
@@ -69,20 +82,26 @@ function CurationList({ kind, tenantId }: { kind: Kind; tenantId: string }) {
 
   const toggleMutation = useMutation({
     mutationFn: async ({ itemId, include }: { itemId: string; include: boolean }) => {
+      const client = supabase as unknown as {
+        from: (t: string) => {
+          upsert: (v: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+          delete: () => { eq: (c: string, v: string) => { eq: (c2: string, v2: string) => Promise<{ error: { message: string } | null }> } };
+        }
+      };
       if (include) {
-        const { error } = await supabase.from(curationTable).upsert({
+        const { error } = await client.from(curationTable).upsert({
           tenant_id: tenantId,
           [fkCol]: itemId,
           included: true,
           added_by: user?.id ?? null,
-        } as never);
-        if (error) throw error;
+        });
+        if (error) throw new Error(error.message);
       } else {
-        const { error } = await supabase.from(curationTable)
+        const { error } = await client.from(curationTable)
           .delete()
           .eq('tenant_id', tenantId)
           .eq(fkCol, itemId);
-        if (error) throw error;
+        if (error) throw new Error(error.message);
       }
     },
     onSuccess: () => {
@@ -92,6 +111,7 @@ function CurationList({ kind, tenantId }: { kind: Kind; tenantId: string }) {
       toast({ title: 'Update failed', description: err.message, variant: 'destructive' });
     },
   });
+
 
   if (itemsQuery.isLoading || curationQuery.isLoading) {
     return (
