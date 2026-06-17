@@ -270,7 +270,7 @@ export function AppSidebar() {
     return ICON_MAP[iconName] || LinkIcon;
   };
 
-  const { tenant, appName } = useTenant();
+  const appName = tenant?.nav_app_name || tenant?.name || 'FGN Academy';
   const logoSrc = tenant?.logo_url || '/fgn-logo.png';
 
   return (
