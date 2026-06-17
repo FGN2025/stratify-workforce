@@ -1,7 +1,7 @@
 // Simulation Resources Configuration
 // Scalable architecture for all simulator game external resources
 
-import { Truck, Tractor, HardHat, Wrench, Cable, Map, GraduationCap, Briefcase, Plane } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Map, GraduationCap, Briefcase, Plane, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { GameTitle } from '@/types/tenant';
 
@@ -103,6 +103,13 @@ export const SIM_RESOURCES: SimResourcesConfig = {
     shortTitle: 'House Flipper 2',
     icon: HardHat,
     accentColor: '#EC4899',
+    resources: [],
+  },
+  Electrician_Sim: {
+    title: 'Electrician Simulator',
+    shortTitle: 'Electrician',
+    icon: Zap,
+    accentColor: '#FACC15',
     resources: [],
   },
 };

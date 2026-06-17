@@ -18,14 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2, Map as MapIcon, Plane } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Upload, Link, X, Loader2, Map as MapIcon, Plane, Zap } from 'lucide-react';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import type { Database } from '@/integrations/supabase/types';
 
 type GameChannel = Database['public']['Tables']['game_channels']['Row'];
 type GameTitle = Database['public']['Enums']['game_title'];
 
-const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft', 'MSFS_2024', 'House_Flipper', 'House_Flipper_2'];
+const allGameTitles: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft', 'MSFS_2024', 'House_Flipper', 'House_Flipper_2', 'Electrician_Sim'];
 
 const gameLabels: Record<GameTitle, string> = {
   ATS: 'American Truck Simulator',
@@ -37,6 +37,7 @@ const gameLabels: Record<GameTitle, string> = {
   MSFS_2024: 'Microsoft Flight Simulator 2024',
   House_Flipper: 'House Flipper',
   House_Flipper_2: 'House Flipper 2',
+  Electrician_Sim: 'Electrician Simulator',
 };
 
 const gameIcons: Record<GameTitle, React.ReactNode> = {
@@ -49,6 +50,7 @@ const gameIcons: Record<GameTitle, React.ReactNode> = {
   MSFS_2024: <Plane className="h-4 w-4" />,
   House_Flipper: <HardHat className="h-4 w-4" />,
   House_Flipper_2: <HardHat className="h-4 w-4" />,
+  Electrician_Sim: <Zap className="h-4 w-4" />,
 };
 
 interface SimGameEditDialogProps {
