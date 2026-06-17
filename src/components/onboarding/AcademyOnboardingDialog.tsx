@@ -221,9 +221,26 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
                 </p>
               </div>
 
-              <OverrideCodeInput
-                value={overrideCode}
-                onChange={setOverrideCode}
+              <div className="space-y-2">
+                <Label htmlFor="customerId" className="flex items-center gap-2">
+                  <IdCard className="h-4 w-4" />
+                  Customer ID
+                  <span className="text-xs text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="customerId"
+                  placeholder="ACME-00123"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If your provider gave you a Customer ID, enter it here to be linked to your community automatically. (Linking coming soon.)
+                </p>
+              </div>
+
+              <InviteCodeInput
+                value={inviteCode}
+                onChange={setInviteCode}
                 onValidCode={handleValidCode}
               />
 
@@ -238,7 +255,7 @@ export function AcademyOnboardingDialog({ open, onOpenChange, onComplete }: Acad
               onAddressValidated={handleAddressValidated}
               onBack={() => setCurrentStep('personal')}
               isSubmitting={isSaving}
-              overrideCode={validatedOverrideCode}
+              overrideCode={validatedInviteCode}
             />
           )}
 
