@@ -2641,14 +2641,22 @@ export type Database = {
             | null
           cover_image_url: string | null
           created_at: string
+          dba: string | null
           description: string | null
           favicon_url: string | null
           font_body: string | null
           font_heading: string | null
           game_titles: Database["public"]["Enums"]["game_title"][] | null
           hierarchy_level: number
+          hq_city: string | null
+          hq_country: string | null
+          hq_state: string | null
+          hq_street: string | null
+          hq_zip: string | null
           id: string
+          industries: string[]
           is_verified: boolean
+          legal_name: string | null
           location: string | null
           logo_dark_url: string | null
           logo_url: string | null
@@ -2660,11 +2668,16 @@ export type Database = {
           parent_tenant_id: string | null
           play_synced_at: string | null
           play_tenant_id: string | null
+          primary_contact_email: string | null
+          primary_contact_name: string | null
+          primary_contact_phone: string | null
           privacy_url: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reviewer_notes: string | null
           scorm_destinations: Json | null
+          setup_completed_at: string | null
+          setup_step: number
           slug: string
           submitted_at: string | null
           support_email: string | null
@@ -2681,14 +2694,22 @@ export type Database = {
             | null
           cover_image_url?: string | null
           created_at?: string
+          dba?: string | null
           description?: string | null
           favicon_url?: string | null
           font_body?: string | null
           font_heading?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
           hierarchy_level?: number
+          hq_city?: string | null
+          hq_country?: string | null
+          hq_state?: string | null
+          hq_street?: string | null
+          hq_zip?: string | null
           id?: string
+          industries?: string[]
           is_verified?: boolean
+          legal_name?: string | null
           location?: string | null
           logo_dark_url?: string | null
           logo_url?: string | null
@@ -2700,11 +2721,16 @@ export type Database = {
           parent_tenant_id?: string | null
           play_synced_at?: string | null
           play_tenant_id?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
           privacy_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
           scorm_destinations?: Json | null
+          setup_completed_at?: string | null
+          setup_step?: number
           slug: string
           submitted_at?: string | null
           support_email?: string | null
@@ -2721,14 +2747,22 @@ export type Database = {
             | null
           cover_image_url?: string | null
           created_at?: string
+          dba?: string | null
           description?: string | null
           favicon_url?: string | null
           font_body?: string | null
           font_heading?: string | null
           game_titles?: Database["public"]["Enums"]["game_title"][] | null
           hierarchy_level?: number
+          hq_city?: string | null
+          hq_country?: string | null
+          hq_state?: string | null
+          hq_street?: string | null
+          hq_zip?: string | null
           id?: string
+          industries?: string[]
           is_verified?: boolean
+          legal_name?: string | null
           location?: string | null
           logo_dark_url?: string | null
           logo_url?: string | null
@@ -2740,11 +2774,16 @@ export type Database = {
           parent_tenant_id?: string | null
           play_synced_at?: string | null
           play_tenant_id?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
           privacy_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewer_notes?: string | null
           scorm_destinations?: Json | null
+          setup_completed_at?: string | null
+          setup_step?: number
           slug?: string
           submitted_at?: string | null
           support_email?: string | null
