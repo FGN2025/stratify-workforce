@@ -30,9 +30,11 @@ import { PlayWebhookRetryManager } from '@/components/admin/PlayWebhookRetryMana
 import { ParityMonitorDashboard } from '@/components/admin/ParityMonitorDashboard';
 import { PlayGamesSyncPanel } from '@/components/admin/PlayGamesSyncPanel';
 import { CurationManager } from '@/components/admin/CurationManager';
+import { CommunitiesAdminTable } from '@/components/admin/CommunitiesAdminTable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTenantAdminGuard } from '@/hooks/useTenantAdminGuard';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
