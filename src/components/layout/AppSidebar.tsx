@@ -365,137 +365,146 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {GAME_ORDER.map((gameKey) => {
-                const game = SIM_RESOURCES[gameKey];
-                const GameIcon = game.icon;
-                const gameResources = resourcesByGame?.[gameKey] || null;
-                const hasDbResources = gameResources && gameResources.length > 0;
-                const hasStaticResources = hasResources(gameKey);
-                const gameHasResources = hasDbResources || hasStaticResources;
-                
+              {sidebarSections.map((section) => {
+                const SectionIcon = section.iconKey ? getSimCategoryIcon(section.iconKey) : Target;
+                const sectionOpen = !!openSections[section.id];
+                const sectionHasContent = section.games.length > 0;
+                const sectionActive = section.games.some((g) => location.pathname === `/sim/${g}`);
+
                 return (
                   <Collapsible
-                    key={gameKey}
-                    open={openGames[gameKey]}
-                    onOpenChange={() => toggleGame(gameKey)}
+                    key={section.id}
+                    open={sectionOpen}
+                    onOpenChange={() => toggleSection(section.id)}
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
-                          tooltip={game.title}
+                          tooltip={section.label}
                           className={cn(
-                            "w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent",
-                            !gameHasResources && "opacity-60"
+                            'w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent',
+                            !sectionHasContent && 'opacity-60',
+                            sectionActive && 'text-primary bg-primary/10'
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <GameIcon 
-                              className="h-4 w-4" 
-                              style={{ color: game.accentColor }} 
-                            />
-                            {!collapsed && <span>{game.title}</span>}
+                            <SectionIcon className="h-4 w-4" style={{ color: section.color }} />
+                            {!collapsed && <span>{section.label}</span>}
                           </div>
                           {!collapsed && (
-                            <ChevronDown className={cn(
-                              "h-4 w-4 transition-transform",
-                              openGames[gameKey] && "rotate-180"
-                            )} />
+                            <ChevronDown
+                              className={cn('h-4 w-4 transition-transform', sectionOpen && 'rotate-180')}
+                            />
                           )}
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pl-4">
                         <SidebarMenu>
-                          <SidebarMenuItem key={`${gameKey}-industry`}>
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location.pathname === `/sim/${gameKey}`}
-                              tooltip={`${game.title} Industry`}
-                              className={cn(
-                                'transition-colors',
-                                location.pathname === `/sim/${gameKey}`
-                                  ? 'text-primary bg-primary/10'
-                                  : 'text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent'
-                              )}
-                            >
-                              <NavLink to={`/sim/${gameKey}`} className="flex items-center gap-3">
-                                <Target
-                                  className="h-4 w-4"
-                                  style={{ color: game.accentColor }}
-                                />
-                                {!collapsed && <span>Industry Hub</span>}
-                              </NavLink>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          {hasDbResources ? (
-                            gameResources.map((resource) => {
-                              const ResourceIcon = getResourceIcon(resource.icon_name);
-                              return (
-                                <SidebarMenuItem key={resource.id}>
-                                  <SidebarMenuButton
-                                    asChild
-                                    tooltip={resource.title}
-                                    className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                                  >
-                                    <a
-                                      href={resource.href}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-3"
-                                    >
-                                      <ResourceIcon 
-                                        className="h-4 w-4" 
-                                        style={{ color: resource.accent_color }} 
-                                      />
-                                      {!collapsed && (
-                                        <>
-                                          <span>{resource.title}</span>
-                                          <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                                        </>
-                                      )}
-                                    </a>
-                                  </SidebarMenuButton>
-                                </SidebarMenuItem>
-                              );
-                            })
-                          ) : hasStaticResources ? (
-                            game.resources.map((resource) => {
-                              const ResourceIcon = resource.icon;
-                              return (
-                                <SidebarMenuItem key={resource.key}>
-                                  <SidebarMenuButton
-                                    asChild
-                                    tooltip={resource.title}
-                                    className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                                  >
-                                    <a
-                                      href={resource.href}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-3"
-                                    >
-                                      <ResourceIcon 
-                                        className="h-4 w-4" 
-                                        style={{ color: resource.accentColor }} 
-                                      />
-                                      {!collapsed && (
-                                        <>
-                                          <span>{resource.title}</span>
-                                          <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                                        </>
-                                      )}
-                                    </a>
-                                  </SidebarMenuButton>
-                                </SidebarMenuItem>
-                              );
-                            })
-                          ) : (
+                          {!sectionHasContent && (
                             <SidebarMenuItem>
                               <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground">
                                 <Clock className="h-3 w-3" />
-                                {!collapsed && <span>Coming Soon</span>}
+                                {!collapsed && <span>No games mapped</span>}
                               </div>
                             </SidebarMenuItem>
                           )}
+                          {section.games.map((gameKey) => {
+                            const game = SIM_RESOURCES[gameKey];
+                            const gameResources = resourcesByGame?.[gameKey] || null;
+                            const hasDbResources = !!gameResources && gameResources.length > 0;
+                            const hasStaticResources = hasResources(gameKey);
+                            const multiGame = section.games.length > 1;
+                            const hubLabel = multiGame
+                              ? (game?.shortTitle || game?.title || gameKey)
+                              : 'Industry Hub';
+                            const hubIconColor = game?.accentColor || section.color;
+
+                            return (
+                              <div key={gameKey}>
+                                <SidebarMenuItem key={`${gameKey}-industry`}>
+                                  <SidebarMenuButton
+                                    asChild
+                                    isActive={location.pathname === `/sim/${gameKey}`}
+                                    tooltip={`${game?.title || gameKey} Industry Hub`}
+                                    className={cn(
+                                      'transition-colors',
+                                      location.pathname === `/sim/${gameKey}`
+                                        ? 'text-primary bg-primary/10'
+                                        : 'text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent'
+                                    )}
+                                  >
+                                    <NavLink to={`/sim/${gameKey}`} className="flex items-center gap-3">
+                                      <Target className="h-4 w-4" style={{ color: hubIconColor }} />
+                                      {!collapsed && <span>{hubLabel}</span>}
+                                    </NavLink>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                {hasDbResources
+                                  ? gameResources!.map((resource) => {
+                                      const ResourceIcon = getResourceIcon(resource.icon_name);
+                                      return (
+                                        <SidebarMenuItem key={resource.id}>
+                                          <SidebarMenuButton
+                                            asChild
+                                            tooltip={resource.title}
+                                            className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                          >
+                                            <a
+                                              href={resource.href}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="flex items-center gap-3"
+                                            >
+                                              <ResourceIcon
+                                                className="h-4 w-4"
+                                                style={{ color: resource.accent_color }}
+                                              />
+                                              {!collapsed && (
+                                                <>
+                                                  <span>{resource.title}</span>
+                                                  <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                                                </>
+                                              )}
+                                            </a>
+                                          </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                      );
+                                    })
+                                  : hasStaticResources && game
+                                    ? game.resources.map((resource) => {
+                                        const ResourceIcon = resource.icon;
+                                        return (
+                                          <SidebarMenuItem key={resource.key}>
+                                            <SidebarMenuButton
+                                              asChild
+                                              tooltip={resource.title}
+                                              className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                            >
+                                              <a
+                                                href={resource.href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-3"
+                                              >
+                                                <ResourceIcon
+                                                  className="h-4 w-4"
+                                                  style={{ color: resource.accentColor }}
+                                                />
+                                                {!collapsed && (
+                                                  <>
+                                                    <span>{resource.title}</span>
+                                                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                                                  </>
+                                                )}
+                                              </a>
+                                            </SidebarMenuButton>
+                                          </SidebarMenuItem>
+                                        );
+                                      })
+                                    : null}
+                              </div>
+                            );
+                          })}
                         </SidebarMenu>
                       </CollapsibleContent>
                     </SidebarMenuItem>
@@ -505,6 +514,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
 
         {/* Admin Section */}
         {showAdmin && (
