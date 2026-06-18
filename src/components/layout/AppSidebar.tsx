@@ -191,6 +191,7 @@ export function AppSidebar() {
   const { tenant } = useTenant();
   const { isLoading: authLoading } = useAuth();
   const { isAdmin, isDeveloper, isSuperAdmin, isLoading: roleLoading } = useUserRole();
+  const { isTenantAdmin } = useTenantAdminGuard();
   
   // Fetch database resources
   const { data: dbResources } = useSimResources();
