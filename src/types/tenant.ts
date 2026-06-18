@@ -62,7 +62,10 @@ export type CategoryType =
   | 'employer'
   | 'training_center'
   | 'government'
-  | 'nonprofit';
+  | 'nonprofit'
+  | 'community_organization'
+  | 'club'
+  | 'cte';
 
 export type MembershipRole = 
   | 'member' 
