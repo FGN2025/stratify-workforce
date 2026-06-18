@@ -1844,6 +1844,8 @@ export type Database = {
           id: string
           is_active: boolean
           key: string
+          show_in_sidebar: boolean
+          sidebar_label: string | null
           subtitle: string | null
           title: string
           updated_at: string
@@ -1858,6 +1860,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           key: string
+          show_in_sidebar?: boolean
+          sidebar_label?: string | null
           subtitle?: string | null
           title: string
           updated_at?: string
@@ -1872,6 +1876,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           key?: string
+          show_in_sidebar?: boolean
+          sidebar_label?: string | null
           subtitle?: string | null
           title?: string
           updated_at?: string
