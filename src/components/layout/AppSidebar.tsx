@@ -85,51 +85,62 @@ const mainNavItems = [
   { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
 ];
 
+type AdminTier = 'community' | 'platform';
+
 type AdminLeaf = {
   title: string;
   url: string;
   icon: LucideIcon;
   badgeKey?: 'evidence' | 'community';
+  tier: AdminTier;
 };
 type AdminGroup = {
   groupKey: 'sim' | 'challenges';
   title: string;
   icon: LucideIcon;
+  tier: AdminTier;
   children: AdminLeaf[];
 };
 type AdminEntry = AdminLeaf | AdminGroup;
 
 const adminSubItems: AdminEntry[] = [
-  { title: 'Community Setup', url: '/admin/community-setup', icon: Shield },
-  { title: 'Users', url: '/admin/users', icon: Users },
-  { title: 'Events', url: '/admin/events', icon: Calendar },
-  { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
-  { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const },
+  // Community-scoped — tenant owners/admins can use these for their own community.
+  { title: 'Community Setup', url: '/admin/community-setup', icon: Shield, tier: 'community' },
+  { title: 'Events', url: '/admin/events', icon: Calendar, tier: 'community' },
+  { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList, tier: 'community' },
+  { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const, tier: 'community' },
+  { title: 'Curation', url: '/admin/curation', icon: FileCheck, tier: 'community' },
+  { title: 'Media Library', url: '/admin/media', icon: Image, tier: 'community' },
+  { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound, tier: 'community' },
+  { title: 'Skills Paths', url: '/admin/career-paths', icon: Route, tier: 'community' },
+
+  // Platform-only.
+  { title: 'Users', url: '/admin/users', icon: Users, tier: 'platform' },
+  { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
   {
     groupKey: 'sim',
     title: 'SIM',
     icon: Gamepad2,
+    tier: 'platform',
     children: [
-      { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
-      { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box },
-      { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
+      { title: 'SIM Games', url: '/admin/games', icon: Gamepad2, tier: 'platform' },
+      { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box, tier: 'platform' },
+      { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box, tier: 'platform' },
     ],
   },
-  { title: 'Media Library', url: '/admin/media', icon: Image },
-  { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
-  { title: 'Skills Paths', url: '/admin/career-paths', icon: Route },
   {
     groupKey: 'challenges',
     title: 'Challenges',
     icon: FileCheck,
+    tier: 'platform',
     children: [
-      { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
-      { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon },
-      { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route },
+      { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck, tier: 'platform' },
+      { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon, tier: 'platform' },
+      { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route, tier: 'platform' },
     ],
   },
-  { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench },
-  { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2 },
+  { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench, tier: 'platform' },
+  { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2, tier: 'platform' },
 ];
 
 const superAdminSubItems = [
@@ -146,6 +157,7 @@ const superAdminSubItems = [
   { title: 'Play Games Sync', url: '/admin/play-sync', icon: Gamepad2 },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
+
 
 const standaloneAdminItems = [
   { title: 'Students', url: '/students', icon: Users, adminOnly: true },
