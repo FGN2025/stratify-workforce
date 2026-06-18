@@ -571,7 +571,7 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pl-4">
                       <SidebarMenu>
-                        {adminSubItems.map((item) => {
+                        {visibleAdminSubItems.map((item) => {
                           if ('children' in item) {
                             const groupOpen = item.groupKey === 'sim' ? simOpen : challengesOpen;
                             const setGroupOpen = item.groupKey === 'sim' ? setSimOpen : setChallengesOpen;
