@@ -144,6 +144,29 @@ export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, on
             <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Shown under the section title" />
           </div>
 
+          <div className="rounded-md border border-border/50 bg-muted/20 p-3 space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="sidebar-label">Sidebar Label</Label>
+              <Input
+                id="sidebar-label"
+                value={sidebarLabel}
+                onChange={(e) => setSidebarLabel(e.target.value)}
+                placeholder={title || 'Defaults to Title'}
+              />
+              <p className="text-xs text-muted-foreground">
+                Overrides the name shown in the sidebar SIM Categories group. Leave blank to use the Title above. The Work Orders filter always uses the Title.
+              </p>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Show in Sidebar</Label>
+                <p className="text-xs text-muted-foreground">Hide this category from the sidebar without deleting it.</p>
+              </div>
+              <Switch checked={showInSidebar} onCheckedChange={setShowInSidebar} />
+            </div>
+          </div>
+
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Icon</Label>
