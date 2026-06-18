@@ -66,7 +66,7 @@ const Communities = () => {
           title="Skills Communities"
           subtitle="Discover communities and request to join their simulation programs to level up your skills"
           backgroundImage={heroImageUrl}
-          primaryAction={user ? {
+          primaryAction={isAdmin ? {
             label: 'Create Community',
             icon: <Plus className="h-4 w-4" />,
             onClick: handleCreateClick,
@@ -77,8 +77,8 @@ const Communities = () => {
           ]}
         />
 
-        {/* My Communities Section (for logged-in users) */}
-        {user && (
+        {/* My Communities Section (admins only) */}
+        {user && isAdmin && (
           <MyCommunities onCreateClick={handleCreateClick} />
         )}
 

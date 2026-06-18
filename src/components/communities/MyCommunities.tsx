@@ -76,29 +76,19 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
 
   return (
     <Card className="border-border/50">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-lg">My Communities</CardTitle>
-          <CardDescription>
-            Communities you've created or joined
-          </CardDescription>
-        </div>
-        <Button size="sm" onClick={onCreateClick}>
-          <Plus className="h-4 w-4 mr-1" />
-          Create
-        </Button>
+      <CardHeader>
+        <CardTitle className="text-lg">Communities You Manage</CardTitle>
+        <CardDescription>
+          Communities you own or have joined
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {myCommunities.length === 0 ? (
           <div className="text-center py-8">
             <Building2 className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground mb-4">
-              You haven't created any communities yet.
+            <p className="text-muted-foreground">
+              You don't manage any communities yet.
             </p>
-            <Button variant="outline" onClick={onCreateClick}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Community
-            </Button>
           </div>
         ) : (
           <div className="space-y-3">

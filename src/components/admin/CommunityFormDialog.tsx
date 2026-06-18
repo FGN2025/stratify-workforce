@@ -194,15 +194,6 @@ export function CommunityFormDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Check if current user is admin
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      const isUserAdmin = roleData?.role === 'admin' || roleData?.role === 'super_admin';
-
       const baseData = {
         name: formData.name.trim(),
         slug: formData.slug.trim(),
@@ -231,28 +222,22 @@ export function CommunityFormDialog({
           description: `${formData.name} has been updated successfully.`,
         });
       } else {
-        // For new communities, set owner and approval status
+        // Admin-only creation: auto-approve and verify.
         const insertData = {
           ...baseData,
           owner_id: user.id,
           submitted_at: new Date().toISOString(),
-          approval_status: isUserAdmin ? 'approved' as const : 'pending' as const,
-          is_verified: isUserAdmin,
+          approval_status: 'approved' as const,
+          is_verified: true,
         };
 
         const { error } = await supabase.from('tenants').insert(insertData);
+        if (error) throw error;
 
-        if (isUserAdmin) {
-          toast({
-            title: 'Community Created',
-            description: `${formData.name} has been created successfully.`,
-          });
-        } else {
-          toast({
-            title: 'Community Submitted',
-            description: 'Your community has been submitted for review. You will be notified once approved.',
-          });
-        }
+        toast({
+          title: 'Community Created',
+          description: `${formData.name} has been created successfully.`,
+        });
       }
 
       onSave();
