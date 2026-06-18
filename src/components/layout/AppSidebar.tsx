@@ -283,12 +283,19 @@ export function AppSidebar() {
   
   // Show admin items while loading (optimistic) to prevent race condition
   const isLoadingAuth = authLoading || roleLoading;
-  const showAdmin = isLoadingAuth || isAdmin;
+  const showPlatformAdmin = isLoadingAuth || isAdmin;
+  const showCommunityAdmin = isLoadingAuth || isAdmin || isTenantAdmin;
+  const showAdmin = showPlatformAdmin || showCommunityAdmin;
   const showSuperAdmin = isLoadingAuth || isSuperAdmin;
   const showDeveloper = isLoadingAuth || isDeveloper || isAdmin;
 
+  const visibleAdminSubItems = adminSubItems.filter((item) => {
+    if (item.tier === 'platform') return showPlatformAdmin;
+    return showCommunityAdmin;
+  });
+
   const visibleStandaloneItems = standaloneAdminItems.filter((item) => {
-    if ('adminOnly' in item && item.adminOnly) return showAdmin;
+    if ('adminOnly' in item && item.adminOnly) return showPlatformAdmin;
     if ('developerOnly' in item && (item as any).developerOnly) return showDeveloper;
     return true;
   });
