@@ -43,6 +43,8 @@ export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, on
   const [key, setKey] = useState('');
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
+  const [sidebarLabel, setSidebarLabel] = useState('');
+  const [showInSidebar, setShowInSidebar] = useState(true);
   const [iconKey, setIconKey] = useState('target');
   const [accentColor, setAccentColor] = useState('#F59E0B');
   const [displayOrder, setDisplayOrder] = useState(0);
@@ -56,6 +58,8 @@ export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, on
     setKey(category?.key ?? '');
     setTitle(category?.title ?? '');
     setSubtitle(category?.subtitle ?? '');
+    setSidebarLabel(category?.sidebar_label ?? '');
+    setShowInSidebar(category?.show_in_sidebar ?? true);
     setIconKey(category?.icon_key ?? 'target');
     setAccentColor(category?.accent_color ?? '#F59E0B');
     setDisplayOrder(category?.display_order ?? 0);
@@ -63,6 +67,7 @@ export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, on
     setResourceIds(category?.resource_ids ?? []);
     setIsActive(category?.is_active ?? true);
   }, [open, category]);
+
 
   const toggleGame = (g: GameTitle) =>
     setDefaultGames((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -91,6 +96,8 @@ export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, on
         key: key.trim(),
         title: title.trim(),
         subtitle: subtitle.trim() || null,
+        sidebar_label: sidebarLabel.trim() || null,
+        show_in_sidebar: showInSidebar,
         icon_key: iconKey,
         accent_color: accentColor,
         display_order: displayOrder,
