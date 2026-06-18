@@ -121,10 +121,10 @@ const App = () => (
                 <AdminRoute><Settings /></AdminRoute>
               } />
               <Route path="/admin" element={
-                <AdminRoute><Admin /></AdminRoute>
+                <CommunityAdminRoute><Admin /></CommunityAdminRoute>
               } />
               <Route path="/admin/:section" element={
-                <AdminRoute><Admin /></AdminRoute>
+                <CommunityAdminRoute><Admin /></CommunityAdminRoute>
               } />
               <Route path="/admin/challenge-registry" element={
                 <AdminRoute><ChallengeRegistry /></AdminRoute>
@@ -133,7 +133,7 @@ const App = () => (
                 <AdminRoute><CourseBuilder /></AdminRoute>
               } />
               <Route path="/admin/community-setup" element={
-                <AdminRoute><CommunitySetup /></AdminRoute>
+                <CommunityAdminRoute><CommunitySetup /></CommunityAdminRoute>
               } />
               <Route path="/scorm-player/:courseId/launch" element={
                 <ProtectedRoute><ScormPlayerLaunch /></ProtectedRoute>
