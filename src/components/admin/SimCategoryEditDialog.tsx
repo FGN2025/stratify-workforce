@@ -11,12 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, ExternalLink } from 'lucide-react';
 import { ICON_OPTIONS, getIconByKey } from '@/lib/sim-icons';
 import { useDeepDiveResources } from '@/hooks/useDeepDiveResources';
+import { useGameChannels } from '@/hooks/useGameChannels';
 import type { SimCategory } from '@/hooks/useSimCategories';
 import type { GameTitle } from '@/types/tenant';
 
-const ALL_GAMES: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'];
-
-const GAME_LABELS: Record<GameTitle, string> = {
+// Static fallback labels for known GameTitle enum values. The live list of
+// selectable games is sourced from `game_channels` (auto-populated by
+// fetch-challenges) so any new SIM appears here without a code change.
+const FALLBACK_GAME_LABELS: Record<GameTitle, string> = {
   ATS: 'American Truck Simulator',
   Farming_Sim: 'Farming Simulator',
   Construction_Sim: 'Construction Simulator',
@@ -28,6 +30,7 @@ const GAME_LABELS: Record<GameTitle, string> = {
   House_Flipper_2: 'House Flipper 2',
   Electrician_Sim: 'Electrician Simulator',
 };
+const KNOWN_GAMES = Object.keys(FALLBACK_GAME_LABELS) as GameTitle[];
 
 interface Props {
   open: boolean;
