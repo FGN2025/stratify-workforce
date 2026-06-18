@@ -66,7 +66,7 @@ import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
 import { usePendingCommunityCount } from '@/hooks/usePendingCommunityCount';
 import { cn } from '@/lib/utils';
 import { SIM_RESOURCES, hasResources } from '@/config/simResources';
-import { ICON_MAP as SIM_CATEGORY_ICON_MAP } from '@/lib/sim-icons';
+import { getIconByKey as getSimCategoryIcon } from '@/lib/sim-icons';
 import { useSimCategories } from '@/hooks/useSimCategories';
 import type { GameTitle } from '@/types/tenant';
 
