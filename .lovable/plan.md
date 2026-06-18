@@ -1,85 +1,46 @@
 ## Goal
+Bring the three in-app Help pages (`/help`, `/help/admin`, `/help/student`) in line with the current state of FGN Academy. The markdown docs in `docs/` are out of scope.
 
-Today, every `/admin/*` route is gated by `AdminRoute`, which only allows platform-level `admin`/`super_admin`. Community owners and admins (rows in `community_memberships` with role `owner` or `admin`) have no way to manage their own community in the admin UI. Meanwhile, platform super admins can technically reach the admin pages but the tenant-scoped panels (Community Setup, Curation, Branding, Members, Work Orders, etc.) read from the active tenant context — there is no first-class "manage *that* community" experience.
+## What's stale today
+- **No mention of the two-tier admin model** (Platform Admin vs Community Admin) added in `CommunityAdminRoute`, `CommunitiesAdminTable`, and `CommunitySetup` refactor.
+- **Community Setup hub** (Curation, Work Orders, Events, Evidence Review, Reg Codes, Skills Paths) isn't documented.
+- **SIM Categories + Default SIM Games** management is missing.
+- **Challenge Configurator + Assessments**: `simulations`, `simulation_items`, `simulation_runs`, four archetypes (`sequence`, `loadout`, `resource_selection`, `method_selection`), `attach-assessment-to-workorder`, `score-simulation` are not referenced.
+- **Import edge function** (`import-challenge-as-workorder`) — guide still describes the old inline-dialog flow.
+- **SIM Industry Hub** (`/sim/:gameTitle`) page isn't mentioned for students.
+- **Atlas AI Tutor** (SIM-aware persona) — student guide describes a generic AI tutor.
+- **XP-only progress doctrine** — student guide still mentions hours/time-based stats; should be XP-only per project rules.
+- **Skill Passport additions** — `/passport/embed`, `/verify`, public passport slug, credential verification hash already partly covered but need a refresh.
+- Student guide lists outdated SIM resource statuses ("Coming Soon" for Farming/Construction/Mechanic) — should reference the SIM Industry Hub instead.
+- Leaderboard description references "play time" — should be XP/credentials.
 
-This plan formalizes two tiers of admin, and gives both a clear surface.
+## Changes
 
-## Tiers
+### 1. `src/pages/HelpAdmin.tsx`
+- Update **Role Hierarchy** section: add `community_admin` / community ownership concept; clarify Platform Admin vs Community Admin scope.
+- New section **Community Admin Hub** (`/admin/community-setup`): describe the six quick-link cards.
+- New section **Communities (Platform Admin)**: `CommunitiesAdminTable` — browse all tenants, "Open as admin" to switch tenant context.
+- Update **Work Orders** section to mention SIM Industry assignment, Default SIM Games, SIM Categories admin.
+- New section **Challenge Configurator & Assessments**: four archetypes, attach-to-work-order flow.
+- Update **Super Admin Features**: keep Tenant Mgmt, Authorized Apps, Audit Logs; note Community Review is platform-only.
+- Keep Danger Zone, Evidence Review, Reg Codes, Media Library sections; minor copy tweaks.
 
-| Tier | Who | Scope |
-|---|---|---|
-| **Platform Admin** | `user_roles.role` ∈ {`super_admin`, `admin`} | Every community + every platform-only panel (Authorized Apps, Webhooks, AI Config, Sync Tester, etc.) |
-| **Community Admin** | `community_memberships.role` ∈ {`owner`, `admin`} for a given tenant (and inherited via `get_parent_tenants`) | Only the communities they own/admin. No platform-only panels. |
+### 2. `src/pages/HelpGuide.tsx` (ecosystem / integrations guide)
+- Update **Importing Challenges** section to describe the `import-challenge-as-workorder` edge function (admin-gated, batch up to 50, idempotent on `fgn_origin_challenge_id`, preserves `play_source` on insert, upserts `game_channels`, inserts `work_order_tasks`).
+- New section **Assessments & Skill Passport recording**: `simulations` / `simulation_items` / `simulation_runs`, four archetypes, `attach-assessment-to-workorder` and `score-simulation` → `sync-challenge-completion` → `ensure_skill_passport`.
+- Refresh **Challenge Completion Pipeline** language to mention `fgn_origin_challenge_id` as primary join (keep `source_challenge_id` mention for legacy clarity).
+- Keep Breakroom, BBW Sync, Cross-Platform Identity, Credential API sections; refresh code snippets only where field names changed.
 
-Membership roles `manager` and `moderator` stay out of admin for now (existing review queues already cover them).
-
-## What changes
-
-### 1. New route guard: `CommunityAdminRoute`
-
-Replaces `AdminRoute` on tenant-scoped admin pages. Allows access if **either**:
-- `useUserRole().isAdmin` is true (platform), **or**
-- `useTenantAdminGuard().isTenantAdmin` is true for the active tenant.
-
-`AdminRoute` itself stays as-is and keeps protecting platform-only pages.
-
-### 2. Admin sections reclassified
-
-`src/pages/Admin.tsx` already has a `section` switch. We tag each section as `platform`, `community`, or `both`:
-
-- **Community-scoped** (CommunityAdminRoute): `community-setup` (new section, see #3), `curation`, `users` (filtered to tenant members), `events`, `work-orders`, `evidence`, `codes`, `media`, `career-paths`, `challenge-mappings`, `challenge-tracks`, `community-review` *(only for managers of that tenant)*.
-- **Platform-only** (AdminRoute + `isSuperAdmin` check kept): `authorized-apps`, `webhooks`, `credential-types`, `discord`, `ai-config`, `notebook-telemetry`, `sync-tester`, `play-webhook-retry`, `parity-monitor`, `super-admin`, `sim-categories`, `sim-resources`, `games`, `breakroom-mapper`, `play-sync`.
-
-`renderSection()` gets a `canManagePlatform` check (today's `isSuperAdmin`) and a `canManageTenant` check (new) before rendering each section, so a community admin who hand-types a platform URL gets blocked.
-
-### 3. "Community Setup" promoted to a community management hub
-
-Rename the `/admin/community-setup` sidebar link to **"This Community"** for community admins and keep it as "Community Setup" for platform admins. The page itself becomes a small landing card that shows the active tenant and links to the community-scoped admin sections above (Setup wizard, Curation, Members, Branding, Work Orders, Events, Codes, Media, Career Paths).
-
-No changes to the actual setup wizard.
-
-### 4. Sidebar tier awareness (`AppSidebar.tsx`)
-
-`showAdmin` currently = `isAdmin`. New:
-
-```
-showPlatformAdmin = isAdmin                        // platform-only items
-showCommunityAdmin = isAdmin || isTenantAdmin       // community-scoped items
-```
-
-Group the admin nav into two collapsibles:
-- **Platform Admin** (only when `showPlatformAdmin`)
-- **Community Admin — {active tenant name}** (when `showCommunityAdmin`)
-
-Community admins only ever see the second group, scoped to communities they administer. The existing TenantSwitcher already lets a platform admin hop between communities; community admins only see their own tenants in the switcher (it already reads from memberships).
-
-### 5. Platform "Communities" management table (super admin convenience)
-
-New section `/admin/communities` (platform-only) listing every approved tenant with: name, owner, member count, setup status, "Open as admin" button that sets active tenant and routes to `/admin/community-setup`. Lets super admins jump into any community without slug-typing.
-
-Source: `tenants` table + existing `community_memberships` for owner lookup. No new DB.
-
-## Database / RLS
-
-No schema changes. All gating uses existing functions: `has_role`, `is_tenant_admin`, `has_tenant_role_inherited`, `get_parent_tenants`. Tenant-scoped tables (`tenants`, `tenant_*_curation`, `work_orders`, `events`, `registration_codes`, etc.) need a quick RLS audit to confirm community admins can write to rows scoped to their tenant. Where a policy currently checks only `has_role('admin')`, we add an `OR is_tenant_admin(auth.uid(), tenant_id)` branch. Migration will be a single file listing each affected policy; no data changes.
+### 3. `src/pages/HelpStudent.tsx`
+- **Skill Passport** section: drop hours/sessions wording; lead with XP, credentials, badges, employability score.
+- **Work Orders**: remove "play.fgn.gg telemetry" phrasing in favor of "completions sync automatically from FGN Play and Breakroom"; mention evidence review states.
+- **Leaderboard**: rank by Employability Score + XP only — remove "play time" line.
+- **Simulation Resources** → replace with **SIM Industry Hub** section pointing to `/sim/:gameTitle` for curriculum, work orders, careers, credentials per SIM.
+- **AI Tutor** → rename to **Atlas (AI Tutor)**, note SIM-aware persona based on current game context.
+- New small section **Communities & Registration Codes**: how codes auto-join you to a community.
+- Keep Getting Started, Events, Tips sections with minor wording tweaks.
 
 ## Out of scope
-
-- New membership roles or permission matrix beyond owner/admin.
-- Per-section granular permissions (e.g. "events editor but not curator"). Owner = admin for now.
-- Tenant-scoped audit log UI.
-- Mobile-specific layout for the new community hub.
-
-## Technical details
-
-Files touched:
-
-- `src/components/auth/CommunityAdminRoute.tsx` *(new)* — wraps `AdminRoute` logic but also accepts tenant admins.
-- `src/App.tsx` — swap guard on tenant-scoped routes; add `/admin/communities` route (platform-only).
-- `src/pages/Admin.tsx` — section tier table + per-section guard before render; new `communities` section component.
-- `src/components/admin/CommunitiesAdminTable.tsx` *(new)* — platform list with "Open as admin".
-- `src/components/layout/AppSidebar.tsx` — split admin group into Platform + Community; use `useTenantAdminGuard`.
-- `src/pages/admin/CommunitySetup.tsx` — add quick-links grid to community-scoped sections.
-- Optional RLS migration: extend policies on `tenants` (update), `tenant_*_curation`, `events`, `work_orders`, `registration_codes`, `site_media`, `career_paths` to grant write to `is_tenant_admin(auth.uid(), tenant_id)`.
-
-Result: platform admins keep full control; community owners/admins get a scoped admin surface for their community only, with no code path leaking platform-only tools to them.
+- `docs/admin-user-guide.md` and other `docs/*.md` runbooks.
+- Any behavior changes — pure content refresh of three TSX files.
+- Layout/visual restyle of the Help pages.
