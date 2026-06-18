@@ -4081,6 +4081,9 @@ export type Database = {
         | "training_center"
         | "government"
         | "nonprofit"
+        | "community_organization"
+        | "club"
+        | "cte"
       community_membership_role:
         | "member"
         | "moderator"
@@ -4303,6 +4306,9 @@ export const Constants = {
         "training_center",
         "government",
         "nonprofit",
+        "community_organization",
+        "club",
+        "cte",
       ],
       community_membership_role: [
         "member",
