@@ -192,7 +192,44 @@ export default function Admin() {
     }
   };
 
+  // Sections only platform admins (admin / super_admin) can see.
+  // Community owners/admins are limited to the community-scoped sections below.
+  const PLATFORM_SECTIONS = new Set([
+    'users',
+    'communities',
+    'games',
+    'sim-categories',
+    'sim-resources',
+    'breakroom-mapper',
+    'play-sync',
+    'community-review',
+    'authorized-apps',
+    'webhooks',
+    'credential-types',
+    'discord',
+    'ai-config',
+    'notebook-telemetry',
+    'sync-tester',
+    'play-webhook-retry',
+    'parity-monitor',
+    'super-admin',
+  ]);
+
+  const AccessDenied = () => (
+    <div className="rounded-md border border-border bg-card/40 p-8 text-center">
+      <h2 className="text-lg font-semibold mb-1">Platform admins only</h2>
+      <p className="text-sm text-muted-foreground">
+        This section is reserved for FGN platform administrators. As a community
+        admin you can manage your own community from the Community Setup page.
+      </p>
+    </div>
+  );
+
   const renderSection = () => {
+    if (section && PLATFORM_SECTIONS.has(section) && !isPlatformAdmin) {
+      return <AccessDenied />;
+    }
+
     switch (section) {
       case 'users':
         return (
@@ -203,6 +240,8 @@ export default function Admin() {
             tenants={tenants}
           />
         );
+      case 'communities':
+        return <CommunitiesAdminTable />;
       case 'events':
         return <EventsManager />;
       case 'work-orders':
@@ -224,26 +263,26 @@ export default function Admin() {
       case 'career-paths':
         return <CareerPathsManager />;
       case 'community-review':
-        return isSuperAdmin ? <CommunityReviewQueue /> : null;
+        return isSuperAdmin ? <CommunityReviewQueue /> : <AccessDenied />;
       case 'authorized-apps':
-        return isSuperAdmin ? <AuthorizedAppsManager /> : null;
+        return isSuperAdmin ? <AuthorizedAppsManager /> : <AccessDenied />;
       case 'webhooks':
-        return isSuperAdmin ? <WebhookManager /> : null;
+        return isSuperAdmin ? <WebhookManager /> : <AccessDenied />;
       case 'credential-types':
-        return isSuperAdmin ? <CredentialTypesManager /> : null;
+        return isSuperAdmin ? <CredentialTypesManager /> : <AccessDenied />;
       case 'discord':
-        return isSuperAdmin ? <DiscordConnectionsManager /> : null;
+        return isSuperAdmin ? <DiscordConnectionsManager /> : <AccessDenied />;
       case 'ai-config':
-        return isSuperAdmin ? <AIConfigManager /> : null;
+        return isSuperAdmin ? <AIConfigManager /> : <AccessDenied />;
       case 'notebook-telemetry':
-        return isSuperAdmin ? <NotebookTelemetryDashboard /> : null;
+        return isSuperAdmin ? <NotebookTelemetryDashboard /> : <AccessDenied />;
       case 'sync-tester':
         return isSuperAdmin ? (
           <div className="space-y-6">
             <IntegrationHealthCheck />
             <ChallengeSyncTester />
           </div>
-        ) : null;
+        ) : <AccessDenied />;
       case 'challenge-mappings':
         return <ChallengeLessonMappingsManager />;
       case 'challenge-tracks':
@@ -251,24 +290,27 @@ export default function Admin() {
       case 'breakroom-mapper':
         return <BreakroomMapperManager />;
       case 'play-webhook-retry':
-        return isSuperAdmin ? <PlayWebhookRetryManager /> : null;
+        return isSuperAdmin ? <PlayWebhookRetryManager /> : <AccessDenied />;
       case 'parity-monitor':
-        return isSuperAdmin ? <ParityMonitorDashboard /> : null;
+        return isSuperAdmin ? <ParityMonitorDashboard /> : <AccessDenied />;
       case 'play-sync':
         return <PlayGamesSyncPanel />;
       case 'super-admin':
-        return isSuperAdmin ? <SuperAdminPanel /> : null;
+        return isSuperAdmin ? <SuperAdminPanel /> : <AccessDenied />;
       default:
-        return (
+        return isPlatformAdmin ? (
           <UserManagementTable
             users={users}
             isLoading={isLoading}
             onRoleChange={handleRoleChange}
             tenants={tenants}
           />
+        ) : (
+          <AccessDenied />
         );
     }
   };
+
 
   return (
     <AppLayout>
