@@ -542,7 +542,7 @@ export function AppSidebar() {
         {showAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-              Admin
+              {showPlatformAdmin ? 'Admin' : 'Community Admin'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
