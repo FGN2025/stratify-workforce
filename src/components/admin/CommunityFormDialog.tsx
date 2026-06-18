@@ -28,12 +28,29 @@ import type { Database } from '@/integrations/supabase/types';
 
 type DBGameTitle = Database['public']['Enums']['game_title'];
 
-const GAME_TITLE_OPTIONS: { value: DBGameTitle; label: string }[] = [
-  { value: 'ATS', label: 'American Truck Simulator' },
-  { value: 'Farming_Sim', label: 'Farming Simulator' },
-  { value: 'Construction_Sim', label: 'Construction Simulator' },
-  { value: 'Mechanic_Sim', label: 'Mechanic Simulator' },
-];
+// Assigned Games options are sourced dynamically from the `game_channels`
+// table so any new game added by an admin (via Sim Games Manager) shows up
+// here automatically.
+function useGameTitleOptions() {
+  const [options, setOptions] = useState<{ value: DBGameTitle; label: string }[]>([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from('game_channels')
+        .select('game_title, name')
+        .order('name', { ascending: true });
+      if (error || !active || !data) return;
+      setOptions(
+        data.map((c) => ({ value: c.game_title as DBGameTitle, label: c.name })),
+      );
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+  return options;
+}
 
 interface CommunityFormDialogProps {
   open: boolean;
