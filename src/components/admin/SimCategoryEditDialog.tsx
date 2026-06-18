@@ -11,12 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, ExternalLink } from 'lucide-react';
 import { ICON_OPTIONS, getIconByKey } from '@/lib/sim-icons';
 import { useDeepDiveResources } from '@/hooks/useDeepDiveResources';
+import { useGameChannels } from '@/hooks/useGameChannels';
 import type { SimCategory } from '@/hooks/useSimCategories';
 import type { GameTitle } from '@/types/tenant';
 
-const ALL_GAMES: GameTitle[] = ['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft'];
-
-const GAME_LABELS: Record<GameTitle, string> = {
+// Static fallback labels for known GameTitle enum values. The live list of
+// selectable games is sourced from `game_channels` (auto-populated by
+// fetch-challenges) so any new SIM appears here without a code change.
+const FALLBACK_GAME_LABELS: Record<GameTitle, string> = {
   ATS: 'American Truck Simulator',
   Farming_Sim: 'Farming Simulator',
   Construction_Sim: 'Construction Simulator',
@@ -28,6 +30,7 @@ const GAME_LABELS: Record<GameTitle, string> = {
   House_Flipper_2: 'House Flipper 2',
   Electrician_Sim: 'Electrician Simulator',
 };
+const KNOWN_GAMES = Object.keys(FALLBACK_GAME_LABELS) as GameTitle[];
 
 interface Props {
   open: boolean;
@@ -40,6 +43,17 @@ interface Props {
 export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, onManageLibrary }: Props) {
   const isEditing = !!category;
   const { data: libraryResources = [] } = useDeepDiveResources(true);
+  const { data: gameChannels = [] } = useGameChannels();
+  // Union of game_channels rows and the known GameTitle enum so admins always
+  // see every SIM, even if a channel row hasn't been created yet.
+  const allGames = Array.from(
+    new Set<GameTitle>([
+      ...gameChannels.map((c) => c.game_title),
+      ...KNOWN_GAMES,
+    ])
+  );
+  const gameLabel = (g: GameTitle) =>
+    gameChannels.find((c) => c.game_title === g)?.name ?? FALLBACK_GAME_LABELS[g] ?? g;
   const [key, setKey] = useState('');
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
@@ -192,10 +206,10 @@ export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, on
           <div className="space-y-2">
             <Label>Default SIM Games</Label>
             <div className="grid grid-cols-2 gap-2 p-3 rounded-md border border-border/50 bg-muted/20">
-              {ALL_GAMES.map((g) => (
+              {allGames.map((g) => (
                 <label key={g} className="flex items-center gap-2 text-sm cursor-pointer">
                   <Checkbox checked={defaultGames.includes(g)} onCheckedChange={() => toggleGame(g)} />
-                  {GAME_LABELS[g]}
+                  {gameLabel(g)}
                 </label>
               ))}
             </div>
