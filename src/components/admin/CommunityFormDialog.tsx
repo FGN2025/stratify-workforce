@@ -370,7 +370,7 @@ export function CommunityFormDialog({
               <Label>Assigned Games</Label>
               <div className="p-4 rounded-lg border border-border/50 bg-muted/30">
                 <div className="grid grid-cols-2 gap-3">
-                  {GAME_TITLE_OPTIONS.map((game) => (
+                  {gameTitleOptions.map((game) => (
                     <div key={game.value} className="flex items-center gap-2">
                       <Checkbox
                         id={game.value}
