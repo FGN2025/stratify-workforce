@@ -10,6 +10,7 @@ import { TutorChatButton } from "@/components/tutor/TutorChatButton";
 import { TutorChatPanel } from "@/components/tutor/TutorChatPanel";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
+import { CommunityAdminRoute } from "@/components/auth/CommunityAdminRoute";
 import { DeveloperRoute } from "@/components/auth/DeveloperRoute";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
@@ -120,10 +121,10 @@ const App = () => (
                 <AdminRoute><Settings /></AdminRoute>
               } />
               <Route path="/admin" element={
-                <AdminRoute><Admin /></AdminRoute>
+                <CommunityAdminRoute><Admin /></CommunityAdminRoute>
               } />
               <Route path="/admin/:section" element={
-                <AdminRoute><Admin /></AdminRoute>
+                <CommunityAdminRoute><Admin /></CommunityAdminRoute>
               } />
               <Route path="/admin/challenge-registry" element={
                 <AdminRoute><ChallengeRegistry /></AdminRoute>
@@ -132,7 +133,7 @@ const App = () => (
                 <AdminRoute><CourseBuilder /></AdminRoute>
               } />
               <Route path="/admin/community-setup" element={
-                <AdminRoute><CommunitySetup /></AdminRoute>
+                <CommunityAdminRoute><CommunitySetup /></CommunityAdminRoute>
               } />
               <Route path="/scorm-player/:courseId/launch" element={
                 <ProtectedRoute><ScormPlayerLaunch /></ProtectedRoute>

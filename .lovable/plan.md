@@ -1,91 +1,85 @@
 ## Goal
 
-One admin-controlled mapping drives both surfaces:
-- **Sidebar "SIM CATEGORIES"** — currently hardcoded game names (Trucking Simulator, Fiber-Tech Simulator).
-- **Work Orders filter chips** — already DB-driven industry names (Trucking & Logistics, Broadband).
+Today, every `/admin/*` route is gated by `AdminRoute`, which only allows platform-level `admin`/`super_admin`. Community owners and admins (rows in `community_memberships` with role `owner` or `admin`) have no way to manage their own community in the admin UI. Meanwhile, platform super admins can technically reach the admin pages but the tenant-scoped panels (Community Setup, Curation, Branding, Members, Work Orders, etc.) read from the active tenant context — there is no first-class "manage *that* community" experience.
 
-After this change, an admin can rename "Trucking Simulator" → "Trucking & Logistics" in one place and both surfaces update. Game-level external resource links (CDL Quest, CDL Exchange, etc.) stay attached to the game, not the industry.
+This plan formalizes two tiers of admin, and gives both a clear surface.
 
-## Current state (for reference)
+## Tiers
 
-- `sim_categories` table — industry name, icon, color, `default_game_titles[]`, display order. Edited in Admin → Sim Categories. Drives `/work-orders` filters.
-- `src/config/simResources.ts` — hardcoded `SIM_RESOURCES[gameTitle]` with title + icon + color + external resource list. Drives sidebar SIM CATEGORIES section and external resource cards.
-- Gap: two parallel naming systems, no mapping between them.
+| Tier | Who | Scope |
+|---|---|---|
+| **Platform Admin** | `user_roles.role` ∈ {`super_admin`, `admin`} | Every community + every platform-only panel (Authorized Apps, Webhooks, AI Config, Sync Tester, etc.) |
+| **Community Admin** | `community_memberships.role` ∈ {`owner`, `admin`} for a given tenant (and inherited via `get_parent_tenants`) | Only the communities they own/admin. No platform-only panels. |
 
-## Design
+Membership roles `manager` and `moderator` stay out of admin for now (existing review queues already cover them).
 
-### 1. Add a sidebar label override to sim_categories
+## What changes
 
-Migration adds two optional columns to `public.sim_categories`:
-- `sidebar_label text` — what the sidebar shows (falls back to `title` when null).
-- `show_in_sidebar boolean default true` — lets admin hide an industry from the sidebar without deleting it.
+### 1. New route guard: `CommunityAdminRoute`
 
-No data migration needed; existing rows just inherit `title` as the sidebar label.
+Replaces `AdminRoute` on tenant-scoped admin pages. Allows access if **either**:
+- `useUserRole().isAdmin` is true (platform), **or**
+- `useTenantAdminGuard().isTenantAdmin` is true for the active tenant.
 
-### 2. New "Sim Category Mapping" admin view
+`AdminRoute` itself stays as-is and keeps protecting platform-only pages.
 
-Extend `SimCategoriesManager` (Admin → Sim Categories) so each category card shows:
-- Industry name (existing `title`)  — used on Work Orders filter chips.
-- Sidebar label (new `sidebar_label`) — used on sidebar. Defaults to industry name; admin can override (e.g., set industry = "Trucking & Logistics", sidebar = "Trucking Simulator", or align them).
-- "Show in sidebar" toggle.
-- Default games (existing `default_game_titles[]`) — the mapping itself.
+### 2. Admin sections reclassified
 
-Result: one row per industry holds both names and the game mapping. Renaming or remapping a game requires no code change.
+`src/pages/Admin.tsx` already has a `section` switch. We tag each section as `platform`, `community`, or `both`:
 
-### 3. Rewrite the sidebar SIM CATEGORIES section
+- **Community-scoped** (CommunityAdminRoute): `community-setup` (new section, see #3), `curation`, `users` (filtered to tenant members), `events`, `work-orders`, `evidence`, `codes`, `media`, `career-paths`, `challenge-mappings`, `challenge-tracks`, `community-review` *(only for managers of that tenant)*.
+- **Platform-only** (AdminRoute + `isSuperAdmin` check kept): `authorized-apps`, `webhooks`, `credential-types`, `discord`, `ai-config`, `notebook-telemetry`, `sync-tester`, `play-webhook-retry`, `parity-monitor`, `super-admin`, `sim-categories`, `sim-resources`, `games`, `breakroom-mapper`, `play-sync`.
 
-`src/components/layout/AppSidebar.tsx`:
-- Stop iterating `SIM_RESOURCES` for the sidebar list.
-- Iterate `useSimCategories()` rows where `show_in_sidebar = true`, ordered by `display_order`.
-- Label = `sidebar_label ?? title`. Icon/color = `icon_key`/`accent_color` from the row.
-- Each row links to `/sim/:gameTitle`. When a category maps to multiple games (e.g., Construction covers Construction_Sim + Roadcraft), expand into sub-items per game using `SIM_RESOURCES[gameKey].shortTitle` for the sub-label.
-- Game channels with no sim_category mapping still get an auto-appended sidebar entry (existing behavior preserved as a fallback so new games appear automatically).
+`renderSection()` gets a `canManagePlatform` check (today's `isSuperAdmin`) and a `canManageTenant` check (new) before rendering each section, so a community admin who hand-types a platform URL gets blocked.
 
-### 4. Keep `SIM_RESOURCES` for game-scoped data only
+### 3. "Community Setup" promoted to a community management hub
 
-`src/config/simResources.ts` stays, but its role narrows to per-game data the DB doesn't own:
-- `shortTitle`, icon component, external resource cards (CDL Quest, CDL Exchange).
-- Sidebar no longer reads `title` from it.
-- `WorkOrderFilters.tsx` "uncategorized game" chip fallback continues to read from it.
+Rename the `/admin/community-setup` sidebar link to **"This Community"** for community admins and keep it as "Community Setup" for platform admins. The page itself becomes a small landing card that shows the active tenant and links to the community-scoped admin sections above (Setup wizard, Curation, Members, Branding, Work Orders, Events, Codes, Media, Career Paths).
 
-We are **not** moving external resource links into the DB in this pass — only the naming and mapping.
+No changes to the actual setup wizard.
 
-## Technical details
+### 4. Sidebar tier awareness (`AppSidebar.tsx`)
 
-### Migration
+`showAdmin` currently = `isAdmin`. New:
 
-```sql
-ALTER TABLE public.sim_categories
-  ADD COLUMN sidebar_label text,
-  ADD COLUMN show_in_sidebar boolean NOT NULL DEFAULT true;
+```
+showPlatformAdmin = isAdmin                        // platform-only items
+showCommunityAdmin = isAdmin || isTenantAdmin       // community-scoped items
 ```
 
-Update `useSimCategories.ts` to surface both fields on `SimCategory`.
+Group the admin nav into two collapsibles:
+- **Platform Admin** (only when `showPlatformAdmin`)
+- **Community Admin — {active tenant name}** (when `showCommunityAdmin`)
 
-### Files touched
+Community admins only ever see the second group, scoped to communities they administer. The existing TenantSwitcher already lets a platform admin hop between communities; community admins only see their own tenants in the switcher (it already reads from memberships).
 
-- `supabase/migrations/<new>.sql` — schema addition above.
-- `src/hooks/useSimCategories.ts` — add `sidebar_label`, `show_in_sidebar` to the returned object.
-- `src/hooks/useSaveSimCategory.ts` — include the two new fields in upsert payload.
-- `src/components/admin/SimCategoriesManager.tsx` — show sidebar label + toggle on each card.
-- `src/components/admin/SimCategoryEditDialog.tsx` — add inputs for `sidebar_label` and `show_in_sidebar`.
-- `src/components/layout/AppSidebar.tsx` — replace the static `SIM_RESOURCES` loop in the SIM CATEGORIES group with a `useSimCategories()`-driven loop; preserve the game-channel fallback for unmapped games.
-- No changes to `WorkOrderFilters.tsx`, `simResources.ts`, or any edge function.
+### 5. Platform "Communities" management table (super admin convenience)
 
-### Backward compatibility
+New section `/admin/communities` (platform-only) listing every approved tenant with: name, owner, member count, setup status, "Open as admin" button that sets active tenant and routes to `/admin/community-setup`. Lets super admins jump into any community without slug-typing.
 
-- Existing rows: `sidebar_label` null → sidebar shows current `title` ("Trucking & Logistics", "Broadband", etc.). If the user prefers the old game names on the sidebar, they set `sidebar_label` per row in admin.
-- Routes (`/sim/:gameTitle`) and game-channel auto-discovery unchanged.
-- `SIM_RESOURCES` keeps providing icons, short titles, and external resource cards.
+Source: `tenants` table + existing `community_memberships` for owner lookup. No new DB.
+
+## Database / RLS
+
+No schema changes. All gating uses existing functions: `has_role`, `is_tenant_admin`, `has_tenant_role_inherited`, `get_parent_tenants`. Tenant-scoped tables (`tenants`, `tenant_*_curation`, `work_orders`, `events`, `registration_codes`, etc.) need a quick RLS audit to confirm community admins can write to rows scoped to their tenant. Where a policy currently checks only `has_role('admin')`, we add an `OR is_tenant_admin(auth.uid(), tenant_id)` branch. Migration will be a single file listing each affected policy; no data changes.
 
 ## Out of scope
 
-- Migrating external resource links (CDL Quest, etc.) from `simResources.ts` into the DB.
-- Renaming the `GameTitle` enum or changing how work orders are tagged.
-- Touching `play.fgn.gg` naming.
+- New membership roles or permission matrix beyond owner/admin.
+- Per-section granular permissions (e.g. "events editor but not curator"). Owner = admin for now.
+- Tenant-scoped audit log UI.
+- Mobile-specific layout for the new community hub.
 
-## Result
+## Technical details
 
-- Single admin surface controls every industry/game label users see in this app.
-- Sidebar and Work Orders filters can be aligned (matching names) or intentionally divergent (game name on sidebar, industry on filter) — admin choice, no code edit.
-- New industries or remappings ship without a deploy.
+Files touched:
+
+- `src/components/auth/CommunityAdminRoute.tsx` *(new)* — wraps `AdminRoute` logic but also accepts tenant admins.
+- `src/App.tsx` — swap guard on tenant-scoped routes; add `/admin/communities` route (platform-only).
+- `src/pages/Admin.tsx` — section tier table + per-section guard before render; new `communities` section component.
+- `src/components/admin/CommunitiesAdminTable.tsx` *(new)* — platform list with "Open as admin".
+- `src/components/layout/AppSidebar.tsx` — split admin group into Platform + Community; use `useTenantAdminGuard`.
+- `src/pages/admin/CommunitySetup.tsx` — add quick-links grid to community-scoped sections.
+- Optional RLS migration: extend policies on `tenants` (update), `tenant_*_curation`, `events`, `work_orders`, `registration_codes`, `site_media`, `career_paths` to grant write to `is_tenant_admin(auth.uid(), tenant_id)`.
+
+Result: platform admins keep full control; community owners/admins get a scoped admin surface for their community only, with no code path leaking platform-only tools to them.

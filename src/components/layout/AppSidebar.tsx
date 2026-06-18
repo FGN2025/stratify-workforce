@@ -41,6 +41,7 @@ import {
   Link2,
   RotateCcw,
   Activity,
+  Building2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -60,6 +61,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTenantAdminGuard } from '@/hooks/useTenantAdminGuard';
 import { useSimResources } from '@/hooks/useSimResources';
 import { useGameChannels } from '@/hooks/useGameChannels';
 import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
@@ -85,51 +87,62 @@ const mainNavItems = [
   { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
 ];
 
+type AdminTier = 'community' | 'platform';
+
 type AdminLeaf = {
   title: string;
   url: string;
   icon: LucideIcon;
   badgeKey?: 'evidence' | 'community';
+  tier: AdminTier;
 };
 type AdminGroup = {
   groupKey: 'sim' | 'challenges';
   title: string;
   icon: LucideIcon;
+  tier: AdminTier;
   children: AdminLeaf[];
 };
 type AdminEntry = AdminLeaf | AdminGroup;
 
 const adminSubItems: AdminEntry[] = [
-  { title: 'Community Setup', url: '/admin/community-setup', icon: Shield },
-  { title: 'Users', url: '/admin/users', icon: Users },
-  { title: 'Events', url: '/admin/events', icon: Calendar },
-  { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
-  { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const },
+  // Community-scoped — tenant owners/admins can use these for their own community.
+  { title: 'Community Setup', url: '/admin/community-setup', icon: Shield, tier: 'community' },
+  { title: 'Events', url: '/admin/events', icon: Calendar, tier: 'community' },
+  { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList, tier: 'community' },
+  { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const, tier: 'community' },
+  { title: 'Curation', url: '/admin/curation', icon: FileCheck, tier: 'community' },
+  { title: 'Media Library', url: '/admin/media', icon: Image, tier: 'community' },
+  { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound, tier: 'community' },
+  { title: 'Skills Paths', url: '/admin/career-paths', icon: Route, tier: 'community' },
+
+  // Platform-only.
+  { title: 'Users', url: '/admin/users', icon: Users, tier: 'platform' },
+  { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
   {
     groupKey: 'sim',
     title: 'SIM',
     icon: Gamepad2,
+    tier: 'platform',
     children: [
-      { title: 'SIM Games', url: '/admin/games', icon: Gamepad2 },
-      { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box },
-      { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box },
+      { title: 'SIM Games', url: '/admin/games', icon: Gamepad2, tier: 'platform' },
+      { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box, tier: 'platform' },
+      { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box, tier: 'platform' },
     ],
   },
-  { title: 'Media Library', url: '/admin/media', icon: Image },
-  { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound },
-  { title: 'Skills Paths', url: '/admin/career-paths', icon: Route },
   {
     groupKey: 'challenges',
     title: 'Challenges',
     icon: FileCheck,
+    tier: 'platform',
     children: [
-      { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck },
-      { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon },
-      { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route },
+      { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck, tier: 'platform' },
+      { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon, tier: 'platform' },
+      { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route, tier: 'platform' },
     ],
   },
-  { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench },
-  { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2 },
+  { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench, tier: 'platform' },
+  { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2, tier: 'platform' },
 ];
 
 const superAdminSubItems = [
@@ -146,6 +159,7 @@ const superAdminSubItems = [
   { title: 'Play Games Sync', url: '/admin/play-sync', icon: Gamepad2 },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
+
 
 const standaloneAdminItems = [
   { title: 'Students', url: '/students', icon: Users, adminOnly: true },
@@ -178,6 +192,7 @@ export function AppSidebar() {
   const { tenant } = useTenant();
   const { isLoading: authLoading } = useAuth();
   const { isAdmin, isDeveloper, isSuperAdmin, isLoading: roleLoading } = useUserRole();
+  const { isTenantAdmin } = useTenantAdminGuard();
   
   // Fetch database resources
   const { data: dbResources } = useSimResources();
@@ -268,12 +283,19 @@ export function AppSidebar() {
   
   // Show admin items while loading (optimistic) to prevent race condition
   const isLoadingAuth = authLoading || roleLoading;
-  const showAdmin = isLoadingAuth || isAdmin;
+  const showPlatformAdmin = isLoadingAuth || isAdmin;
+  const showCommunityAdmin = isLoadingAuth || isAdmin || isTenantAdmin;
+  const showAdmin = showPlatformAdmin || showCommunityAdmin;
   const showSuperAdmin = isLoadingAuth || isSuperAdmin;
   const showDeveloper = isLoadingAuth || isDeveloper || isAdmin;
 
+  const visibleAdminSubItems = adminSubItems.filter((item) => {
+    if (item.tier === 'platform') return showPlatformAdmin;
+    return showCommunityAdmin;
+  });
+
   const visibleStandaloneItems = standaloneAdminItems.filter((item) => {
-    if ('adminOnly' in item && item.adminOnly) return showAdmin;
+    if ('adminOnly' in item && item.adminOnly) return showPlatformAdmin;
     if ('developerOnly' in item && (item as any).developerOnly) return showDeveloper;
     return true;
   });
@@ -520,7 +542,7 @@ export function AppSidebar() {
         {showAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-              Admin
+              {showPlatformAdmin ? 'Admin' : 'Community Admin'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -549,7 +571,7 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pl-4">
                       <SidebarMenu>
-                        {adminSubItems.map((item) => {
+                        {visibleAdminSubItems.map((item) => {
                           if ('children' in item) {
                             const groupOpen = item.groupKey === 'sim' ? simOpen : challengesOpen;
                             const setGroupOpen = item.groupKey === 'sim' ? setSimOpen : setChallengesOpen;
