@@ -25,6 +25,10 @@ export interface SimCategory {
   /** Resource IDs from sim_deep_dive_resources currently linked (for edit picker) */
   resource_ids: string[];
   is_active: boolean;
+  /** Optional override for sidebar display name; falls back to `title` */
+  sidebar_label: string | null;
+  /** Whether this category renders in the sidebar SIM CATEGORIES group */
+  show_in_sidebar: boolean;
 }
 
 export function useSimCategories(includeInactive = false) {
@@ -88,6 +92,8 @@ export function useSimCategories(includeInactive = false) {
           deep_dive_resources: fromLibrary.length > 0 ? fromLibrary : jsonbResources,
           resource_ids: sortedLinks.map((l) => l.resource_id),
           is_active: (r.is_active as boolean) ?? true,
+          sidebar_label: (r.sidebar_label as string | null) ?? null,
+          show_in_sidebar: (r.show_in_sidebar as boolean) ?? true,
         };
       });
     },

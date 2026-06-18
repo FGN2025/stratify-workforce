@@ -21,6 +21,8 @@ export function useSaveSimCategory() {
         default_game_titles: data.default_game_titles ?? [],
         deep_dive_resources: (data.deep_dive_resources ?? []) as unknown as never,
         is_active: data.is_active ?? true,
+        sidebar_label: data.sidebar_label ?? null,
+        show_in_sidebar: data.show_in_sidebar ?? true,
       };
 
       let categoryId: string;
