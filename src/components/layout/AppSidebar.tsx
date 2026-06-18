@@ -61,6 +61,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTenantAdminGuard } from '@/hooks/useTenantAdminGuard';
 import { useSimResources } from '@/hooks/useSimResources';
 import { useGameChannels } from '@/hooks/useGameChannels';
 import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
