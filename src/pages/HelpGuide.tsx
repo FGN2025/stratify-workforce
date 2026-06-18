@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Globe, Upload, Zap, Award, Gamepad2, Users, Radio, FileCheck,
-  Code, GraduationCap, AlertTriangle, ArrowRight, Shield, Database
+  Code, GraduationCap, AlertTriangle, ArrowRight, Wand2,
 } from 'lucide-react';
 
 const AdminBadge = () => (
@@ -56,21 +56,59 @@ const sections = [
     adminOnly: true,
     content: (
       <div className="space-y-3 text-sm text-muted-foreground">
-        <p>Admins can import simulation challenges from FGN Play directly into the Academy as Work Orders.</p>
-        <ol className="list-decimal pl-5 space-y-2">
-          <li>Navigate to <strong className="text-foreground">Admin Dashboard → Work Orders</strong></li>
-          <li>Click <strong className="text-foreground">"New Work Order"</strong></li>
-          <li>Select <strong className="text-foreground">"Import from FGN Play"</strong> in the dialog</li>
-          <li>Browse available challenges — each shows title, game, difficulty, and XP reward</li>
-          <li>Click <strong className="text-foreground">"Import"</strong> to create the Work Order</li>
-        </ol>
-        <p>
-          The import stores the original challenge UUID as <code className="bg-muted px-1.5 py-0.5 rounded text-xs">source_challenge_id</code> on the Work Order.
-          This ID is the permanent cross-platform link used by the completion webhook.
-        </p>
+        <p>Imports are handled by a dedicated, admin-gated edge function. Both the Work Order dialog's "Import from FGN Play" branch and the Configurator call the same endpoint:</p>
+        <pre className="bg-muted/50 p-4 rounded-lg text-xs overflow-x-auto font-mono leading-relaxed">
+{`POST /functions/v1/import-challenge-as-workorder
+Headers: Authorization: Bearer <admin user JWT>
+Body:    { "challenge_ids": ["uuid", ...] }   // 1–50 ids
+
+Response:
+{ "results": [
+  { "challenge_id", "work_order_id",
+    "status": "created" | "existing",
+    "tasks_imported", "play_source_present" }
+] }`}
+        </pre>
+        <p><strong className="text-foreground">Guarantees:</strong></p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Admin role enforced server-side via <code className="bg-muted px-1 rounded">has_role(user, 'admin')</code> before the service-role client runs</li>
+          <li>Idempotent on <code className="bg-muted px-1 rounded">fgn_origin_challenge_id</code> — re-imports return <code className="bg-muted px-1 rounded">status: 'existing'</code></li>
+          <li><code className="bg-muted px-1 rounded">metadata.play_source</code> is set on the single INSERT (no post-insert UPDATE)</li>
+          <li>Side effects: upsert <code className="bg-muted px-1 rounded">game_channels</code> keyed on <code className="bg-muted px-1 rounded">game_title</code>; insert <code className="bg-muted px-1 rounded">work_order_tasks</code> with <code className="bg-muted px-1 rounded">order_index</code> and <code className="bg-muted px-1 rounded">source_task_id</code></li>
+          <li>Work orders are created with <code className="bg-muted px-1 rounded">is_active = false</code> and a null title (resolver-driven)</li>
+        </ul>
         <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <p className="text-xs"><strong className="text-foreground">💡 Tip:</strong> Use the <strong className="text-foreground">Challenge Registry</strong> at <code className="bg-muted px-1.5 py-0.5 rounded text-xs">/admin/challenge-registry</code> to view and manage all cross-platform ID mappings, export challenge IDs for game scripts, and configure Breakroom course name links.</p>
+          <p className="text-xs"><strong className="text-foreground">Tip:</strong> Use the <strong className="text-foreground">Challenge Registry</strong> at <code className="bg-muted px-1.5 py-0.5 rounded text-xs">/admin/challenge-registry</code> to view cross-platform ID mappings, export challenge IDs for game scripts, and configure Breakroom course-name links.</p>
         </div>
+      </div>
+    ),
+  },
+  {
+    id: 'assessments',
+    icon: Wand2,
+    title: 'Assessments & Skill Passport Recording',
+    adminOnly: true,
+    content: (
+      <div className="space-y-3 text-sm text-muted-foreground">
+        <p>Interactive challenges authored by the Configurator are stored as <strong className="text-foreground">simulations</strong> and attached to work orders. Three tables back the feature:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li><code className="bg-muted px-1 rounded">simulations</code> — root record (sim_type, briefing, facts, cats, config, track_key, status, tenant)</li>
+          <li><code className="bg-muted px-1 rounded">simulation_items</code> — selectable items (item_key, cat_key, correct, critical, seq, why)</li>
+          <li><code className="bg-muted px-1 rounded">simulation_runs</code> — graded attempts (archetype, raw, max, percent, grade, stand_down, item_selections, debrief)</li>
+        </ul>
+        <p><strong className="text-foreground">Four archetypes:</strong> <code className="bg-muted px-1 rounded">sequence</code>, <code className="bg-muted px-1 rounded">loadout</code>, <code className="bg-muted px-1 rounded">resource_selection</code>, <code className="bg-muted px-1 rounded">method_selection</code>. All four are accepted by the CHECK constraints on both tables.</p>
+        <p><strong className="text-foreground">Write path:</strong></p>
+        <pre className="bg-muted/50 p-4 rounded-lg text-xs overflow-x-auto font-mono leading-relaxed">
+{`Author → POST /functions/v1/attach-assessment-to-workorder
+Attempt → POST /functions/v1/score-simulation
+                 │
+                 ▼
+        sync-challenge-completion
+                 │
+                 ▼
+           ensure_skill_passport  →  Skill Credential + XP`}
+        </pre>
+        <p className="text-xs">The score → sync → passport chain is live end-to-end. A passing run writes a credential, awards XP, and triggers <code className="bg-muted px-1 rounded">recalculate_user_skills</code> + <code className="bg-muted px-1 rounded">evaluate_achievements</code>.</p>
       </div>
     ),
   },
@@ -90,7 +128,7 @@ Headers:
 Body:
 {
   "user_id": "uuid",
-  "challenge_id": "uuid",        // matches source_challenge_id
+  "challenge_id": "uuid",        // matches fgn_origin_challenge_id (legacy: source_challenge_id)
   "score": 85,                    // percentage (0-100)
   "completed_at": "ISO-8601",
   "metadata": {
