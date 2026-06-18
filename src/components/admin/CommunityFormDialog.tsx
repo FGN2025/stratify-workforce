@@ -101,6 +101,7 @@ export function CommunityFormDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [showLogoPicker, setShowLogoPicker] = useState(false);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
+  const gameTitleOptions = useGameTitleOptions();
 
   // Available parent communities (exclude self and descendants)
   const availableParents = allCommunities.filter(t => {
