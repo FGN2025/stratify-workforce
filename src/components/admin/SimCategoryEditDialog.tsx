@@ -43,6 +43,17 @@ interface Props {
 export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, onManageLibrary }: Props) {
   const isEditing = !!category;
   const { data: libraryResources = [] } = useDeepDiveResources(true);
+  const { data: gameChannels = [] } = useGameChannels();
+  // Union of game_channels rows and the known GameTitle enum so admins always
+  // see every SIM, even if a channel row hasn't been created yet.
+  const allGames = Array.from(
+    new Set<GameTitle>([
+      ...gameChannels.map((c) => c.game_title),
+      ...KNOWN_GAMES,
+    ])
+  );
+  const gameLabel = (g: GameTitle) =>
+    gameChannels.find((c) => c.game_title === g)?.name ?? FALLBACK_GAME_LABELS[g] ?? g;
   const [key, setKey] = useState('');
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
