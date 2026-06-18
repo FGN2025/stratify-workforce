@@ -51,7 +51,9 @@ interface UserWithRole {
 export default function Admin() {
   const { section } = useParams<{ section: string }>();
   const navigate = useNavigate();
-  const { isSuperAdmin } = useUserRole();
+  const { isAdmin, isSuperAdmin } = useUserRole();
+  const { isTenantAdmin } = useTenantAdminGuard();
+  const isPlatformAdmin = isAdmin || isSuperAdmin;
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [tenants, setTenants] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,12 +67,12 @@ export default function Admin() {
     newUsersThisWeek: 0,
   });
 
-  // Redirect /admin to /admin/users
+  // Redirect /admin to a sensible landing for the viewer's tier.
   useEffect(() => {
     if (!section) {
-      navigate('/admin/users', { replace: true });
+      navigate(isPlatformAdmin ? '/admin/users' : '/admin/community-setup', { replace: true });
     }
-  }, [section, navigate]);
+  }, [section, navigate, isPlatformAdmin]);
 
   useEffect(() => {
     fetchData();
