@@ -182,6 +182,7 @@ export function AppSidebar() {
   // Fetch database resources
   const { data: dbResources } = useSimResources();
   const { data: gameChannels = [] } = useGameChannels();
+  const { data: simCategories = [] } = useSimCategories();
 
   // Sidebar SIM CATEGORIES order: static base first, then any extra game_channels
   // (e.g. House Flipper, future imports) appended so new games auto-appear.
@@ -197,6 +198,48 @@ export function AppSidebar() {
     return order;
   }, [gameChannels]);
 
+  // Build sidebar sections from sim_categories (admin-controlled mapping),
+  // then append any games not covered by a visible category as a fallback so
+  // newly added games still surface in the sidebar.
+  type SidebarSection = {
+    id: string;
+    label: string;
+    iconKey: string | null;
+    color: string;
+    games: GameTitle[];
+  };
+  const sidebarSections = useMemo<SidebarSection[]>(() => {
+    const sections: SidebarSection[] = [];
+    const coveredGames = new Set<GameTitle>();
+    for (const cat of simCategories) {
+      if (!cat.show_in_sidebar) {
+        cat.default_game_titles.forEach((g) => coveredGames.add(g));
+        continue;
+      }
+      sections.push({
+        id: `cat:${cat.key}`,
+        label: cat.sidebar_label || cat.title,
+        iconKey: cat.icon_key,
+        color: cat.accent_color,
+        games: cat.default_game_titles.filter((g) => GAME_ORDER.includes(g)),
+      });
+      cat.default_game_titles.forEach((g) => coveredGames.add(g));
+    }
+    for (const game of GAME_ORDER) {
+      if (coveredGames.has(game)) continue;
+      const res = SIM_RESOURCES[game];
+      if (!res) continue;
+      sections.push({
+        id: `game:${game}`,
+        label: res.title,
+        iconKey: null,
+        color: res.accentColor,
+        games: [game],
+      });
+    }
+    return sections;
+  }, [simCategories, GAME_ORDER]);
+
   // Pending counts for badges
   const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
   const { data: pendingCommunityCount = 0 } = usePendingCommunityCount();
@@ -205,20 +248,12 @@ export function AppSidebar() {
     evidence: pendingEvidenceCount,
     community: pendingCommunityCount,
   };
-  
-  // Track open state for each game dropdown
-  const [openGames, setOpenGames] = useState<Record<GameTitle, boolean>>({
-    ATS: false,
-    Farming_Sim: false,
-    Construction_Sim: false,
-    Mechanic_Sim: false,
-    Fiber_Tech: false,
-    Roadcraft: false,
-    MSFS_2024: false,
-    House_Flipper: false,
-    House_Flipper_2: false,
-    Electrician_Sim: false,
-  });
+
+  // Track open state for each sidebar section (keyed by section id).
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const toggleSection = (id: string) =>
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
   const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
