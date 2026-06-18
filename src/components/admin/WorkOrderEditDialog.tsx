@@ -285,8 +285,29 @@ export function WorkOrderEditDialog({
           title: 'Updated',
           description: 'Work order has been updated.',
         });
+      } else if (fgnOriginChallengeId) {
+        // Create-from-import: delegate to the single canonical edge function so
+        // the dialog and the FGN Configurator share one path. Preserves the
+        // Phase A invariant (play_source on INSERT) and both side effects
+        // (game_channels upsert, work_order_tasks insert) inside the function.
+        const { data: invokeData, error: invokeError } = await supabase.functions.invoke(
+          'import-challenge-as-workorder',
+          { body: { challenge_ids: [fgnOriginChallengeId] } },
+        );
+        if (invokeError) throw invokeError;
+        const result = (invokeData as { results?: Array<{ status: string; error?: string; tasks_imported?: number }> })?.results?.[0];
+        if (!result || result.status === 'error') {
+          throw new Error(result?.error ?? 'Import failed');
+        }
+        toast({
+          title: result.status === 'existing' ? 'Already Imported' : 'Created',
+          description:
+            result.status === 'existing'
+              ? 'A work order for this challenge already exists.'
+              : `New work order created${(result.tasks_imported ?? 0) > 0 ? ` with ${result.tasks_imported} tasks` : ''}.`,
+        });
       } else {
-        // Create new
+        // Manual create (no challenge import) — keep inline insert path.
         const { data: newWO, error } = await supabase.from('work_orders').insert(data as never).select('id').single();
 
         if (error) throw error;
@@ -342,6 +363,7 @@ export function WorkOrderEditDialog({
           description: `New work order created${pendingTasks.length > 0 ? ` with ${pendingTasks.length} tasks` : ''}.`,
         });
       }
+
 
       onSave();
     } catch (error) {
