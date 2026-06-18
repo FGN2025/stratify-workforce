@@ -62,7 +62,10 @@ export type CategoryType =
   | 'employer'
   | 'training_center'
   | 'government'
-  | 'nonprofit';
+  | 'nonprofit'
+  | 'community_organization'
+  | 'club'
+  | 'cte';
 
 export type MembershipRole = 
   | 'member' 
@@ -143,6 +146,9 @@ export const CATEGORY_LABELS: Record<CategoryType, string> = {
   geography: 'Geographic Region',
   government: 'Government',
   nonprofit: 'Nonprofit',
+  community_organization: 'Community Organization',
+  club: 'Club',
+  cte: 'CTE',
 };
 
 export const MEMBERSHIP_ROLE_LABELS: Record<MembershipRole, string> = {
