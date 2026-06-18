@@ -206,10 +206,10 @@ export function SimCategoryEditDialog({ open, onOpenChange, category, onSave, on
           <div className="space-y-2">
             <Label>Default SIM Games</Label>
             <div className="grid grid-cols-2 gap-2 p-3 rounded-md border border-border/50 bg-muted/20">
-              {ALL_GAMES.map((g) => (
+              {allGames.map((g) => (
                 <label key={g} className="flex items-center gap-2 text-sm cursor-pointer">
                   <Checkbox checked={defaultGames.includes(g)} onCheckedChange={() => toggleGame(g)} />
-                  {GAME_LABELS[g]}
+                  {gameLabel(g)}
                 </label>
               ))}
             </div>
