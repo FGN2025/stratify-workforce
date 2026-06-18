@@ -20,6 +20,9 @@ const CATEGORY_ICONS: Record<CategoryType, React.ComponentType<{ className?: str
   training_center: GraduationCap,
   government: Building2,
   nonprofit: Users,
+  community_organization: Users,
+  club: Users,
+  cte: GraduationCap,
 };
 
 interface TreeNodeProps {
