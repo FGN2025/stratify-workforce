@@ -83,7 +83,7 @@ const mainNavItems = [
   { title: 'Skill Passport', url: '/profile', icon: User },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
   { title: 'Careers', url: '/careers', icon: Target },
-  { title: 'Help', url: '/help/student', icon: HelpCircle },
+  { title: 'Help', url: '/help', icon: HelpCircle },
   { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
 ];
 
