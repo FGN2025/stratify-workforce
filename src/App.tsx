@@ -51,6 +51,7 @@ import Eula from "./pages/Eula";
 import SimIndustry from "./pages/SimIndustry";
 import NotFound from "./pages/NotFound";
 import { TenantRouteRedirect } from "@/components/TenantRouteRedirect";
+import { HelpRedirect } from "@/components/HelpRedirect";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +143,7 @@ const App = () => (
                 <DeveloperRoute><Developers /></DeveloperRoute>
               } />
               <Route path="/agent-widget" element={<AgentWidget />} />
+              <Route path="/help" element={<HelpRedirect />} />
               <Route path="/help/admin" element={
                 <AdminRoute><HelpAdmin /></AdminRoute>
               } />
