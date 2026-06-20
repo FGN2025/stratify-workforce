@@ -177,6 +177,30 @@ export function MediaLibrary() {
             </Badge>
           </Button>
         </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={sourceFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSourceFilter('all')}
+          >
+            All Sources
+          </Button>
+          <Button
+            variant={sourceFilter === 'slotted' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSourceFilter('slotted')}
+          >
+            Slotted
+          </Button>
+          <Button
+            variant={sourceFilter === 'library' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSourceFilter('library')}
+          >
+            Uploaded
+          </Button>
+        </div>
       </div>
 
       {/* Grid */}
