@@ -178,6 +178,33 @@ Deno.serve(async (req) => {
 
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
 
+    // Register in Media Library (site_media) so admins can browse SCORM
+    // cover uploads alongside other uploaded assets. Idempotent via the
+    // content-addressed location_key.
+    const locationKey = `library/scorm-covers/${safeCourseId}-${hashHex}`;
+    const { error: catalogErr } = await supabase
+      .from('site_media')
+      .upsert(
+        {
+          location_key: locationKey,
+          media_type: 'image',
+          url: pub.publicUrl,
+          title: body.filename || `${safeCourseId}-${hashHex}.${ext}`,
+          alt_text: null,
+          metadata: {
+            source: 'scorm-toolkit',
+            course_id: body.courseId,
+            storage_path: storagePath,
+            bytes: bytes.byteLength,
+            mime_type: body.mimeType,
+          },
+        },
+        { onConflict: 'location_key' },
+      );
+    if (catalogErr) {
+      console.warn('media-upload: site_media catalog failed:', catalogErr.message);
+    }
+
     return jsonOk({
       url: pub.publicUrl,
       storagePath,
