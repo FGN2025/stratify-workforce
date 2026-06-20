@@ -12,24 +12,32 @@ import { MediaUploadDialog } from './MediaUploadDialog';
 import { MediaEditDialog } from './MediaEditDialog';
 
 type MediaFilter = 'all' | 'image' | 'video' | 'youtube' | 'audio';
+type SourceFilter = 'all' | 'slotted' | 'library';
 
 export function MediaLibrary() {
   const { data: allMedia, isLoading } = useAllSiteMedia();
   const { updateMedia, deleteMedia } = useMediaLibrary();
 
   const [filter, setFilter] = useState<MediaFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [search, setSearch] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [editingMedia, setEditingMedia] = useState<SiteMedia | null>(null);
+
+  const isLibraryItem = (m: SiteMedia) =>
+    m.location_key.startsWith('library/') ||
+    ((m.metadata as Record<string, unknown> | null)?.source as string | undefined) === 'upload' ||
+    ((m.metadata as Record<string, unknown> | null)?.source as string | undefined) === 'scorm-toolkit';
 
   const filteredMedia = useMemo(() => {
     if (!allMedia) return [];
 
     return allMedia.filter((media) => {
-      // Type filter
       if (filter !== 'all' && media.media_type !== filter) return false;
 
-      // Search filter
+      if (sourceFilter === 'library' && !isLibraryItem(media)) return false;
+      if (sourceFilter === 'slotted' && isLibraryItem(media)) return false;
+
       if (search) {
         const searchLower = search.toLowerCase();
         return (
@@ -41,7 +49,7 @@ export function MediaLibrary() {
 
       return true;
     });
-  }, [allMedia, filter, search]);
+  }, [allMedia, filter, sourceFilter, search]);
 
   const mediaTypeCounts = useMemo(() => {
     if (!allMedia) return { image: 0, video: 0, youtube: 0, audio: 0 };
@@ -167,6 +175,30 @@ export function MediaLibrary() {
             <Badge variant="secondary" className="ml-1">
               {mediaTypeCounts.audio}
             </Badge>
+          </Button>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={sourceFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSourceFilter('all')}
+          >
+            All Sources
+          </Button>
+          <Button
+            variant={sourceFilter === 'slotted' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSourceFilter('slotted')}
+          >
+            Slotted
+          </Button>
+          <Button
+            variant={sourceFilter === 'library' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSourceFilter('library')}
+          >
+            Uploaded
           </Button>
         </div>
       </div>
