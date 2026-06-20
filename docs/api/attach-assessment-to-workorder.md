@@ -104,7 +104,7 @@ The function does not inspect `work_orders.is_active` or any lifecycle flag. Att
 
 Re-sending the same body is idempotent: the simulation upserts on `wo_code` and the items are replaced wholesale. Sending the same `wo_code` with a different `work_order_id` returns `409`.
 
-Note: `public.simulation_items` is RLS-locked from REST reads even for an admin token (Postgres error `42501`). Callers cannot read the items back over REST and should trust the `items_written` count returned here.
+Note: `public.simulation_items` is now admin-readable over REST. With a valid admin JWT plus the anon key, `GET /rest/v1/simulation_items?simulation_id=eq.<id>&select=*` returns the rows so callers can verify the write. Non-admin authenticated reads remain limited to the existing student-safe column set; anon is denied.
 
 ## cURL example
 
