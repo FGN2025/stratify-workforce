@@ -12,6 +12,7 @@ import { MediaUploadDialog } from './MediaUploadDialog';
 import { MediaEditDialog } from './MediaEditDialog';
 
 type MediaFilter = 'all' | 'image' | 'video' | 'youtube' | 'audio';
+type SourceFilter = 'all' | 'slotted' | 'library';
 
 export function MediaLibrary() {
   const { data: allMedia, isLoading } = useAllSiteMedia();
