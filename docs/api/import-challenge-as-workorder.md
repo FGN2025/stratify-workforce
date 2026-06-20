@@ -75,7 +75,7 @@ Status meanings:
 
 - **`created`** a new work order was made for this challenge.
 - **`existing`** the challenge was already imported (idempotent hit on `fgn_origin_challenge_id`); the existing `work_order_id` is returned.
-- **`error`** this item could not be imported; `error` carries the reason and `work_order_id` is null. A common cause is `challenge not found in fetch-challenges response`, which means the supplied id is wrong, stale, or the challenge is not visible to the function's fetch step. The rest of the batch still processes.
+- **`error`** this item could not be imported; `error` carries the reason and `work_order_id` is null. Inactive play challenges (`is_active = false`) are supported: the function first checks the bulk `fetch-challenges` response and, on a miss, falls back to a direct privileged per-id lookup against play with `include_inactive: true`. An error is therefore reserved for genuinely missing or malformed ids; the message is `challenge not found on play (verified active + inactive lookup)`. The rest of the batch still processes.
 
 Note: the response does **not** include a `wo_code`. `wo_code` is a Configurator-chosen value set during the attach step, not assigned by import. To bind an assessment, take the returned `work_order_id` and pass it (plus a stable Configurator-chosen `wo_code`) to attach-assessment-to-workorder.
 
