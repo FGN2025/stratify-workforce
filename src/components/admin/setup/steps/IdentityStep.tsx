@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ImageField } from '@/components/admin/ImageField';
 import type { CommunitySetupData } from '@/hooks/useCommunitySetup';
 
 interface Props {
@@ -33,16 +34,24 @@ export function IdentityStep({ data, onChange }: Props) {
           placeholder="Tell members what your community is about."
         />
       </div>
+
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Logo URL</Label>
-          <Input value={data.logo_url || ''} onChange={(e) => onChange({ logo_url: e.target.value })} placeholder="https://…" />
-        </div>
-        <div className="space-y-2">
-          <Label>Cover Image URL</Label>
-          <Input value={data.cover_image_url || ''} onChange={(e) => onChange({ cover_image_url: e.target.value })} placeholder="https://…" />
-        </div>
+        <ImageField
+          label="Logo"
+          variant="logo"
+          folder="community-logos"
+          value={data.logo_url || ''}
+          onChange={(url) => onChange({ logo_url: url })}
+        />
+        <ImageField
+          label="Cover Image"
+          variant="cover"
+          folder="community-covers"
+          value={data.cover_image_url || ''}
+          onChange={(url) => onChange({ cover_image_url: url })}
+        />
       </div>
+
       <div className="space-y-2">
         <Label>Brand Color</Label>
         <div className="flex gap-2">
