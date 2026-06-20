@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ImageField } from '@/components/admin/ImageField';
 import type { CommunitySetupData } from '@/hooks/useCommunitySetup';
 
 interface Props {
@@ -33,6 +34,7 @@ export function IdentityStep({ data, onChange }: Props) {
           placeholder="Tell members what your community is about."
         />
       </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Logo URL</Label>
