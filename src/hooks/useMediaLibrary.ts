@@ -134,11 +134,11 @@ export function useMediaLibrary() {
   const uploadFile = useMutation({
     mutationFn: async ({ file, folder }: UploadFileParams) => {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const storagePath = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('media-assets')
-        .upload(fileName, file, {
+        .upload(storagePath, file, {
           cacheControl: '3600',
           upsert: false,
         });
@@ -147,7 +147,46 @@ export function useMediaLibrary() {
 
       const { data: { publicUrl } } = supabase.storage
         .from('media-assets')
-        .getPublicUrl(fileName);
+        .getPublicUrl(storagePath);
+
+      // Auto-register in the Media Library so admins can browse/manage every
+      // uploaded asset. Soft-fail: if the caller lacks admin INSERT rights
+      // (or the row collides), the file is still usable via publicUrl.
+      try {
+        const mime = (file.type || '').toLowerCase();
+        const mediaType: MediaType = mime.startsWith('video/')
+          ? 'video'
+          : mime.startsWith('audio/')
+            ? 'audio'
+            : 'image';
+
+        const { data: userData } = await supabase.auth.getUser();
+        const locationKey = `library/${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+        const { error: insertError } = await supabase.from('site_media').insert({
+          location_key: locationKey,
+          media_type: mediaType,
+          url: publicUrl,
+          title: file.name,
+          alt_text: null,
+          metadata: {
+            source: 'upload',
+            folder,
+            storage_path: storagePath,
+            size: file.size,
+            mime_type: file.type,
+            uploaded_by: userData?.user?.id ?? null,
+          } as Record<string, unknown>,
+        } as any);
+
+        if (insertError) {
+          console.warn('Upload not catalogued in Media Library:', insertError.message);
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['site-media-all'] });
+        }
+      } catch (catalogErr) {
+        console.warn('Media Library cataloguing failed:', catalogErr);
+      }
 
       return publicUrl;
     },
