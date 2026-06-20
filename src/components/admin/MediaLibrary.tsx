@@ -19,18 +19,25 @@ export function MediaLibrary() {
   const { updateMedia, deleteMedia } = useMediaLibrary();
 
   const [filter, setFilter] = useState<MediaFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [search, setSearch] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [editingMedia, setEditingMedia] = useState<SiteMedia | null>(null);
+
+  const isLibraryItem = (m: SiteMedia) =>
+    m.location_key.startsWith('library/') ||
+    ((m.metadata as Record<string, unknown> | null)?.source as string | undefined) === 'upload' ||
+    ((m.metadata as Record<string, unknown> | null)?.source as string | undefined) === 'scorm-toolkit';
 
   const filteredMedia = useMemo(() => {
     if (!allMedia) return [];
 
     return allMedia.filter((media) => {
-      // Type filter
       if (filter !== 'all' && media.media_type !== filter) return false;
 
-      // Search filter
+      if (sourceFilter === 'library' && !isLibraryItem(media)) return false;
+      if (sourceFilter === 'slotted' && isLibraryItem(media)) return false;
+
       if (search) {
         const searchLower = search.toLowerCase();
         return (
@@ -42,7 +49,7 @@ export function MediaLibrary() {
 
       return true;
     });
-  }, [allMedia, filter, search]);
+  }, [allMedia, filter, sourceFilter, search]);
 
   const mediaTypeCounts = useMemo(() => {
     if (!allMedia) return { image: 0, video: 0, youtube: 0, audio: 0 };
