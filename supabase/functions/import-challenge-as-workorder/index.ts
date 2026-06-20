@@ -144,6 +144,48 @@ Deno.serve(async (req) => {
     const allChallenges: PlayChallenge[] = fcBody?.challenges ?? [];
     const byId = new Map(allChallenges.map((c) => [String(c.id), c]));
 
+    // Direct per-id fallback: if a challenge isn't in the bulk list (typical
+    // cause: play returns it gated by is_active even when include_inactive is
+    // requested), look it up directly against play's ecosystem-data-api with
+    // an id filter. Tries a small set of action shapes to be tolerant of the
+    // play-side API surface; the first one that returns a row wins.
+    const playUrl = Deno.env.get('FGN_PLAY_SUPABASE_URL');
+    const ecosystemKey = Deno.env.get('ECOSYSTEM_API_KEY');
+
+    async function fetchInactiveChallengeById(id: string): Promise<PlayChallenge | null> {
+      if (!playUrl || !ecosystemKey) return null;
+      const attempts: Array<Record<string, unknown>> = [
+        { action: 'challenges', ids: [id], include_inactive: true, limit: 1, page: 0 },
+        { action: 'challenges', id, include_inactive: true, limit: 1, page: 0 },
+        { action: 'challenge', id, include_inactive: true },
+      ];
+      for (const body of attempts) {
+        try {
+          const r = await fetch(`${playUrl}/functions/v1/ecosystem-data-api`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Ecosystem-Key': ecosystemKey,
+              'X-Ecosystem-App': 'academy',
+            },
+            body: JSON.stringify(body),
+          });
+          if (!r.ok) continue;
+          const data = await r.json();
+          const single = (data?.challenge ?? data?.data ?? null) as PlayChallenge | null;
+          const list: PlayChallenge[] = data?.challenges ?? (Array.isArray(data?.data) ? data.data : []);
+          const match =
+            (single && String(single.id) === id ? single : null) ??
+            list.find((c) => String(c.id) === id) ??
+            null;
+          if (match) return match;
+        } catch (e) {
+          console.warn('inactive challenge direct fetch attempt failed:', e);
+        }
+      }
+      return null;
+    }
+
     const results: ImportResult[] = [];
 
     for (const challengeId of challengeIds) {
@@ -167,13 +209,17 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const challenge = byId.get(challengeId);
+        let challenge = byId.get(challengeId) ?? null;
+        if (!challenge) {
+          // Fallback: try a direct privileged lookup for inactive challenges.
+          challenge = await fetchInactiveChallengeById(challengeId);
+        }
         if (!challenge) {
           results.push({
             challenge_id: challengeId,
             work_order_id: null,
             status: 'error',
-            error: 'challenge not found in fetch-challenges response',
+            error: 'challenge not found on play (verified active + inactive lookup)',
           });
           continue;
         }
