@@ -81,7 +81,7 @@ export function HorizontalCarousel({
             </Button>
           )}
           
-          <div className="hidden md:flex items-center gap-1">
+          <div className={cn("hidden md:flex items-center gap-1", gridOnDesktop && "md:hidden")}>
             <Button
               variant="ghost"
               size="icon"
