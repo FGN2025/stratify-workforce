@@ -177,21 +177,17 @@ const WorkOrders = () => {
         />
 
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />}>
+          <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />} gridOnDesktop>
             {filteredWorkOrders.slice(0, 6).map((wo, idx) => (
-              <div key={wo.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant={idx === 0 ? 'featured' : 'default'} />
-              </div>
+              <EventCard key={wo.id} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant={idx === 0 ? 'featured' : 'default'} />
             ))}
           </HorizontalCarousel>
         )}
 
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />}>
+          <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />} gridOnDesktop>
             {filteredWorkOrders.slice(0, 4).map((wo) => (
-              <div key={`recent-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
-              </div>
+              <EventCard key={`recent-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
             ))}
           </HorizontalCarousel>
         )}
@@ -218,29 +214,26 @@ const WorkOrders = () => {
                 </div>
               )}
               {showMain && (
-                <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
+                <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />} gridOnDesktop>
                   {catItems.map((wo) => (
-                    <div key={`${cat.key}-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                      <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
-                    </div>
+                    <EventCard key={`${cat.key}-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
                   ))}
                 </HorizontalCarousel>
               )}
               {cat.deep_dive_resources.length > 0 && (activeFilter === 'all' || activeFilter === cat.key || catItems.length > 0) && (
-                <HorizontalCarousel title={`Deep Dive: ${cat.title}`} subtitle="Extended training resources and career pathways" icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
+                <HorizontalCarousel title={`Deep Dive: ${cat.title}`} subtitle="Extended training resources and career pathways" icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />} gridOnDesktop>
                   {cat.deep_dive_resources.map((r) => {
                     const RIcon = getIconByKey(r.iconKey);
                     return (
-                      <div key={r.key} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                        <ExternalResourceCard
-                          title={r.title}
-                          description={r.description}
-                          href={r.href}
-                          icon={<RIcon className="h-6 w-6" />}
-                          ctaLabel={r.ctaLabel || 'Open'}
-                          accentColor={r.accentColor}
-                        />
-                      </div>
+                      <ExternalResourceCard
+                        key={r.key}
+                        title={r.title}
+                        description={r.description}
+                        href={r.href}
+                        icon={<RIcon className="h-6 w-6" />}
+                        ctaLabel={r.ctaLabel || 'Open'}
+                        accentColor={r.accentColor}
+                      />
                     );
                   })}
                 </HorizontalCarousel>
@@ -261,11 +254,9 @@ const WorkOrders = () => {
         )}
 
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions">
+          <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions" gridOnDesktop>
             {filteredWorkOrders.slice(0, 6).map((wo) => (
-              <div key={`competition-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
-              </div>
+              <EventCard key={`competition-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
             ))}
           </HorizontalCarousel>
         )}
