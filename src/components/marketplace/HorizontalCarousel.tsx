@@ -27,6 +27,7 @@ export function HorizontalCarousel({
   viewAllLink,
   icon,
   cardWidthClass,
+  gridOnDesktop = false,
 }: HorizontalCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
