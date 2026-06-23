@@ -220,7 +220,7 @@ export default function Events() {
             {eventsLoading ? (
               <div className="flex gap-4 overflow-hidden">
                 {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-[200px] w-80 shrink-0 rounded-lg" />
+                  <Skeleton key={i} className="h-[200px] w-[85vw] sm:w-72 lg:w-80 shrink-0 rounded-lg" />
                 ))}
               </div>
             ) : upcomingEvents.length === 0 ? (
@@ -242,7 +242,7 @@ export default function Events() {
                 icon={<CalendarIcon className="h-5 w-5" />}
               >
                 {upcomingEvents.map((event) => (
-                  <div key={event.id} className="w-80 shrink-0 snap-start">
+                  <div key={event.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                     <EventCard
                       event={event}
                       onClick={() => handleEventClick(event.id)}

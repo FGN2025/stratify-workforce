@@ -106,7 +106,7 @@ const Communities = () => {
           icon={<Users className="h-5 w-5" />}
         >
           {filteredCommunities.map((community, idx) => (
-            <div key={community.id} className="w-72 shrink-0 snap-start">
+            <div key={community.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
               <CommunityCard 
                 community={community}
                 featured={idx === 0}

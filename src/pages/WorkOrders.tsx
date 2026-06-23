@@ -133,7 +133,7 @@ const WorkOrders = () => {
           <div className="space-y-4">
             <Skeleton className="h-8 w-48" />
             <div className="flex gap-4">
-              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-72 w-72 shrink-0 rounded-xl" />)}
+              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-72 w-[85vw] sm:w-72 lg:w-80 shrink-0 rounded-xl" />)}
             </div>
           </div>
         </div>
@@ -179,7 +179,7 @@ const WorkOrders = () => {
         {filteredWorkOrders.length > 0 && (
           <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />}>
             {filteredWorkOrders.slice(0, 6).map((wo, idx) => (
-              <div key={wo.id} className="w-72 shrink-0 snap-start">
+              <div key={wo.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                 <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant={idx === 0 ? 'featured' : 'default'} />
               </div>
             ))}
@@ -189,7 +189,7 @@ const WorkOrders = () => {
         {filteredWorkOrders.length > 0 && (
           <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />}>
             {filteredWorkOrders.slice(0, 4).map((wo) => (
-              <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
+              <div key={`recent-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                 <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
               </div>
             ))}
@@ -220,7 +220,7 @@ const WorkOrders = () => {
               {showMain && (
                 <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
                   {catItems.map((wo) => (
-                    <div key={`${cat.key}-${wo.id}`} className="w-72 shrink-0 snap-start">
+                    <div key={`${cat.key}-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                       <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
                     </div>
                   ))}
@@ -231,7 +231,7 @@ const WorkOrders = () => {
                   {cat.deep_dive_resources.map((r) => {
                     const RIcon = getIconByKey(r.iconKey);
                     return (
-                      <div key={r.key} className="w-80 shrink-0 snap-start">
+                      <div key={r.key} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                         <ExternalResourceCard
                           title={r.title}
                           description={r.description}
@@ -263,7 +263,7 @@ const WorkOrders = () => {
         {filteredWorkOrders.length > 0 && (
           <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions">
             {filteredWorkOrders.slice(0, 6).map((wo) => (
-              <div key={`competition-${wo.id}`} className="w-72 shrink-0 snap-start">
+              <div key={`competition-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                 <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
               </div>
             ))}

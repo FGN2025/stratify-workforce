@@ -209,13 +209,13 @@ export default function SimIndustry() {
           >
             {coursesLoading ? (
               [...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-72 w-80 shrink-0 rounded-lg" />
+                <Skeleton key={i} className="h-72 w-[85vw] sm:w-72 lg:w-80 shrink-0 rounded-lg" />
               ))
             ) : courses.length === 0 ? (
               <EmptyState message={`First ${meta.shortTitle} course coming soon.`} />
             ) : (
               courses.map((course) => (
-                <div key={course.id} className="w-80 shrink-0 snap-start">
+                <div key={course.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                   <CourseCard course={course} />
                 </div>
               ))
@@ -258,7 +258,7 @@ export default function SimIndustry() {
                   <NavLink
                     key={id}
                     to="/careers"
-                    className="w-80 shrink-0 snap-start glass-card p-5 hover:border-primary/50 transition-all"
+                    className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start glass-card p-5 hover:border-primary/50 transition-all"
                     style={{ borderLeft: `3px solid ${accent}` }}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -296,7 +296,7 @@ export default function SimIndustry() {
               {credsForGame.map((c) => (
                 <div
                   key={c.id}
-                  className="w-72 shrink-0 snap-start glass-card p-5"
+                  className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start glass-card p-5"
                   style={{ borderTop: `3px solid ${c.accent_color}` }}
                 >
                   <div className="flex items-center gap-2 mb-3">
@@ -328,7 +328,7 @@ export default function SimIndustry() {
               icon={<LinkIcon className="h-5 w-5" />}
             >
               {resourcesForGame.map((r) => (
-                <div key={r.id} className="w-80 shrink-0 snap-start">
+                <div key={r.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                   <ExternalResourceCard
                     title={r.title}
                     description={r.description ?? ''}
