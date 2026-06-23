@@ -11,10 +11,14 @@ interface HorizontalCarouselProps {
   icon?: React.ReactNode;
   /** Tailwind width classes applied to each direct child card via a wrapper. */
   cardWidthClass?: string;
+  /** When true, mobile = horizontal snap rail; md+ = responsive grid (no horizontal overflow). */
+  gridOnDesktop?: boolean;
 }
 
 /** Default responsive card width — full-bleed on phones, fixed on tablet+. */
 export const DEFAULT_CARD_WIDTH = 'w-[85vw] sm:w-72 lg:w-80';
+/** Width when used inside a grid on md+ (auto-sized by grid cell). */
+export const GRID_CARD_WIDTH = 'w-[85vw] sm:w-72 md:w-auto';
 
 export function HorizontalCarousel({ 
   children, 
