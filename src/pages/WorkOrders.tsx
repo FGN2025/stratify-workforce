@@ -177,21 +177,17 @@ const WorkOrders = () => {
         />
 
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />}>
+          <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />} gridOnDesktop>
             {filteredWorkOrders.slice(0, 6).map((wo, idx) => (
-              <div key={wo.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant={idx === 0 ? 'featured' : 'default'} />
-              </div>
+              <EventCard key={wo.id} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant={idx === 0 ? 'featured' : 'default'} />
             ))}
           </HorizontalCarousel>
         )}
 
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />}>
+          <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />} gridOnDesktop>
             {filteredWorkOrders.slice(0, 4).map((wo) => (
-              <div key={`recent-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
-              </div>
+              <EventCard key={`recent-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
             ))}
           </HorizontalCarousel>
         )}
