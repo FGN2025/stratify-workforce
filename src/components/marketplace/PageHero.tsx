@@ -55,25 +55,25 @@ export function PageHero({
       </div>
       
       {/* Content */}
-      <div className="relative z-10 px-8 py-12 md:py-16 max-w-2xl">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold tracking-tight">
+      <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 max-w-2xl xl:max-w-3xl 2xl:max-w-4xl">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold tracking-tight text-balance">
           {title}
         </h1>
         
-        <p className="text-muted-foreground text-base md:text-lg mt-4 max-w-lg">
+        <p className="text-muted-foreground text-sm sm:text-base md:text-lg mt-3 sm:mt-4 max-w-lg">
           {subtitle}
         </p>
         
         {(primaryAction || secondaryAction) && (
-          <div className="flex flex-wrap items-center gap-4 mt-6">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mt-6">
             {primaryAction && (
-              <Button size="lg" className="gap-2 h-11 px-6" onClick={primaryAction.onClick}>
+              <Button size="lg" className="gap-2 h-11 px-6 w-full sm:w-auto" onClick={primaryAction.onClick}>
                 {primaryAction.icon}
                 {primaryAction.label}
               </Button>
             )}
             {secondaryAction && (
-              <Button variant="outline" size="lg" className="gap-2 h-11 px-6" onClick={secondaryAction.onClick}>
+              <Button variant="outline" size="lg" className="gap-2 h-11 px-6 w-full sm:w-auto" onClick={secondaryAction.onClick}>
                 {secondaryAction.icon}
                 {secondaryAction.label}
               </Button>
@@ -83,11 +83,11 @@ export function PageHero({
         
         {/* Stats ticker */}
         {stats && stats.length > 0 && (
-          <div className="flex items-center gap-8 mt-8 pt-6 border-t border-border/50">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-4 sm:gap-8 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-border/50">
             {stats.map((stat, idx) => (
               <div key={idx}>
                 <p className={cn(
-                  "font-data text-2xl",
+                  "font-data text-xl sm:text-2xl",
                   stat.highlight ? "text-primary" : "text-foreground"
                 )}>
                   {stat.value}
