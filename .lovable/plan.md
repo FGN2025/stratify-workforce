@@ -1,46 +1,77 @@
-# Mobile & Desktop Adaptability Audit
 
-Audit-only pass across the student-facing shell (Home, Learn, Work Orders, Profile, Communities) and the global layout. No code changes. Issues are graded **High / Med / Low** with file:line citations.
+# Mobile-Friendly Overhaul — fgn.academy
 
-## Top cross-cutting problems
+Goal: bring fgn.academy's student-facing experience up to the polish of play.fgn.gg on phones and small tablets, without regressing desktop. Scope is presentation/layout only — no business logic, no schema, no API changes.
 
-| # | Issue | Severity | Where |
-|---|---|---|---|
-| 1 | Hardcoded `w-72` / `w-80` carousel cards don't fit a 375px viewport and prevent "peek" of the next card | **High** | Index, Learn, WorkOrders, Communities, Profile skeletons |
-| 2 | Hero sections use `px-8` on mobile (only 311px usable on a 375px phone) — `text-6xl` headings overflow/wrap badly | **High** | `HeroSection.tsx:28`, `PageHero.tsx:58` |
-| 3 | Carousel arrows are `hidden sm:flex` and there's no swipe affordance or resize listener | **High / Med** | `HorizontalCarousel.tsx:73,33-40` |
-| 4 | `useIsMobile` exists but is unused in the layout shell and every page audited (only `TutorChatPanel` + shadcn sidebar use it) | **Med** | AppLayout, TopNav, WorkOrderDetail, Profile, Communities, CommunityProfile |
-| 5 | Desktop wide-screen (≥1440px) under-utilization: hero copy capped at `max-w-2xl`, grids stop at `lg:grid-cols-3/4` with no `2xl:` step, no two-column carousel band | **Med** | Heroes, Profile, CommunityProfile, WorkOrders |
-| 6 | Global `<main>` uses flat `p-6` and has no max-width container | **High / Med** | `AppLayout.tsx:18` |
+Reference target (play.fgn.gg mobile patterns):
+- Compact top bar: logo left, hamburger/sheet right; primary CTA pinned in the bar
+- Stacked single-column hero with display type that scales down cleanly
+- Full-bleed content cards with edge-to-edge horizontal swipe rails (no visible side arrows)
+- Bottom-safe sticky CTA on detail screens
+- Dark backdrop with the brand network pattern; no horizontal scroll anywhere
 
-## Per-file findings (condensed)
+This plan is the execution sequence for the findings already captured in `.lovable/plan.md`. It is a presentation-layer pass only.
 
-### Global shell
-- **AppLayout.tsx:18** — `p-6` flat → `p-4 md:p-6`; add `max-w-screen-2xl mx-auto` on `<main>`.
-- **TopNav.tsx:39** — Search bar `hidden md:block` with no mobile fallback (no icon → sheet). Avatar trigger lacks `min-h-[44px]`. Left cluster (TenantSwitcher + trigger) has no `min-w-0 overflow-hidden` guard.
-- **AppSidebar.tsx:336** — `collapsible="icon"` with no `defaultOpen={!isMobile}` guard; on mobile first paint the drawer can overlay content. No `2xl:` always-expanded variant for wide desktops.
-- **Footer.tsx** — Already responsive (`flex-col sm:flex-row`); only a container-token alignment nit.
+## Phase 1 — Shell & primitives (foundation)
 
-### Hero / Carousel primitives
-- **HeroSection.tsx:28** — `px-8 py-16`, `max-w-2xl`; needs `px-4 md:px-8`, `text-3xl md:text-5xl lg:text-6xl`, `min-h-[280px] md:min-h-[400px]`, wider cap at `xl:`.
-- **PageHero.tsx:58,86** — same `px-8` issue; stats row `flex gap-8` has no `flex-wrap` (WorkOrders passes 4 stats → mobile overflow).
-- **HorizontalCarousel.tsx** — arrows hidden on mobile (acceptable, but no swipe hint); `checkScroll` not bound to `resize` (line 33); `viewAllLink` uses `<a href>` not `<Link>` (line 69).
+These changes unblock every page below. Done once, benefit everywhere.
 
-### Pages
-- **Index.tsx:99,117,134,153** — 4 carousels of fixed `w-72/80` cards. Skeleton row (line 73) has same problem. Consider a `md:` grid fallback for at least one band.
-- **Learn.tsx:37** — `TabsList grid-cols-2` stays `cols-2` when "My Courses" is hidden for signed-out users → broken tab bar. Skeleton `w-80` fixed.
-- **WorkOrders.tsx:182-267** — 6 carousels, all `w-72/80`. Inconsistent container usage (line 209). At 2xl could host two carousels per row.
-- **WorkOrderDetail.tsx:233-411** — Hero stacks correctly; CTAs (line 312) can land far below fold on mobile — candidate for sticky bottom action bar via `useIsMobile`. Back link (line 226) lacks tap target.
-- **Profile.tsx:230,249** — Credential grid stops at `xl:grid-cols-4`; add `2xl:grid-cols-5/6`. `SkillRadar` (recharts) needs a separate responsive-SVG check.
-- **Communities.tsx:109** — Uses carousel for a browse/search page; should be a `grid-cols-1 sm:2 lg:3 xl:4`. Search `max-w-md` could widen on desktop.
-- **CommunityProfile.tsx:232-256** — 4–6 tabs in a `TabsList` with no `overflow-x-auto` → mobile overflow/wrap. Cover banner fixed `h-48` (short on wide desktops). Work-orders grid caps at `lg:grid-cols-3`.
+1. `src/components/layout/AppLayout.tsx`
+   - `<main>`: `px-4 sm:px-6 lg:px-8 py-4 sm:py-6` + inner `container mx-auto max-w-7xl 2xl:max-w-[1400px]`
+   - Remove flat `p-6`
+2. `src/components/layout/TopNav.tsx`
+   - Mobile (<768px): logo + hamburger trigger only; move search into the sheet; collapse avatar menu into sheet
+   - Reserve a 44px tap target for every actionable icon
+3. `src/components/layout/AppSidebar.tsx`
+   - Pass `defaultOpen={!isMobile}` so the sidebar starts collapsed on phones
+   - Wire the existing shadcn `Sheet` mobile drawer (already supported by `ui/sidebar`)
+4. `src/components/marketplace/HorizontalCarousel.tsx`
+   - Replace `hidden sm:flex` arrows with: arrows on `md+`, snap-scroll + edge-fade affordance on mobile
+   - Add `scroll-snap-type: x mandatory` to the rail and `scroll-snap-align: start` to children
+   - Expose a `cardWidthClass` prop default of `w-[85vw] sm:w-72 lg:w-80` so callers stop hardcoding
+5. `src/components/marketplace/HeroSection.tsx` and `PageHero.tsx`
+   - `px-4 sm:px-6 lg:px-8` (drop the `px-8` floor)
+   - Headline: `text-3xl sm:text-5xl lg:text-6xl`, allow `text-balance`
+   - Hero copy max width: `max-w-2xl xl:max-w-3xl 2xl:max-w-4xl`
+6. `src/index.css`
+   - Add a `.no-scrollbar` utility (already partially present — verify) and a `--safe-bottom: env(safe-area-inset-bottom)` token used by sticky CTAs
 
-## Recommended phased fix order (when you're ready to build)
+## Phase 2 — Student page sweep
 
-1. **Shell + primitives** (highest leverage, touches every page): AppLayout padding/container, HorizontalCarousel resize + responsive card-width contract, HeroSection/PageHero padding & wrap rules.
-2. **Page card widths**: sweep `w-72`/`w-80` → `w-[85vw] sm:w-72` across Index, Learn, WorkOrders, Communities skeletons.
-3. **Browse pages → grids**: convert Communities (and optionally one band of WorkOrders) from carousels to responsive grids.
-4. **Mobile-specific affordances**: TopNav mobile search, WorkOrderDetail sticky CTA bar, CommunityProfile tab overflow/select, sidebar `defaultOpen={!isMobile}`.
-5. **Wide-desktop polish (≥1440px)**: add `2xl:` grid steps on Profile + CommunityProfile, widen hero content caps, taller cover banners, two-column carousel band where it makes sense.
+For each page, replace hardcoded `w-72`/`w-80` card widths on rails with the new `cardWidthClass` default, and add a `2xl:` grid step where a grid is used.
 
-No files will be changed until you approve.
+- `src/pages/Index.tsx` — rails: featured courses, work orders, communities, events
+- `src/pages/Learn.tsx` — enrolled + catalog rails; grid: `sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4`
+- `src/pages/WorkOrders.tsx` — convert the 6 stacked carousels to a filterable grid on `md+` (stay as carousels on mobile); grid: `md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4`
+- `src/pages/WorkOrderDetail.tsx` — sticky bottom CTA bar on mobile (`fixed bottom-0 inset-x-0 pb-[var(--safe-bottom)]`); two-column layout on `lg+`
+- `src/pages/Profile.tsx` — header stack on mobile; achievements/certs grid `2xl:grid-cols-5`, skills `2xl:grid-cols-6`
+- `src/pages/Communities.tsx` — search widens to `max-w-xl` on desktop; carousels → responsive grid on `md+`
+- `src/pages/CommunityProfile.tsx` — tabs become a horizontal scroller on mobile with `no-scrollbar`; fall back to a `Select` only under 380px
+- `src/components/tutor/TutorChatPanel.tsx` — already mobile-aware; verify full-screen sheet behavior and safe-area padding
+
+## Phase 3 — Desktop wide-screen polish (≥1440px)
+
+- Containers: lift `max-w-7xl` → `2xl:max-w-[1400px]` in `AppLayout` and any page overriding it
+- Add a `2xl:` step on every grid touched in Phase 2 so wide monitors get more columns instead of more whitespace
+- Hero copy: allow `2xl:max-w-4xl` so the line length grows with the viewport
+- Carousels: show 4–5 cards on `2xl` via `cardWidthClass` token
+
+## Out of scope (explicitly)
+
+- Admin surfaces (Configurator, Media Library, Course Builder) — not requested
+- PWA / install prompts / offline — none requested
+- Capacitor / native wrapper — none requested
+- Backend, RLS, edge functions, data shape — untouched
+- Visual redesign or new tokens — current Industrial Command Center aesthetic is preserved; only spacing, breakpoints, and component contracts change
+
+## Verification
+
+After each phase, drive Playwright at 375×812 (iPhone), 768×1024 (iPad), 1440×900, and 1920×1080 against `/`, `/learn`, `/work-orders`, `/work-orders/:id`, `/profile`, `/communities`, `/communities/:slug`. Confirm: no horizontal scroll, no clipped CTAs, no card narrower than 280px on mobile, no grid wider than 4 columns until `2xl`.
+
+## Sequencing & estimate
+
+- Phase 1: 1 pass, ~6 files. Unblocks the rest.
+- Phase 2: 1 pass per page, mostly mechanical. ~7 pages.
+- Phase 3: piggybacks on Phase 2 edits — same files, additional `2xl:` classes.
+
+Recommend executing Phase 1 first as a standalone change so the primitives can be reviewed before the page sweep lands.
