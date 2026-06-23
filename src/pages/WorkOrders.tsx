@@ -214,29 +214,26 @@ const WorkOrders = () => {
                 </div>
               )}
               {showMain && (
-                <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
+                <HorizontalCarousel title={cat.title} subtitle={cat.subtitle ?? undefined} icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />} gridOnDesktop>
                   {catItems.map((wo) => (
-                    <div key={`${cat.key}-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                      <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
-                    </div>
+                    <EventCard key={`${cat.key}-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
                   ))}
                 </HorizontalCarousel>
               )}
               {cat.deep_dive_resources.length > 0 && (activeFilter === 'all' || activeFilter === cat.key || catItems.length > 0) && (
-                <HorizontalCarousel title={`Deep Dive: ${cat.title}`} subtitle="Extended training resources and career pathways" icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />}>
+                <HorizontalCarousel title={`Deep Dive: ${cat.title}`} subtitle="Extended training resources and career pathways" icon={<Icon className="h-5 w-5" style={{ color: cat.accent_color }} />} gridOnDesktop>
                   {cat.deep_dive_resources.map((r) => {
                     const RIcon = getIconByKey(r.iconKey);
                     return (
-                      <div key={r.key} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                        <ExternalResourceCard
-                          title={r.title}
-                          description={r.description}
-                          href={r.href}
-                          icon={<RIcon className="h-6 w-6" />}
-                          ctaLabel={r.ctaLabel || 'Open'}
-                          accentColor={r.accentColor}
-                        />
-                      </div>
+                      <ExternalResourceCard
+                        key={r.key}
+                        title={r.title}
+                        description={r.description}
+                        href={r.href}
+                        icon={<RIcon className="h-6 w-6" />}
+                        ctaLabel={r.ctaLabel || 'Open'}
+                        accentColor={r.accentColor}
+                      />
                     );
                   })}
                 </HorizontalCarousel>
