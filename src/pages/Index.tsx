@@ -70,7 +70,7 @@ const Index = () => {
             <Skeleton className="h-8 w-48" />
             <div className="flex gap-4">
               {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-72 w-72 shrink-0 rounded-xl" />
+                <Skeleton key={i} className="h-72 w-[85vw] sm:w-72 lg:w-80 shrink-0 rounded-xl" />
               ))}
             </div>
           </div>
@@ -96,7 +96,7 @@ const Index = () => {
           icon={<Flame className="h-5 w-5" />}
         >
           {workOrders.slice(0, 6).map((wo, idx) => (
-            <div key={wo.id} className="w-72 shrink-0 snap-start">
+            <div key={wo.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
               <EventCard 
                 workOrder={wo}
                 community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
@@ -114,7 +114,7 @@ const Index = () => {
           icon={<Users className="h-5 w-5" />}
         >
           {communities.map((community, idx) => (
-            <div key={community.id} className="w-72 shrink-0 snap-start">
+            <div key={community.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
               <CommunityCard 
                 community={community}
                 featured={idx === 0}
@@ -131,7 +131,7 @@ const Index = () => {
           icon={<Zap className="h-5 w-5" />}
         >
           {workOrders.slice(0, 4).map((wo) => (
-            <div key={`recent-${wo.id}`} className="w-80 shrink-0 snap-start">
+            <div key={`recent-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
               <EventCard 
                 workOrder={wo}
                 community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
@@ -150,7 +150,7 @@ const Index = () => {
             viewAllLink="/work-orders?sort=popular"
           >
             {workOrders.slice(0, 6).map((wo) => (
-              <div key={`popular-${wo.id}`} className="w-72 shrink-0 snap-start">
+              <div key={`popular-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                 <EventCard 
                   workOrder={wo}
                   community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}

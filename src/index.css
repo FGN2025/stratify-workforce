@@ -14,6 +14,9 @@
 
 @layer base {
   :root {
+    /* Mobile safe-area inset, used by sticky bottom CTAs */
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
     /* Industrial Command Center - Deep Dark Theme */
     /* Background: #080c16 = hsl(220, 50%, 6%) */
     --background: 220 50% 6%;

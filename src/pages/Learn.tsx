@@ -59,7 +59,7 @@ export default function Learn() {
               {coursesLoading ? (
                 <div className="flex gap-4 overflow-hidden">
                   {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-72 w-80 shrink-0 rounded-lg" />
+                    <Skeleton key={i} className="h-72 w-[85vw] sm:w-72 lg:w-80 shrink-0 rounded-lg" />
                   ))}
                 </div>
               ) : availableCourses.length === 0 ? (
@@ -77,7 +77,7 @@ export default function Learn() {
                   icon={<BookOpen className="h-5 w-5" />}
                 >
                   {availableCourses.map((course) => (
-                    <div key={course.id} className="w-80 shrink-0 snap-start">
+                    <div key={course.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
                       <CourseCard course={course} />
                     </div>
                   ))}
@@ -105,7 +105,7 @@ export default function Learn() {
           subtitle="Deep-dive curriculum for American Truck Simulator"
           icon={<Truck className="h-5 w-5" />}
         >
-          <div className="w-80 shrink-0 snap-start">
+          <div className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
             <ExternalResourceCard
               title={ATS_RESOURCES.cdlQuest.title}
               description="Access the full CDL curriculum with structured modules, telemetry labs, and certification tracking"

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -9,14 +9,20 @@ interface HorizontalCarouselProps {
   subtitle?: string;
   viewAllLink?: string;
   icon?: React.ReactNode;
+  /** Tailwind width classes applied to each direct child card via a wrapper. */
+  cardWidthClass?: string;
 }
+
+/** Default responsive card width — full-bleed on phones, fixed on tablet+. */
+export const DEFAULT_CARD_WIDTH = 'w-[85vw] sm:w-72 lg:w-80';
 
 export function HorizontalCarousel({ 
   children, 
   title, 
   subtitle,
   viewAllLink,
-  icon
+  icon,
+  cardWidthClass,
 }: HorizontalCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -70,16 +76,17 @@ export function HorizontalCarousel({
             </Button>
           )}
           
-          <div className="hidden sm:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               className={cn(
-                "h-8 w-8 rounded-full",
+                "h-9 w-9 rounded-full",
                 !canScrollLeft && "opacity-30 cursor-not-allowed"
               )}
               onClick={() => scroll('left')}
               disabled={!canScrollLeft}
+              aria-label="Scroll left"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -87,11 +94,12 @@ export function HorizontalCarousel({
               variant="ghost"
               size="icon"
               className={cn(
-                "h-8 w-8 rounded-full",
+                "h-9 w-9 rounded-full",
                 !canScrollRight && "opacity-30 cursor-not-allowed"
               )}
               onClick={() => scroll('right')}
               disabled={!canScrollRight}
+              aria-label="Scroll right"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -102,17 +110,23 @@ export function HorizontalCarousel({
       {/* Carousel */}
       <div 
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 snap-x snap-mandatory"
+        className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory scroll-px-4 sm:scroll-px-6 lg:scroll-px-8"
       >
-        {children}
+        {cardWidthClass !== undefined
+          ? React.Children.map(children, (child, i) => (
+              <div key={i} className={cn('shrink-0 snap-start', cardWidthClass || DEFAULT_CARD_WIDTH)}>
+                {child}
+              </div>
+            ))
+          : children}
       </div>
       
-      {/* Gradient Edges */}
+      {/* Gradient Edges - desktop only; mobile uses native snap as affordance */}
       {canScrollLeft && (
-        <div className="absolute left-0 top-12 bottom-0 w-12 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+        <div className="hidden md:block absolute left-0 top-12 bottom-0 w-12 bg-gradient-to-r from-background to-transparent pointer-events-none" />
       )}
       {canScrollRight && (
-        <div className="absolute right-0 top-12 bottom-0 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+        <div className="hidden md:block absolute right-0 top-12 bottom-0 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       )}
     </section>
   );
