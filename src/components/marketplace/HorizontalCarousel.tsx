@@ -112,14 +112,23 @@ export function HorizontalCarousel({
         </div>
       </div>
       
-      {/* Carousel */}
+      {/* Carousel (mobile) / Grid (md+) */}
       <div 
         ref={scrollRef}
-        className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory scroll-px-4 sm:scroll-px-6 lg:scroll-px-8"
+        className={cn(
+          "flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory scroll-px-4 sm:scroll-px-6 lg:scroll-px-8",
+          gridOnDesktop && "md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:snap-none"
+        )}
       >
-        {cardWidthClass !== undefined
+        {cardWidthClass !== undefined || gridOnDesktop
           ? React.Children.map(children, (child, i) => (
-              <div key={i} className={cn('shrink-0 snap-start', cardWidthClass || DEFAULT_CARD_WIDTH)}>
+              <div
+                key={i}
+                className={cn(
+                  'shrink-0 snap-start md:shrink',
+                  cardWidthClass || (gridOnDesktop ? GRID_CARD_WIDTH : DEFAULT_CARD_WIDTH)
+                )}
+              >
                 {child}
               </div>
             ))
@@ -127,10 +136,10 @@ export function HorizontalCarousel({
       </div>
       
       {/* Gradient Edges - desktop only; mobile uses native snap as affordance */}
-      {canScrollLeft && (
+      {canScrollLeft && !gridOnDesktop && (
         <div className="hidden md:block absolute left-0 top-12 bottom-0 w-12 bg-gradient-to-r from-background to-transparent pointer-events-none" />
       )}
-      {canScrollRight && (
+      {canScrollRight && !gridOnDesktop && (
         <div className="hidden md:block absolute right-0 top-12 bottom-0 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       )}
     </section>
