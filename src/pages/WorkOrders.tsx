@@ -254,11 +254,9 @@ const WorkOrders = () => {
         )}
 
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions">
+          <HorizontalCarousel title="Active Competitions" subtitle="Compete with other operators for top rankings" icon={<Trophy className="h-5 w-5" />} viewAllLink="/work-orders?filter=competitions" gridOnDesktop>
             {filteredWorkOrders.slice(0, 6).map((wo) => (
-              <div key={`competition-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                <EventCard workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
-              </div>
+              <EventCard key={`competition-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} />
             ))}
           </HorizontalCarousel>
         )}
