@@ -2,7 +2,7 @@
  * Builder — turns a list of FetchedChallenge rows into a CourseManifest.
  *
  * Per the Phase 1.5 content model: SCORM/Learn courses are the
- * post-completion skills development layer. The challenge step itself
+ * post-completion skills discovery layer. The challenge step itself
  * belongs to the Work Order layer on fgn.academy (and the deeper
  * gameplay on play.fgn.gg). The course content here assumes the
  * learner has already completed the prerequisite Work Order.
