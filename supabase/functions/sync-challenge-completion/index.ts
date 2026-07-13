@@ -699,7 +699,7 @@ Deno.serve(async (req) => {
             user_id: user.id,
             type: 'knowledge_check_available',
             title: `Track Complete: ${track.name}`,
-            message: `You have completed the ${track.name} track. Continue your skills development at fgn.academy to earn your credential.`,
+            message: `You have completed the ${track.name} track. Continue your skills discovery at fgn.academy to earn your credential.`,
             icon_name: icon,
             accent_color: accent,
             link_url: lessonId ? `/learn/${courseId}/lesson/${lessonId}` : '/learn',
