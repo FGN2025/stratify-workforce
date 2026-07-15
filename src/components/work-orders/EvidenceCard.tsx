@@ -95,7 +95,7 @@ export function EvidenceCard({
           <div className="shrink-0 w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
             {evidence.file_type.startsWith('image/') ? (
               <img 
-                src={evidence.file_url} 
+                src={displayUrl} 
                 alt={evidence.file_name}
                 className="w-full h-full object-cover"
               />
@@ -136,7 +136,7 @@ export function EvidenceCard({
               size="icon"
               asChild
             >
-              <a href={evidence.file_url} target="_blank" rel="noopener noreferrer">
+              <a href={displayUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
