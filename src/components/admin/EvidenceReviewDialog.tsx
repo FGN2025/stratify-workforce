@@ -79,6 +79,14 @@ export function EvidenceReviewDialog({
 }: EvidenceReviewDialogProps) {
   const [notes, setNotes] = useState('');
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | 'revision' | null>(null);
+  const [displayUrl, setDisplayUrl] = useState('');
+
+  useEffect(() => {
+    if (!evidence?.file_url) { setDisplayUrl(''); return; }
+    let cancelled = false;
+    getEvidenceDisplayUrl(evidence.file_url).then((u) => { if (!cancelled) setDisplayUrl(u); });
+    return () => { cancelled = true; };
+  }, [evidence?.file_url]);
 
   if (!evidence) return null;
 
