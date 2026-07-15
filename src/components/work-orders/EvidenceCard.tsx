@@ -80,6 +80,12 @@ export function EvidenceCard({
   const statusConfig = getStatusConfig(evidence.review_status);
   const StatusIcon = statusConfig.icon;
   const canDelete = evidence.review_status === 'pending' || evidence.review_status === 'needs_revision';
+  const [displayUrl, setDisplayUrl] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    getEvidenceDisplayUrl(evidence.file_url).then((u) => { if (!cancelled) setDisplayUrl(u); });
+    return () => { cancelled = true; };
+  }, [evidence.file_url]);
 
   return (
     <Card className="overflow-hidden">
