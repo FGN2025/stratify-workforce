@@ -24,6 +24,7 @@ import Communities from "./pages/Communities";
 import CommunityProfile from "./pages/CommunityProfile";
 import Auth from "./pages/Auth";
 import AuthDiscordCallback from "./pages/AuthDiscordCallback";
+import OAuthConsent from "./pages/OAuthConsent";
 import AgentWidget from "./pages/AgentWidget";
 import Admin from "./pages/Admin";
 import Learn from "./pages/Learn";
@@ -73,6 +74,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/discord/callback" element={<AuthDiscordCallback />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/" element={<Index />} />
               <Route path="/passport/link" element={<PassportLink />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
