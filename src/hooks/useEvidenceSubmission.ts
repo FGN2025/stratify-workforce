@@ -174,14 +174,17 @@ export function useDeleteEvidence() {
     }) => {
       if (!user) throw new Error('Must be logged in');
 
-      // Extract file path from URL
-      const urlParts = fileUrl.split('/media-assets/');
-      if (urlParts.length > 1) {
-        const filePath = urlParts[1];
-        // Delete from storage
-        await supabase.storage
-          .from('media-assets')
-          .remove([filePath]);
+      // Private-bucket sentinel: evidence://<path>
+      if (fileUrl.startsWith('evidence://')) {
+        const filePath = fileUrl.replace(/^evidence:\/\//, '');
+        await supabase.storage.from('evidence').remove([filePath]);
+      } else {
+        // Legacy public-bucket URLs
+        const urlParts = fileUrl.split('/media-assets/');
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1];
+          await supabase.storage.from('media-assets').remove([filePath]);
+        }
       }
 
       // Delete record
@@ -194,9 +197,25 @@ export function useDeleteEvidence() {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['evidence-submissions', user?.id, variables.workOrderId] 
+      queryClient.invalidateQueries({
+        queryKey: ['evidence-submissions', user?.id, variables.workOrderId]
       });
     },
   });
 }
+
+/**
+ * Resolve a stored evidence file_url to a displayable URL. Private-bucket
+ * entries (evidence://<path>) are converted to short-lived signed URLs;
+ * legacy public URLs are returned as-is.
+ */
+export async function getEvidenceDisplayUrl(fileUrl: string): Promise<string> {
+  if (!fileUrl.startsWith('evidence://')) return fileUrl;
+  const filePath = fileUrl.replace(/^evidence:\/\//, '');
+  const { data, error } = await supabase.storage
+    .from('evidence')
+    .createSignedUrl(filePath, 60 * 10); // 10 minutes
+  if (error || !data?.signedUrl) return '';
+  return data.signedUrl;
+}
+
