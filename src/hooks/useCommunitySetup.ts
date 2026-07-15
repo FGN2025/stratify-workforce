@@ -42,7 +42,20 @@ export function useCommunitySetup(tenantId: string | null | undefined) {
         .eq('id', tenantId!)
         .maybeSingle();
       if (error) throw new Error(error.message);
-      return data as unknown as CommunitySetupData & { id: string };
+      if (!data) return null;
+
+      // Sensitive contact/legal columns are revoked from anon/authenticated
+      // on the base table — fetch them via the admin-guarded RPC so only
+      // tenant admins receive them.
+      const { data: adminDetails } = await supabase.rpc('get_tenant_admin_details', {
+        p_tenant_id: tenantId!,
+      });
+      const details = Array.isArray(adminDetails) ? adminDetails[0] : null;
+
+      return {
+        ...(data as unknown as CommunitySetupData & { id: string }),
+        ...(details ?? {}),
+      } as CommunitySetupData & { id: string };
     },
   });
 
