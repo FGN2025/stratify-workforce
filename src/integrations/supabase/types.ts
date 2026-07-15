@@ -3975,6 +3975,16 @@ export type Database = {
           username: string
         }[]
       }
+      get_tenant_admin_details: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          dba: string
+          legal_name: string
+          primary_contact_email: string
+          primary_contact_name: string
+          primary_contact_phone: string
+        }[]
+      }
       get_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_user_level: { Args: { p_user_id: string }; Returns: number }
       get_user_total_xp: { Args: { p_user_id: string }; Returns: number }
