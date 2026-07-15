@@ -296,23 +296,15 @@ async function checkCompletion(
     return jsonError(400, 'challengeId and scormStudentId are required');
   }
 
-  // Step 1: does an fgn.academy account exist for this email?
-  const { data: userId, error: userErr } = await supabase.rpc('get_user_id_by_email', {
+  // Enumeration hardening: we do NOT reveal whether the email exists as an
+  // fgn.academy account. All responses are keyed off challenge eligibility
+  // and completion state only. The "eligible" flag says the challenge maps
+  // to a work order that the caller could complete; "completed" says a
+  // matching completion exists for this email + challenge.
+  const { data: userId } = await supabase.rpc('get_user_id_by_email', {
     p_email: body.scormStudentId,
   });
-  if (userErr) {
-    return jsonError(500, `User lookup failed: ${userErr.message}`);
-  }
 
-  if (!userId) {
-    // No account — Player will render the "create FGN passport" CTA.
-    return jsonOk({
-      userExists: false,
-      completed: false,
-    });
-  }
-
-  // Step 2: is there a work_orders row for this challenge?
   const { data: wo, error: woErr } = await supabase
     .from('work_orders')
     .select('id, title')
@@ -323,11 +315,10 @@ async function checkCompletion(
   }
 
   if (!wo) {
-    // Account exists but no one has ever completed the challenge — no
-    // work_orders row yet. Treat as "not completed" with a hint that
-    // the user should head to fgn.academy to start.
+    // Challenge has no matching work order yet — response is identical
+    // regardless of whether the email is registered.
     return jsonOk({
-      userExists: true,
+      eligible: false,
       completed: false,
     });
   }
@@ -335,7 +326,16 @@ async function checkCompletion(
   const workOrder = wo as { id: string; title: string };
   const workOrderUrl = `https://fgn.academy/work-orders/${workOrder.id}`;
 
-  // Step 3: is there a recent successful completion?
+  if (!userId) {
+    // No account: same shape as "account exists but no completion".
+    return jsonOk({
+      eligible: true,
+      completed: false,
+      workOrderTitle: workOrder.title,
+      workOrderUrl,
+    });
+  }
+
   const { data: completion, error: cErr } = await supabase
     .from('user_work_order_completions')
     .select('status, score, completed_at')
@@ -352,7 +352,7 @@ async function checkCompletion(
 
   if (!completion) {
     return jsonOk({
-      userExists: true,
+      eligible: true,
       completed: false,
       workOrderTitle: workOrder.title,
       workOrderUrl,
@@ -361,7 +361,7 @@ async function checkCompletion(
 
   const c = completion as { status: string; score: number | null; completed_at: string | null };
   return jsonOk({
-    userExists: true,
+    eligible: true,
     completed: true,
     completedAt: c.completed_at,
     score: c.score,

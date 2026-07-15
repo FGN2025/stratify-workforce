@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import type { EvidenceSubmission } from '@/hooks/useEvidenceSubmission';
+import { getEvidenceDisplayUrl, type EvidenceSubmission } from '@/hooks/useEvidenceSubmission';
 
 interface EvidenceCardProps {
   evidence: EvidenceSubmission;
@@ -79,6 +80,12 @@ export function EvidenceCard({
   const statusConfig = getStatusConfig(evidence.review_status);
   const StatusIcon = statusConfig.icon;
   const canDelete = evidence.review_status === 'pending' || evidence.review_status === 'needs_revision';
+  const [displayUrl, setDisplayUrl] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    getEvidenceDisplayUrl(evidence.file_url).then((u) => { if (!cancelled) setDisplayUrl(u); });
+    return () => { cancelled = true; };
+  }, [evidence.file_url]);
 
   return (
     <Card className="overflow-hidden">
@@ -88,7 +95,7 @@ export function EvidenceCard({
           <div className="shrink-0 w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
             {evidence.file_type.startsWith('image/') ? (
               <img 
-                src={evidence.file_url} 
+                src={displayUrl} 
                 alt={evidence.file_name}
                 className="w-full h-full object-cover"
               />
@@ -129,7 +136,7 @@ export function EvidenceCard({
               size="icon"
               asChild
             >
-              <a href={evidence.file_url} target="_blank" rel="noopener noreferrer">
+              <a href={displayUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
               </a>
             </Button>

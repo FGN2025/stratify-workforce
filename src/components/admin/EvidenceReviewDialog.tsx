@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getEvidenceDisplayUrl } from '@/hooks/useEvidenceSubmission';
 import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,14 @@ export function EvidenceReviewDialog({
 }: EvidenceReviewDialogProps) {
   const [notes, setNotes] = useState('');
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | 'revision' | null>(null);
+  const [displayUrl, setDisplayUrl] = useState('');
+
+  useEffect(() => {
+    if (!evidence?.file_url) { setDisplayUrl(''); return; }
+    let cancelled = false;
+    getEvidenceDisplayUrl(evidence.file_url).then((u) => { if (!cancelled) setDisplayUrl(u); });
+    return () => { cancelled = true; };
+  }, [evidence?.file_url]);
 
   if (!evidence) return null;
 
@@ -168,7 +177,7 @@ export function EvidenceReviewDialog({
                 {isImage && (
                   <div className="relative aspect-video bg-muted flex items-center justify-center">
                     <img
-                      src={evidence.file_url}
+                      src={displayUrl}
                       alt={evidence.file_name}
                       className="max-h-full max-w-full object-contain"
                     />
@@ -177,7 +186,7 @@ export function EvidenceReviewDialog({
                 {isVideo && (
                   <div className="aspect-video bg-muted">
                     <video
-                      src={evidence.file_url}
+                      src={displayUrl}
                       controls
                       className="w-full h-full object-contain"
                     />
@@ -202,13 +211,13 @@ export function EvidenceReviewDialog({
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" asChild>
-                      <a href={evidence.file_url} target="_blank" rel="noopener noreferrer">
+                      <a href={displayUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-4 w-4 mr-1" />
                         Open
                       </a>
                     </Button>
                     <Button variant="ghost" size="sm" asChild>
-                      <a href={evidence.file_url} download={evidence.file_name}>
+                      <a href={displayUrl} download={evidence.file_name}>
                         <Download className="h-4 w-4 mr-1" />
                         Download
                       </a>
