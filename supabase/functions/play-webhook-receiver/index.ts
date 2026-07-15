@@ -83,24 +83,18 @@ async function verifySignature(rawBody: string, headers: Headers): Promise<Verif
   const sourceApp = (headers.get('x-ecosystem-app') ?? 'play-webhook').toLowerCase();
   const envName = SOURCE_SECRET_ENV[sourceApp] ?? 'PLAY_WEBHOOK_SECRET';
   const secret = Deno.env.get(envName);
-  const strict = (Deno.env.get('PLAY_WEBHOOK_STRICT') ?? 'false').toLowerCase() === 'true';
+  // Fail-safe default: strict signature verification is ON unless
+  // explicitly disabled. Missing env var → strict.
+  const strict = (Deno.env.get('PLAY_WEBHOOK_STRICT') ?? 'true').toLowerCase() !== 'false';
 
   if (!secret) {
     console.warn('[play-webhook-receiver] secret not configured', { envName, sourceApp });
-    return { ok: true, mode: 'unsigned', reason: `${envName} not configured` };
+    if (strict) {
+      return { ok: false, mode: 'strict', reason: `${envName} not configured` };
+    }
+    return { ok: true, mode: 'unsigned', reason: `${envName} not configured (lenient)` };
   }
 
-  // Anchor #7b: secret fingerprint for cross-project comparison vs Play.
-  const secretSha12 = Array.from(new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret))
-  )).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
-  const secretShaTrim12 = Array.from(new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret.trim()))
-  )).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
-
-  // STUB SCHEME — replace when play confirms HMAC contract:
-  //   header: x-play-signature
-  //   value:  hex(hmac_sha256(secret, rawBody))
   const provided = headers.get('x-play-signature') ?? '';
 
   try {
@@ -121,15 +115,10 @@ async function verifySignature(rawBody: string, headers: Headers): Promise<Verif
       source_app: sourceApp,
       env_name: envName,
       sig_ok: ok,
-      provided_prefix: provided.slice(0, 8),
-      expected_prefix: expected.slice(0, 8),
       body_len: rawBody.length,
-      academy_secret_sha256_12: secretSha12,
-      academy_secret_sha256_12_trim: secretShaTrim12,
-      secret_len: secret.length,
     });
     if (ok) return { ok: true, mode: strict ? 'strict' : 'lenient' };
-    const reason = `signature mismatch — provided=${provided.slice(0, 8)}… expected=${expected.slice(0, 8)}… body_len=${rawBody.length} secret_len=${secret.length} secret_sha12=${secretSha12} secret_sha12_trim=${secretShaTrim12}`;
+    const reason = 'signature mismatch';
     if (strict) return { ok: false, mode: 'strict', reason };
     return { ok: true, mode: 'lenient', reason: `${reason} (lenient mode)` };
   } catch (err) {
@@ -137,6 +126,7 @@ async function verifySignature(rawBody: string, headers: Headers): Promise<Verif
     return { ok: true, mode: 'lenient', reason: `verify failed: ${err}` };
   }
 }
+
 
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
