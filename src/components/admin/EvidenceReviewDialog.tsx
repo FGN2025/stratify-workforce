@@ -177,7 +177,7 @@ export function EvidenceReviewDialog({
                 {isImage && (
                   <div className="relative aspect-video bg-muted flex items-center justify-center">
                     <img
-                      src={evidence.file_url}
+                      src={displayUrl}
                       alt={evidence.file_name}
                       className="max-h-full max-w-full object-contain"
                     />
@@ -186,7 +186,7 @@ export function EvidenceReviewDialog({
                 {isVideo && (
                   <div className="aspect-video bg-muted">
                     <video
-                      src={evidence.file_url}
+                      src={displayUrl}
                       controls
                       className="w-full h-full object-contain"
                     />
@@ -211,13 +211,13 @@ export function EvidenceReviewDialog({
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" asChild>
-                      <a href={evidence.file_url} target="_blank" rel="noopener noreferrer">
+                      <a href={displayUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-4 w-4 mr-1" />
                         Open
                       </a>
                     </Button>
                     <Button variant="ghost" size="sm" asChild>
-                      <a href={evidence.file_url} download={evidence.file_name}>
+                      <a href={displayUrl} download={evidence.file_name}>
                         <Download className="h-4 w-4 mr-1" />
                         Download
                       </a>
