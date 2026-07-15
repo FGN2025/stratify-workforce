@@ -465,9 +465,38 @@ Deno.serve(async (req) => {
     }
 
     // GET /career-paths/:id/readiness/:user_id
+    // Requires auth; caller may only view their own readiness OR the target
+    // user's public passport must be marked is_public=true.
     if (req.method === 'GET' && path[0] === 'career-paths' && path[2] === 'readiness' && path[3]) {
       const careerPathId = path[1];
       const targetUserId = path[3];
+
+      const authHeaderReadiness = req.headers.get('Authorization');
+      if (!authHeaderReadiness?.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Authorization required' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: authData, error: authErr } = await supabase.auth.getUser(
+        authHeaderReadiness.replace('Bearer ', ''),
+      );
+      if (authErr || !authData?.user) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (authData.user.id !== targetUserId) {
+        const { data: pass } = await supabase
+          .from('skill_passport')
+          .select('is_public')
+          .eq('user_id', targetUserId)
+          .maybeSingle();
+        if (!pass?.is_public) {
+          return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
 
       const { data: readiness, error: readErr } = await supabase.rpc('calculate_readiness', { p_user_id: targetUserId, p_career_path_id: careerPathId });
       if (readErr) throw readErr;
