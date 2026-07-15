@@ -110,14 +110,16 @@ export function useUploadEvidence() {
     }) => {
       if (!user) throw new Error('Must be logged in');
 
-      // Generate unique file path
+      // Generate unique file path — stored in the PRIVATE 'evidence' bucket.
+      // Path shape (folder[2] = user id) is enforced by the storage RLS
+      // policy so users can only upload under their own uid folder.
       const timestamp = Date.now();
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const filePath = `evidence-submissions/${workOrderId}/${user.id}/${timestamp}-${sanitizedFileName}`;
+      const filePath = `work-orders/${user.id}/${workOrderId}/${timestamp}-${sanitizedFileName}`;
 
-      // Upload file to storage
+      // Upload file to private bucket
       const { error: uploadError } = await supabase.storage
-        .from('media-assets')
+        .from('evidence')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false,
@@ -125,10 +127,9 @@ export function useUploadEvidence() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('media-assets')
-        .getPublicUrl(filePath);
+      // Store a sentinel path (not a public URL) — signed URLs are
+      // generated on-demand by consumers via getEvidenceDisplayUrl().
+      const storedRef = `evidence://${filePath}`;
 
       // Create evidence record
       const { data, error } = await supabase
@@ -137,7 +138,7 @@ export function useUploadEvidence() {
           completion_id: completionId,
           user_id: user.id,
           work_order_id: workOrderId,
-          file_url: urlData.publicUrl,
+          file_url: storedRef,
           file_name: file.name,
           file_type: file.type,
           file_size: file.size,
