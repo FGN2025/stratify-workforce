@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import type { EvidenceSubmission } from '@/hooks/useEvidenceSubmission';
+import { getEvidenceDisplayUrl, type EvidenceSubmission } from '@/hooks/useEvidenceSubmission';
 
 interface EvidenceCardProps {
   evidence: EvidenceSubmission;
