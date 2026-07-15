@@ -78,14 +78,12 @@ var list_my_work_orders_default = defineTool2({
 import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.93.3";
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.22.2";
 function supabaseForUser3(ctx) {
-  return createClient3(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    }
-  );
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return createClient3(url, anon, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
 }
 var list_my_communities_default = defineTool3({
   name: "list_my_communities",
