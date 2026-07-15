@@ -43,14 +43,12 @@ import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.93.3
 import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.22.2";
 import { z } from "npm:zod@^3.25.76";
 function supabaseForUser2(ctx) {
-  return createClient2(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    }
-  );
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return createClient2(url, anon, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
 }
 var list_my_work_orders_default = defineTool2({
   name: "list_my_work_orders",
