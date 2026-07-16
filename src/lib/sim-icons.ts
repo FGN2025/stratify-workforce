@@ -16,6 +16,7 @@ export const ICON_OPTIONS: { key: string; label: string; icon: LucideIcon }[] = 
   { key: 'book-open', label: 'Book', icon: BookOpen },
   { key: 'gamepad', label: 'Gamepad', icon: Gamepad2 },
   { key: 'home', label: 'Home', icon: Home },
+  { key: 'plane', label: 'Plane', icon: Plane },
 ];
 
 const map = Object.fromEntries(ICON_OPTIONS.map((o) => [o.key, o.icon]));
