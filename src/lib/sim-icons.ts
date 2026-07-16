@@ -1,4 +1,4 @@
-import { Truck, Tractor, HardHat, Wrench, Cable, Map as MapIcon, Target, GraduationCap, Briefcase, Trophy, Award, Zap, BookOpen, Gamepad2, type LucideIcon } from 'lucide-react';
+import { Truck, Tractor, HardHat, Wrench, Cable, Map as MapIcon, Target, GraduationCap, Briefcase, Trophy, Award, Zap, BookOpen, Gamepad2, Home, type LucideIcon } from 'lucide-react';
 
 export const ICON_OPTIONS: { key: string; label: string; icon: LucideIcon }[] = [
   { key: 'truck', label: 'Truck', icon: Truck },
@@ -15,6 +15,7 @@ export const ICON_OPTIONS: { key: string; label: string; icon: LucideIcon }[] = 
   { key: 'zap', label: 'Zap', icon: Zap },
   { key: 'book-open', label: 'Book', icon: BookOpen },
   { key: 'gamepad', label: 'Gamepad', icon: Gamepad2 },
+  { key: 'home', label: 'Home', icon: Home },
 ];
 
 const map = Object.fromEntries(ICON_OPTIONS.map((o) => [o.key, o.icon]));
