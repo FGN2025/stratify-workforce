@@ -14,18 +14,11 @@ function supabaseForUser(ctx: ToolContext) {
 }
 
 export default defineTool({
-  name: "list_my_work_orders",
-  title: "List my work orders",
-  description:
-    "List work orders visible to the signed-in FGN Academy user (respects tenant and RLS).",
+  name: "list_tenants",
+  title: "List tenants",
+  description: "List tenants (communities) visible to the signed-in user under RLS.",
   inputSchema: {
-    limit: z
-      .number()
-      .int()
-      .positive()
-      .max(100)
-      .optional()
-      .describe("Max rows to return (default 25, max 100)."),
+    limit: z.number().int().positive().max(100).optional().describe("Max rows to return (default 25, max 100)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ limit }, ctx) => {
@@ -33,24 +26,17 @@ export default defineTool({
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
     const supabase = supabaseForUser(ctx);
-    // work_orders has no `status` column on this project. Lifecycle state is
-    // stored as `is_active` (boolean); we map it into `status` in the response
-    // so this tool's output contract stays stable across projects.
     const { data, error } = await supabase
-      .from("work_orders")
-      .select("id, title, generated_name, game_title, difficulty, is_active, xp_reward, created_at, tenant_id")
-      .order("created_at", { ascending: false })
+      .from("tenants")
+      .select("id, name, slug, logo_url, accent_color, brand_color, description, is_verified")
+      .order("name", { ascending: true })
       .limit(limit ?? 25);
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
     }
-    const rows = (data ?? []).map((wo: Record<string, unknown>) => ({
-      ...wo,
-      status: wo.is_active ? "active" : "inactive",
-    }));
     return {
-      content: [{ type: "text", text: JSON.stringify(rows) }],
-      structuredContent: { work_orders: rows },
+      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
+      structuredContent: { tenants: data ?? [] },
     };
   },
 });

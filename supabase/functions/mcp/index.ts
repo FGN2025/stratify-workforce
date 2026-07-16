@@ -63,13 +63,17 @@ var list_my_work_orders_default = defineTool2({
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
     const supabase = supabaseForUser2(ctx);
-    const { data, error } = await supabase.from("work_orders").select("id, title, status, difficulty, xp_reward, created_at, tenant_id").order("created_at", { ascending: false }).limit(limit ?? 25);
+    const { data, error } = await supabase.from("work_orders").select("id, title, generated_name, game_title, difficulty, is_active, xp_reward, created_at, tenant_id").order("created_at", { ascending: false }).limit(limit ?? 25);
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
     }
+    const rows = (data ?? []).map((wo) => ({
+      ...wo,
+      status: wo.is_active ? "active" : "inactive"
+    }));
     return {
-      content: [{ type: "text", text: JSON.stringify(data) }],
-      structuredContent: { work_orders: data ?? [] }
+      content: [{ type: "text", text: JSON.stringify(rows) }],
+      structuredContent: { work_orders: rows }
     };
   }
 });
@@ -96,13 +100,250 @@ var list_my_communities_default = defineTool3({
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
     const supabase = supabaseForUser3(ctx);
-    const { data, error } = await supabase.from("tenant_users").select("role, tenant:tenants(id, name, slug, logo_url)").eq("user_id", ctx.getUserId());
+    const { data, error } = await supabase.from("community_memberships").select("role, joined_at, tenant:tenants(id, name, slug, logo_url, accent_color, brand_color)").eq("user_id", ctx.getUserId()).eq("request_status", "approved");
+    if (error) {
+      return { content: [{ type: "text", text: error.message }], isError: true };
+    }
+    const memberships = (data ?? []).filter((r) => r.tenant).map((r) => ({
+      tenant_id: r.tenant.id,
+      name: r.tenant.name,
+      slug: r.tenant.slug,
+      logo_url: r.tenant.logo_url,
+      accent_color: r.tenant.accent_color,
+      brand_color: r.tenant.brand_color,
+      role: r.role
+    }));
+    return {
+      content: [{ type: "text", text: JSON.stringify(memberships) }],
+      structuredContent: { memberships }
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-tenants.ts
+import { createClient as createClient4 } from "npm:@supabase/supabase-js@^2.93.3";
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z2 } from "npm:zod@^3.25.76";
+function supabaseForUser4(ctx) {
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return createClient4(url, anon, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+var list_tenants_default = defineTool4({
+  name: "list_tenants",
+  title: "List tenants",
+  description: "List tenants (communities) visible to the signed-in user under RLS.",
+  inputSchema: {
+    limit: z2.number().int().positive().max(100).optional().describe("Max rows to return (default 25, max 100).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ limit }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser4(ctx);
+    const { data, error } = await supabase.from("tenants").select("id, name, slug, logo_url, accent_color, brand_color, description, is_verified").order("name", { ascending: true }).limit(limit ?? 25);
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
     }
     return {
-      content: [{ type: "text", text: JSON.stringify(data) }],
-      structuredContent: { memberships: data ?? [] }
+      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
+      structuredContent: { tenants: data ?? [] }
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-games.ts
+import { createClient as createClient5 } from "npm:@supabase/supabase-js@^2.93.3";
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z3 } from "npm:zod@^3.25.76";
+function supabaseForUser5(ctx) {
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return createClient5(url, anon, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+var list_games_default = defineTool5({
+  name: "list_games",
+  title: "List games",
+  description: "List the games catalog. On this project the catalog is keyed by the game_title enum (returned as `id`); there is no separate games table with UUID ids.",
+  inputSchema: {
+    limit: z3.number().int().positive().max(100).optional().describe("Max rows to return (default 50, max 100).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ limit }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser5(ctx);
+    const { data, error } = await supabase.from("game_channels").select("game_title, name, description, accent_color, cover_image_url, member_count, work_order_count").order("name", { ascending: true }).limit(limit ?? 50);
+    if (error) {
+      return { content: [{ type: "text", text: error.message }], isError: true };
+    }
+    const games = (data ?? []).map((g) => ({
+      id: g.game_title,
+      name: g.name,
+      description: g.description,
+      accent_color: g.accent_color,
+      cover_image_url: g.cover_image_url,
+      member_count: g.member_count,
+      work_order_count: g.work_order_count
+    }));
+    return {
+      content: [{ type: "text", text: JSON.stringify(games) }],
+      structuredContent: { games }
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-challenges.ts
+import { createClient as createClient6 } from "npm:@supabase/supabase-js@^2.93.3";
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z4 } from "npm:zod@^3.25.76";
+function supabaseForUser6(ctx) {
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return createClient6(url, anon, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+var list_challenges_default = defineTool6({
+  name: "list_challenges",
+  title: "List challenges",
+  description: "List challenges (work_orders) visible to the caller under RLS. Filter by game_title (enum string, e.g. 'Fiber_Tech'), tenant_id, or is_active.",
+  inputSchema: {
+    game_title: z4.string().optional().describe("Game enum name (e.g. 'Fiber_Tech'). This project has no separate games UUID."),
+    tenant_id: z4.string().uuid().optional(),
+    is_active: z4.boolean().optional(),
+    limit: z4.number().int().positive().max(100).optional().describe("Max rows (default 25, max 100).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ game_title, tenant_id, is_active, limit }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser6(ctx);
+    let q = supabase.from("work_orders").select("id, title, generated_name, game_title, is_active, difficulty, xp_reward, tenant_id, fgn_origin_challenge_id, source_challenge_id, created_at").order("created_at", { ascending: false }).limit(limit ?? 25);
+    if (game_title !== void 0) q = q.eq("game_title", game_title);
+    if (tenant_id !== void 0) q = q.eq("tenant_id", tenant_id);
+    if (is_active !== void 0) q = q.eq("is_active", is_active);
+    const { data, error } = await q;
+    if (error) {
+      return { content: [{ type: "text", text: error.message }], isError: true };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
+      structuredContent: { challenges: data ?? [] }
+    };
+  }
+});
+
+// src/lib/mcp/tools/get-challenge.ts
+import { createClient as createClient7 } from "npm:@supabase/supabase-js@^2.93.3";
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z5 } from "npm:zod@^3.25.76";
+function supabaseForUser7(ctx) {
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return createClient7(url, anon, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+var get_challenge_default = defineTool7({
+  name: "get_challenge",
+  title: "Get challenge",
+  description: "Return a single challenge (work_orders row) with its child tasks (work_order_tasks). RLS-scoped.",
+  inputSchema: {
+    id: z5.string().uuid().describe("Challenge (work_order) UUID.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ id }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser7(ctx);
+    const [challengeRes, tasksRes] = await Promise.all([
+      supabase.from("work_orders").select("*").eq("id", id).maybeSingle(),
+      supabase.from("work_order_tasks").select("id, title, description, order_index, source_task_id").eq("work_order_id", id).order("order_index", { ascending: true })
+    ]);
+    if (challengeRes.error) {
+      return { content: [{ type: "text", text: challengeRes.error.message }], isError: true };
+    }
+    if (tasksRes.error) {
+      return { content: [{ type: "text", text: tasksRes.error.message }], isError: true };
+    }
+    const payload = { challenge: challengeRes.data, tasks: tasksRes.data ?? [] };
+    return {
+      content: [{ type: "text", text: JSON.stringify(payload) }],
+      structuredContent: payload
+    };
+  }
+});
+
+// src/lib/mcp/tools/get-passport.ts
+import { createClient as createClient8 } from "npm:@supabase/supabase-js@^2.93.3";
+import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z6 } from "npm:zod@^3.25.76";
+function supabaseForUser8(ctx) {
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return createClient8(url, anon, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+var get_passport_default = defineTool8({
+  name: "get_passport",
+  title: "Get passport",
+  description: "Return a user's skill passport: profile, passport record, earned credentials, badges, and career readiness (only for users the caller can read under RLS).",
+  inputSchema: {
+    user_id: z6.string().uuid().optional().describe("Target user. Defaults to the signed-in caller. Other users only returned when RLS permits.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ user_id }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const targetUserId = user_id ?? ctx.getUserId();
+    const supabase = supabaseForUser8(ctx);
+    const { data: profile, error: profileErr } = await supabase.from("profiles").select("id, username, avatar_url, employability_score, skills, tenant_id, created_at, updated_at").eq("id", targetUserId).maybeSingle();
+    if (profileErr) {
+      return { content: [{ type: "text", text: profileErr.message }], isError: true };
+    }
+    if (!profile) {
+      const empty = { profile: null, passport: null, credentials: [], badges: [], readiness: null };
+      return {
+        content: [{ type: "text", text: JSON.stringify(empty) }],
+        structuredContent: empty
+      };
+    }
+    const [passportRes, badgesRes] = await Promise.all([
+      supabase.from("skill_passport").select("id, passport_hash, public_url_slug, is_public, created_at, updated_at").eq("user_id", targetUserId).maybeSingle(),
+      supabase.from("user_badges").select("earned_at, badge:badges(id, name, description, icon_name, game_title, category, accent_color)").eq("user_id", targetUserId)
+    ]);
+    let credentials = [];
+    if (passportRes.data?.id) {
+      const { data: creds } = await supabase.from("skill_credentials").select("id, credential_type, credential_type_key, title, issuer, issued_at, expires_at, skills_verified, score, game_title, xp_earned, source").eq("passport_id", passportRes.data.id).order("issued_at", { ascending: false });
+      credentials = creds ?? [];
+    }
+    const { data: readiness } = await supabase.rpc("calculate_readiness", { p_user_id: targetUserId });
+    const payload = {
+      profile,
+      passport: passportRes.data ?? null,
+      credentials,
+      badges: badgesRes.data ?? [],
+      readiness: readiness ?? null
+    };
+    return {
+      content: [{ type: "text", text: JSON.stringify(payload) }],
+      structuredContent: payload
     };
   }
 });
@@ -112,13 +353,22 @@ var projectRef = "vfzjfkcwromssjnlrhoo";
 var mcp_default = defineMcp({
   name: "fgn-academy-mcp",
   title: "FGN Academy",
-  version: "0.1.0",
-  instructions: "Tools for the FGN Academy workforce training platform. Read the signed-in user's profile, work orders, and community memberships. All calls run as the authenticated user under row-level security.",
+  version: "0.2.0",
+  instructions: "Tools for the FGN Academy workforce training platform. Read the signed-in user's profile, work orders, community memberships, tenants, games catalog, challenges, and skill passport. All calls run as the authenticated user under row-level security.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [get_my_profile_default, list_my_work_orders_default, list_my_communities_default]
+  tools: [
+    get_my_profile_default,
+    list_my_communities_default,
+    list_my_work_orders_default,
+    list_tenants_default,
+    list_games_default,
+    list_challenges_default,
+    get_challenge_default,
+    get_passport_default
+  ]
 });
 
 // lovable-mcp-supabase-entry.ts
