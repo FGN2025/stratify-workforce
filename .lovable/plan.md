@@ -1,80 +1,43 @@
-## Item 1 — Fix recursive RLS on `community_memberships`
+## Goal
 
-### Recursive policy (verbatim, from `pg_policies`)
+House Flipper and House Flipper 2 challenges (imported from play.fgn.gg) should be grouped and surfaced under a single generic category called **Home Building**, the same way Construction Simulator and Roadcraft are grouped under **Construction**.
 
-**`Members can view approved members in community`** (SELECT)
-```sql
-USING (
-  (request_status = 'approved'::membership_request_status)
-  AND (EXISTS (
-    SELECT 1
-    FROM community_memberships cm
-    WHERE ((cm.user_id = auth.uid())
-      AND (cm.tenant_id = community_memberships.tenant_id)
-      AND (cm.request_status = 'approved'::membership_request_status))
-  ))
-)
-```
+## How the existing system works
 
-The `EXISTS` subquery selects `community_memberships` inside its own policy → recursion.
+The project already has a generic grouping mechanism — no schema changes are needed:
 
-Other policies are safe (use `auth.uid()`, `has_role()`, or `has_tenant_role()` which is already `SECURITY DEFINER`).
+- `public.sim_categories` rows carry a `default_game_titles game_title[]` array (e.g. the `construction` row is `['Construction_Sim','Roadcraft']`).
+- `resolveCategoryKey(wo, categories)` in `src/hooks/useSimCategories.ts` maps any work order's `game_title` to a category via that array.
+- Sidebar sections (`AppSidebar.tsx`), work-order filters (`WorkOrderFilters.tsx`), and the `/sim/:gameTitle` industry hub all consume `useSimCategories`, so a new row propagates everywhere automatically.
+- Both `House_Flipper` and `House_Flipper_2` already exist as valid `game_title` enum values and there are live work orders using both.
 
-### Fix — Option B, hardened one-arg form (per user refinement)
+The gap: there is no `sim_categories` row that claims those two game titles, so House Flipper work orders currently have no category home.
 
-Drop `p_user` so the RPC can't be used as a membership oracle; the policy only ever needs `auth.uid()`.
+## Change
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_approved_member(p_tenant uuid)
-RETURNS boolean
-LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.community_memberships
-    WHERE user_id = auth.uid()
-      AND tenant_id = p_tenant
-      AND request_status = 'approved'
-  );
-$$;
+Insert one row into `public.sim_categories`:
 
-REVOKE ALL ON FUNCTION public.is_approved_member(uuid) FROM public;
-GRANT EXECUTE ON FUNCTION public.is_approved_member(uuid) TO authenticated;
+- key: `home_building`
+- title: `Home Building`
+- subtitle: `House Flipper scenarios`
+- icon_key: `home` (existing icon in `src/lib/sim-icons.ts`; if absent, fall back to `hard-hat`)
+- accent_color: `#EC4899` (distinct from existing categories; adjustable)
+- display_order: `35` (between Construction 30 and Mechanics 40)
+- default_game_titles: `ARRAY['House_Flipper','House_Flipper_2']::game_title[]`
+- deep_dive_resources: `[]::jsonb`
+- is_active: `true`, `show_in_sidebar: true`, `sidebar_label: null`
 
-DROP POLICY "Members can view approved members in community" ON public.community_memberships;
+This is a data insert (not a schema change), so it will be applied via the insert tool in build mode.
 
-CREATE POLICY "Members can view approved members in community"
-ON public.community_memberships
-FOR SELECT
-TO authenticated
-USING (
-  request_status = 'approved'
-  AND public.is_approved_member(tenant_id)
-);
-```
+## Verification
 
-Behavior unchanged: approved members of a tenant see other approved members of the same tenant; recursion gone; no oracle beyond "am I in tenant X" (which the caller already knows).
-
-### Regression paths to spot-check
-
-- `src/hooks/useMyCommunities.ts`, `useCommunityReview.ts`, `useMembershipReview.ts`, `useMembershipRequest.ts`, `usePendingMembershipCount.ts`
-- `src/components/communities/MembershipReviewQueue.tsx`, `MyCommunities.tsx`, `JoinCommunityButton.tsx`
-- DB helpers `current_tenant_id`, `user_tenant_id`, `is_tenant_admin` (SECURITY DEFINER — unaffected)
-- MCP `list_my_communities` returns non-error JSON
-
-## Item 2 — Verify manifest exposes all 8 tools
-
-1. Confirm `src/lib/mcp/index.ts` registers 8 (already does).
-2. `app_mcp_server--extract_mcp_manifest` → confirm `.lovable/mcp/manifest.json` lists 8.
-3. `supabase--deploy_edge_functions ["mcp"]`.
-4. Live `tools/list` via `supabase--curl_edge_functions` POST to `/mcp` with headers `Accept: application/json, text/event-stream` + `Content-Type: application/json`, body `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`. Paste returned names.
-
-## Report
-
-1. Original + replacement policy verbatim; Option B (hardened one-arg).
-2. Regression paths list.
-3. Live `tools/list` with 8 names.
-4. `verify_jwt=true` unchanged; only 1 policy + 1 helper touched.
+1. `SELECT key, default_game_titles FROM sim_categories` shows the new `home_building` row.
+2. Sidebar renders a **Home Building** entry under SIM CATEGORIES.
+3. `/sim/House_Flipper` and `/sim/House_Flipper_2` resolve to the Home Building category; existing House Flipper work orders show up under it in `/work-orders` filters.
+4. No changes required to icons, filters, or enums.
 
 ## Out of scope
 
-No new tables/columns, no tool renames, no service-role usage, no other policy changes.
+- No new game_title enum values.
+- No changes to icon set, filters, or the play.fgn.gg import path — the import already stamps `game_title` correctly; only the category mapping was missing.
+- No renaming of the existing House_Flipper / House_Flipper_2 enum values.
