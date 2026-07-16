@@ -4011,6 +4011,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_approved_member: { Args: { p_tenant: string }; Returns: boolean }
       is_course_visible: {
         Args: { p_id: string; p_user: string }
         Returns: boolean
