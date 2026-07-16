@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "fgn-academy-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "FGN Academy"
     },
     "tools": [
@@ -20,6 +20,22 @@
         "name": "get_my_profile",
         "title": "Get my profile",
         "description": "Return the signed-in FGN Academy user's profile (username, display name, XP, tenant).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_communities",
+        "title": "List my communities",
+        "description": "List the communities (tenants) the signed-in FGN Academy user is a member of.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -57,18 +73,134 @@
         "outputSchema": null
       },
       {
-        "name": "list_my_communities",
-        "title": "List my communities",
-        "description": "List the communities (tenants) the signed-in FGN Academy user is a member of.",
+        "name": "list_tenants",
+        "title": "List tenants",
+        "description": "List tenants (communities) visible to the signed-in user under RLS.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         },
         "inputSchema": {
-          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
-          "properties": {}
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "description": "Max rows to return (default 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_games",
+        "title": "List games",
+        "description": "List the games catalog. On this project the catalog is keyed by the game_title enum (returned as `id`); there is no separate games table with UUID ids.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "description": "Max rows to return (default 50, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_challenges",
+        "title": "List challenges",
+        "description": "List challenges (work_orders) visible to the caller under RLS. Filter by game_title (enum string, e.g. 'Fiber_Tech'), tenant_id, or is_active.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "game_title": {
+              "type": "string",
+              "description": "Game enum name (e.g. 'Fiber_Tech'). This project has no separate games UUID."
+            },
+            "tenant_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "limit": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "description": "Max rows (default 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_challenge",
+        "title": "Get challenge",
+        "description": "Return a single challenge (work_orders row) with its child tasks (work_order_tasks). RLS-scoped.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Challenge (work_order) UUID."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_passport",
+        "title": "Get passport",
+        "description": "Return a user's skill passport: profile, passport record, earned credentials, badges, and career readiness (only for users the caller can read under RLS).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Target user. Defaults to the signed-in caller. Other users only returned when RLS permits."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
       }
