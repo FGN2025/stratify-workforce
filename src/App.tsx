@@ -131,7 +131,7 @@ const App = () => (
                 <CommunityAdminRoute><Admin /></CommunityAdminRoute>
               } />
               <Route path="/admin/configurator" element={
-                <AdminRoute><Configurator /></AdminRoute>
+                <CommunityAdminRoute><Configurator /></CommunityAdminRoute>
               } />
               <Route path="/admin/challenge-registry" element={
                 <AdminRoute><ChallengeRegistry /></AdminRoute>
