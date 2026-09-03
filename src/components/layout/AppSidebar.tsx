@@ -115,10 +115,10 @@ const adminSubItems: AdminEntry[] = [
   { title: 'Media Library', url: '/admin/media', icon: Image, tier: 'community' },
   { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound, tier: 'community' },
   { title: 'Skills Paths', url: '/admin/career-paths', icon: Route, tier: 'community' },
+  { title: 'Configurator', url: '/admin/configurator', icon: Wrench, tier: 'community' },
 
   // Platform-only.
   { title: 'Users', url: '/admin/users', icon: Users, tier: 'platform' },
-  { title: 'Configurator', url: '/admin/configurator', icon: Wrench, tier: 'platform' },
   { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
   {
     groupKey: 'sim',
