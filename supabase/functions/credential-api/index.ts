@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { resolveIdentity } from '../_shared/resolve-play-identity.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -217,13 +218,17 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: identity } = await supabase
-        .from('play_identity')
-        .select('user_id')
-        .eq('external_user_id', externalUserId)
-        .maybeSingle();
+      // Identity resolution: play_identity fast path, then optional email
+      // fallback (shared helper with play-webhook-receiver). On an email hit
+      // the helper upserts play_identity so future lookups hit the fast path.
+      // user_email stays optional — older Play deploys don't send it and get
+      // the unchanged 404 below.
+      const userEmail = typeof parsed?.user_email === 'string'
+        ? parsed.user_email.trim().toLowerCase()
+        : null;
+      const ident = await resolveIdentity(supabase, externalUserId, userEmail);
 
-      if (!identity) {
+      if (!ident.ok) {
         return new Response(JSON.stringify({ error: 'user_not_linked' }), {
           status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -235,7 +240,7 @@ Deno.serve(async (req) => {
         .from('passport_link_tokens')
         .insert({
           token,
-          user_id: identity.user_id,
+          user_id: ident.userId,
           external_user_id: externalUserId,
           intent,
           issued_to_app: 'play.fgn.gg',
@@ -252,6 +257,7 @@ Deno.serve(async (req) => {
         url: `${origin}/passport/link?token=${token}`,
         expires_at: expiresAt,
         user_resolved: true,
+        matched_by: ident.matchedBy,
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
