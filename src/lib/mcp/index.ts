@@ -7,6 +7,11 @@ import listGames from "./tools/list-games";
 import listChallenges from "./tools/list-challenges";
 import getChallenge from "./tools/get-challenge";
 import getPassport from "./tools/get-passport";
+import listSimCategories from "./tools/list-sim-categories";
+import createCommunity from "./tools/create-community";
+import updateCommunity from "./tools/update-community";
+import upsertSimCategory from "./tools/upsert-sim-category";
+import upsertWorkOrder from "./tools/upsert-work-order";
 
 const projectRef =
   import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
