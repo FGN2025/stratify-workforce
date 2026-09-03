@@ -47,6 +47,7 @@ import ChallengeRegistry from "./pages/ChallengeRegistry";
 import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
 import CourseBuilder from "./pages/admin/CourseBuilder";
 import CommunitySetup from "./pages/admin/CommunitySetup";
+import Configurator from "./pages/admin/Configurator";
 import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
 import SimIndustry from "./pages/SimIndustry";
