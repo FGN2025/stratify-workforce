@@ -1,43 +1,35 @@
+# Passport-link email fallback (Academy side)
+
 ## Goal
+`POST /passport-link` currently returns 404 `user_not_linked` whenever no `play_identity` row exists for the Play UUID — even when the same email already has an Academy account. Play now sends `user_email` in the signed payload, so Academy can fall back to email matching and permanently link the accounts.
 
-House Flipper and House Flipper 2 challenges (imported from play.fgn.gg) should be grouped and surfaced under a single generic category called **Home Building**, the same way Construction Simulator and Roadcraft are grouped under **Construction**.
+## Current state (verified)
+- `supabase/functions/credential-api/index.ts` lines 220–230: identity is resolved **only** via `play_identity.external_user_id`; no email fallback.
+- `supabase/functions/play-webhook-receiver/index.ts` lines 148–187: working `resolveIdentity(externalUserId, email)` helper (play_identity hit → update `last_seen_at`; else email RPC `get_user_id_by_email` → upsert `play_identity` on `external_user_id`).
+- `get_user_id_by_email(p_email)` RPC already exists (security definer).
 
-## How the existing system works
+## Changes
 
-The project already has a generic grouping mechanism — no schema changes are needed:
+### 1. Extract shared helper
+- New file `supabase/functions/_shared/resolve-play-identity.ts` containing `resolveIdentity(supabase, externalUserId, email)` copied from `play-webhook-receiver/index.ts` (returns `{ ok: true, userId, matchedBy: 'play_identity' | 'email' }` or `{ ok: false, reason: 'unmapped_identity' }`).
+- Update `play-webhook-receiver/index.ts` to import from `_shared/` instead of its local copy — behavior unchanged.
 
-- `public.sim_categories` rows carry a `default_game_titles game_title[]` array (e.g. the `construction` row is `['Construction_Sim','Roadcraft']`).
-- `resolveCategoryKey(wo, categories)` in `src/hooks/useSimCategories.ts` maps any work order's `game_title` to a category via that array.
-- Sidebar sections (`AppSidebar.tsx`), work-order filters (`WorkOrderFilters.tsx`), and the `/sim/:gameTitle` industry hub all consume `useSimCategories`, so a new row propagates everywhere automatically.
-- Both `House_Flipper` and `House_Flipper_2` already exist as valid `game_title` enum values and there are live work orders using both.
+### 2. Email fallback in `/passport-link` (`credential-api/index.ts`)
+After the existing `play_identity` lookup returns null:
+1. Read optional `parsed?.user_email`; if a string, normalize (trim, lowercase).
+2. If present, call `resolveIdentity(supabase, externalUserId, email)` (which runs the email RPC and, on a hit, upserts `play_identity` keyed on the Play UUID — permanently linking the accounts).
+3. On a hit, continue to token creation with that `user_id` and include `matched_by: 'play_identity' | 'email'` in the JSON response and the `play_sync_attempts` mirror snapshot.
+4. If `user_email` is absent or no Academy account matches, return the existing 404 `user_not_linked` unchanged. Never auto-create an Academy account.
 
-The gap: there is no `sim_categories` row that claims those two game titles, so House Flipper work orders currently have no category home.
+Unchanged: HMAC/ecosystem-key verification (Play signs the raw body including `user_email`, so no signature changes), TTL logic, token issuance, and behavior for callers that don't send `user_email`.
 
-## Change
+### 3. Deploy & verify
+- Deploy `credential-api` and `play-webhook-receiver` edge functions.
+- Smoke test via curl with a signed body:
+  1. Play UUID whose email has an Academy account but no `play_identity` row → expect 200 `{ url, expires_at, user_resolved: true, matched_by: 'email' }`, plus a new `passport_link_tokens` row and a new `play_identity` row keyed on the Play UUID.
+  2. Repeat the same call → fast path, `matched_by: 'play_identity'`.
+  3. Play UUID with no matching email → still 404 `user_not_linked`.
 
-Insert one row into `public.sim_categories`:
-
-- key: `home_building`
-- title: `Home Building`
-- subtitle: `House Flipper scenarios`
-- icon_key: `home` (existing icon in `src/lib/sim-icons.ts`; if absent, fall back to `hard-hat`)
-- accent_color: `#EC4899` (distinct from existing categories; adjustable)
-- display_order: `35` (between Construction 30 and Mechanics 40)
-- default_game_titles: `ARRAY['House_Flipper','House_Flipper_2']::game_title[]`
-- deep_dive_resources: `[]::jsonb`
-- is_active: `true`, `show_in_sidebar: true`, `sidebar_label: null`
-
-This is a data insert (not a schema change), so it will be applied via the insert tool in build mode.
-
-## Verification
-
-1. `SELECT key, default_game_titles FROM sim_categories` shows the new `home_building` row.
-2. Sidebar renders a **Home Building** entry under SIM CATEGORIES.
-3. `/sim/House_Flipper` and `/sim/House_Flipper_2` resolve to the Home Building category; existing House Flipper work orders show up under it in `/work-orders` filters.
-4. No changes required to icons, filters, or enums.
-
-## Out of scope
-
-- No new game_title enum values.
-- No changes to icon set, filters, or the play.fgn.gg import path — the import already stamps `game_title` correctly; only the category mapping was missing.
-- No renaming of the existing House_Flipper / House_Flipper_2 enum values.
+## Technical details
+- Email is treated as an identity hint only after HMAC signature verification, so an unsigned caller cannot probe which emails have accounts beyond the existing 404 behavior.
+- The `play_identity` upsert uses `onConflict: 'external_user_id'`, identical to the webhook receiver, so the two paths cannot drift.
