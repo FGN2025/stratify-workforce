@@ -257,6 +257,7 @@ Deno.serve(async (req) => {
         url: `${origin}/passport/link?token=${token}`,
         expires_at: expiresAt,
         user_resolved: true,
+        matched_by: ident.matchedBy,
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
