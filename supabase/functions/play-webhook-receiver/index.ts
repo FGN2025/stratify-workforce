@@ -20,6 +20,7 @@
 //   https://<project-ref>.supabase.co/functions/v1/play-webhook-receiver
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { resolveIdentity } from '../_shared/resolve-play-identity.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -141,50 +142,8 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 type SupabaseSvc = ReturnType<typeof createClient>;
 
-type IdentityResolution =
-  | { ok: true; userId: string; matchedBy: 'play_identity' | 'email' }
-  | { ok: false; reason: string };
-
-async function resolveIdentity(
-  supabase: SupabaseSvc,
-  externalUserId: string | null,
-  email: string | null,
-): Promise<IdentityResolution> {
-  if (externalUserId) {
-    const { data } = await supabase
-      .from('play_identity')
-      .select('user_id')
-      .eq('external_user_id', externalUserId)
-      .maybeSingle();
-    if (data?.user_id) {
-      await supabase
-        .from('play_identity')
-        .update({ last_seen_at: new Date().toISOString() })
-        .eq('external_user_id', externalUserId);
-      return { ok: true, userId: data.user_id as string, matchedBy: 'play_identity' };
-    }
-  }
-  if (email) {
-    const { data: userId, error } = await supabase.rpc('get_user_id_by_email', { p_email: email });
-    if (!error && userId) {
-      if (externalUserId) {
-        await supabase
-          .from('play_identity')
-          .upsert(
-            {
-              user_id: userId as string,
-              external_user_id: externalUserId,
-              email,
-              last_seen_at: new Date().toISOString(),
-            },
-            { onConflict: 'external_user_id' },
-          );
-      }
-      return { ok: true, userId: userId as string, matchedBy: 'email' };
-    }
-  }
-  return { ok: false, reason: 'unmapped_identity' };
-}
+// resolveIdentity is shared with credential-api (/passport-link) — see
+// ../_shared/resolve-play-identity.ts
 
 async function ensurePassport(supabase: SupabaseSvc, userId: string): Promise<string | null> {
   const { data: existing } = await supabase
