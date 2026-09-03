@@ -348,13 +348,303 @@ var get_passport_default = defineTool8({
   }
 });
 
+// src/lib/mcp/tools/list-sim-categories.ts
+import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z7 } from "npm:zod@^3.25.76";
+
+// src/lib/mcp/supabase.ts
+import { createClient as createClient9 } from "npm:@supabase/supabase-js@^2.93.3";
+function runtimeEnv(name) {
+  const runtime = globalThis;
+  return runtime.Deno?.env?.get?.(name) ?? runtime.process?.env?.[name];
+}
+function configuredEnv(names) {
+  for (const name of names) {
+    const value = runtimeEnv(name)?.trim();
+    if (value) return value;
+  }
+  return void 0;
+}
+function supabaseProjectUrl() {
+  const url = configuredEnv(["SUPABASE_URL", "VITE_SUPABASE_URL"]);
+  if (!url) throw new Error("SUPABASE_URL (or VITE_SUPABASE_URL) is required");
+  return url;
+}
+function supabasePublishableKey() {
+  const direct = configuredEnv([
+    "SUPABASE_PUBLISHABLE_KEY",
+    "VITE_SUPABASE_PUBLISHABLE_KEY"
+  ]);
+  if (direct) return direct;
+  const keyset = runtimeEnv("SUPABASE_PUBLISHABLE_KEYS");
+  if (keyset) {
+    try {
+      const parsed = JSON.parse(keyset);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const keys = parsed;
+        const key = [keys.default, ...Object.values(keys)].find((v) => typeof v === "string" && v.trim().startsWith("sb_publishable_"))?.trim();
+        if (key) return key;
+      }
+    } catch {
+    }
+  }
+  const legacy = configuredEnv(["SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY"]);
+  if (legacy) return legacy;
+  throw new Error("SUPABASE_PUBLISHABLE_KEY, SUPABASE_PUBLISHABLE_KEYS, or SUPABASE_ANON_KEY is required");
+}
+function supabaseForUser9(ctx) {
+  const token = ctx.getToken();
+  if (!token) throw new Error("supabaseForUser requires a verified OAuth token");
+  return createClient9(supabaseProjectUrl(), supabasePublishableKey(), {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+
+// src/lib/mcp/tools/list-sim-categories.ts
+var list_sim_categories_default = defineTool9({
+  name: "list_sim_categories",
+  title: "List SIM categories",
+  description: "List the industry categories (sim_categories) that group SIM games on FGN Academy. These drive the Work Orders filters and the sidebar.",
+  inputSchema: {
+    include_inactive: z7.boolean().optional().describe("Include categories marked inactive.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ include_inactive }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser9(ctx);
+    let q = supabase.from("sim_categories").select(
+      "id, key, title, subtitle, icon_key, accent_color, default_game_titles, display_order, is_active, sidebar_label, show_in_sidebar"
+    ).order("display_order", { ascending: true });
+    if (!include_inactive) q = q.eq("is_active", true);
+    const { data, error } = await q;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
+      structuredContent: { categories: data ?? [] }
+    };
+  }
+});
+
+// src/lib/mcp/tools/create-community.ts
+import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z8 } from "npm:zod@^3.25.76";
+var CATEGORY_TYPES = [
+  "geography",
+  "broadband_provider",
+  "trade_skill",
+  "school",
+  "employer",
+  "training_center",
+  "government",
+  "nonprofit",
+  "community_organization",
+  "club",
+  "cte"
+];
+var create_community_default = defineTool10({
+  name: "create_community",
+  title: "Create community",
+  description: "Create a new community (tenant) on FGN Academy. Runs as the signed-in user, so it only succeeds for admins permitted to create communities.",
+  inputSchema: {
+    name: z8.string().trim().min(2).describe("Display name of the community."),
+    slug: z8.string().trim().regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only.").describe("URL slug, e.g. 'north-valley-cte'."),
+    description: z8.string().trim().optional(),
+    category_type: z8.enum(CATEGORY_TYPES).optional(),
+    brand_color: z8.string().trim().optional().describe("Hex color, e.g. '#F59E0B'."),
+    website_url: z8.string().url().optional(),
+    parent_tenant_id: z8.string().uuid().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser9(ctx);
+    const { data, error } = await supabase.from("tenants").insert({ ...input, owner_id: ctx.getUserId() }).select("id, name, slug, approval_status, category_type, parent_tenant_id").maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { community: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/update-community.ts
+import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z9 } from "npm:zod@^3.25.76";
+var update_community_default = defineTool11({
+  name: "update_community",
+  title: "Update community",
+  description: "Update an existing community (tenant): name, description, branding, contact URLs or industries. Only fields you pass are changed. RLS restricts this to admins of that community.",
+  inputSchema: {
+    id: z9.string().uuid().describe("Community (tenant) UUID."),
+    name: z9.string().trim().min(2).optional(),
+    description: z9.string().trim().optional(),
+    tagline: z9.string().trim().optional(),
+    brand_color: z9.string().trim().optional(),
+    accent_color: z9.string().trim().optional(),
+    logo_url: z9.string().url().optional(),
+    cover_image_url: z9.string().url().optional(),
+    website_url: z9.string().url().optional(),
+    support_email: z9.string().email().optional(),
+    location: z9.string().trim().optional(),
+    industries: z9.array(z9.string()).optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  handler: async ({ id, ...patch }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const fields = Object.fromEntries(
+      Object.entries(patch).filter(([, v]) => v !== void 0)
+    );
+    if (Object.keys(fields).length === 0) {
+      return { content: [{ type: "text", text: "No fields to update" }], isError: true };
+    }
+    const supabase = supabaseForUser9(ctx);
+    const { data, error } = await supabase.from("tenants").update(fields).eq("id", id).select("id, name, slug, description, brand_color, industries").maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!data) {
+      return {
+        content: [{ type: "text", text: "Community not found or not editable by this user." }],
+        isError: true
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { community: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/upsert-sim-category.ts
+import { defineTool as defineTool12 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z10 } from "npm:zod@^3.25.76";
+var GAME_TITLES = [
+  "ATS",
+  "Farming_Sim",
+  "Construction_Sim",
+  "Mechanic_Sim",
+  "Fiber_Tech",
+  "Roadcraft",
+  "MSFS_2024",
+  "House_Flipper",
+  "House_Flipper_2",
+  "Electrician_Sim"
+];
+var upsert_sim_category_default = defineTool12({
+  name: "upsert_sim_category",
+  title: "Create or update SIM category",
+  description: "Create or update an industry category (sim_categories) by its unique `key`. Categories name the Work Orders filters and the sidebar entries, and map to one or more SIM games.",
+  inputSchema: {
+    key: z10.string().trim().min(2).describe("Stable unique key, e.g. 'trucking-logistics'."),
+    title: z10.string().trim().min(2).describe("Industry filter name, e.g. 'Trucking & Logistics'."),
+    subtitle: z10.string().trim().optional(),
+    icon_key: z10.string().trim().optional().describe("Icon key from the app's SIM icon set."),
+    accent_color: z10.string().trim().optional().describe("Hex color, e.g. '#F59E0B'."),
+    default_game_titles: z10.array(z10.enum(GAME_TITLES)).optional().describe("SIM games in this industry."),
+    display_order: z10.number().int().min(0).optional(),
+    is_active: z10.boolean().optional(),
+    sidebar_label: z10.string().trim().optional().describe("Sidebar label when it differs from the filter name."),
+    show_in_sidebar: z10.boolean().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const row = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== void 0));
+    const supabase = supabaseForUser9(ctx);
+    const { data, error } = await supabase.from("sim_categories").upsert(row, { onConflict: "key" }).select(
+      "id, key, title, subtitle, icon_key, accent_color, default_game_titles, display_order, is_active, sidebar_label, show_in_sidebar"
+    ).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { category: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/upsert-work-order.ts
+import { defineTool as defineTool13 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z11 } from "npm:zod@^3.25.76";
+var GAME_TITLES2 = [
+  "ATS",
+  "Farming_Sim",
+  "Construction_Sim",
+  "Mechanic_Sim",
+  "Fiber_Tech",
+  "Roadcraft",
+  "MSFS_2024",
+  "House_Flipper",
+  "House_Flipper_2",
+  "Electrician_Sim"
+];
+var upsert_work_order_default = defineTool13({
+  name: "upsert_work_order",
+  title: "Create or update work order",
+  description: "Create a work order (challenge), or update one when `id` is supplied. `game_title` is required on create. Runs as the signed-in user, so RLS restricts writes to admins of the owning community.",
+  inputSchema: {
+    id: z11.string().uuid().optional().describe("Work order UUID. Omit to create a new one."),
+    title: z11.string().trim().min(2).optional(),
+    description: z11.string().trim().optional(),
+    game_title: z11.enum(GAME_TITLES2).optional().describe("Required when creating."),
+    difficulty: z11.enum(["beginner", "intermediate", "advanced"]).optional(),
+    xp_reward: z11.number().int().min(0).optional(),
+    estimated_time_minutes: z11.number().int().positive().optional(),
+    category_key: z11.string().trim().optional().describe("Industry category key from list_sim_categories."),
+    tenant_id: z11.string().uuid().optional().describe("Owning community; omit for the global catalog."),
+    cover_image_url: z11.string().url().optional(),
+    is_active: z11.boolean().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  handler: async ({ id, ...input }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const fields = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== void 0));
+    if (Object.keys(fields).length === 0) {
+      return { content: [{ type: "text", text: "Nothing to write" }], isError: true };
+    }
+    const supabase = supabaseForUser9(ctx);
+    const selection = "id, title, description, game_title, difficulty, xp_reward, category_key, tenant_id, is_active, created_at";
+    if (id) {
+      const { data: data2, error: error2 } = await supabase.from("work_orders").update(fields).eq("id", id).select(selection).maybeSingle();
+      if (error2) return { content: [{ type: "text", text: error2.message }], isError: true };
+      if (!data2) {
+        return {
+          content: [{ type: "text", text: "Work order not found or not editable by this user." }],
+          isError: true
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(data2) }],
+        structuredContent: { work_order: data2 }
+      };
+    }
+    if (!fields.game_title) {
+      return { content: [{ type: "text", text: "game_title is required when creating a work order." }], isError: true };
+    }
+    const { data, error } = await supabase.from("work_orders").insert(fields).select(selection).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { work_order: data }
+    };
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "vfzjfkcwromssjnlrhoo";
 var mcp_default = defineMcp({
   name: "fgn-academy-mcp",
   title: "FGN Academy",
-  version: "0.2.0",
-  instructions: "Tools for the FGN Academy workforce training platform. Read the signed-in user's profile, work orders, community memberships, tenants, games catalog, challenges, and skill passport. All calls run as the authenticated user under row-level security.",
+  version: "0.3.0",
+  instructions: "Tools for the FGN Academy workforce training platform. Read the signed-in user's profile, work orders, community memberships, tenants, games catalog, industry SIM categories, challenges, and skill passport \u2014 and, for admins, create or update communities, SIM categories, and work orders. All calls run as the authenticated user under row-level security.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
@@ -367,7 +657,12 @@ var mcp_default = defineMcp({
     list_games_default,
     list_challenges_default,
     get_challenge_default,
-    get_passport_default
+    get_passport_default,
+    list_sim_categories_default,
+    create_community_default,
+    update_community_default,
+    upsert_sim_category_default,
+    upsert_work_order_default
   ]
 });
 

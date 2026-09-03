@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "fgn-academy-mcp",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "title": "FGN Academy"
     },
     "tools": [
@@ -197,6 +197,316 @@
               "type": "string",
               "format": "uuid",
               "description": "Target user. Defaults to the signed-in caller. Other users only returned when RLS permits."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_sim_categories",
+        "title": "List SIM categories",
+        "description": "List the industry categories (sim_categories) that group SIM games on FGN Academy. These drive the Work Orders filters and the sidebar.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "include_inactive": {
+              "type": "boolean",
+              "description": "Include categories marked inactive."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_community",
+        "title": "Create community",
+        "description": "Create a new community (tenant) on FGN Academy. Runs as the signed-in user, so it only succeeds for admins permitted to create communities.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Display name of the community."
+            },
+            "slug": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$",
+              "description": "URL slug, e.g. 'north-valley-cte'."
+            },
+            "description": {
+              "type": "string"
+            },
+            "category_type": {
+              "type": "string",
+              "enum": [
+                "geography",
+                "broadband_provider",
+                "trade_skill",
+                "school",
+                "employer",
+                "training_center",
+                "government",
+                "nonprofit",
+                "community_organization",
+                "club",
+                "cte"
+              ]
+            },
+            "brand_color": {
+              "type": "string",
+              "description": "Hex color, e.g. '#F59E0B'."
+            },
+            "website_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "parent_tenant_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "name",
+            "slug"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_community",
+        "title": "Update community",
+        "description": "Update an existing community (tenant): name, description, branding, contact URLs or industries. Only fields you pass are changed. RLS restricts this to admins of that community.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Community (tenant) UUID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 2
+            },
+            "description": {
+              "type": "string"
+            },
+            "tagline": {
+              "type": "string"
+            },
+            "brand_color": {
+              "type": "string"
+            },
+            "accent_color": {
+              "type": "string"
+            },
+            "logo_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "cover_image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "website_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "support_email": {
+              "type": "string",
+              "format": "email"
+            },
+            "location": {
+              "type": "string"
+            },
+            "industries": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_sim_category",
+        "title": "Create or update SIM category",
+        "description": "Create or update an industry category (sim_categories) by its unique `key`. Categories name the Work Orders filters and the sidebar entries, and map to one or more SIM games.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Stable unique key, e.g. 'trucking-logistics'."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Industry filter name, e.g. 'Trucking & Logistics'."
+            },
+            "subtitle": {
+              "type": "string"
+            },
+            "icon_key": {
+              "type": "string",
+              "description": "Icon key from the app's SIM icon set."
+            },
+            "accent_color": {
+              "type": "string",
+              "description": "Hex color, e.g. '#F59E0B'."
+            },
+            "default_game_titles": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ATS",
+                  "Farming_Sim",
+                  "Construction_Sim",
+                  "Mechanic_Sim",
+                  "Fiber_Tech",
+                  "Roadcraft",
+                  "MSFS_2024",
+                  "House_Flipper",
+                  "House_Flipper_2",
+                  "Electrician_Sim"
+                ]
+              },
+              "description": "SIM games in this industry."
+            },
+            "display_order": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "sidebar_label": {
+              "type": "string",
+              "description": "Sidebar label when it differs from the filter name."
+            },
+            "show_in_sidebar": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "key",
+            "title"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_work_order",
+        "title": "Create or update work order",
+        "description": "Create a work order (challenge), or update one when `id` is supplied. `game_title` is required on create. Runs as the signed-in user, so RLS restricts writes to admins of the owning community.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Work order UUID. Omit to create a new one."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 2
+            },
+            "description": {
+              "type": "string"
+            },
+            "game_title": {
+              "type": "string",
+              "enum": [
+                "ATS",
+                "Farming_Sim",
+                "Construction_Sim",
+                "Mechanic_Sim",
+                "Fiber_Tech",
+                "Roadcraft",
+                "MSFS_2024",
+                "House_Flipper",
+                "House_Flipper_2",
+                "Electrician_Sim"
+              ],
+              "description": "Required when creating."
+            },
+            "difficulty": {
+              "type": "string",
+              "enum": [
+                "beginner",
+                "intermediate",
+                "advanced"
+              ]
+            },
+            "xp_reward": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "estimated_time_minutes": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "category_key": {
+              "type": "string",
+              "description": "Industry category key from list_sim_categories."
+            },
+            "tenant_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Owning community; omit for the global catalog."
+            },
+            "cover_image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "is_active": {
+              "type": "boolean"
             }
           },
           "additionalProperties": false,
