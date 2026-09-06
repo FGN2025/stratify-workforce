@@ -6,6 +6,7 @@ import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel'
 import { CourseCard } from '@/components/learn/CourseCard';
 import { WorkOrderCard } from '@/components/dashboard/WorkOrderCard';
 import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
+import { JoinCtaBanner } from '@/components/marketplace/JoinCtaBanner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
