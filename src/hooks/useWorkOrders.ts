@@ -29,7 +29,7 @@ export interface WorkOrderWithXP {
   fgn_origin_challenge_id: string | null;
   metadata: Record<string, unknown> | null;
 }
-...
+
 export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
   const { tenant } = useTenant();
   const { user } = useAuth();
