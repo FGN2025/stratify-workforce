@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 export default function LessonDetail() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const { data, isLoading, error } = useLessonDetail(lessonId);
   const submitQuiz = useSubmitQuiz();
   const [answers, setAnswers] = useState<Record<string, number>>({});
