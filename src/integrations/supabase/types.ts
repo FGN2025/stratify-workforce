@@ -206,6 +206,13 @@ export type Database = {
             foreignKeyName: "authorized_apps_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "authorized_apps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -279,6 +286,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "breakroom_identity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "breakroom_identity_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -437,6 +451,13 @@ export type Database = {
             columns: ["lesson_id"]
             isOneToOne: false
             referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_lesson_mappings_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "public_lesson_outlines"
             referencedColumns: ["id"]
           },
         ]
@@ -611,6 +632,13 @@ export type Database = {
             foreignKeyName: "community_memberships_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -670,7 +698,21 @@ export type Database = {
             foreignKeyName: "courses_owner_tenant_id_fkey"
             columns: ["owner_tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
             referencedColumns: ["id"]
           },
           {
@@ -898,6 +940,13 @@ export type Database = {
             foreignKeyName: "events_owner_tenant_id_fkey"
             columns: ["owner_tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -905,7 +954,21 @@ export type Database = {
             foreignKeyName: "events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -1054,7 +1117,21 @@ export type Database = {
             foreignKeyName: "leaderboard_embed_configs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_embed_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_embed_configs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -1271,6 +1348,13 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -1575,6 +1659,13 @@ export type Database = {
             foreignKeyName: "profiles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -1618,6 +1709,13 @@ export type Database = {
           tenant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "registration_codes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "registration_codes_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1718,6 +1816,13 @@ export type Database = {
             foreignKeyName: "scorm_course_work_orders_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scorm_course_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -1782,6 +1887,13 @@ export type Database = {
           zip_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "scorm_courses_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scorm_courses_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -2138,6 +2250,13 @@ export type Database = {
             foreignKeyName: "simulation_runs_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulation_runs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -2212,7 +2331,21 @@ export type Database = {
             foreignKeyName: "simulations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -2368,6 +2501,13 @@ export type Database = {
             foreignKeyName: "skill_credentials_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -2508,7 +2648,21 @@ export type Database = {
             foreignKeyName: "telemetry_sessions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemetry_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemetry_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -2554,6 +2708,13 @@ export type Database = {
             foreignKeyName: "tenant_course_curation_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_course_curation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -2593,6 +2754,13 @@ export type Database = {
             foreignKeyName: "tenant_event_curation_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_event_curation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -2625,7 +2793,21 @@ export type Database = {
             foreignKeyName: "tenant_work_order_curation_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_work_order_curation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_work_order_curation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -2802,6 +2984,13 @@ export type Database = {
             foreignKeyName: "tenants_parent_tenant_id_fkey"
             columns: ["parent_tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenants_parent_tenant_id_fkey"
+            columns: ["parent_tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -2848,6 +3037,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tutor_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tutor_conversations_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -2945,6 +3141,13 @@ export type Database = {
             foreignKeyName: "user_active_tenant_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_active_tenant_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -3008,6 +3211,13 @@ export type Database = {
             columns: ["override_code_id"]
             isOneToOne: false
             referencedRelation: "registration_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_addresses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
             referencedColumns: ["id"]
           },
           {
@@ -3092,6 +3302,13 @@ export type Database = {
             columns: ["current_lesson_id"]
             isOneToOne: false
             referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_course_enrollments_current_lesson_id_fkey"
+            columns: ["current_lesson_id"]
+            isOneToOne: false
+            referencedRelation: "public_lesson_outlines"
             referencedColumns: ["id"]
           },
           {
@@ -3250,6 +3467,13 @@ export type Database = {
             foreignKeyName: "user_invitations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invitations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -3301,6 +3525,13 @@ export type Database = {
             columns: ["lesson_id"]
             isOneToOne: false
             referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "public_lesson_outlines"
             referencedColumns: ["id"]
           },
         ]
@@ -3443,6 +3674,13 @@ export type Database = {
             foreignKeyName: "user_task_progress_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_task_progress_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -3496,6 +3734,13 @@ export type Database = {
           xp_awarded?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_work_order_completions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_work_order_completions_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -3595,6 +3840,13 @@ export type Database = {
             foreignKeyName: "webhook_subscriptions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -3633,7 +3885,21 @@ export type Database = {
             foreignKeyName: "work_order_assignments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -3712,7 +3978,21 @@ export type Database = {
             foreignKeyName: "work_order_evidence_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_evidence_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -3753,6 +4033,13 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_order_tasks_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_order_tasks_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -3857,7 +4144,21 @@ export type Database = {
             foreignKeyName: "work_orders_owner_tenant_id_fkey"
             columns: ["owner_tenant_id"]
             isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
             referencedColumns: ["id"]
           },
           {
@@ -3871,7 +4172,150 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_communities: {
+        Row: {
+          brand_color: string | null
+          category_type:
+            | Database["public"]["Enums"]["community_category_type"]
+            | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_verified: boolean | null
+          location: string | null
+          logo_url: string | null
+          member_count: number | null
+          name: string | null
+          slug: string | null
+          website_url: string | null
+        }
+        Insert: {
+          brand_color?: string | null
+          category_type?:
+            | Database["public"]["Enums"]["community_category_type"]
+            | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_verified?: boolean | null
+          location?: string | null
+          logo_url?: string | null
+          member_count?: number | null
+          name?: string | null
+          slug?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          brand_color?: string | null
+          category_type?:
+            | Database["public"]["Enums"]["community_category_type"]
+            | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_verified?: boolean | null
+          location?: string | null
+          logo_url?: string | null
+          member_count?: number | null
+          name?: string | null
+          slug?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      public_lesson_outlines: {
+        Row: {
+          course_id: string | null
+          id: string | null
+          lesson_type: Database["public"]["Enums"]["lesson_type"] | null
+          module_id: string | null
+          order_index: number | null
+          title: string | null
+          xp_reward: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_work_orders: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          difficulty:
+            | Database["public"]["Enums"]["work_order_difficulty"]
+            | null
+          game_title: Database["public"]["Enums"]["game_title"] | null
+          generated_name: string | null
+          id: string | null
+          is_active: boolean | null
+          tenant_id: string | null
+          title: string | null
+          xp_reward: number | null
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          difficulty?:
+            | Database["public"]["Enums"]["work_order_difficulty"]
+            | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          generated_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          tenant_id?: string | null
+          title?: string | null
+          xp_reward?: number | null
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          difficulty?:
+            | Database["public"]["Enums"]["work_order_difficulty"]
+            | null
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          generated_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          tenant_id?: string | null
+          title?: string | null
+          xp_reward?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       backfill_credentials_for_course: {
