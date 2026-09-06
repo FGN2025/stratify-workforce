@@ -4,6 +4,31 @@ import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChannelSubscriptions } from './useChannelSubscriptions';
 import type { Database } from '@/integrations/supabase/types';
+
+type GameTitle = Database['public']['Enums']['game_title'];
+type WorkOrderDifficulty = Database['public']['Enums']['work_order_difficulty'];
+
+export interface WorkOrderWithXP {
+  id: string;
+  tenant_id: string | null;
+  title: string | null;
+  generated_name: string | null;
+  description: string | null;
+  game_title: GameTitle;
+  success_criteria: Record<string, number>;
+  is_active: boolean;
+  created_at: string;
+  xp_reward: number;
+  channel_id: string | null;
+  difficulty: WorkOrderDifficulty;
+  estimated_time_minutes: number | null;
+  max_attempts: number | null;
+  evidence_requirements: Record<string, unknown> | null;
+  cover_image_url: string | null;
+  source_challenge_id: string | null;
+  fgn_origin_challenge_id: string | null;
+  metadata: Record<string, unknown> | null;
+}
 ...
 export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
   const { tenant } = useTenant();
