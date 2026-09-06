@@ -23,10 +23,10 @@ const Index = () => {
   useEffect(() => {
     async function fetchCommunities() {
       setCommunitiesLoading(true);
+      // Safe public projection — approved communities only, no internal fields.
       const { data } = await supabase
-        .from('tenants')
+        .from('public_communities')
         .select('*')
-        .eq('approval_status', 'approved')
         .order('name', { ascending: true });
 
       if (data) {

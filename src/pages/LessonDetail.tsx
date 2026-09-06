@@ -3,18 +3,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useLessonDetail, useSubmitQuiz, useNextLesson } from '@/hooks/useLessonProgress';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle2, XCircle, Star, RotateCcw, ArrowRight, PlayCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Star, RotateCcw, ArrowRight, PlayCircle, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function LessonDetail() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const { data, isLoading, error } = useLessonDetail(lessonId);
   const submitQuiz = useSubmitQuiz();
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -37,6 +39,32 @@ export default function LessonDetail() {
       return () => setCurrentGameTitle(null);
     }
   }, [lesson]);
+
+  // Lesson content (including quiz answers) requires an account — visitors get
+  // a conversion prompt instead of the content.
+  if (!authLoading && !user) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-20 gap-4 max-w-md mx-auto text-center">
+          <div className="p-4 rounded-full bg-primary/10">
+            <Lock className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold">Sign in to start this lesson</h2>
+          <p className="text-sm text-muted-foreground">
+            Lesson content, quizzes, and XP are available to members. Join free to begin training.
+          </p>
+          <Button onClick={() => navigate('/auth', { state: { from: `/learn/${courseId ?? ''}/lesson/${lessonId ?? ''}` } })}>
+            Join free
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+          <Button variant="outline" onClick={() => navigate(courseId ? `/learn/${courseId}` : '/learn')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Course
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (isLoading) {
     return (

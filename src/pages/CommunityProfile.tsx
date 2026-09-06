@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { JoinCommunityButton } from '@/components/communities/JoinCommunityButton';
 import { MembershipReviewQueue } from '@/components/communities/MembershipReviewQueue';
 import { WorkOrderAssignmentManager } from '@/components/communities/WorkOrderAssignmentManager';
+import { JoinCtaBanner } from '@/components/marketplace/JoinCtaBanner';
+import { useAuth } from '@/contexts/AuthContext';
 import { useIsManager } from '@/hooks/useMembershipRequest';
 import { usePendingMembershipCount } from '@/hooks/usePendingMembershipCount';
 import { 
@@ -33,7 +35,8 @@ const CommunityProfile = () => {
   const [community, setCommunity] = useState<Tenant | null>(null);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const { user } = useAuth();
+
   // Manager hooks - called unconditionally, enabled based on community.id
   const { data: isManager } = useIsManager(community?.id);
   const { data: pendingCount = 0 } = usePendingMembershipCount(community?.id);
@@ -41,25 +44,36 @@ const CommunityProfile = () => {
   useEffect(() => {
     async function fetchCommunity() {
       if (!slug) return;
-      
+
       setIsLoading(true);
-      
-      // Fetch tenant by slug
-      const { data: tenantData } = await supabase
+
+      // Signed-in users (members/managers) get the full tenant row; anonymous
+      // visitors fall back to the safe public projection.
+      let tenantData: Record<string, unknown> | null = null;
+      const { data: fullRow } = await supabase
         .from('tenants')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
+      tenantData = fullRow;
+
+      if (!tenantData) {
+        const { data: publicRow } = await supabase
+          .from('public_communities')
+          .select('*')
+          .eq('slug', slug)
+          .maybeSingle();
+        tenantData = publicRow;
+      }
 
       if (tenantData) {
-        // Cast directly - Supabase returns matching shape
         setCommunity(tenantData as unknown as Tenant);
 
-        // Fetch work orders for this tenant
+        // Marketing-safe work order projection (curation still applied in the view)
         const { data: woData } = await supabase
-          .from('work_orders')
+          .from('public_work_orders')
           .select('*')
-          .eq('tenant_id', tenantData.id)
+          .eq('tenant_id', tenantData.id as string)
           .order('created_at', { ascending: false });
 
         if (woData) {
@@ -67,14 +81,14 @@ const CommunityProfile = () => {
             id: wo.id,
             tenant_id: wo.tenant_id,
             title: wo.title,
-            generated_name: (wo as { generated_name?: string | null }).generated_name ?? null,
+            generated_name: wo.generated_name ?? null,
             description: wo.description,
             game_title: wo.game_title as GameTitle,
-            success_criteria: (wo.success_criteria as Record<string, number>) || {},
+            success_criteria: {},
             is_active: wo.is_active ?? true,
             created_at: wo.created_at,
             cover_image_url: wo.cover_image_url,
-            metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
+            metadata: null,
           }));
           setWorkOrders(typedWorkOrders);
         }
@@ -226,6 +240,11 @@ const CommunityProfile = () => {
             <p className="text-xs text-muted-foreground">Work Orders</p>
           </div>
         </div>
+
+        {/* Signed-out conversion banner */}
+        {!user && (
+          <JoinCtaBanner message={`Create a free account to join ${community.name} and start training.`} />
+        )}
 
         {/* Content Tabs */}
         <Tabs defaultValue="events" className="mt-8">

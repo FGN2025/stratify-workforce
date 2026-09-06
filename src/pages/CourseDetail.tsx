@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useCourse } from '@/hooks/useCourses';
 import { useEnroll } from '@/hooks/useEnrollment';
 import { useAuth } from '@/contexts/AuthContext';
+import { JoinCtaBanner } from '@/components/marketplace/JoinCtaBanner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -165,6 +166,11 @@ export default function CourseDetail() {
           </CardContent>
         </Card>
 
+        {/* Signed-out conversion banner */}
+        {!user && (
+          <JoinCtaBanner message="Join free to enroll, complete lessons, and earn XP toward verifiable credentials." />
+        )}
+
         {/* Progress */}
         {course.enrolled && (
           <Card>
@@ -249,6 +255,8 @@ export default function CourseDetail() {
                           >
                             {isCompleted ? (
                               <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            ) : !user ? (
+                              <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
                             ) : (
                               <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
                             )}

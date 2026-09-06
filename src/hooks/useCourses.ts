@@ -79,33 +79,59 @@ export function useCourse(courseId: string | undefined) {
 
       if (modulesError) throw modulesError;
 
-      // Fetch lessons for all modules
+      // Fetch lessons for all modules. Signed-out visitors get the safe public
+      // outline (titles/types/XP only) — lesson content requires an account.
       const moduleIds = modules?.map((m) => m.id) || [];
       let lessons: Lesson[] = [];
 
       if (moduleIds.length > 0) {
-        const { data: lessonsData, error: lessonsError } = await supabase
-          .from('lessons')
-          .select('*')
-          .in('module_id', moduleIds)
-          .order('order_index');
+        if (user) {
+          const { data: lessonsData, error: lessonsError } = await supabase
+            .from('lessons')
+            .select('*')
+            .in('module_id', moduleIds)
+            .order('order_index');
 
-        if (lessonsError) throw lessonsError;
+          if (lessonsError) throw lessonsError;
 
-        lessons = (lessonsData || []).map((l) => ({
-          id: l.id,
-          module_id: l.module_id,
-          title: l.title,
-          lesson_type: l.lesson_type as LessonType,
-          content: (l.content as Record<string, unknown>) || {},
-          work_order_id: l.work_order_id,
-          duration_minutes: l.duration_minutes ?? 10,
-          xp_reward: l.xp_reward,
-          order_index: l.order_index,
-          passing_score: l.passing_score ?? 70,
-          created_at: l.created_at,
-          updated_at: l.updated_at,
-        }));
+          lessons = (lessonsData || []).map((l) => ({
+            id: l.id,
+            module_id: l.module_id,
+            title: l.title,
+            lesson_type: l.lesson_type as LessonType,
+            content: (l.content as Record<string, unknown>) || {},
+            work_order_id: l.work_order_id,
+            duration_minutes: l.duration_minutes ?? 10,
+            xp_reward: l.xp_reward,
+            order_index: l.order_index,
+            passing_score: l.passing_score ?? 70,
+            created_at: l.created_at,
+            updated_at: l.updated_at,
+          }));
+        } else {
+          const { data: outlineData, error: outlineError } = await supabase
+            .from('public_lesson_outlines')
+            .select('*')
+            .in('module_id', moduleIds)
+            .order('order_index');
+
+          if (outlineError) throw outlineError;
+
+          lessons = (outlineData || []).map((l) => ({
+            id: l.id,
+            module_id: l.module_id,
+            title: l.title,
+            lesson_type: l.lesson_type as LessonType,
+            content: {},
+            work_order_id: null,
+            duration_minutes: 0,
+            xp_reward: l.xp_reward,
+            order_index: l.order_index,
+            passing_score: 70,
+            created_at: '',
+            updated_at: '',
+          }));
+        }
       }
 
       // Fetch user progress if logged in

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useChannelSubscriptions } from './useChannelSubscriptions';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -31,16 +32,19 @@ export interface WorkOrderWithXP {
 
 export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
   const { tenant } = useTenant();
+  const { user } = useAuth();
   const { subscribedGames } = useChannelSubscriptions();
 
   return useQuery({
-    queryKey: ['work-orders', tenant?.id, filter, subscribedGames],
+    queryKey: ['work-orders', tenant?.id, filter, subscribedGames, user?.id ? 'auth' : 'anon'],
     queryFn: async () => {
-      let query = supabase
-        .from('work_orders')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      // Signed-out visitors read the safe public projection (no scoring,
+      // evidence, or integration internals). Curation is applied in the view.
+      let query = user
+        ? supabase.from('work_orders').select('*').eq('is_active', true)
+        : supabase.from('public_work_orders').select('*');
+
+      query = query.order('created_at', { ascending: false });
 
       // Filter by specific game title
       if (filter && filter !== 'all' && filter !== 'subscribed') {
@@ -53,32 +57,33 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
 
       // Tenant visibility is enforced by RLS via is_work_order_visible().
       // Client only filters by user-facing channel subscription preference.
-      let filtered = data || [];
+      const rows = (data || []) as Record<string, unknown>[];
+      let filtered = rows;
 
       if (filter === 'subscribed' && subscribedGames.length > 0) {
-        filtered = filtered.filter(wo => subscribedGames.includes(wo.game_title));
+        filtered = filtered.filter(wo => subscribedGames.includes(wo.game_title as GameTitle));
       }
 
 
       return filtered.map(wo => ({
-        id: wo.id,
-        tenant_id: wo.tenant_id,
-        title: wo.title,
-        generated_name: (wo as { generated_name?: string | null }).generated_name ?? null,
-        description: wo.description,
-        game_title: wo.game_title,
+        id: wo.id as string,
+        tenant_id: (wo.tenant_id as string | null) ?? null,
+        title: (wo.title as string | null) ?? null,
+        generated_name: (wo.generated_name as string | null) ?? null,
+        description: (wo.description as string | null) ?? null,
+        game_title: wo.game_title as GameTitle,
         success_criteria: (wo.success_criteria as Record<string, number>) || {},
-        is_active: wo.is_active ?? true,
-        created_at: wo.created_at,
-        xp_reward: wo.xp_reward,
-        channel_id: wo.channel_id,
-        difficulty: wo.difficulty,
-        estimated_time_minutes: wo.estimated_time_minutes,
-        max_attempts: wo.max_attempts,
+        is_active: (wo.is_active as boolean | null) ?? true,
+        created_at: wo.created_at as string,
+        xp_reward: (wo.xp_reward as number | null) ?? 0,
+        channel_id: (wo.channel_id as string | null) ?? null,
+        difficulty: wo.difficulty as WorkOrderDifficulty,
+        estimated_time_minutes: (wo.estimated_time_minutes as number | null) ?? null,
+        max_attempts: (wo.max_attempts as number | null) ?? null,
         evidence_requirements: (wo.evidence_requirements as Record<string, unknown>) || null,
-        cover_image_url: wo.cover_image_url,
-        source_challenge_id: wo.source_challenge_id,
-        fgn_origin_challenge_id: wo.fgn_origin_challenge_id,
+        cover_image_url: (wo.cover_image_url as string | null) ?? null,
+        source_challenge_id: (wo.source_challenge_id as string | null) ?? null,
+        fgn_origin_challenge_id: (wo.fgn_origin_challenge_id as string | null) ?? null,
         metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
       })) as WorkOrderWithXP[];
     },
