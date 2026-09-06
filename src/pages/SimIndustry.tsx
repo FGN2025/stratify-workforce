@@ -200,6 +200,11 @@ export default function SimIndustry() {
         </section>
 
         <div className="container mx-auto px-4 space-y-12">
+          {/* Signed-out conversion banner */}
+          {!user && (
+            <JoinCtaBanner message={`Join free to follow ${channel?.name ?? meta.title}, complete work orders, and earn credentials.`} />
+          )}
+
           {/* Curriculum */}
           <HorizontalCarousel
             title="Curriculum"

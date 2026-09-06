@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { JoinCommunityButton } from '@/components/communities/JoinCommunityButton';
 import { MembershipReviewQueue } from '@/components/communities/MembershipReviewQueue';
 import { WorkOrderAssignmentManager } from '@/components/communities/WorkOrderAssignmentManager';
+import { JoinCtaBanner } from '@/components/marketplace/JoinCtaBanner';
+import { useAuth } from '@/contexts/AuthContext';
 import { useIsManager } from '@/hooks/useMembershipRequest';
 import { usePendingMembershipCount } from '@/hooks/usePendingMembershipCount';
 import { 
@@ -33,7 +35,8 @@ const CommunityProfile = () => {
   const [community, setCommunity] = useState<Tenant | null>(null);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const { user } = useAuth();
+
   // Manager hooks - called unconditionally, enabled based on community.id
   const { data: isManager } = useIsManager(community?.id);
   const { data: pendingCount = 0 } = usePendingMembershipCount(community?.id);
@@ -237,6 +240,11 @@ const CommunityProfile = () => {
             <p className="text-xs text-muted-foreground">Work Orders</p>
           </div>
         </div>
+
+        {/* Signed-out conversion banner */}
+        {!user && (
+          <JoinCtaBanner message={`Create a free account to join ${community.name} and start training.`} />
+        )}
 
         {/* Content Tabs */}
         <Tabs defaultValue="events" className="mt-8">
