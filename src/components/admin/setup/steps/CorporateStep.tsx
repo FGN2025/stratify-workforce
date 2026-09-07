@@ -13,17 +13,17 @@ export function CorporateStep({ data, onChange }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Legal Name</Label>
-          <Input value={data.legal_name || ''} onChange={(e) => onChange({ legal_name: e.target.value })} placeholder="Cox Communications, Inc." />
+          <Input value={data.legal_name || ''} onChange={(e) => onChange({ legal_name: e.target.value })} placeholder="Acme Broadband, Inc." />
         </div>
         <div className="space-y-2">
           <Label>Doing Business As (DBA)</Label>
-          <Input value={data.dba || ''} onChange={(e) => onChange({ dba: e.target.value })} placeholder="COX" />
+          <Input value={data.dba || ''} onChange={(e) => onChange({ dba: e.target.value })} placeholder="Acme Broadband" />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label>Public Website</Label>
-        <Input value={data.website_url || ''} onChange={(e) => onChange({ website_url: e.target.value })} placeholder="https://www.cox.com" />
+        <Input value={data.website_url || ''} onChange={(e) => onChange({ website_url: e.target.value })} placeholder="https://www.acmebroadband.com" />
       </div>
 
       <div className="pt-2">
