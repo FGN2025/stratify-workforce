@@ -37,7 +37,7 @@ export function CommunityWorkOrdersPanel({ tenantId }: { tenantId: string }) {
         ...wo,
         evidence_requirements: wo.evidence_requirements as unknown as EvidenceRequirements | null,
         metadata: (wo.metadata as Record<string, unknown> | null) ?? null,
-      }));
+      })) as unknown as EditableWorkOrder[];
     },
   });
 
@@ -85,7 +85,7 @@ export function CommunityWorkOrdersPanel({ tenantId }: { tenantId: string }) {
                 className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{getWorkOrderDisplayName(wo)}</p>
+                  <p className="truncate text-sm font-medium">{getWorkOrderDisplayName(wo as Parameters<typeof getWorkOrderDisplayName>[0])}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">
                       {wo.game_title}
