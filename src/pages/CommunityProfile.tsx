@@ -110,7 +110,7 @@ const CommunityProfile = () => {
     }
 
     fetchCommunity();
-  }, [slug]);
+  }, [slug, user]);
 
   if (isLoading) {
     return (
