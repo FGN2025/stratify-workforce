@@ -71,28 +71,38 @@ const CommunityProfile = () => {
       if (tenantData) {
         setCommunity(tenantData as unknown as Tenant);
 
-        // Marketing-safe work order projection (curation still applied in the view)
-        const { data: woData } = await supabase
-          .from('public_work_orders')
-          .select('*')
-          .eq('tenant_id', tenantData.id as string)
-          .order('created_at', { ascending: false });
+        // Signed-in users see the full work order rows (RLS-scoped); anonymous
+        // visitors get the marketing-safe projection.
+        if (user) {
+          const { data: woFull } = await supabase
+            .from('work_orders')
+            .select('*')
+            .eq('tenant_id', tenantData.id as string)
+            .order('created_at', { ascending: false });
+          if (woFull) setWorkOrders(woFull as unknown as WorkOrder[]);
+        } else {
+          const { data: woData } = await supabase
+            .from('public_work_orders')
+            .select('*')
+            .eq('tenant_id', tenantData.id as string)
+            .order('created_at', { ascending: false });
 
-        if (woData) {
-          const typedWorkOrders: WorkOrder[] = woData.map(wo => ({
-            id: wo.id,
-            tenant_id: wo.tenant_id,
-            title: wo.title,
-            generated_name: wo.generated_name ?? null,
-            description: wo.description,
-            game_title: wo.game_title as GameTitle,
-            success_criteria: {},
-            is_active: wo.is_active ?? true,
-            created_at: wo.created_at,
-            cover_image_url: wo.cover_image_url,
-            metadata: null,
-          }));
-          setWorkOrders(typedWorkOrders);
+          if (woData) {
+            const typedWorkOrders: WorkOrder[] = woData.map(wo => ({
+              id: wo.id,
+              tenant_id: wo.tenant_id,
+              title: wo.title,
+              generated_name: wo.generated_name ?? null,
+              description: wo.description,
+              game_title: wo.game_title as GameTitle,
+              success_criteria: {},
+              is_active: wo.is_active ?? true,
+              created_at: wo.created_at,
+              cover_image_url: wo.cover_image_url,
+              metadata: null,
+            }));
+            setWorkOrders(typedWorkOrders);
+          }
         }
       }
 
