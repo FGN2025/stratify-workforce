@@ -81,9 +81,14 @@ export function CommunitiesAdminTable() {
                     /{t.slug} · {t.member_count ?? 0} member{(t.member_count ?? 0) === 1 ? '' : 's'}
                   </div>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => openAsAdmin(t)}>
-                  Open as admin <ExternalLink className="ml-2 h-3 w-3" />
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button size="sm" onClick={() => navigate(`/admin/community/${t.slug}`)}>
+                    Dashboard
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openAsAdmin(t)}>
+                    Open as admin <ExternalLink className="ml-2 h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             ))}
             {tenants.length === 0 && (
