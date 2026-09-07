@@ -50,12 +50,14 @@ const CommunityProfile = () => {
       // Signed-in users (members/managers) get the full tenant row; anonymous
       // visitors fall back to the safe public projection.
       let tenantData: Record<string, unknown> | null = null;
-      const { data: fullRow } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle();
-      tenantData = fullRow;
+      if (user) {
+        const { data: fullRow } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('slug', slug)
+          .maybeSingle();
+        tenantData = fullRow;
+      }
 
       if (!tenantData) {
         const { data: publicRow } = await supabase
