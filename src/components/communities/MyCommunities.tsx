@@ -120,12 +120,19 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
                       {statusConfig.label}
                     </Badge>
                     {isApproved && (
-                      <Link to={`/community/${community.slug}`}>
-                        <Button variant="ghost" size="sm">
-                          View
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </Link>
+                      <>
+                        <Link to={`/admin/community/${community.slug}`}>
+                          <Button variant="outline" size="sm">
+                            Manage
+                          </Button>
+                        </Link>
+                        <Link to={`/community/${community.slug}`}>
+                          <Button variant="ghost" size="sm">
+                            View
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </Link>
+                      </>
                     )}
                   </div>
                 </div>
