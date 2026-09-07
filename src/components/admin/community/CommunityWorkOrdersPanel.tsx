@@ -13,7 +13,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type Row = Database['public']['Tables']['work_orders']['Row'];
 
-type EditableWorkOrder = Row & {
+type EditableWorkOrder = Omit<Row, 'evidence_requirements' | 'metadata'> & {
   evidence_requirements: EvidenceRequirements | null;
   metadata: Record<string, unknown> | null;
 };
