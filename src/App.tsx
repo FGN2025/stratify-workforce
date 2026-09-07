@@ -47,6 +47,7 @@ import ChallengeRegistry from "./pages/ChallengeRegistry";
 import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
 import CourseBuilder from "./pages/admin/CourseBuilder";
 import CommunitySetup from "./pages/admin/CommunitySetup";
+import CommunityDashboard from "./pages/admin/CommunityDashboard";
 import Configurator from "./pages/admin/Configurator";
 import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
@@ -142,6 +143,9 @@ const App = () => (
               } />
               <Route path="/admin/community-setup" element={
                 <CommunityAdminRoute><CommunitySetup /></CommunityAdminRoute>
+              } />
+              <Route path="/admin/community/:slug" element={
+                <CommunityAdminRoute><CommunityDashboard /></CommunityAdminRoute>
               } />
               <Route path="/scorm-player/:courseId/launch" element={
                 <ProtectedRoute><ScormPlayerLaunch /></ProtectedRoute>
