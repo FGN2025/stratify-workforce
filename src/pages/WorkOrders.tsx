@@ -49,7 +49,10 @@ const WorkOrders = () => {
   const { data: communities = [] } = useQuery({
     queryKey: ['tenants'],
     queryFn: async () => {
-      const { data } = await supabase.from('tenants').select('*').order('name', { ascending: true });
+      const { data } = await supabase
+        .from('tenants')
+        .select('id, name, slug, brand_color, logo_url, created_at')
+        .order('name', { ascending: true });
       return (data || []).map((t) => ({
         id: t.id, name: t.name, slug: t.slug, brand_color: t.brand_color,
         logo_url: t.logo_url, created_at: t.created_at,

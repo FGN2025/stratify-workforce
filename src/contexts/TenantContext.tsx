@@ -126,11 +126,17 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     async function loadTenants() {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .order('hierarchy_level', { ascending: true })
-        .order('name');
+      // Signed-out visitors can only read the public marketing projection.
+      const { data, error } = user
+        ? await supabase
+            .from('tenants')
+            .select('*')
+            .order('hierarchy_level', { ascending: true })
+            .order('name')
+        : await supabase
+            .from('public_communities')
+            .select('*')
+            .order('name');
 
       if (error) {
         console.error('Error loading tenants:', error);
