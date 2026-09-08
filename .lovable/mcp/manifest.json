@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "fgn-academy-mcp",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "title": "FGN Academy"
     },
     "tools": [
@@ -221,6 +221,64 @@
               "description": "Include categories marked inactive."
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_courses",
+        "title": "List courses",
+        "description": "List courses visible to the signed-in user under RLS. Filter by tenant_id (community) to see one community's curriculum, e.g. Acme Broadband.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tenant_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Owning community UUID."
+            },
+            "is_published": {
+              "type": "boolean"
+            },
+            "limit": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "description": "Max rows (default 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_course",
+        "title": "Get course",
+        "description": "Return one course with its modules and lessons (including quiz question counts). RLS-scoped to the signed-in user.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Course UUID."
+            }
+          },
+          "required": [
+            "id"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
@@ -507,6 +565,199 @@
             },
             "is_active": {
               "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_course",
+        "title": "Create or update course",
+        "description": "Create a course for a community (pass tenant_id, e.g. Acme Broadband), or update one when `id` is supplied. Runs as the signed-in user, so RLS restricts writes to admins of the owning community.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Course UUID. Omit to create."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 2
+            },
+            "description": {
+              "type": "string"
+            },
+            "game_title": {
+              "type": "string",
+              "enum": [
+                "ATS",
+                "Farming_Sim",
+                "Construction_Sim",
+                "Mechanic_Sim",
+                "Fiber_Tech",
+                "Roadcraft",
+                "MSFS_2024",
+                "House_Flipper",
+                "House_Flipper_2",
+                "Electrician_Sim"
+              ]
+            },
+            "difficulty_level": {
+              "type": "string",
+              "enum": [
+                "beginner",
+                "intermediate",
+                "advanced"
+              ]
+            },
+            "xp_reward": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cover_image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "tenant_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Owning community; required when creating a community course."
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "tenant",
+                "private"
+              ]
+            },
+            "is_published": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_lesson",
+        "title": "Create or update lesson or quiz",
+        "description": "Create a lesson (or quiz) inside a course, or update one when `id` is supplied. Each lesson gets its own module, matching the platform's 1:1 curriculum structure. For quizzes pass `lesson_type: 'quiz'` and `questions`. Runs as the signed-in user, so RLS restricts writes to admins of the owning community.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Lesson UUID. Omit to create."
+            },
+            "course_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Course to add the lesson to. Required when creating."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 2
+            },
+            "lesson_type": {
+              "type": "string",
+              "enum": [
+                "video",
+                "reading",
+                "quiz",
+                "simulation",
+                "work_order"
+              ]
+            },
+            "xp_reward": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "passing_score": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Percent needed to pass a quiz."
+            },
+            "order_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "work_order_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Link the lesson to a work order (challenge)."
+            },
+            "frame": {
+              "type": "string",
+              "description": "Framing text shown before the activity."
+            },
+            "play": {
+              "type": "string",
+              "description": "Instructions for the hands-on step."
+            },
+            "prove": {
+              "type": "string",
+              "description": "What the learner must demonstrate."
+            },
+            "questions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Stable question id; generated when omitted."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 2
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 8
+                  },
+                  "correct_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Zero-based index of the correct option."
+                  },
+                  "explanation": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "prompt",
+                  "options",
+                  "correct_index"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Quiz questions; replaces existing questions."
             }
           },
           "additionalProperties": false,
