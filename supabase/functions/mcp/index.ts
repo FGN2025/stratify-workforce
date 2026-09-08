@@ -638,13 +638,256 @@ var upsert_work_order_default = defineTool13({
   }
 });
 
+// src/lib/mcp/tools/list-courses.ts
+import { defineTool as defineTool14 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z12 } from "npm:zod@^3.25.76";
+var list_courses_default = defineTool14({
+  name: "list_courses",
+  title: "List courses",
+  description: "List courses visible to the signed-in user under RLS. Filter by tenant_id (community) to see one community's curriculum, e.g. Acme Broadband.",
+  inputSchema: {
+    tenant_id: z12.string().uuid().optional().describe("Owning community UUID."),
+    is_published: z12.boolean().optional(),
+    limit: z12.number().int().positive().max(100).optional().describe("Max rows (default 25, max 100).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ tenant_id, is_published, limit }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser9(ctx);
+    let query = supabase.from("courses").select(
+      "id, title, description, game_title, difficulty_level, xp_reward, is_published, visibility, tenant_id, owner_tenant_id, created_at"
+    ).order("created_at", { ascending: false }).limit(limit ?? 25);
+    if (tenant_id) query = query.eq("tenant_id", tenant_id);
+    if (is_published !== void 0) query = query.eq("is_published", is_published);
+    const { data, error } = await query;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
+      structuredContent: { courses: data ?? [] }
+    };
+  }
+});
+
+// src/lib/mcp/tools/get-course.ts
+import { defineTool as defineTool15 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z13 } from "npm:zod@^3.25.76";
+var get_course_default = defineTool15({
+  name: "get_course",
+  title: "Get course",
+  description: "Return one course with its modules and lessons (including quiz question counts). RLS-scoped to the signed-in user.",
+  inputSchema: { id: z13.string().uuid().describe("Course UUID.") },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ id }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser9(ctx);
+    const { data: course, error } = await supabase.from("courses").select(
+      "id, title, description, game_title, difficulty_level, xp_reward, is_published, visibility, tenant_id, owner_tenant_id"
+    ).eq("id", id).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!course) return { content: [{ type: "text", text: "Course not found" }], isError: true };
+    const { data: modules } = await supabase.from("modules").select("id, title, description, order_index, xp_reward").eq("course_id", id).order("order_index");
+    const moduleIds = (modules ?? []).map((m) => m.id);
+    const { data: lessons } = moduleIds.length ? await supabase.from("lessons").select("id, module_id, title, lesson_type, order_index, xp_reward, passing_score, work_order_id, content").in("module_id", moduleIds).order("order_index") : { data: [] };
+    const shaped = (modules ?? []).map((m) => ({
+      ...m,
+      lessons: (lessons ?? []).filter((l) => l.module_id === m.id).map((l) => ({
+        ...l,
+        question_count: Array.isArray(l.content?.questions) ? l.content.questions.length : 0
+      }))
+    }));
+    const payload = { course, modules: shaped };
+    return {
+      content: [{ type: "text", text: JSON.stringify(payload) }],
+      structuredContent: payload
+    };
+  }
+});
+
+// src/lib/mcp/tools/upsert-course.ts
+import { defineTool as defineTool16 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z14 } from "npm:zod@^3.25.76";
+var GAME_TITLES3 = [
+  "ATS",
+  "Farming_Sim",
+  "Construction_Sim",
+  "Mechanic_Sim",
+  "Fiber_Tech",
+  "Roadcraft",
+  "MSFS_2024",
+  "House_Flipper",
+  "House_Flipper_2",
+  "Electrician_Sim"
+];
+var upsert_course_default = defineTool16({
+  name: "upsert_course",
+  title: "Create or update course",
+  description: "Create a course for a community (pass tenant_id, e.g. Acme Broadband), or update one when `id` is supplied. Runs as the signed-in user, so RLS restricts writes to admins of the owning community.",
+  inputSchema: {
+    id: z14.string().uuid().optional().describe("Course UUID. Omit to create."),
+    title: z14.string().trim().min(2).optional(),
+    description: z14.string().trim().optional(),
+    game_title: z14.enum(GAME_TITLES3).optional(),
+    difficulty_level: z14.enum(["beginner", "intermediate", "advanced"]).optional(),
+    xp_reward: z14.number().int().min(0).optional(),
+    cover_image_url: z14.string().url().optional(),
+    tenant_id: z14.string().uuid().optional().describe("Owning community; required when creating a community course."),
+    visibility: z14.enum(["public", "tenant", "private"]).optional(),
+    is_published: z14.boolean().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  handler: async ({ id, ...input }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const fields = Object.fromEntries(
+      Object.entries(input).filter(([, v]) => v !== void 0)
+    );
+    if (Object.keys(fields).length === 0) {
+      return { content: [{ type: "text", text: "Nothing to write" }], isError: true };
+    }
+    if (fields.tenant_id && !fields.owner_tenant_id) fields.owner_tenant_id = fields.tenant_id;
+    const supabase = supabaseForUser9(ctx);
+    const selection = "id, title, description, game_title, difficulty_level, xp_reward, is_published, visibility, tenant_id, owner_tenant_id";
+    if (id) {
+      const { data: data2, error: error2 } = await supabase.from("courses").update(fields).eq("id", id).select(selection).maybeSingle();
+      if (error2) return { content: [{ type: "text", text: error2.message }], isError: true };
+      if (!data2) {
+        return {
+          content: [{ type: "text", text: "Course not found or not editable by this user." }],
+          isError: true
+        };
+      }
+      return { content: [{ type: "text", text: JSON.stringify(data2) }], structuredContent: { course: data2 } };
+    }
+    if (!fields.title) {
+      return { content: [{ type: "text", text: "title is required when creating a course." }], isError: true };
+    }
+    const { data, error } = await supabase.from("courses").insert(fields).select(selection).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return { content: [{ type: "text", text: JSON.stringify(data) }], structuredContent: { course: data } };
+  }
+});
+
+// src/lib/mcp/tools/upsert-lesson.ts
+import { defineTool as defineTool17 } from "npm:@lovable.dev/mcp-js@0.22.2";
+import { z as z15 } from "npm:zod@^3.25.76";
+var questionSchema = z15.object({
+  id: z15.string().trim().min(1).optional().describe("Stable question id; generated when omitted."),
+  prompt: z15.string().trim().min(2),
+  options: z15.array(z15.string().trim().min(1)).min(2).max(8),
+  correct_index: z15.number().int().min(0).describe("Zero-based index of the correct option."),
+  explanation: z15.string().trim().optional()
+});
+var upsert_lesson_default = defineTool17({
+  name: "upsert_lesson",
+  title: "Create or update lesson or quiz",
+  description: "Create a lesson (or quiz) inside a course, or update one when `id` is supplied. Each lesson gets its own module, matching the platform's 1:1 curriculum structure. For quizzes pass `lesson_type: 'quiz'` and `questions`. Runs as the signed-in user, so RLS restricts writes to admins of the owning community.",
+  inputSchema: {
+    id: z15.string().uuid().optional().describe("Lesson UUID. Omit to create."),
+    course_id: z15.string().uuid().optional().describe("Course to add the lesson to. Required when creating."),
+    title: z15.string().trim().min(2).optional(),
+    lesson_type: z15.enum(["video", "reading", "quiz", "simulation", "work_order"]).optional(),
+    xp_reward: z15.number().int().min(0).optional(),
+    passing_score: z15.number().int().min(0).max(100).optional().describe("Percent needed to pass a quiz."),
+    order_index: z15.number().int().min(0).optional(),
+    work_order_id: z15.string().uuid().optional().describe("Link the lesson to a work order (challenge)."),
+    frame: z15.string().trim().optional().describe("Framing text shown before the activity."),
+    play: z15.string().trim().optional().describe("Instructions for the hands-on step."),
+    prove: z15.string().trim().optional().describe("What the learner must demonstrate."),
+    questions: z15.array(questionSchema).optional().describe("Quiz questions; replaces existing questions.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  handler: async ({ id, course_id, frame, play, prove, questions, ...input }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser9(ctx);
+    const selection = "id, module_id, title, lesson_type, order_index, xp_reward, passing_score, work_order_id, content";
+    const buildContent = (existing) => {
+      const content2 = { ...existing ?? {} };
+      if (frame !== void 0) content2.frame = frame;
+      if (play !== void 0) content2.play = play;
+      if (prove !== void 0) content2.prove = prove;
+      if (frame !== void 0 || play !== void 0 || prove !== void 0) content2.tier = "light";
+      if (questions !== void 0) {
+        content2.questions = questions.map((q, i) => ({
+          id: q.id ?? `q${i + 1}`,
+          prompt: q.prompt,
+          options: q.options,
+          correct_index: q.correct_index,
+          ...q.explanation ? { explanation: q.explanation } : {}
+        }));
+      }
+      return Object.keys(content2).length ? content2 : null;
+    };
+    const fields = Object.fromEntries(
+      Object.entries(input).filter(([, v]) => v !== void 0)
+    );
+    if (id) {
+      const { data: existing, error: readErr } = await supabase.from("lessons").select("content").eq("id", id).maybeSingle();
+      if (readErr) return { content: [{ type: "text", text: readErr.message }], isError: true };
+      if (!existing) {
+        return { content: [{ type: "text", text: "Lesson not found or not visible to this user." }], isError: true };
+      }
+      const content2 = buildContent(existing.content);
+      if (content2) fields.content = content2;
+      if (Object.keys(fields).length === 0) {
+        return { content: [{ type: "text", text: "Nothing to write" }], isError: true };
+      }
+      const { data: data2, error: error2 } = await supabase.from("lessons").update(fields).eq("id", id).select(selection).maybeSingle();
+      if (error2) return { content: [{ type: "text", text: error2.message }], isError: true };
+      if (!data2) {
+        return { content: [{ type: "text", text: "Lesson not editable by this user." }], isError: true };
+      }
+      return { content: [{ type: "text", text: JSON.stringify(data2) }], structuredContent: { lesson: data2 } };
+    }
+    if (!course_id || !fields.title) {
+      return {
+        content: [{ type: "text", text: "course_id and title are required when creating a lesson." }],
+        isError: true
+      };
+    }
+    const { count } = await supabase.from("modules").select("id", { count: "exact", head: true }).eq("course_id", course_id);
+    const orderIndex = fields.order_index ?? count ?? 0;
+    const { data: moduleRow, error: moduleErr } = await supabase.from("modules").insert({
+      course_id,
+      title: fields.title,
+      order_index: orderIndex,
+      xp_reward: fields.xp_reward ?? 0
+    }).select("id").maybeSingle();
+    if (moduleErr) return { content: [{ type: "text", text: moduleErr.message }], isError: true };
+    if (!moduleRow) {
+      return {
+        content: [{ type: "text", text: "Could not create the module for this lesson (check admin permissions)." }],
+        isError: true
+      };
+    }
+    const content = buildContent(null);
+    const { data, error } = await supabase.from("lessons").insert({
+      ...fields,
+      module_id: moduleRow.id,
+      order_index: 0,
+      ...content ? { content } : {}
+    }).select(selection).maybeSingle();
+    if (error) {
+      await supabase.from("modules").delete().eq("id", moduleRow.id);
+      return { content: [{ type: "text", text: error.message }], isError: true };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(data) }], structuredContent: { lesson: data } };
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "vfzjfkcwromssjnlrhoo";
 var mcp_default = defineMcp({
   name: "fgn-academy-mcp",
   title: "FGN Academy",
-  version: "0.3.0",
-  instructions: "Tools for the FGN Academy workforce training platform. Read the signed-in user's profile, work orders, community memberships, tenants, games catalog, industry SIM categories, challenges, and skill passport \u2014 and, for admins, create or update communities, SIM categories, and work orders. All calls run as the authenticated user under row-level security.",
+  version: "0.4.0",
+  instructions: "Tools for the FGN Academy workforce training platform. Read the signed-in user's profile, work orders, community memberships, tenants, games catalog, industry SIM categories, challenges, courses and skill passport \u2014 and, for admins, create or update communities, SIM categories, work orders, courses, lessons and quizzes for a specific community. All calls run as the authenticated user under row-level security.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
@@ -659,10 +902,14 @@ var mcp_default = defineMcp({
     get_challenge_default,
     get_passport_default,
     list_sim_categories_default,
+    list_courses_default,
+    get_course_default,
     create_community_default,
     update_community_default,
     upsert_sim_category_default,
-    upsert_work_order_default
+    upsert_work_order_default,
+    upsert_course_default,
+    upsert_lesson_default
   ]
 });
 
