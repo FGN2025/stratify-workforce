@@ -125,7 +125,7 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
                     </Badge>
                     {isApproved && (
                       <>
-                        {isOwner && (
+                        {canManage && (
                           <Link to={`/admin/community/${community.slug}`}>
                             <Button variant="outline" size="sm">
                               Manage
