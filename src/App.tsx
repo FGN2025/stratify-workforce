@@ -144,8 +144,9 @@ const App = () => (
               <Route path="/admin/community-setup" element={
                 <CommunityAdminRoute><CommunitySetup /></CommunityAdminRoute>
               } />
+              {/* Slug-scoped: the dashboard itself verifies admin rights for that community */}
               <Route path="/admin/community/:slug" element={
-                <CommunityAdminRoute><CommunityDashboard /></CommunityAdminRoute>
+                <ProtectedRoute><CommunityDashboard /></ProtectedRoute>
               } />
               <Route path="/scorm-player/:courseId/launch" element={
                 <ProtectedRoute><ScormPlayerLaunch /></ProtectedRoute>
