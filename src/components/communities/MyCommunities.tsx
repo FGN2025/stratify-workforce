@@ -96,6 +96,7 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
               const statusConfig = STATUS_CONFIG[community.approval_status];
               const StatusIcon = statusConfig.icon;
               const isApproved = community.approval_status === 'approved';
+              const isOwner = community.owner_id === user?.id;
 
               return (
                 <div
@@ -121,11 +122,13 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
                     </Badge>
                     {isApproved && (
                       <>
-                        <Link to={`/admin/community/${community.slug}`}>
-                          <Button variant="outline" size="sm">
-                            Manage
-                          </Button>
-                        </Link>
+                        {isOwner && (
+                          <Link to={`/admin/community/${community.slug}`}>
+                            <Button variant="outline" size="sm">
+                              Manage
+                            </Button>
+                          </Link>
+                        )}
                         <Link to={`/community/${community.slug}`}>
                           <Button variant="ghost" size="sm">
                             View
