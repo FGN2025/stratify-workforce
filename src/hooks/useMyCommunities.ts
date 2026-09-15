@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Tenant } from '@/types/tenant';
+import type { Tenant, MembershipRole } from '@/types/tenant';
+
+export type MyCommunity = Tenant & { membership_role?: MembershipRole | null };
 
 export function useMyCommunities() {
   const { user } = useAuth();
@@ -9,7 +11,7 @@ export function useMyCommunities() {
 
   const { data: myCommunities = [], isLoading, error } = useQuery({
     queryKey: ['my-communities', user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<MyCommunity[]> => {
       if (!user) return [];
 
       // Fetch owned communities
@@ -21,14 +23,18 @@ export function useMyCommunities() {
 
       if (ownedErr) throw ownedErr;
 
-      // Fetch communities where user is an approved member
+      // Fetch communities where user is an approved member (with role)
       const { data: memberships, error: memberErr } = await supabase
         .from('community_memberships')
-        .select('tenant_id')
+        .select('tenant_id, role')
         .eq('user_id', user.id)
         .eq('request_status', 'approved');
 
       if (memberErr) throw memberErr;
+
+      const roleByTenant = new Map(
+        (memberships || []).map(m => [m.tenant_id, m.role as MembershipRole | null])
+      );
 
       const ownedIds = new Set((owned || []).map(t => t.id));
       const memberTenantIds = (memberships || [])
@@ -47,8 +53,12 @@ export function useMyCommunities() {
         memberTenants = (tenants || []) as unknown as Tenant[];
       }
 
-      const ownedTyped = (owned || []) as unknown as Tenant[];
-      return [...ownedTyped, ...memberTenants];
+      const ownedTyped = (owned || []) as unknown as MyCommunity[];
+      const memberTyped = memberTenants.map(t => ({
+        ...t,
+        membership_role: roleByTenant.get(t.id) ?? null,
+      })) as MyCommunity[];
+      return [...ownedTyped, ...memberTyped];
     },
     enabled: !!user,
   });
