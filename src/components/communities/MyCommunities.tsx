@@ -96,7 +96,10 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
               const statusConfig = STATUS_CONFIG[community.approval_status];
               const StatusIcon = statusConfig.icon;
               const isApproved = community.approval_status === 'approved';
-              const isOwner = community.owner_id === user?.id;
+              const canManage =
+                community.owner_id === user?.id ||
+                community.membership_role === 'admin' ||
+                community.membership_role === 'owner';
 
               return (
                 <div
