@@ -1,5 +1,6 @@
 import { useMyCommunities } from '@/hooks/useMyCommunities';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -53,6 +54,7 @@ interface MyCommunitiesProps {
 export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
   const { user } = useAuth();
   const { myCommunities, isLoading } = useMyCommunities();
+  const { isAdmin: isPlatformAdmin } = useUserRole();
 
   if (!user) return null;
 
@@ -96,7 +98,11 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
               const statusConfig = STATUS_CONFIG[community.approval_status];
               const StatusIcon = statusConfig.icon;
               const isApproved = community.approval_status === 'approved';
-              const isOwner = community.owner_id === user?.id;
+              const canManage =
+                isPlatformAdmin ||
+                community.owner_id === user?.id ||
+                community.membership_role === 'admin' ||
+                community.membership_role === 'owner';
 
               return (
                 <div
@@ -122,7 +128,7 @@ export function MyCommunities({ onCreateClick }: MyCommunitiesProps) {
                     </Badge>
                     {isApproved && (
                       <>
-                        {isOwner && (
+                        {canManage && (
                           <Link to={`/admin/community/${community.slug}`}>
                             <Button variant="outline" size="sm">
                               Manage
