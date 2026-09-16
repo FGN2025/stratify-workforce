@@ -4387,6 +4387,22 @@ export type Database = {
           work_order_id: string
         }[]
       }
+      get_event_participants: {
+        Args: { p_event_id: string }
+        Returns: {
+          avatar_url: string
+          registered_at: string
+          user_id: string
+          username: string
+        }[]
+      }
+      get_event_registration_counts: {
+        Args: { p_event_ids: string[] }
+        Returns: {
+          event_id: string
+          registration_count: number
+        }[]
+      }
       get_leaderboard_data:
         | {
             Args: never
