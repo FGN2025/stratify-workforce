@@ -98,42 +98,23 @@ export function useEventRegistrations(eventId: string | undefined) {
     queryKey: ['event-registrations', eventId],
     enabled: !!eventId,
     queryFn: async () => {
-      const { data: registrations, error } = await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', eventId!)
-        .eq('status', 'registered')
-        .order('registered_at', { ascending: true });
+      const { data: participants, error } = await supabase
+        .rpc('get_event_participants', { p_event_id: eventId! });
 
       if (error) throw error;
 
-      // Get profile data for registered users
-      const userIds = (registrations || []).map(r => r.user_id);
-      
-      if (userIds.length === 0) {
-        return [] as EventRegistrationWithUser[];
-      }
-
-      const { data: profiles } = await supabase
-        .rpc('get_public_profile_data', { profile_ids: userIds });
-
-      const profileMap: Record<string, { id: string; username: string | null; avatar_url: string | null }> = {};
-      (profiles || []).forEach(p => {
-        profileMap[p.id] = {
-          id: p.id,
+      return (participants || []).map(p => ({
+        id: `${eventId}:${p.user_id}`,
+        event_id: eventId!,
+        user_id: p.user_id,
+        registered_at: p.registered_at,
+        status: 'registered' as RegistrationStatus,
+        bracket_seed: null,
+        profile: {
+          id: p.user_id,
           username: p.username,
           avatar_url: p.avatar_url,
-        };
-      });
-
-      return (registrations || []).map(reg => ({
-        id: reg.id,
-        event_id: reg.event_id,
-        user_id: reg.user_id,
-        registered_at: reg.registered_at,
-        status: reg.status as RegistrationStatus,
-        bracket_seed: reg.bracket_seed,
-        profile: profileMap[reg.user_id],
+        },
       })) as EventRegistrationWithUser[];
     },
   });

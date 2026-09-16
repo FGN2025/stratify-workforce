@@ -114,15 +114,12 @@ export function EventsManager() {
       // Fetch registration counts
       const eventIds = eventsData?.map(e => e.id) || [];
       const { data: regCounts } = await supabase
-        .from('event_registrations')
-        .select('event_id')
-        .in('event_id', eventIds)
-        .eq('status', 'registered');
+        .rpc('get_event_registration_counts', { p_event_ids: eventIds });
 
       // Count registrations per event
       const countMap = new Map<string, number>();
       regCounts?.forEach(r => {
-        countMap.set(r.event_id, (countMap.get(r.event_id) || 0) + 1);
+        countMap.set(r.event_id, Number(r.registration_count) || 0);
       });
 
       const eventsWithCounts = eventsData?.map(e => ({
