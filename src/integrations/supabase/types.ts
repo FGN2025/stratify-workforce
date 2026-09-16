@@ -4423,6 +4423,11 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: {
           dba: string
+          hq_city: string
+          hq_country: string
+          hq_state: string
+          hq_street: string
+          hq_zip: string
           legal_name: string
           primary_contact_email: string
           primary_contact_name: string
