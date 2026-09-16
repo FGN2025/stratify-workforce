@@ -53,13 +53,21 @@ Deno.serve(async (req) => {
 
     const playFgnResult = await testEcosystemDataApi();
 
+    // Prefer a pasted authorized-app key (X-App-Key). Otherwise fall back to the
+    // stored ECOSYSTEM_API_KEY (X-Ecosystem-Key), which sync-challenge-completion
+    // also accepts — this validates the rotated ecosystem key end to end.
     let syncResult: { status: string; latency_ms: number; error?: string } = {
       status: "skipped",
       latency_ms: 0,
-      error: "No API key provided — sync endpoint test skipped",
+      error: "No API key provided and ECOSYSTEM_API_KEY not configured — sync endpoint test skipped",
     };
     if (apiKey) {
-      syncResult = await testSyncEndpoint(supabaseUrl, authHeader, apiKey);
+      syncResult = await testSyncEndpoint(supabaseUrl, authHeader, apiKey, "x-app-key");
+    } else {
+      const ecosystemKey = Deno.env.get("ECOSYSTEM_API_KEY");
+      if (ecosystemKey) {
+        syncResult = await testSyncEndpoint(supabaseUrl, authHeader, ecosystemKey, "x-ecosystem-key");
+      }
     }
 
     return new Response(
