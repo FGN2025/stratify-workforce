@@ -67,15 +67,12 @@ export function useEvents(filters?: EventFilters) {
       // Get registration counts for each event
       const eventIds = filtered.map(e => e.id);
       const { data: registrations } = await supabase
-        .from('event_registrations')
-        .select('event_id')
-        .in('event_id', eventIds)
-        .eq('status', 'registered');
+        .rpc('get_event_registration_counts', { p_event_ids: eventIds });
 
       // Count registrations per event
       const regCounts: Record<string, number> = {};
       (registrations || []).forEach(reg => {
-        regCounts[reg.event_id] = (regCounts[reg.event_id] || 0) + 1;
+        regCounts[reg.event_id] = Number(reg.registration_count) || 0;
       });
 
       return filtered.map(event => ({
