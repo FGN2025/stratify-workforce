@@ -39,11 +39,9 @@ export function useEventById(id: string | undefined) {
       if (error) throw error;
 
       // Get registration count
-      const { count } = await supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', id!)
-        .eq('status', 'registered');
+      const { data: countRows } = await supabase
+        .rpc('get_event_registration_counts', { p_event_ids: [id!] });
+      const count = Number(countRows?.[0]?.registration_count ?? 0);
 
       // Get winner profile if exists
       let winnerProfile = null;
