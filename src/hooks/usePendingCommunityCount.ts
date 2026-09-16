@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function usePendingCommunityCount() {
+  const { user } = useAuth();
+
   return useQuery({
-    queryKey: ['pending-community-count'],
+    queryKey: ['pending-community-count', user?.id],
+    enabled: !!user,
     queryFn: async () => {
       const { count, error } = await supabase
         .from('tenants')
