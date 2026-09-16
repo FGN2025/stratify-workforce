@@ -144,6 +144,7 @@ async function testSyncEndpoint(
   supabaseUrl: string,
   authHeader: string,
   apiKey: string,
+  keyHeader: "x-app-key" | "x-ecosystem-key" = "x-app-key",
 ): Promise<{ status: string; latency_ms: number; error?: string }> {
   const start = performance.now();
   try {
@@ -154,7 +155,7 @@ async function testSyncEndpoint(
         headers: {
           "Content-Type": "application/json",
           Authorization: authHeader,
-          "X-App-Key": apiKey,
+          [keyHeader]: apiKey,
         },
         body: JSON.stringify({
           user_email: "health-check-probe@invalid.test",
