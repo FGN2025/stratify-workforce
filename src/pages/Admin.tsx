@@ -23,6 +23,7 @@ import { NotebookTelemetryDashboard } from '@/components/admin/NotebookTelemetry
 import { ChallengeSyncTester } from '@/components/admin/ChallengeSyncTester';
 import { CareerPathsManager } from '@/components/admin/CareerPathsManager';
 import { IntegrationHealthCheck } from '@/components/admin/IntegrationHealthCheck';
+import { PlayOutboundPanel } from '@/components/admin/PlayOutboundPanel';
 import { ChallengeLessonMappingsManager } from '@/components/admin/ChallengeLessonMappingsManager';
 import { ChallengeTrackMembershipManager } from '@/components/admin/ChallengeTrackMembershipManager';
 import { BreakroomMapperManager } from '@/components/admin/BreakroomMapperManager';
