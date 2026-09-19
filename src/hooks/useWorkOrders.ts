@@ -40,18 +40,27 @@ export function useWorkOrders(filter?: 'all' | 'subscribed' | GameTitle) {
     queryFn: async () => {
       // Signed-out visitors read the safe public projection (no scoring,
       // evidence, or integration internals). Curation is applied in the view.
-      let query = user
-        ? supabase.from('work_orders').select('*').eq('is_active', true)
-        : supabase.from('public_work_orders').select('*');
+      const buildQuery = (useBase: boolean) => {
+        let q = useBase
+          ? supabase.from('work_orders').select('*').eq('is_active', true)
+          : supabase.from('public_work_orders').select('*');
 
-      query = query.order('created_at', { ascending: false });
+        q = q.order('created_at', { ascending: false });
 
-      // Filter by specific game title
-      if (filter && filter !== 'all' && filter !== 'subscribed') {
-        query = query.eq('game_title', filter);
+        // Filter by specific game title
+        if (filter && filter !== 'all' && filter !== 'subscribed') {
+          q = q.eq('game_title', filter);
+        }
+        return q;
+      };
+
+      let { data, error } = await buildQuery(!!user);
+
+      // A stale/expired session can leave `user` set while the request is sent
+      // anonymously; fall back to the public projection instead of erroring.
+      if (error && (error as { code?: string }).code === '42501') {
+        ({ data, error } = await buildQuery(false));
       }
-
-      const { data, error } = await query;
 
       if (error) throw error;
 
