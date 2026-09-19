@@ -1530,6 +1530,48 @@ export type Database = {
           },
         ]
       }
+      play_outbound_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          event_type: string
+          id: string
+          last_error: string | null
+          payload: Json
+          status: string
+          updated_at: string
+          user_id: string | null
+          work_order_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_type: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          work_order_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          work_order_id?: string | null
+        }
+        Relationships: []
+      }
       play_poll_cursor: {
         Row: {
           action: string
