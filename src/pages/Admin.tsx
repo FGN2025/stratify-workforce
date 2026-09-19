@@ -280,6 +280,7 @@ export default function Admin() {
         return isSuperAdmin ? (
           <div className="space-y-6">
             <IntegrationHealthCheck />
+            <PlayOutboundPanel />
             <ChallengeSyncTester />
           </div>
         ) : <AccessDenied />;
