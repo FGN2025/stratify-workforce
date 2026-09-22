@@ -148,6 +148,45 @@ Deno.serve(async (req) => {
       return json({ ok: true, work_order_id: woId, simulation_activity_id: targetId });
     }
 
+    // ------------------------------------------- accept_multi_interpretation
+    // Architectural rule: ONE canonical Simulation Activity MAY support MULTIPLE
+    // Academy Work Orders when those Work Orders represent materially different
+    // educational interpretations of the same underlying simulated activity.
+    // simulation_activity_id = what occurred in the simulation.
+    // work_order_id          = the educational interpretation of that activity.
+    // An admin explicitly accepts the set; nothing here is automatic, and only
+    // the identity column is written.
+    if (action === 'accept_multi_interpretation') {
+      const ids = Array.isArray(body.work_order_ids) ? body.work_order_ids : [];
+      const activityId = body.simulation_activity_id;
+      if (ids.length < 2 || ids.some((i) => typeof i !== 'string' || !UUID_RE.test(i))) {
+        return json({ error: 'work_order_ids must be two or more UUIDs' }, 400);
+      }
+      if (typeof activityId !== 'string' || !UUID_RE.test(activityId)) {
+        return json({ error: 'simulation_activity_id must be a UUID' }, 400);
+      }
+
+      const { error: updErr } = await admin
+        .from('work_orders')
+        .update({ simulation_activity_id: activityId })
+        .in('id', ids);
+      if (updErr) return json({ error: updErr.message }, 500);
+
+      const { error: recErr } = await admin
+        .from('simulation_activity_reconciliation')
+        .update({
+          status: 'ACCEPTED_MULTI_INTERPRETATION',
+          resolved: true,
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          reopened_at: null,
+        })
+        .in('work_order_id', ids);
+      if (recErr) return json({ error: recErr.message }, 500);
+
+      return json({ ok: true, simulation_activity_id: activityId, work_order_ids: ids });
+    }
+
     // --------------------------------------------------------------- set_status
     // Admin marks a proposal resolved/unresolved without changing identity.
     if (action === 'set_status') {
