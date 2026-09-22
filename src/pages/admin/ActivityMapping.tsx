@@ -9,10 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, RefreshCw, Check, Link2Off } from 'lucide-react';
+import { Loader2, RefreshCw, Check, Link2Off, Layers } from 'lucide-react';
 
 type Status =
   | 'MATCHED'
+  | 'ACCEPTED_MULTI_INTERPRETATION'
   | 'ACADEMY_NATIVE'
   | 'NEEDS_REVIEW'
   | 'LEGACY_SOURCE'
@@ -22,6 +23,7 @@ type Status =
 const STATUS_ORDER: Status[] = [
   'NEEDS_REVIEW',
   'MATCHED',
+  'ACCEPTED_MULTI_INTERPRETATION',
   'ACADEMY_NATIVE',
   'LEGACY_SOURCE',
   'ORPHANED_SOURCE',
@@ -30,6 +32,7 @@ const STATUS_ORDER: Status[] = [
 
 const STATUS_STYLE: Record<Status, string> = {
   MATCHED: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  ACCEPTED_MULTI_INTERPRETATION: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
   ACADEMY_NATIVE: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
   NEEDS_REVIEW: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   LEGACY_SOURCE: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
@@ -39,6 +42,7 @@ const STATUS_STYLE: Record<Status, string> = {
 
 const STATUS_HELP: Record<Status, string> = {
   MATCHED: 'A single FGN.GG canonical activity resolves deterministically from recorded source identifiers.',
+  ACCEPTED_MULTI_INTERPRETATION: 'Several work orders share one canonical activity because they are materially different educational interpretations of the same simulated activity. This is a valid resolved state and is not surfaced for review again.',
   ACADEMY_NATIVE: 'Academy-authored work order with no game challenge behind it. This is a valid resolved state.',
   NEEDS_REVIEW: 'Identity cannot be resolved without a human decision.',
   LEGACY_SOURCE: 'Carries an Academy-side source identifier only, with no recorded FGN.GG lineage.',
@@ -137,6 +141,25 @@ export default function ActivityMapping() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const acceptMulti = useMutation({
+    mutationFn: async (vars: { workOrderIds: string[]; activityId: string }) => {
+      const { data, error } = await supabase.functions.invoke('reconcile-simulation-activities', {
+        body: {
+          action: 'accept_multi_interpretation',
+          work_order_ids: vars.workOrderIds,
+          simulation_activity_id: vars.activityId,
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Accepted as multiple interpretations of one activity.');
+      queryClient.invalidateQueries({ queryKey: ['activity-mapping'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const setStatus = useMutation({
     mutationFn: async (vars: { workOrderId: string; status: Status }) => {
       const { data, error } = await supabase.functions.invoke('reconcile-simulation-activities', {
@@ -156,6 +179,18 @@ export default function ActivityMapping() {
     acc[s] = (rows ?? []).filter((r) => r.status === s).length;
     return acc;
   }, {});
+
+  // One canonical activity may legitimately support several work orders, each a
+  // different educational or industry interpretation. Group them so they can be
+  // reviewed together rather than flagged as errors one by one.
+  const sharedGroups = Object.values(
+    (rows ?? []).reduce<Record<string, Row[]>>((acc, r) => {
+      const key = r.proposed_simulation_activity_id;
+      if (!key) return acc;
+      (acc[key] ||= []).push(r);
+      return acc;
+    }, {}),
+  ).filter((group) => group.length > 1);
 
   const visible = (rows ?? [])
     .filter((r) => (tab === 'ALL' ? true : r.status === tab))
@@ -215,6 +250,68 @@ export default function ActivityMapping() {
           className="max-w-xl"
         />
 
+        {sharedGroups.length > 0 && (
+          <Card className="border-teal-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Layers className="h-4 w-4 text-teal-300" />
+                Shared canonical activities
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                One canonical activity may support several work orders when each is a materially
+                different educational or industry interpretation of the same simulated activity.
+                Accept the set once it is genuinely differentiated — identical work orders should
+                stay in review until they are.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {sharedGroups.map((group) => {
+                const activityId = group[0].proposed_simulation_activity_id as string;
+                const activity = activityById.get(activityId);
+                const accepted = group.every((g) => g.status === 'ACCEPTED_MULTI_INTERPRETATION');
+                return (
+                  <div key={activityId} className="rounded-lg border border-border/60 p-3 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-medium">
+                          {activity?.canonical_name ?? activityId}
+                        </div>
+                        <div className="font-mono text-xs text-muted-foreground break-all">{activityId}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={accepted ? 'outline' : 'default'}
+                        disabled={accepted || acceptMulti.isPending}
+                        onClick={() => acceptMulti.mutate({
+                          workOrderIds: group.map((g) => g.work_order_id),
+                          activityId,
+                        })}
+                      >
+                        <Layers className="h-3.5 w-3.5 mr-1.5" />
+                        {accepted ? 'Accepted' : 'Accept as multiple interpretations'}
+                      </Button>
+                    </div>
+                    <ul className="space-y-1">
+                      {group.map((g) => (
+                        <li key={g.work_order_id} className="flex flex-wrap items-center gap-2 text-sm">
+                          <Badge variant="outline" className={STATUS_STYLE[g.status]}>
+                            {g.status.replace(/_/g, ' ')}
+                          </Badge>
+                          <span>{String((g.diagnostics ?? {}).title ?? g.work_order_id)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {String((g.diagnostics ?? {}).game_title ?? '')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading mappings…
@@ -240,9 +337,14 @@ export default function ActivityMapping() {
                         {String(d.title ?? 'Untitled work order')}
                       </CardTitle>
                       <div className="flex flex-wrap items-center gap-2">
-                        {d.duplicate_canonical_mapping ? (
-                          <Badge variant="outline" className="border-rose-500/30 bg-rose-500/10 text-rose-400">
-                            Duplicate claim
+                        {d.shared_canonical_activity || d.duplicate_canonical_mapping ? (
+                          <Badge variant="outline" className="border-teal-500/30 bg-teal-500/10 text-teal-300">
+                            Shared activity
+                          </Badge>
+                        ) : null}
+                        {d.shared_source_challenge ? (
+                          <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-300">
+                            Shared source challenge
                           </Badge>
                         ) : null}
                         {d.identity_conflict ? (

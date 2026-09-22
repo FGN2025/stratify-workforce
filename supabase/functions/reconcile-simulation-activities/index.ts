@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
     let body: {
       action?: string;
       work_order_id?: string;
+      work_order_ids?: string[];
       simulation_activity_id?: string | null;
       status?: string;
     } = {};
@@ -148,16 +149,56 @@ Deno.serve(async (req) => {
       return json({ ok: true, work_order_id: woId, simulation_activity_id: targetId });
     }
 
+    // ------------------------------------------- accept_multi_interpretation
+    // Architectural rule: ONE canonical Simulation Activity MAY support MULTIPLE
+    // Academy Work Orders when those Work Orders represent materially different
+    // educational interpretations of the same underlying simulated activity.
+    // simulation_activity_id = what occurred in the simulation.
+    // work_order_id          = the educational interpretation of that activity.
+    // An admin explicitly accepts the set; nothing here is automatic, and only
+    // the identity column is written.
+    if (action === 'accept_multi_interpretation') {
+      const ids = Array.isArray(body.work_order_ids) ? body.work_order_ids : [];
+      const activityId = body.simulation_activity_id;
+      if (ids.length < 2 || ids.some((i) => typeof i !== 'string' || !UUID_RE.test(i))) {
+        return json({ error: 'work_order_ids must be two or more UUIDs' }, 400);
+      }
+      if (typeof activityId !== 'string' || !UUID_RE.test(activityId)) {
+        return json({ error: 'simulation_activity_id must be a UUID' }, 400);
+      }
+
+      const { error: updErr } = await admin
+        .from('work_orders')
+        .update({ simulation_activity_id: activityId })
+        .in('id', ids);
+      if (updErr) return json({ error: updErr.message }, 500);
+
+      const { error: recErr } = await admin
+        .from('simulation_activity_reconciliation')
+        .update({
+          status: 'ACCEPTED_MULTI_INTERPRETATION',
+          resolved: true,
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          reopened_at: null,
+        })
+        .in('work_order_id', ids);
+      if (recErr) return json({ error: recErr.message }, 500);
+
+      return json({ ok: true, simulation_activity_id: activityId, work_order_ids: ids });
+    }
+
     // --------------------------------------------------------------- set_status
     // Admin marks a proposal resolved/unresolved without changing identity.
     if (action === 'set_status') {
       const woId = body.work_order_id;
       const status = body.status;
-      const allowed = ['MATCHED', 'ACADEMY_NATIVE', 'NEEDS_REVIEW', 'LEGACY_SOURCE', 'ORPHANED_SOURCE', 'RETIRED'];
+      const allowed = ['MATCHED', 'ACCEPTED_MULTI_INTERPRETATION', 'ACADEMY_NATIVE', 'NEEDS_REVIEW', 'LEGACY_SOURCE', 'ORPHANED_SOURCE', 'RETIRED'];
       if (!woId || !status || !allowed.includes(status)) {
         return json({ error: 'work_order_id and a valid status are required' }, 400);
       }
-      const resolved = status === 'MATCHED' || status === 'ACADEMY_NATIVE' || status === 'RETIRED';
+      const resolved = status === 'MATCHED' || status === 'ACCEPTED_MULTI_INTERPRETATION'
+        || status === 'ACADEMY_NATIVE' || status === 'RETIRED';
       const { error } = await admin
         .from('simulation_activity_reconciliation')
         .update({
@@ -247,6 +288,10 @@ Deno.serve(async (req) => {
     const proposals: Record<string, unknown>[] = [];
     const counts: Record<string, number> = {};
     const duplicateWatch = new Map<string, string[]>();
+    // Work orders sharing one GG challenge that has NO canonical activity yet.
+    // These are recorded now so the pairing is preserved for later review and
+    // surfaces the moment FGN.GG publishes a canonical activity for it.
+    const challengeWatch = new Map<string, string[]>();
 
     for (const wo of workOrders ?? []) {
       const origin = wo.fgn_origin_challenge_id as string | null;
@@ -276,6 +321,9 @@ Deno.serve(async (req) => {
         // Challenge exists on GG but carries no canonical activity yet.
         status = 'NEEDS_REVIEW';
         reviewReason = 'canonical_identity_not_yet_published_by_gg';
+        const arr = challengeWatch.get(matchedChallengeId) ?? [];
+        arr.push(wo.id as string);
+        challengeWatch.set(matchedChallengeId, arr);
       } else if (origin || playSource) {
         // Recorded GG provenance, but the challenge is gone from the live catalog.
         status = 'ORPHANED_SOURCE';
@@ -328,18 +376,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Two or more work orders resolving to the same canonical activity is a
-    // reportable conflict, not something to auto-resolve.
+    // Two or more work orders resolving to the same canonical activity is an
+    // OBSERVATION, not an error. Under the architectural rule, one canonical
+    // Simulation Activity may legitimately support several Academy Work Orders
+    // that represent different educational or industry interpretations. It only
+    // needs review while the interpretations have not yet been differentiated.
     const duplicates = [...duplicateWatch.entries()]
       .filter(([, ids]) => ids.length > 1)
       .map(([activityId, ids]) => ({ simulation_activity_id: activityId, work_order_ids: ids }));
     const duplicateWoIds = new Set(duplicates.flatMap((d) => d.work_order_ids));
     for (const p of proposals) {
       if (duplicateWoIds.has(p.work_order_id as string)) {
+        (p.diagnostics as Record<string, unknown>).shared_canonical_activity = true;
+        // legacy diagnostic key kept so older console builds keep rendering
         (p.diagnostics as Record<string, unknown>).duplicate_canonical_mapping = true;
+        if (!p.resolved) {
+          (p.diagnostics as Record<string, unknown>).review_reason =
+            'shared_canonical_activity_pending_interpretation_review';
+          p.status = 'NEEDS_REVIEW';
+        }
+      }
+    }
+
+    // Pairings on a GG challenge that has no canonical activity yet. Recorded
+    // now so the duplication is preserved for review the moment GG publishes one.
+    const pendingSharedSources = [...challengeWatch.entries()]
+      .filter(([, ids]) => ids.length > 1)
+      .map(([challengeId, ids]) => ({ gg_challenge_id: challengeId, work_order_ids: ids }));
+    const pendingSharedWoIds = new Set(pendingSharedSources.flatMap((d) => d.work_order_ids));
+    for (const p of proposals) {
+      if (pendingSharedWoIds.has(p.work_order_id as string)) {
+        (p.diagnostics as Record<string, unknown>).shared_source_challenge = true;
         (p.diagnostics as Record<string, unknown>).review_reason =
-          'two_or_more_work_orders_claim_the_same_canonical_activity';
-        if (!p.resolved) { p.status = 'NEEDS_REVIEW'; }
+          'shared_gg_challenge_awaiting_canonical_identity';
       }
     }
 
@@ -365,7 +434,10 @@ Deno.serve(async (req) => {
       activities_cached: cacheRows.length,
       challenges_seen: challengeById.size,
       status_counts: counts,
+      shared_canonical_activities: duplicates,
+      // legacy key retained for older console builds
       duplicate_canonical_mappings: duplicates,
+      shared_source_challenges_pending_canonical_identity: pendingSharedSources,
       canonical_activities_without_work_order: unmappedActivities,
       note: 'Proposals only. No work order identity was changed by this run.',
     });
