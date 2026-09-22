@@ -15,12 +15,37 @@ interface CheckResult {
   challenge_count?: number;
 }
 
+interface CanonicalCheck {
+  status: string;
+  count?: number;
+  verified?: number;
+  missing?: string[];
+  broken?: string[];
+  error?: string;
+}
+
+interface CanonicalIdentityResult {
+  status: string;
+  latency_ms: number;
+  live_only?: boolean;
+  error?: string;
+  checks?: Record<string, CanonicalCheck>;
+}
+
 interface HealthResponse {
   play_fgn_connection: CheckResult;
   sync_endpoint: CheckResult;
+  canonical_identity?: CanonicalIdentityResult;
   checked_at: string;
   error?: string;
 }
+
+const CANONICAL_LABELS: Record<string, string> = {
+  activity_list: 'Activity list reachable',
+  single_activity_lookup: 'Single activity lookup',
+  golden_path_ids: 'Golden Path canonical IDs',
+  challenge_to_activity_relationship: 'Challenge to activity link',
+};
 
 export function IntegrationHealthCheck() {
   const [apiKey, setApiKey] = useState('');
