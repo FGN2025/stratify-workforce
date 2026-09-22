@@ -141,6 +141,25 @@ export default function ActivityMapping() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const acceptMulti = useMutation({
+    mutationFn: async (vars: { workOrderIds: string[]; activityId: string }) => {
+      const { data, error } = await supabase.functions.invoke('reconcile-simulation-activities', {
+        body: {
+          action: 'accept_multi_interpretation',
+          work_order_ids: vars.workOrderIds,
+          simulation_activity_id: vars.activityId,
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Accepted as multiple interpretations of one activity.');
+      queryClient.invalidateQueries({ queryKey: ['activity-mapping'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const setStatus = useMutation({
     mutationFn: async (vars: { workOrderId: string; status: Status }) => {
       const { data, error } = await supabase.functions.invoke('reconcile-simulation-activities', {
