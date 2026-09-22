@@ -369,18 +369,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Two or more work orders resolving to the same canonical activity is a
-    // reportable conflict, not something to auto-resolve.
+    // Two or more work orders resolving to the same canonical activity is an
+    // OBSERVATION, not an error. Under the architectural rule, one canonical
+    // Simulation Activity may legitimately support several Academy Work Orders
+    // that represent different educational or industry interpretations. It only
+    // needs review while the interpretations have not yet been differentiated.
     const duplicates = [...duplicateWatch.entries()]
       .filter(([, ids]) => ids.length > 1)
       .map(([activityId, ids]) => ({ simulation_activity_id: activityId, work_order_ids: ids }));
     const duplicateWoIds = new Set(duplicates.flatMap((d) => d.work_order_ids));
     for (const p of proposals) {
       if (duplicateWoIds.has(p.work_order_id as string)) {
+        (p.diagnostics as Record<string, unknown>).shared_canonical_activity = true;
+        // legacy diagnostic key kept so older console builds keep rendering
         (p.diagnostics as Record<string, unknown>).duplicate_canonical_mapping = true;
-        (p.diagnostics as Record<string, unknown>).review_reason =
-          'two_or_more_work_orders_claim_the_same_canonical_activity';
-        if (!p.resolved) { p.status = 'NEEDS_REVIEW'; }
+        if (!p.resolved) {
+          (p.diagnostics as Record<string, unknown>).review_reason =
+            'shared_canonical_activity_pending_interpretation_review';
+          p.status = 'NEEDS_REVIEW';
+        }
       }
     }
 
