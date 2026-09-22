@@ -79,7 +79,8 @@ export function IntegrationHealthCheck() {
       setResult(data);
 
       const allPass = data.play_fgn_connection?.status === 'pass' &&
-        (data.sync_endpoint?.status === 'pass' || data.sync_endpoint?.status === 'skipped');
+        (data.sync_endpoint?.status === 'pass' || data.sync_endpoint?.status === 'skipped') &&
+        (!data.canonical_identity || data.canonical_identity.status === 'pass');
 
       toast({
         title: allPass ? 'All checks passed' : 'Some checks failed',
