@@ -54,6 +54,8 @@ const PLAY_CHALLENGE_FIELDS = [
   'points_reward', 'estimated_minutes', 'start_date', 'end_date',
   'requires_evidence', 'cover_image_url', 'game_name', 'is_active',
   'is_featured', 'created_at', 'updated_at',
+  // Phase 1B — canonical Simulation Activity identity published by FGN.GG.
+  'simulation_activity_id', 'content_classification',
 ] as const;
 
 interface PlayTask {
@@ -85,7 +87,20 @@ interface ImportResult {
   status: 'created' | 'existing' | 'error';
   tasks_imported?: number;
   play_source_present?: boolean;
+  simulation_activity_id?: string | null;
   error?: string;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// FGN.GG owns this identity — we only accept a well-formed UUID it published.
+function canonicalActivityId(challenge: Record<string, unknown>): string | null {
+  const direct = challenge.simulation_activity_id;
+  if (typeof direct === 'string' && UUID_RE.test(direct)) return direct;
+  const embedded = challenge.simulation_activity as Record<string, unknown> | null | undefined;
+  const nested = embedded?.simulation_activity_id ?? embedded?.id;
+  if (typeof nested === 'string' && UUID_RE.test(nested)) return nested;
+  return null;
 }
 
 function json(body: unknown, status = 200) {
@@ -193,18 +208,22 @@ Deno.serve(async (req) => {
         // Idempotency check — return existing row, never duplicate.
         const { data: existing } = await admin
           .from('work_orders')
-          .select('id, metadata')
+          .select('id, metadata, simulation_activity_id')
           .eq('fgn_origin_challenge_id', challengeId)
           .maybeSingle();
 
         if (existing) {
           const playSourcePresent =
             !!(existing.metadata && (existing.metadata as Record<string, unknown>).play_source);
+          // Idempotent: an already-imported challenge is never re-created and its
+          // Academy interpretation is never overwritten. Canonical identity on an
+          // existing work order is changed only through admin-approved reconciliation.
           results.push({
             challenge_id: challengeId,
             work_order_id: existing.id,
             status: 'existing',
             play_source_present: playSourcePresent,
+            simulation_activity_id: existing.simulation_activity_id ?? null,
           });
           continue;
         }
@@ -272,6 +291,9 @@ Deno.serve(async (req) => {
           evidence_requirements: evidenceRequirements,
           cover_image_url: coverImageUrl,
           fgn_origin_challenge_id: challengeId,
+          // Phase 1B: carry FGN.GG's canonical identity through on create.
+          // Null when the challenge is not yet mapped on FGN.GG — that is fine.
+          simulation_activity_id: canonicalActivityId(challenge as Record<string, unknown>),
           metadata: { play_source: finalPlaySource },
         };
 
@@ -338,6 +360,7 @@ Deno.serve(async (req) => {
           status: 'created',
           tasks_imported: tasksImported,
           play_source_present: playSourcePresent,
+          simulation_activity_id: insertRow.simulation_activity_id,
         });
       } catch (e) {
         results.push({

@@ -2172,6 +2172,141 @@ export type Database = {
           },
         ]
       }
+      simulation_activity_cache: {
+        Row: {
+          activity_category: string | null
+          canonical_description: string | null
+          canonical_name: string | null
+          canonical_slug: string | null
+          canonical_status: string | null
+          created_at: string
+          game_version: string | null
+          gg_game_id: string | null
+          gg_game_name: string | null
+          gg_game_slug: string | null
+          industry_domain: string | null
+          last_synced_at: string
+          platform_applicability: Json | null
+          provenance: string | null
+          schema_version: number | null
+          simulation_activity_id: string
+          source_payload: Json | null
+          source_updated_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_category?: string | null
+          canonical_description?: string | null
+          canonical_name?: string | null
+          canonical_slug?: string | null
+          canonical_status?: string | null
+          created_at?: string
+          game_version?: string | null
+          gg_game_id?: string | null
+          gg_game_name?: string | null
+          gg_game_slug?: string | null
+          industry_domain?: string | null
+          last_synced_at?: string
+          platform_applicability?: Json | null
+          provenance?: string | null
+          schema_version?: number | null
+          simulation_activity_id: string
+          source_payload?: Json | null
+          source_updated_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_category?: string | null
+          canonical_description?: string | null
+          canonical_name?: string | null
+          canonical_slug?: string | null
+          canonical_status?: string | null
+          created_at?: string
+          game_version?: string | null
+          gg_game_id?: string | null
+          gg_game_name?: string | null
+          gg_game_slug?: string | null
+          industry_domain?: string | null
+          last_synced_at?: string
+          platform_applicability?: Json | null
+          provenance?: string | null
+          schema_version?: number | null
+          simulation_activity_id?: string
+          source_payload?: Json | null
+          source_updated_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      simulation_activity_reconciliation: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          diagnostics: Json
+          id: string
+          is_deterministic: boolean
+          last_run_at: string
+          match_basis: string | null
+          matched_challenge_id: string | null
+          proposed_simulation_activity_id: string | null
+          reopened_at: string | null
+          resolved: boolean
+          status: string
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          diagnostics?: Json
+          id?: string
+          is_deterministic?: boolean
+          last_run_at?: string
+          match_basis?: string | null
+          matched_challenge_id?: string | null
+          proposed_simulation_activity_id?: string | null
+          reopened_at?: string | null
+          resolved?: boolean
+          status?: string
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          diagnostics?: Json
+          id?: string
+          is_deterministic?: boolean
+          last_run_at?: string
+          match_basis?: string | null
+          matched_challenge_id?: string | null
+          proposed_simulation_activity_id?: string | null
+          reopened_at?: string | null
+          resolved?: boolean
+          status?: string
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_activity_reconciliation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulation_activity_reconciliation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulation_items: {
         Row: {
           cat_key: string | null
@@ -4110,6 +4245,7 @@ export type Database = {
           max_attempts: number | null
           metadata: Json
           owner_tenant_id: string | null
+          simulation_activity_id: string | null
           source_challenge_id: string | null
           success_criteria: Json | null
           tenant_id: string | null
@@ -4135,6 +4271,7 @@ export type Database = {
           max_attempts?: number | null
           metadata?: Json
           owner_tenant_id?: string | null
+          simulation_activity_id?: string | null
           source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null
@@ -4160,6 +4297,7 @@ export type Database = {
           max_attempts?: number | null
           metadata?: Json
           owner_tenant_id?: string | null
+          simulation_activity_id?: string | null
           source_challenge_id?: string | null
           success_criteria?: Json | null
           tenant_id?: string | null

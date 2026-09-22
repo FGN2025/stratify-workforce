@@ -29,6 +29,9 @@ const PLAY_CHALLENGE_FIELDS = [
   'is_featured',
   'created_at',
   'updated_at',
+  // Phase 1B — canonical Simulation Activity identity published by FGN.GG.
+  'simulation_activity_id',
+  'content_classification',
 ] as const;
 
 type Challenge = Record<string, unknown> & { id: string; tasks?: unknown[] };

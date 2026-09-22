@@ -70,10 +70,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Canonical Simulation Activity identity checks. Every one of these hits the
+    // live FGN.GG API — a locally cached activity is never treated as proof.
+    const canonicalResult = await testCanonicalIdentity();
+
     return new Response(
       JSON.stringify({
         play_fgn_connection: playFgnResult,
         sync_endpoint: syncResult,
+        canonical_identity: canonicalResult,
         checked_at: new Date().toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -175,6 +180,100 @@ async function testSyncEndpoint(
       status: "fail",
       latency_ms: Math.round(performance.now() - start),
       error: String(err),
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Canonical Simulation Activity identity health (Phase 1B).
+//
+// Live checks only. A cache hit in simulation_activity_cache is never accepted
+// as evidence of health — every assertion below is answered by FGN.GG.
+// ---------------------------------------------------------------------------
+
+// Golden Path canonical ids, retrieved from the live FGN.GG API and recorded in
+// docs/api/integration-guides/gg-simulation-activity-contract.md.
+const GOLDEN_PATHS: { activity_id: string; challenge_id: string; label: string }[] = [
+  { activity_id: "6ac1275d-6c8d-41c0-ad52-9f22bd13ea2e", challenge_id: "7ceee2be-1279-45a1-97eb-618db5d403d7", label: "Bulk Grain Hauling" },
+  { activity_id: "086eefb4-bff0-4826-8543-22864689cd2e", challenge_id: "02481a75-383c-485a-bdff-f0a4dd2b9121", label: "Excavation and Trenching" },
+  { activity_id: "19720a68-04bd-4dae-8f74-17e91d14d4b5", challenge_id: "c79a46d4-9aa6-43b2-914f-1f83419f2586", label: "Interior Surface Preparation and Painting" },
+  { activity_id: "b12e6fe2-1758-4409-84ff-762cc66323f4", challenge_id: "7846317c-77b2-4dd4-a855-308cb659891a", label: "Preflight Aircraft Inspection" },
+  { activity_id: "b6e90c9b-0c62-4232-ab04-a92064af191b", challenge_id: "f969023f-d69e-4323-a508-778c6a92e7fa", label: "Trailer Positioning and Dock Approach" },
+];
+
+async function ggFetch(payload: Record<string, unknown>) {
+  const playUrl = Deno.env.get("FGN_PLAY_SUPABASE_URL");
+  const ecosystemKey = Deno.env.get("ECOSYSTEM_API_KEY");
+  if (!playUrl || !ecosystemKey) throw new Error("Play integration not configured");
+  const res = await fetch(`${playUrl}/functions/v1/ecosystem-data-api`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Ecosystem-Key": ecosystemKey,
+      "X-Ecosystem-App": "academy",
+    },
+    body: JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, body };
+}
+
+async function testCanonicalIdentity(): Promise<Record<string, unknown>> {
+  const start = performance.now();
+  const checks: Record<string, unknown> = {};
+  try {
+    // 1. The activity list action is reachable and returns records.
+    const list = await ggFetch({ action: "simulation-activities", limit: 200, page: 0 });
+    const listData = Array.isArray(list.body?.data) ? list.body.data : [];
+    checks.activity_list = list.ok && listData.length > 0
+      ? { status: "pass", count: listData.length }
+      : { status: "fail", error: `simulation-activities ${list.status}`, count: listData.length };
+
+    // 2. Single-activity lookup resolves.
+    const single = await ggFetch({ action: "simulation-activity", id: GOLDEN_PATHS[3].activity_id });
+    const singleId = single.body?.data?.simulation_activity_id ?? single.body?.data?.id;
+    checks.single_activity_lookup = single.ok && singleId === GOLDEN_PATHS[3].activity_id
+      ? { status: "pass" }
+      : { status: "fail", error: `simulation-activity ${single.status}` };
+
+    // 3. All five Golden Path canonical ids are present in the live list.
+    const liveIds = new Set(
+      listData.map((a: Record<string, unknown>) => (a.simulation_activity_id ?? a.id) as string),
+    );
+    const missing = GOLDEN_PATHS.filter((g) => !liveIds.has(g.activity_id)).map((g) => g.label);
+    checks.golden_path_ids = missing.length === 0
+      ? { status: "pass", verified: GOLDEN_PATHS.length }
+      : { status: "fail", missing };
+
+    // 4. Challenge -> canonical activity relationship still holds on GG's side.
+    const challenges = await ggFetch({ action: "challenges", limit: 500, page: 0, include_inactive: true });
+    const arr: Record<string, unknown>[] = Array.isArray(challenges.body?.challenges)
+      ? challenges.body.challenges
+      : Array.isArray(challenges.body?.data) ? challenges.body.data : [];
+    const byId = new Map(arr.map((c) => [c.id as string, c]));
+    const broken = GOLDEN_PATHS.filter((g) => {
+      const c = byId.get(g.challenge_id) as Record<string, unknown> | undefined;
+      return !c || c.simulation_activity_id !== g.activity_id;
+    }).map((g) => g.label);
+    checks.challenge_to_activity_relationship = broken.length === 0
+      ? { status: "pass", verified: GOLDEN_PATHS.length }
+      : { status: "fail", broken };
+
+    const allPass = Object.values(checks)
+      .every((c) => (c as { status: string }).status === "pass");
+    return {
+      status: allPass ? "pass" : "fail",
+      latency_ms: Math.round(performance.now() - start),
+      live_only: true,
+      checks,
+    };
+  } catch (err) {
+    return {
+      status: "fail",
+      latency_ms: Math.round(performance.now() - start),
+      live_only: true,
+      error: String(err),
+      checks,
     };
   }
 }
