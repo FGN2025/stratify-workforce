@@ -113,3 +113,22 @@ The single deterministic match is **Preflight Aircraft Inspection** →
 
 **No broad migration, no credential issuance, no retroactive XP or badges, and
 no title-based inference has been performed or is proposed here.**
+
+---
+
+## Checkpoint outcome (2026-09-22)
+
+- **Approved and written:** exactly one canonical mapping — MSFS "Preflight Aircraft
+  Inspection" → Work Order `eff75523-423a-4005-9af2-1d9d1d80e8f0`. Identity column only.
+- **Withheld:** broad migration. Every other Work Order still carries only its original
+  source identifiers.
+- **Excavation and Trenching:** classified ACTUAL IDENTITY CONFLICT (duplicate
+  educational record). Both Work Orders held in review; no activity minted, nothing
+  retired, no educational rewrite.
+- **Conduit Placement and Backfill:** duplication recorded and preserved for later review.
+- **GG-only paths:** HF2 painting and ATS dock approach recorded as authoring candidates
+  (ATS first for the Phase 2 evidence prototype); Bulk Grain Hauling deferred. None created.
+- **Console:** shared canonical activities are an observation with a grouped view and an
+  explicit `ACCEPTED_MULTI_INTERPRETATION` resolved state.
+- **Phase 2:** revised architecture documented in `docs/phase-2-evidence-skills-architecture.md`.
+  No Phase 2 tables have been created.

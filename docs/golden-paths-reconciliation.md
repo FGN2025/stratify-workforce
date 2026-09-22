@@ -181,3 +181,72 @@ Status: **MATCHED**, awaiting admin approval before the id is written.
 5. **No Academy Work Order stores skill tags.** Any skill claim today is
    implicit in descriptions, not structured data.
 6. **No canonical id has been written anywhere.** Every row above is a proposal.
+
+---
+
+## Checkpoint decisions applied (2026-09-22)
+
+These decisions were taken at the Phase 1B checkpoint and are now reflected in the data.
+
+### 1. MSFS Preflight Aircraft Inspection — APPROVED
+
+| Field | Value |
+| --- | --- |
+| Canonical Simulation Activity | `b12e6fe2-1758-4409-84ff-762cc66323f4` (Preflight Aircraft Inspection) |
+| Academy Work Order | `eff75523-423a-4005-9af2-1d9d1d80e8f0` — "MSFS Flight: Preflight Walkaround" |
+| Reconciliation status | `MATCHED`, resolved |
+
+Only the identity column `work_orders.simulation_activity_id` was written. No educational
+content, source identifier or metadata was touched. No other Work Order received a
+canonical id — broad migration remains deliberately withheld.
+
+### 2. Excavation and Trenching — remains in review
+
+Architectural rule of record:
+
+> One canonical Simulation Activity MAY support multiple Academy Work Orders, but only
+> when those Work Orders represent materially different educational interpretations.
+> `simulation_activity_id` identifies what occurred in the simulation.
+> `work_order_id` identifies the educational interpretation of that activity.
+
+The two trench Work Orders are byte-identical in tasks, success criteria, difficulty,
+duration, XP and evidence requirements. They are therefore a **duplicate educational
+record**, not yet a valid multiple interpretation.
+
+| Work Order | Game title | Disposition |
+| --- | --- | --- |
+| `f4347636-5f14-45df-a59e-155abec8262d` | Fiber_Tech | `NEEDS_REVIEW` — shared canonical activity pending interpretation review |
+| `f98c218c-2c64-4fde-a1c4-cdfada0658b6` | Construction_Sim | `NEEDS_REVIEW` — shared canonical activity pending interpretation review |
+
+No new Simulation Activity was minted. Neither Work Order was retired. No educational
+rewrite was performed. The intent to later differentiate these into a Construction
+interpretation and a Fiber construction interpretation — with different learning
+objectives, task emphasis, evidence requirements and assessment criteria — is recorded
+here as future work, not Phase 1B work.
+
+### 3. Conduit Placement and Backfill — duplication preserved
+
+`e008fe88-5a8f-4fd6-ad62-df779717c36d` and `fbc3b71e-e904-437f-af80-9910d8a9ebbd`
+("CS Fiber: Conduit Placement and Backfill") share one GG challenge that FGN.GG has not
+yet given a canonical activity. Both are recorded as `NEEDS_REVIEW` with the diagnostic
+`shared_source_challenge` and reason `shared_gg_challenge_awaiting_canonical_identity`,
+so the pairing resurfaces the moment a canonical activity is published for it.
+
+### 4. Console behaviour
+
+- New resolved status `ACCEPTED_MULTI_INTERPRETATION`. Once an admin accepts a shared
+  activity set, it stops resurfacing in the review queue.
+- A shared canonical activity is reported as an **observation**, not an automatic error.
+  It only carries `NEEDS_REVIEW` while the interpretations remain undifferentiated.
+- A grouped view shows one canonical activity together with every Work Order that
+  interprets it, with a single explicit accept action for the set.
+
+### 5. GG-only Golden Paths — no Work Orders created
+
+| Canonical activity | Game | Disposition |
+| --- | --- | --- |
+| Interior Surface Preparation and Painting (`19720a68-04bd-4dae-8f74-17e91d14d4b5`) | House Flipper 2 | GG ONLY — ACADEMY WORK ORDER NOT YET AUTHORED. Authoring candidate: quantity take-off and material selection reasoning are genuinely assessable. |
+| Trailer Positioning and Dock Approach (`b6e90c9b-0c62-4232-ab04-a92064af191b`) | American Truck Simulator | GG ONLY — ACADEMY WORK ORDER NOT YET AUTHORED. Authoring candidate and preferred first Phase 2 evidence prototype: the only path requiring process evidence. |
+| Bulk Grain Hauling (`6ac1275d-6c8d-41c0-ad52-9f22bd13ea2e`) | Farm Simulator 2025 | GG ONLY — ACADEMY WORK ORDER NOT YET AUTHORED. Deferred until the Evidence + Skills model exists. |
+
+Catalog parity between FGN.GG and the Academy is explicitly **not** a requirement.
