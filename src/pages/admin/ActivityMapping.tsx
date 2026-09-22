@@ -9,10 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, RefreshCw, Check, Link2Off } from 'lucide-react';
+import { Loader2, RefreshCw, Check, Link2Off, Layers } from 'lucide-react';
 
 type Status =
   | 'MATCHED'
+  | 'ACCEPTED_MULTI_INTERPRETATION'
   | 'ACADEMY_NATIVE'
   | 'NEEDS_REVIEW'
   | 'LEGACY_SOURCE'
@@ -22,6 +23,7 @@ type Status =
 const STATUS_ORDER: Status[] = [
   'NEEDS_REVIEW',
   'MATCHED',
+  'ACCEPTED_MULTI_INTERPRETATION',
   'ACADEMY_NATIVE',
   'LEGACY_SOURCE',
   'ORPHANED_SOURCE',
@@ -30,6 +32,7 @@ const STATUS_ORDER: Status[] = [
 
 const STATUS_STYLE: Record<Status, string> = {
   MATCHED: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  ACCEPTED_MULTI_INTERPRETATION: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
   ACADEMY_NATIVE: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
   NEEDS_REVIEW: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   LEGACY_SOURCE: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
@@ -39,6 +42,7 @@ const STATUS_STYLE: Record<Status, string> = {
 
 const STATUS_HELP: Record<Status, string> = {
   MATCHED: 'A single FGN.GG canonical activity resolves deterministically from recorded source identifiers.',
+  ACCEPTED_MULTI_INTERPRETATION: 'Several work orders share one canonical activity because they are materially different educational interpretations of the same simulated activity. This is a valid resolved state and is not surfaced for review again.',
   ACADEMY_NATIVE: 'Academy-authored work order with no game challenge behind it. This is a valid resolved state.',
   NEEDS_REVIEW: 'Identity cannot be resolved without a human decision.',
   LEGACY_SOURCE: 'Carries an Academy-side source identifier only, with no recorded FGN.GG lineage.',
