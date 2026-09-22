@@ -398,6 +398,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Pairings on a GG challenge that has no canonical activity yet. Recorded
+    // now so the duplication is preserved for review the moment GG publishes one.
+    const pendingSharedSources = [...challengeWatch.entries()]
+      .filter(([, ids]) => ids.length > 1)
+      .map(([challengeId, ids]) => ({ gg_challenge_id: challengeId, work_order_ids: ids }));
+    const pendingSharedWoIds = new Set(pendingSharedSources.flatMap((d) => d.work_order_ids));
+    for (const p of proposals) {
+      if (pendingSharedWoIds.has(p.work_order_id as string)) {
+        (p.diagnostics as Record<string, unknown>).shared_source_challenge = true;
+        (p.diagnostics as Record<string, unknown>).review_reason =
+          'shared_gg_challenge_awaiting_canonical_identity';
+      }
+    }
+
     if (proposals.length) {
       const { error: upErr } = await admin
         .from('simulation_activity_reconciliation')
