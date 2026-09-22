@@ -250,6 +250,68 @@ export default function ActivityMapping() {
           className="max-w-xl"
         />
 
+        {sharedGroups.length > 0 && (
+          <Card className="border-teal-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Layers className="h-4 w-4 text-teal-300" />
+                Shared canonical activities
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                One canonical activity may support several work orders when each is a materially
+                different educational or industry interpretation of the same simulated activity.
+                Accept the set once it is genuinely differentiated — identical work orders should
+                stay in review until they are.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {sharedGroups.map((group) => {
+                const activityId = group[0].proposed_simulation_activity_id as string;
+                const activity = activityById.get(activityId);
+                const accepted = group.every((g) => g.status === 'ACCEPTED_MULTI_INTERPRETATION');
+                return (
+                  <div key={activityId} className="rounded-lg border border-border/60 p-3 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-medium">
+                          {activity?.canonical_name ?? activityId}
+                        </div>
+                        <div className="font-mono text-xs text-muted-foreground break-all">{activityId}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={accepted ? 'outline' : 'default'}
+                        disabled={accepted || acceptMulti.isPending}
+                        onClick={() => acceptMulti.mutate({
+                          workOrderIds: group.map((g) => g.work_order_id),
+                          activityId,
+                        })}
+                      >
+                        <Layers className="h-3.5 w-3.5 mr-1.5" />
+                        {accepted ? 'Accepted' : 'Accept as multiple interpretations'}
+                      </Button>
+                    </div>
+                    <ul className="space-y-1">
+                      {group.map((g) => (
+                        <li key={g.work_order_id} className="flex flex-wrap items-center gap-2 text-sm">
+                          <Badge variant="outline" className={STATUS_STYLE[g.status]}>
+                            {g.status.replace(/_/g, ' ')}
+                          </Badge>
+                          <span>{String((g.diagnostics ?? {}).title ?? g.work_order_id)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {String((g.diagnostics ?? {}).game_title ?? '')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading mappings…
