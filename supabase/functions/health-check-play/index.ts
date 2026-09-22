@@ -70,10 +70,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Canonical Simulation Activity identity checks. Every one of these hits the
+    // live FGN.GG API — a locally cached activity is never treated as proof.
+    const canonicalResult = await testCanonicalIdentity();
+
     return new Response(
       JSON.stringify({
         play_fgn_connection: playFgnResult,
         sync_endpoint: syncResult,
+        canonical_identity: canonicalResult,
         checked_at: new Date().toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
