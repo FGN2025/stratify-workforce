@@ -180,6 +180,18 @@ export default function ActivityMapping() {
     return acc;
   }, {});
 
+  // One canonical activity may legitimately support several work orders, each a
+  // different educational or industry interpretation. Group them so they can be
+  // reviewed together rather than flagged as errors one by one.
+  const sharedGroups = Object.values(
+    (rows ?? []).reduce<Record<string, Row[]>>((acc, r) => {
+      const key = r.proposed_simulation_activity_id;
+      if (!key) return acc;
+      (acc[key] ||= []).push(r);
+      return acc;
+    }, {}),
+  ).filter((group) => group.length > 1);
+
   const visible = (rows ?? [])
     .filter((r) => (tab === 'ALL' ? true : r.status === tab))
     // ACADEMY NATIVE is resolved — never nag about it in the review queue.
