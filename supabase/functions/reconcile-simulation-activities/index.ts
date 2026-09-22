@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
     if (action === 'set_status') {
       const woId = body.work_order_id;
       const status = body.status;
-      const allowed = ['MATCHED', 'ACADEMY_NATIVE', 'NEEDS_REVIEW', 'LEGACY_SOURCE', 'ORPHANED_SOURCE', 'RETIRED'];
+      const allowed = ['MATCHED', 'ACCEPTED_MULTI_INTERPRETATION', 'ACADEMY_NATIVE', 'NEEDS_REVIEW', 'LEGACY_SOURCE', 'ORPHANED_SOURCE', 'RETIRED'];
       if (!woId || !status || !allowed.includes(status)) {
         return json({ error: 'work_order_id and a valid status are required' }, 400);
       }
