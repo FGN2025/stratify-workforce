@@ -321,6 +321,9 @@ Deno.serve(async (req) => {
         // Challenge exists on GG but carries no canonical activity yet.
         status = 'NEEDS_REVIEW';
         reviewReason = 'canonical_identity_not_yet_published_by_gg';
+        const arr = challengeWatch.get(matchedChallengeId) ?? [];
+        arr.push(wo.id as string);
+        challengeWatch.set(matchedChallengeId, arr);
       } else if (origin || playSource) {
         // Recorded GG provenance, but the challenge is gone from the live catalog.
         status = 'ORPHANED_SOURCE';
