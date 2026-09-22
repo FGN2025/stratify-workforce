@@ -434,7 +434,10 @@ Deno.serve(async (req) => {
       activities_cached: cacheRows.length,
       challenges_seen: challengeById.size,
       status_counts: counts,
+      shared_canonical_activities: duplicates,
+      // legacy key retained for older console builds
       duplicate_canonical_mappings: duplicates,
+      shared_source_challenges_pending_canonical_identity: pendingSharedSources,
       canonical_activities_without_work_order: unmappedActivities,
       note: 'Proposals only. No work order identity was changed by this run.',
     });
