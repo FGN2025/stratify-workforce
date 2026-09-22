@@ -44,6 +44,7 @@ import EmbedPassport from "./pages/EmbedPassport";
 import Activity from "./pages/Activity";
 import VerifyCredential from "./pages/VerifyCredential";
 import ChallengeRegistry from "./pages/ChallengeRegistry";
+import ActivityMapping from "./pages/admin/ActivityMapping";
 import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
 import CourseBuilder from "./pages/admin/CourseBuilder";
 import CommunitySetup from "./pages/admin/CommunitySetup";
@@ -136,6 +137,9 @@ const App = () => (
               } />
               <Route path="/admin/challenge-registry" element={
                 <AdminRoute><ChallengeRegistry /></AdminRoute>
+              } />
+              <Route path="/admin/activity-mapping" element={
+                <AdminRoute><ActivityMapping /></AdminRoute>
               } />
 
               <Route path="/admin/course-builder" element={

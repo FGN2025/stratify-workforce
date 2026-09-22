@@ -140,6 +140,7 @@ const adminSubItems: AdminEntry[] = [
       { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck, tier: 'platform' },
       { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon, tier: 'platform' },
       { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route, tier: 'platform' },
+      { title: 'Activity Mapping', url: '/admin/activity-mapping', icon: LinkIcon, tier: 'platform' },
     ],
   },
   { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench, tier: 'platform' },
@@ -275,7 +276,7 @@ export function AppSidebar() {
   const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
 
   const simChildPaths = ['/admin/games', '/admin/sim-categories', '/admin/sim-resources'];
-  const challengeChildPaths = ['/admin/challenge-registry', '/admin/challenge-mappings', '/admin/challenge-tracks'];
+  const challengeChildPaths = ['/admin/challenge-registry', '/admin/challenge-mappings', '/admin/challenge-tracks', '/admin/activity-mapping'];
   const [simOpen, setSimOpen] = useState(simChildPaths.includes(location.pathname));
   const [challengesOpen, setChallengesOpen] = useState(challengeChildPaths.includes(location.pathname));
 

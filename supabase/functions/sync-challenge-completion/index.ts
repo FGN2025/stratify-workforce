@@ -301,6 +301,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    // 2b. Canonical provenance check (Phase 1B).
+    // If the incoming payload carries FGN.GG's canonical simulation_activity_id,
+    // compare it with the one recorded on the work order and log any mismatch.
+    // This is observation only: it never blocks the completion, never writes an
+    // extra copy onto the completion record, and never triggers XP, badges,
+    // credentials, skill verification, assessment or course progress.
+    try {
+      const incomingActivityId =
+        (body as { simulation_activity_id?: unknown }).simulation_activity_id;
+      if (typeof incomingActivityId === 'string' && incomingActivityId.length > 0) {
+        const woActivityId = (workOrder as { simulation_activity_id?: string | null })
+          .simulation_activity_id ?? null;
+        if (woActivityId && woActivityId !== incomingActivityId) {
+          console.warn(
+            `canonical activity mismatch for work_order ${workOrder.id}: ` +
+            `work order has ${woActivityId}, payload reports ${incomingActivityId}`,
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('canonical provenance check skipped:', e);
+    }
+
     // 3. Get current attempt count + prior completion (for best-attempt semantics)
     const { data: priorCompletion } = await supabase
       .from('user_work_order_completions')
