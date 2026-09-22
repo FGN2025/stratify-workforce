@@ -337,9 +337,14 @@ export default function ActivityMapping() {
                         {String(d.title ?? 'Untitled work order')}
                       </CardTitle>
                       <div className="flex flex-wrap items-center gap-2">
-                        {d.duplicate_canonical_mapping ? (
-                          <Badge variant="outline" className="border-rose-500/30 bg-rose-500/10 text-rose-400">
-                            Duplicate claim
+                        {d.shared_canonical_activity || d.duplicate_canonical_mapping ? (
+                          <Badge variant="outline" className="border-teal-500/30 bg-teal-500/10 text-teal-300">
+                            Shared activity
+                          </Badge>
+                        ) : null}
+                        {d.shared_source_challenge ? (
+                          <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-300">
+                            Shared source challenge
                           </Badge>
                         ) : null}
                         {d.identity_conflict ? (
