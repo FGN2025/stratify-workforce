@@ -157,7 +157,8 @@ Deno.serve(async (req) => {
       if (!woId || !status || !allowed.includes(status)) {
         return json({ error: 'work_order_id and a valid status are required' }, 400);
       }
-      const resolved = status === 'MATCHED' || status === 'ACADEMY_NATIVE' || status === 'RETIRED';
+      const resolved = status === 'MATCHED' || status === 'ACCEPTED_MULTI_INTERPRETATION'
+        || status === 'ACADEMY_NATIVE' || status === 'RETIRED';
       const { error } = await admin
         .from('simulation_activity_reconciliation')
         .update({
