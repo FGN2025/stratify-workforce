@@ -288,6 +288,10 @@ Deno.serve(async (req) => {
     const proposals: Record<string, unknown>[] = [];
     const counts: Record<string, number> = {};
     const duplicateWatch = new Map<string, string[]>();
+    // Work orders sharing one GG challenge that has NO canonical activity yet.
+    // These are recorded now so the pairing is preserved for later review and
+    // surfaces the moment FGN.GG publishes a canonical activity for it.
+    const challengeWatch = new Map<string, string[]>();
 
     for (const wo of workOrders ?? []) {
       const origin = wo.fgn_origin_challenge_id as string | null;
