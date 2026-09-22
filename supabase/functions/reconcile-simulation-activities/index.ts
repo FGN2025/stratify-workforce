@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
     let body: {
       action?: string;
       work_order_id?: string;
+      work_order_ids?: string[];
       simulation_activity_id?: string | null;
       status?: string;
     } = {};
