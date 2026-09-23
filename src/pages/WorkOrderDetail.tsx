@@ -13,6 +13,8 @@ import { DifficultyIndicator, getDifficultyLabel } from '@/components/work-order
 import { ChannelSubscribeButton } from '@/components/work-orders/ChannelSubscribeButton';
 import { EvidenceCard } from '@/components/work-orders/EvidenceCard';
 import { EvidenceUploadDialog } from '@/components/work-orders/EvidenceUploadDialog';
+import { TaskEvidencePanel } from '@/components/work-orders/TaskEvidencePanel';
+
 import { EditableImageWrapper } from '@/components/admin/EditableImageWrapper';
 import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog';
 import { useWorkOrderById } from '@/hooks/useWorkOrders';
@@ -668,8 +670,16 @@ export default function WorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Per-step evidence (Phase 2 authored work orders only) */}
+          {id && (
+            <div className="lg:col-span-3">
+              <TaskEvidencePanel workOrderId={id} completionId={latestCompletionId ?? null} />
+            </div>
+          )}
         </div>
       </div>
+
 
       {/* Evidence Upload Dialog */}
       {latestCompletionId && evidenceRequirements && id && (

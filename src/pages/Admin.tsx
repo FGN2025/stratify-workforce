@@ -12,6 +12,8 @@ import { SimResourcesManager } from '@/components/admin/SimResourcesManager';
 import { RegistrationCodeManager } from '@/components/admin/RegistrationCodeManager';
 import { EventsManager } from '@/components/admin/EventsManager';
 import { EvidenceReviewQueue } from '@/components/admin/EvidenceReviewQueue';
+import { TaskEvidenceReviewQueue } from '@/components/admin/TaskEvidenceReviewQueue';
+
 import { AuthorizedAppsManager } from '@/components/admin/AuthorizedAppsManager';
 import { WebhookManager } from '@/components/admin/WebhookManager';
 import { CredentialTypesManager } from '@/components/admin/CredentialTypesManager';
@@ -250,7 +252,13 @@ export default function Admin() {
       case 'curation':
         return <CurationManager />;
       case 'evidence':
-        return <EvidenceReviewQueue />;
+        return (
+          <div className="space-y-6">
+            <TaskEvidenceReviewQueue />
+            <EvidenceReviewQueue />
+          </div>
+        );
+
       case 'games':
         return <SimGamesManager />;
       case 'sim-categories':
