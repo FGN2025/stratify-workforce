@@ -140,17 +140,22 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
     window.open(data.signedUrl, '_blank');
   };
 
+  const unassessed = criteria.filter((c) => !outcomes[c.id] || !quality[c.id]);
+  const gatingBlocked = criteria.some(
+    (c) => c.is_gating && outcomes[c.id] && outcomes[c.id] !== 'met'
+  );
+
   const decide = useMutation({
     mutationFn: async (decision: 'accepted' | 'needs_revision' | 'rejected') => {
       if (!user) throw new Error('Not signed in');
+      if (unassessed.length) {
+        throw new Error('Assess every point explicitly before recording a decision.');
+      }
       const rows = criteria.map((c) => ({
         artifact_requirement_id: item.assoc_id,
         criterion_id: c.id,
-        outcome: (outcomes[c.id] ?? (decision === 'accepted' ? 'met' : 'not_met')) as 'met' | 'partially_met' | 'not_met',
-        evidence_quality: (quality[c.id] ?? (decision === 'accepted' ? 'adequate' : 'insufficient')) as
-          | 'insufficient'
-          | 'adequate'
-          | 'strong',
+        outcome: outcomes[c.id] as 'met' | 'partially_met' | 'not_met' | 'not_observed',
+        evidence_quality: quality[c.id] as 'insufficient' | 'adequate' | 'strong',
         reviewer_id: user.id,
         reviewer_note: note || null,
       }));
