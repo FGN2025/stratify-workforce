@@ -69,6 +69,7 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [reuseArtifactId, setReuseArtifactId] = useState('new');
+  const [structured, setStructured] = useState<Record<string, string>>({});
 
   const byTask = useMemo(() => {
     const map = new Map<string, EvidenceRequirementRow[]>();
@@ -91,19 +92,54 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
     setFrom('');
     setTo('');
     setReuseArtifactId('new');
+    setStructured({});
   };
 
   const handleSubmit = async () => {
     if (!target || !completionId) return;
+    const fields = target.req.response_schema?.fields ?? [];
     const wantsText = target.req.accepted_evidence_types.some((t) =>
       ['written_annotation', 'structured_form'].includes(t),
     );
-    if (reuseArtifactId === 'new' && !file && !bodyText.trim()) {
+
+    let bodyStructured: Record<string, unknown> | undefined;
+    if (reuseArtifactId === 'new' && fields.length) {
+      const missing = fields.filter((f) => f.required !== false && !String(structured[f.key] ?? '').trim());
+      if (missing.length) {
+        toast({ title: `Fill in ${missing[0].label}`, variant: 'destructive' });
+        return;
+      }
+      const outOfRange = fields.find((f) => {
+        if (f.type !== 'number' && f.type !== 'integer') return false;
+        const raw = String(structured[f.key] ?? '').trim();
+        if (!raw) return false;
+        const n = Number(raw);
+        if (Number.isNaN(n)) return true;
+        if (f.type === 'integer' && !Number.isInteger(n)) return true;
+        if (f.min != null && n < f.min) return true;
+        if (f.max != null && n > f.max) return true;
+        return false;
+      });
+      if (outOfRange) {
+        toast({ title: `Check the value for ${outOfRange.label}`, variant: 'destructive' });
+        return;
+      }
+      bodyStructured = { schema_version: target.req.response_schema?.version ?? 1 };
+      fields.forEach((f) => {
+        const raw = String(structured[f.key] ?? '').trim();
+        if (!raw) return;
+        (bodyStructured as Record<string, unknown>)[f.key] =
+          f.type === 'number' || f.type === 'integer' ? Number(raw) : raw;
+      });
+    }
+
+    if (reuseArtifactId === 'new' && !file && !bodyText.trim() && !bodyStructured) {
       toast({ title: wantsText ? 'Write your response first' : 'Choose a file first', variant: 'destructive' });
       return;
     }
     try {
       await submit.mutateAsync({
+        bodyStructured,
         workOrderId,
         completionId,
         taskId: target.taskId,
