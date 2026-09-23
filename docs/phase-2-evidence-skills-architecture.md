@@ -408,3 +408,33 @@ artifacts never generate signals.
 `skill_verification_signals`; no automation, no credential issuance.
 
 No tables are created until this spec is approved.
+
+---
+
+## Phase 2C addendum — canonical skills, Signal Strength v2, structured evidence
+
+**Games do not own Skills.** Skill identity lives in `canonical_skills` (no `game_title`). Game and
+simulation context is preserved through the evidence chain only:
+Skill Signal → Task Skill Mapping → Task → Work Order → Simulation Activity → Game.
+
+* `skill_aliases (alias_key, game_title NULL-able, canonical_skill_id)` resolves every historical
+  game-scoped key. Resolution is deterministic (`resolve_canonical_skill`): game-scoped alias first,
+  then the game-independent alias. No title or AI based merging.
+* `skills_taxonomy`, historical Skill Signals and historical Task Skill Mappings are never rewritten.
+* Each canonical skill carries a classification: transferable / domain_specific /
+  simulation_specific / needs_review. Ambiguous skills stay `needs_review` for administrative decision.
+
+**Signal Strength v2 (`v2_fit_weighted`)** — strength is evidence-to-skill fit against the mapping,
+not a global modality ranking. Factors: fit 0.30, assessment quality 0.30, gating coverage 0.20,
+evidence coverage 0.15, diversity 0.05. Bands: ≥0.80 strong, ≥0.55 moderate, else weak. No strong
+without a direct basis for that skill, and none if a gating criterion was not observed or not met;
+the mapping cap applies last. `v1_three_band` is frozen; existing signals keep their v1 values.
+Confidence stays an internal evidence-strength measure, never a real-world proficiency probability.
+
+**Structured evidence** — `work_order_task_evidence_requirements.response_schema` defines configurable
+fields (key, label, type, unit, required, min/max, options, order, reviewer guidance); answers are
+stored in `evidence_artifacts.body_structured`. Written/structured reasoning is never a screenshot.
+
+**Revision auto-requeue** — a new association against a requirement previously marked
+`needs_revision`/`rejected` reopens the task review automatically; prior artifact, association,
+assessment results and reviewer decision remain in history.
