@@ -207,7 +207,7 @@ export function useSubmitTaskEvidence() {
             mime_type: args.file?.type ?? null,
             file_size: args.file?.size ?? null,
             body_text: args.bodyText ?? null,
-            body_structured: args.bodyStructured ?? null,
+            body_structured: (args.bodyStructured ?? null) as never,
             title: args.title ?? args.file?.name ?? (args.bodyStructured ? 'Structured response' : 'Written response'),
             status: 'submitted',
             submitted_at: new Date().toISOString(),
