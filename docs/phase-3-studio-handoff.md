@@ -129,3 +129,68 @@ live credential.
 
 Approval stays with Academy. Studio approvals remain simulated. No write or submission path
 exists in this contract.
+
+## 7. Registered origins
+
+| Origin | Status |
+|---|---|
+| `https://studio.fgn.gg` | **registered** (production browser origin, exact string, no wildcard) |
+| Preview / staging origins | **unset** — none registered until you supply the exact strings |
+
+Registration is exact-match; `http://`, a different host, a port or a trailing path will not
+match. Verified live after registration: `OPTIONS /skills` with `Origin: https://studio.fgn.gg`
+returns `200` with `access-control-allow-origin: https://studio.fgn.gg`; the same origin on
+`GET /skills` without a token returns `401` (credential still required). The authenticated
+approved-origin success path still needs a live token minted by your proxy — see §9.
+
+**Proxy egress.** Not inferred and not recorded. The browser origin says nothing about where the
+proxy calls from. We need the proxy operator to state its actual egress arrangement (source
+addresses or the hosting arrangement) before the durable key is provisioned.
+
+## 8. Durable key provisioning and server-side revocation
+
+**Provisioning.** The durable operator key is **not issued**. It is generated and handed over
+out-of-band only after the authenticated operator proxy is confirmed ready and its egress details
+are supplied. It never appears in chat, in this document or in any repository file, and it goes
+into the proxy only — never into a browser.
+
+**Responsible administrator.** While the admin UI is unfinished, Academy super administrator
+**Jake_Trucker** (`aa4618e1-5932-4243-b497-73467e4867de`) owns issuance and revocation, with
+administrator **MJ** (`217ce9a1-898b-493f-8f9e-0112dc6da0d1`) as backup. Requests go to that
+administrator directly; there is no self-service path.
+
+**Revocation procedure (server-side, current).** Performed by the administrator above against the
+Academy database. Each level takes effect on the very next request — nothing is cached.
+
+| Goal | Action | Effect for Studio |
+|---|---|---|
+| Kill one live session token | set `revoked_at = now()` on that row in `studio_tokens` | `401 credential_revoked` |
+| Kill every live token for the app | set `revoked_at = now()` on all its unrevoked `studio_tokens` rows | `401 credential_revoked` |
+| Stop new tokens being minted | regenerate or invalidate the app's key hash on `authorized_apps` | mint returns `401`; existing tokens still run until they expire, so pair it with a token revoke |
+| Withdraw catalog access, keep the app | set `can_read_catalog = false` on `authorized_apps` | `403 scope_denied`, even for unexpired tokens |
+| Full shutdown | set `is_active = false` on `authorized_apps` | `401 credential_revoked` on every route |
+
+Every token expires on its own after 15 minutes regardless, so the worst-case exposure window
+without any action is 15 minutes. The admin UI (scope toggle, tenant/descendants selector, token
+list with a revoke button) is still to be built; it will replace this procedure, not change its
+semantics.
+
+## 9. Coordination — approved-origin CORS test and Studio's live acceptance run
+
+1. Proxy operator supplies egress details. *(waiting on Studio)*
+2. Academy provisions the durable key out-of-band to the named administrator's counterpart on
+   your side. *(blocked on step 1)*
+3. Joint approved-origin CORS test: proxy mints a token, Studio's browser at
+   `https://studio.fgn.gg` calls `/capabilities`, `/skills` and `/work-orders` with it. Expected:
+   `200` with `access-control-allow-origin: https://studio.fgn.gg`. Any other origin must be
+   refused `403 forbidden_origin` — please include one deliberate negative in the run.
+4. Studio runs its Phase 3 acceptance suite against the live credential and publishes the report.
+5. Mismatches come back to Academy before any write gate is discussed.
+
+**Alias ambiguity stays recorded as a true-negative.** No alias key in the live catalog currently
+resolves to more than one canonical skill, so `ambiguousAliases[]` is empty. This does **not**
+demonstrate the ambiguous-match case — the branch is implemented but unproven against real data,
+and it must not be counted as a passed acceptance check. Proving it needs a fixture outside
+production data, which we have deliberately not created.
+
+Phase 4 and content submissions remain blocked. Studio approvals remain simulated.
