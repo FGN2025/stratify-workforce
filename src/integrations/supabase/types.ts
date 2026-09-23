@@ -5330,9 +5330,21 @@ export type Database = {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
       }
+      complete_task_review: {
+        Args: { p_demonstration_id: string }
+        Returns: Json
+      }
+      create_skill_signals_for_demonstration: {
+        Args: { p_demo: string }
+        Returns: number
+      }
       current_or_user_tenant: { Args: { p_user?: string }; Returns: string }
       current_tenant_id: { Args: { p_user?: string }; Returns: string }
       ensure_skill_passport: { Args: { p_user_id: string }; Returns: string }
+      ensure_task_demonstration: {
+        Args: { p_completion_id: string; p_task_id: string }
+        Returns: string
+      }
       evidence_tenant_for_user: { Args: { p_user: string }; Returns: string }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
       get_accessible_tenants: {
@@ -5483,7 +5495,15 @@ export type Database = {
       provision_fgn_scorm_toolkit_app: { Args: never; Returns: string }
       purge_expired_passport_link_tokens: { Args: never; Returns: number }
       purge_expired_scorm_launch_tokens: { Args: never; Returns: number }
+      recompute_task_demonstration: {
+        Args: { p_demo: string }
+        Returns: Database["public"]["Enums"]["demonstration_status"]
+      }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
+      reopen_task_review: {
+        Args: { p_demonstration_id: string }
+        Returns: Database["public"]["Enums"]["demonstration_status"]
+      }
       requirement_task_id: { Args: { p_requirement: string }; Returns: string }
       task_work_order_id: { Args: { p_task: string }; Returns: string }
       tenant_curation_enforced: { Args: never; Returns: boolean }
