@@ -270,8 +270,23 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
         <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
 
+      {unassessed.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Assess every point above — outcome and quality — before recording a decision.
+          {' '}{unassessed.length} still open.
+        </p>
+      )}
+      {gatingBlocked && (
+        <p className="text-xs text-destructive">
+          A required point is not met or not shown, so this evidence cannot be accepted.
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
-        <Button disabled={decide.isPending} onClick={() => decide.mutate('accepted')}>
+        <Button
+          disabled={decide.isPending || unassessed.length > 0 || gatingBlocked}
+          onClick={() => decide.mutate('accepted')}
+        >
           Accept
         </Button>
         <Button variant="outline" disabled={decide.isPending} onClick={() => decide.mutate('needs_revision')}>
