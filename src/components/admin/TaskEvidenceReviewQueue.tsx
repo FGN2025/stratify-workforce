@@ -252,9 +252,45 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
       if (uErr) throw uErr;
 
       if (item.demonstration_id) {
-        const { error: rErr } = await supabase.rpc('complete_task_review', {
-          p_demonstration_id: item.demonstration_id,
-        });
+        // Only finalise the step once every required requirement has a
+        // decided (accepted/rejected) submission and nothing awaits revision.
+        // Otherwise keep the step open so the learner sees its live state.
+        let finalise = false;
+        if (decision !== 'needs_revision') {
+          const { data: reqRows, error: qErr } = await supabase
+            .from('work_order_task_evidence_requirements')
+            .select('id, is_required')
+            .eq('task_id', item.task_id)
+            .eq('is_active', true);
+          if (qErr) throw qErr;
+          const reqIds = (reqRows ?? []).map((r) => r.id);
+          const { data: assocRows, error: aErr } = reqIds.length
+            ? await supabase
+                .from('evidence_artifact_requirements')
+                .select('requirement_id, association_status')
+                .in('requirement_id', reqIds)
+                .eq('user_id', item.user_id)
+                .eq('completion_id', item.completion_id)
+                .eq('is_active', true)
+            : { data: [], error: null };
+          if (aErr) throw aErr;
+          const rows = assocRows ?? [];
+          const openWork = rows.some((a) =>
+            ['needs_revision', 'under_review', 'submitted', 'pending'].includes(a.association_status as string),
+          );
+          const allRequiredDecided = (reqRows ?? [])
+            .filter((r) => r.is_required)
+            .every((r) =>
+              rows.some(
+                (a) => a.requirement_id === r.id && ['accepted', 'rejected'].includes(a.association_status as string),
+              ),
+            );
+          finalise = !openWork && allRequiredDecided;
+        }
+        const { error: rErr } = await supabase.rpc(
+          finalise ? 'complete_task_review' : 'reopen_task_review',
+          { p_demonstration_id: item.demonstration_id },
+        );
         if (rErr) throw rErr;
       }
     },
