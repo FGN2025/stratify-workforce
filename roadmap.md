@@ -48,3 +48,11 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [ ] Public OpenAPI doc, approved-origin CORS, contract-version mismatch response
 - [ ] Pre-handoff verification suite; completed vs planned clearly distinguished
 - [ ] Read-only; Studio approvals simulated; Phase 4 (writes) blocked
+
+## Phase 3 prep — Studio catalog read API (2026-09-23)
+- [x] Scope confirmed: FGN Global efd28c29-…, descendants off, read-only, all maturity levels incl. unclassified
+- [x] Four corrections built: CORS/discovery exceptions, tenant-filtered curation metadata, scope-bound idempotent cursors, proxy-only short-lived tokens
+- [x] Full pre-handoff verification suite executed against the deployed endpoint (27 checks)
+- [x] Docs: docs/api/studio-catalog/README.md, docs/openapi/studio-catalog.yaml, docs/phase-3-studio-handoff.md
+- [ ] Register Studio's browser origin(s) + issue operator key out-of-band (blocked: awaiting Studio's proxy/origin details)
+- [ ] Admin UI for catalog-read scope + token revoke list (server-side administration only today)
