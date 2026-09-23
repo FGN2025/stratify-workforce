@@ -36,7 +36,9 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 
 # Phase 3 prep — FGN Studio read-only catalog contract
 
-- [ ] Confirm authoring tenant + descendant scope with owner before issuing any credential
+- [x] Scope confirmed by owner: FGN Global `efd28c29-…`, descendants disabled, read-only
+- [ ] Corrections: CORS/discovery exceptions, scope-filtered visibility metadata, scope-bound cursors with safe retries, authenticated proxy token delivery
+- [ ] Handoff doc: exact API + OpenAPI URLs, deployment status, real test results, remaining Studio steps
 - [ ] Short-lived tenant-scoped Studio tokens (expiry + revocation documented); durable app key stays operator-side
 - [ ] `studio-catalog` read API: /capabilities, /skills, /work-order-relationships, /vocabulary, /sources
 - [ ] All maturity levels incl. null/unclassified + Academy-native retrievable without an activityIds filter
