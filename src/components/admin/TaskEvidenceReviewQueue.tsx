@@ -12,8 +12,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ExternalLink } from 'lucide-react';
 
+type StructuredField = {
+  key: string;
+  label: string;
+  unit?: string;
+  order?: number;
+  reviewer_guidance?: string;
+};
+
 type Pending = {
   assoc_id: string;
+  user_id: string;
   association_status: string;
   learner_rationale: string | null;
   timecode_start_seconds: number | null;
