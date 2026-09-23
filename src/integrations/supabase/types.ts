@@ -1148,6 +1148,13 @@ export type Database = {
             foreignKeyName: "events_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -1379,6 +1386,13 @@ export type Database = {
             foreignKeyName: "evidence_artifacts_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -1543,6 +1557,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "leaderboard_embed_configs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -1773,6 +1794,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "lessons_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -2290,6 +2318,13 @@ export type Database = {
             foreignKeyName: "scorm_course_work_orders_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "scorm_course_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -2366,6 +2401,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "scorm_courses_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -2768,6 +2810,13 @@ export type Database = {
             foreignKeyName: "simulation_activity_reconciliation_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: true
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "simulation_activity_reconciliation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -2907,6 +2956,13 @@ export type Database = {
             foreignKeyName: "simulation_runs_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "simulation_runs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -3003,6 +3059,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "simulations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -3636,6 +3699,13 @@ export type Database = {
             foreignKeyName: "task_demonstrations_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "task_demonstrations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -3778,6 +3848,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "telemetry_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -3930,6 +4007,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "tenant_work_order_curation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -4810,6 +4894,13 @@ export type Database = {
             foreignKeyName: "user_task_progress_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "user_task_progress_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -4875,6 +4966,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "user_work_order_completions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -5049,6 +5147,13 @@ export type Database = {
             foreignKeyName: "work_order_assignments_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -5149,6 +5254,84 @@ export type Database = {
             foreignKeyName: "work_order_evidence_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_evidence_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_migration_maturity: {
+        Row: {
+          created_at: string
+          id: string
+          level1_approved_at: string | null
+          level1_approved_by: string | null
+          level2_approved_at: string | null
+          level2_approved_by: string | null
+          level3_approved_at: string | null
+          level3_approved_by: string | null
+          review_note: string | null
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level1_approved_at?: string | null
+          level1_approved_by?: string | null
+          level2_approved_at?: string | null
+          level2_approved_by?: string | null
+          level3_approved_at?: string | null
+          level3_approved_by?: string | null
+          review_note?: string | null
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level1_approved_at?: string | null
+          level1_approved_by?: string | null
+          level2_approved_at?: string | null
+          level2_approved_by?: string | null
+          level3_approved_at?: string | null
+          level3_approved_by?: string | null
+          review_note?: string | null
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_migration_maturity_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_migration_maturity_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_migration_maturity_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_migration_maturity_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -5266,6 +5449,13 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_tasks_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
             referencedColumns: ["work_order_id"]
           },
           {
@@ -5606,6 +5796,53 @@ export type Database = {
           {
             foreignKeyName: "skill_signals_tenant_id_fkey"
             columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_migration_readiness: {
+        Row: {
+          academy_native: boolean | null
+          approved_level: number | null
+          approved_mapping_count: number | null
+          canonical_activity_linked: boolean | null
+          canonical_name: string | null
+          criteria_count: number | null
+          game_title: string | null
+          gating_criteria_count: number | null
+          industry_domain: string | null
+          is_active: boolean | null
+          level1_approved_at: string | null
+          level1_eligible: boolean | null
+          level2_approved_at: string | null
+          level2_eligible: boolean | null
+          level3_approved_at: string | null
+          level3_eligible: boolean | null
+          mapping_count: number | null
+          mappings_with_direct_bases: number | null
+          owner_tenant_id: string | null
+          requirement_count: number | null
+          simulation_activity_id: string | null
+          task_count: number | null
+          tasks_with_mappings: number | null
+          tasks_with_requirements: number | null
+          title: string | null
+          visibility: string | null
+          work_order_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]

@@ -202,7 +202,7 @@ export function useSubmitTaskEvidence() {
             user_id: user.id,
             work_order_id: args.workOrderId,
             completion_id: args.completionId,
-            artifact_kind: args.file ? 'file' : args.bodyStructured ? 'structured' : 'text',
+            artifact_kind: args.file ? 'file' : 'text',
             storage_path: storagePath,
             mime_type: args.file?.type ?? null,
             file_size: args.file?.size ?? null,
