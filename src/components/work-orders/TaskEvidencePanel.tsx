@@ -193,6 +193,9 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
                     const active = associations.filter((a) => a.requirement_id === req.id && a.is_active);
                     const history = associations.filter((a) => a.requirement_id === req.id && !a.is_active);
                     const needsRevision = active.find((a) => a.association_status === 'needs_revision');
+                    const needed = req.min_artifacts ?? 1;
+                    const counted = active.filter((a) => a.association_status !== 'rejected').length;
+                    const remaining = Math.max(0, needed - counted);
 
                     return (
                       <div key={req.id} className="rounded-md bg-muted/30 p-3 space-y-2">
@@ -216,6 +219,16 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
                             {needsRevision ? 'Replace evidence' : active.length ? 'Add evidence' : 'Submit evidence'}
                           </Button>
                         </div>
+
+                        {needed > 1 && (
+                          <p className={`text-xs ${remaining ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            {counted} of {needed} required submitted
+                            {remaining > 0
+                              ? ` — ${remaining} more still needed before this can be reviewed.`
+                              : ' — complete.'}
+                          </p>
+                        )}
+
 
                         {[...active, ...history].map((assoc) => {
                           const meta = STATUS_META[assoc.association_status] ?? STATUS_META.claimed;
