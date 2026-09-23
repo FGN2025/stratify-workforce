@@ -20,3 +20,16 @@
 
 Broad catalog migration remains withheld. No Phase 2 tables have been created —
 implementation of the Evidence + Skills model awaits an explicit build instruction.
+
+# Phase 2D — Skills governance + staged migration (review gate reached)
+
+- [x] Resolve the six needs_review canonical skills (aliases preserved, no generic Documentation skill)
+- [x] Seven new canonical skills for civil earthworks / underground infrastructure
+- [x] Maturity model: `work_order_migration_maturity` + `work_order_migration_readiness` (approval-only promotion)
+- [x] Excavation and Trenching: one canonical activity, two valid interpretations (Construction + Fiber)
+- [x] Controlled non-admin learner test per interpretation; 16 v2_fit_weighted signals, shared provenance
+- [x] Structured-evidence artifact kind defect fixed
+- [x] Admin migration maturity + industry rollout views in the Activity Mapping console
+- [x] Security/RLS regression (learner, reviewer, cross-community admin, signed out)
+- [x] A–M report in `docs/phase-2d-build-report.md`
+- [ ] AWAITING APPROVAL — no further industry migration until the review gate is cleared
