@@ -267,14 +267,73 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
             </Button>
           )}
         </div>
+        {item.body_structured && (
+          <div className="rounded border border-border/60 divide-y divide-border/60">
+            {structuredRows.map((row) => (
+              <div key={row.key} className="flex flex-wrap justify-between gap-2 px-2 py-1.5">
+                <span className="text-muted-foreground">
+                  {row.label}
+                  {row.guidance && <span className="block text-xs">{row.guidance}</span>}
+                </span>
+                <span className="font-medium">
+                  {row.value}
+                  {row.unit ? ` ${row.unit}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
         {item.body_text && <p className="whitespace-pre-wrap">{item.body_text}</p>}
         {item.learner_rationale && (
           <p className="text-muted-foreground">Learner note: {item.learner_rationale}</p>
         )}
       </div>
 
-      <div className="space-y-3">
-        {criteria.map((c) => (
+      {priorRounds.length > 0 && (
+        <div className="rounded-md border border-border/60 p-3 space-y-2">
+          <p className="text-sm font-medium">Earlier submissions for this point</p>
+          {priorRounds.map((p) => (
+            <div key={p.id} className="text-xs space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="capitalize">
+                  {p.association_status.replace(/_/g, ' ')}
+                </Badge>
+                <span className="font-medium">{p.artifact_title}</span>
+                <span className="text-muted-foreground">
+                  {new Date(p.created_at).toLocaleDateString()}
+                </span>
+              </div>
+              {p.reviewer_note && <p className="text-muted-foreground">Reviewer said: {p.reviewer_note}</p>}
+              {p.results.map((r) => (
+                <p key={r.id} className="text-muted-foreground">
+                  • {criteria.find((c) => c.id === r.criterion_id)?.criterion_text ?? 'Point'} —{' '}
+                  {OUTCOME_LABEL[r.outcome as string] ?? r.outcome} ({r.evidence_quality})
+                </p>
+              ))}
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            These stay in history. Assess the new evidence on its own — focus on the points that were previously
+            not met or not shown.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {(['gating', 'other'] as const).map((group) => {
+          const rows = group === 'gating' ? gatingCriteria : otherCriteria;
+          if (!rows.length) return null;
+          return (
+            <div key={group} className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {group === 'gating' ? 'Must be met to accept' : 'Additional points'}
+              </p>
+              {rows.map((c) => {
+          const previous = priorRounds
+            .flatMap((p) => p.results)
+            .filter((r) => r.criterion_id === c.id)
+            .slice(-1)[0];
+          return (
           <div key={c.id} className="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-center">
             <div>
               <p className="text-sm">
@@ -283,6 +342,11 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
               </p>
               {c.guidance_for_reviewer && (
                 <p className="text-xs text-muted-foreground">{c.guidance_for_reviewer}</p>
+              )}
+              {previous && (
+                <p className="text-xs text-muted-foreground">
+                  Previously: {OUTCOME_LABEL[previous.outcome as string] ?? previous.outcome}
+                </p>
               )}
             </div>
             <Select value={outcomes[c.id] ?? ''} onValueChange={(v) => setOutcomes((o) => ({ ...o, [c.id]: v }))}>
