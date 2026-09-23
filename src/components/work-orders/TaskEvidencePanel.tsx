@@ -313,9 +313,56 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
                     <Label>Title</Label>
                     <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short description" />
                   </div>
-                  {target.req.accepted_evidence_types.some((t) =>
-                    ['written_annotation', 'structured_form'].includes(t),
-                  ) ? (
+                  {target.req.response_schema?.fields?.length ? (
+                    <div className="space-y-3">
+                      {[...target.req.response_schema.fields]
+                        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                        .map((f) => (
+                          <div key={f.key} className="space-y-1.5">
+                            <Label>
+                              {f.label}
+                              {f.unit && <span className="text-muted-foreground"> ({f.unit})</span>}
+                              {f.required !== false && <span className="text-destructive"> *</span>}
+                            </Label>
+                            {f.type === 'select' ? (
+                              <Select
+                                value={structured[f.key] ?? ''}
+                                onValueChange={(v) => setStructured((s) => ({ ...s, [f.key]: v }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Choose" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(f.options ?? []).map((o) => (
+                                    <SelectItem key={o} value={o}>
+                                      {o}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : f.type === 'text' ? (
+                              <Textarea
+                                rows={4}
+                                value={structured[f.key] ?? ''}
+                                onChange={(e) => setStructured((s) => ({ ...s, [f.key]: e.target.value }))}
+                              />
+                            ) : (
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                min={f.min}
+                                max={f.max}
+                                step={f.type === 'integer' ? 1 : 'any'}
+                                value={structured[f.key] ?? ''}
+                                onChange={(e) => setStructured((s) => ({ ...s, [f.key]: e.target.value }))}
+                              />
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  ) : target.req.accepted_evidence_types.some((t) =>
+                      ['written_annotation', 'structured_form'].includes(t),
+                    ) ? (
                     <div className="space-y-1.5">
                       <Label>Your written response</Label>
                       <Textarea
