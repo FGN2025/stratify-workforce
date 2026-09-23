@@ -12,8 +12,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ExternalLink } from 'lucide-react';
 
+type StructuredField = {
+  key: string;
+  label: string;
+  unit?: string;
+  order?: number;
+  reviewer_guidance?: string;
+};
+
 type Pending = {
   assoc_id: string;
+  user_id: string;
   association_status: string;
   learner_rationale: string | null;
   timecode_start_seconds: number | null;
@@ -32,6 +41,15 @@ type Pending = {
   artifact_kind: string;
   storage_path: string | null;
   body_text: string | null;
+  body_structured: Record<string, unknown> | null;
+  response_schema: { fields?: StructuredField[] } | null;
+};
+
+const OUTCOME_LABEL: Record<string, string> = {
+  met: 'Met',
+  partially_met: 'Partially met',
+  not_met: 'Not met',
+  not_observed: 'Not enough shown to judge',
 };
 
 function mmss(s?: number | null) {
@@ -57,7 +75,7 @@ function usePendingTaskEvidence() {
           supabase.from('evidence_artifacts').select('*').in('id', assocs.map((a) => a.artifact_id)),
           supabase
             .from('work_order_task_evidence_requirements')
-            .select('id, label, task_id')
+            .select('id, label, task_id, response_schema')
             .in('id', assocs.map((a) => a.requirement_id)),
           supabase.rpc('get_public_profile_data', { profile_ids: assocs.map((a) => a.user_id) }),
           supabase.from('tenants').select('id, name'),
@@ -85,6 +103,7 @@ function usePendingTaskEvidence() {
         const demo = demos?.find((d) => d.task_id === req?.task_id && d.completion_id === a.completion_id);
         return {
           assoc_id: a.id,
+          user_id: a.user_id,
           association_status: a.association_status,
           learner_rationale: a.learner_rationale,
           timecode_start_seconds: a.timecode_start_seconds,
@@ -103,6 +122,8 @@ function usePendingTaskEvidence() {
           artifact_kind: artifact?.artifact_kind ?? 'file',
           storage_path: artifact?.storage_path ?? null,
           body_text: artifact?.body_text ?? null,
+          body_structured: (artifact?.body_structured as Record<string, unknown> | null) ?? null,
+          response_schema: (req?.response_schema as { fields?: StructuredField[] } | null) ?? null,
         };
       });
     },
@@ -130,6 +151,37 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
     },
   });
 
+  /** Earlier submissions by the same learner against this same requirement, with how they were assessed. */
+  const { data: priorRounds = [] } = useQuery({
+    queryKey: ['prior-evidence-rounds', item.requirement_id, item.user_id, item.completion_id],
+    queryFn: async () => {
+      const { data: prior, error } = await supabase
+        .from('evidence_artifact_requirements')
+        .select('*')
+        .eq('requirement_id', item.requirement_id)
+        .eq('user_id', item.user_id)
+        .eq('completion_id', item.completion_id)
+        .neq('id', item.assoc_id)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      if (!prior?.length) return [];
+      const { data: results } = await supabase
+        .from('assessment_results')
+        .select('*')
+        .in('artifact_requirement_id', prior.map((p) => p.id));
+      const { data: artifacts } = await supabase
+        .from('evidence_artifacts')
+        .select('id, title')
+        .in('id', prior.map((p) => p.artifact_id));
+      return prior.map((p) => ({
+        ...p,
+        artifact_title: artifacts?.find((a) => a.id === p.artifact_id)?.title ?? 'Evidence',
+        results: (results ?? []).filter((r) => r.artifact_requirement_id === p.id),
+      }));
+    },
+  });
+
+
   const openFile = async () => {
     if (!item.storage_path) return;
     const { data, error } = await supabase.storage.from('evidence').createSignedUrl(item.storage_path, 300);
@@ -144,6 +196,29 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
   const gatingBlocked = criteria.some(
     (c) => c.is_gating && outcomes[c.id] && outcomes[c.id] !== 'met'
   );
+  const gatingCriteria = criteria.filter((c) => c.is_gating);
+  const otherCriteria = criteria.filter((c) => !c.is_gating);
+
+  const structuredRows = (() => {
+    const body = item.body_structured;
+    if (!body) return [];
+    const fields = item.response_schema?.fields ?? [];
+    const known = [...fields]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .filter((f) => body[f.key] != null)
+      .map((f) => ({
+        key: f.key,
+        label: f.label,
+        unit: f.unit,
+        guidance: f.reviewer_guidance,
+        value: String(body[f.key]),
+      }));
+    const extras = Object.keys(body)
+      .filter((k) => k !== 'schema_version' && !fields.some((f) => f.key === k))
+      .map((k) => ({ key: k, label: k.replace(/_/g, ' '), unit: undefined, guidance: undefined, value: String(body[k]) }));
+    return [...known, ...extras];
+  })();
+
 
   const decide = useMutation({
     mutationFn: async (decision: 'accepted' | 'needs_revision' | 'rejected') => {
@@ -222,14 +297,73 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
             </Button>
           )}
         </div>
+        {item.body_structured && (
+          <div className="rounded border border-border/60 divide-y divide-border/60">
+            {structuredRows.map((row) => (
+              <div key={row.key} className="flex flex-wrap justify-between gap-2 px-2 py-1.5">
+                <span className="text-muted-foreground">
+                  {row.label}
+                  {row.guidance && <span className="block text-xs">{row.guidance}</span>}
+                </span>
+                <span className="font-medium">
+                  {row.value}
+                  {row.unit ? ` ${row.unit}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
         {item.body_text && <p className="whitespace-pre-wrap">{item.body_text}</p>}
         {item.learner_rationale && (
           <p className="text-muted-foreground">Learner note: {item.learner_rationale}</p>
         )}
       </div>
 
-      <div className="space-y-3">
-        {criteria.map((c) => (
+      {priorRounds.length > 0 && (
+        <div className="rounded-md border border-border/60 p-3 space-y-2">
+          <p className="text-sm font-medium">Earlier submissions for this point</p>
+          {priorRounds.map((p) => (
+            <div key={p.id} className="text-xs space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="capitalize">
+                  {p.association_status.replace(/_/g, ' ')}
+                </Badge>
+                <span className="font-medium">{p.artifact_title}</span>
+                <span className="text-muted-foreground">
+                  {new Date(p.created_at).toLocaleDateString()}
+                </span>
+              </div>
+              {p.reviewer_note && <p className="text-muted-foreground">Reviewer said: {p.reviewer_note}</p>}
+              {p.results.map((r) => (
+                <p key={r.id} className="text-muted-foreground">
+                  • {criteria.find((c) => c.id === r.criterion_id)?.criterion_text ?? 'Point'} —{' '}
+                  {OUTCOME_LABEL[r.outcome as string] ?? r.outcome} ({r.evidence_quality})
+                </p>
+              ))}
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            These stay in history. Assess the new evidence on its own — focus on the points that were previously
+            not met or not shown.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {(['gating', 'other'] as const).map((group) => {
+          const rows = group === 'gating' ? gatingCriteria : otherCriteria;
+          if (!rows.length) return null;
+          return (
+            <div key={group} className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {group === 'gating' ? 'Must be met to accept' : 'Additional points'}
+              </p>
+              {rows.map((c) => {
+          const previous = priorRounds
+            .flatMap((p) => p.results)
+            .filter((r) => r.criterion_id === c.id)
+            .slice(-1)[0];
+          return (
           <div key={c.id} className="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-center">
             <div>
               <p className="text-sm">
@@ -238,6 +372,11 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
               </p>
               {c.guidance_for_reviewer && (
                 <p className="text-xs text-muted-foreground">{c.guidance_for_reviewer}</p>
+              )}
+              {previous && (
+                <p className="text-xs text-muted-foreground">
+                  Previously: {OUTCOME_LABEL[previous.outcome as string] ?? previous.outcome}
+                </p>
               )}
             </div>
             <Select value={outcomes[c.id] ?? ''} onValueChange={(v) => setOutcomes((o) => ({ ...o, [c.id]: v }))}>
@@ -262,8 +401,13 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
               </SelectContent>
             </Select>
           </div>
-        ))}
+          );
+              })}
+            </div>
+          );
+        })}
       </div>
+
 
       <div className="space-y-1.5">
         <Label>Note to the learner</Label>

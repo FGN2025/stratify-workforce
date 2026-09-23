@@ -2,6 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+export type StructuredField = {
+  key: string;
+  label: string;
+  type: 'number' | 'integer' | 'text' | 'select';
+  unit?: string;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  options?: string[];
+  order?: number;
+  reviewer_guidance?: string;
+};
+
+export type ResponseSchema = { version?: number; title?: string; fields: StructuredField[] } | null;
+
 export type EvidenceRequirementRow = {
   id: string;
   task_id: string;
@@ -11,8 +26,10 @@ export type EvidenceRequirementRow = {
   accepted_evidence_types: string[];
   evidence_basis: string;
   is_required: boolean;
+  min_artifacts: number;
   min_duration_seconds: number | null;
   order_index: number;
+  response_schema: ResponseSchema;
   criteria: {
     id: string;
     criterion_key: string;
@@ -30,6 +47,7 @@ export type ArtifactRow = {
   storage_path: string | null;
   mime_type: string | null;
   body_text: string | null;
+  body_structured: Record<string, unknown> | null;
   status: string;
   created_at: string;
 };
@@ -142,6 +160,7 @@ type SubmitArgs = {
   title?: string;
   file?: File;
   bodyText?: string;
+  bodyStructured?: Record<string, unknown>;
   learnerRationale?: string;
   timecodeStart?: number | null;
   timecodeEnd?: number | null;
@@ -183,12 +202,13 @@ export function useSubmitTaskEvidence() {
             user_id: user.id,
             work_order_id: args.workOrderId,
             completion_id: args.completionId,
-            artifact_kind: args.file ? 'file' : 'text',
+            artifact_kind: args.file ? 'file' : args.bodyStructured ? 'structured' : 'text',
             storage_path: storagePath,
             mime_type: args.file?.type ?? null,
             file_size: args.file?.size ?? null,
             body_text: args.bodyText ?? null,
-            title: args.title ?? args.file?.name ?? 'Written response',
+            body_structured: (args.bodyStructured ?? null) as never,
+            title: args.title ?? args.file?.name ?? (args.bodyStructured ? 'Structured response' : 'Written response'),
             status: 'submitted',
             submitted_at: new Date().toISOString(),
           })

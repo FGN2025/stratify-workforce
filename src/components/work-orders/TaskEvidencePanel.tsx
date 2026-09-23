@@ -69,6 +69,7 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [reuseArtifactId, setReuseArtifactId] = useState('new');
+  const [structured, setStructured] = useState<Record<string, string>>({});
 
   const byTask = useMemo(() => {
     const map = new Map<string, EvidenceRequirementRow[]>();
@@ -91,19 +92,54 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
     setFrom('');
     setTo('');
     setReuseArtifactId('new');
+    setStructured({});
   };
 
   const handleSubmit = async () => {
     if (!target || !completionId) return;
+    const fields = target.req.response_schema?.fields ?? [];
     const wantsText = target.req.accepted_evidence_types.some((t) =>
       ['written_annotation', 'structured_form'].includes(t),
     );
-    if (reuseArtifactId === 'new' && !file && !bodyText.trim()) {
+
+    let bodyStructured: Record<string, unknown> | undefined;
+    if (reuseArtifactId === 'new' && fields.length) {
+      const missing = fields.filter((f) => f.required !== false && !String(structured[f.key] ?? '').trim());
+      if (missing.length) {
+        toast({ title: `Fill in ${missing[0].label}`, variant: 'destructive' });
+        return;
+      }
+      const outOfRange = fields.find((f) => {
+        if (f.type !== 'number' && f.type !== 'integer') return false;
+        const raw = String(structured[f.key] ?? '').trim();
+        if (!raw) return false;
+        const n = Number(raw);
+        if (Number.isNaN(n)) return true;
+        if (f.type === 'integer' && !Number.isInteger(n)) return true;
+        if (f.min != null && n < f.min) return true;
+        if (f.max != null && n > f.max) return true;
+        return false;
+      });
+      if (outOfRange) {
+        toast({ title: `Check the value for ${outOfRange.label}`, variant: 'destructive' });
+        return;
+      }
+      bodyStructured = { schema_version: target.req.response_schema?.version ?? 1 };
+      fields.forEach((f) => {
+        const raw = String(structured[f.key] ?? '').trim();
+        if (!raw) return;
+        (bodyStructured as Record<string, unknown>)[f.key] =
+          f.type === 'number' || f.type === 'integer' ? Number(raw) : raw;
+      });
+    }
+
+    if (reuseArtifactId === 'new' && !file && !bodyText.trim() && !bodyStructured) {
       toast({ title: wantsText ? 'Write your response first' : 'Choose a file first', variant: 'destructive' });
       return;
     }
     try {
       await submit.mutateAsync({
+        bodyStructured,
         workOrderId,
         completionId,
         taskId: target.taskId,
@@ -157,6 +193,9 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
                     const active = associations.filter((a) => a.requirement_id === req.id && a.is_active);
                     const history = associations.filter((a) => a.requirement_id === req.id && !a.is_active);
                     const needsRevision = active.find((a) => a.association_status === 'needs_revision');
+                    const needed = req.min_artifacts ?? 1;
+                    const counted = active.filter((a) => a.association_status !== 'rejected').length;
+                    const remaining = Math.max(0, needed - counted);
 
                     return (
                       <div key={req.id} className="rounded-md bg-muted/30 p-3 space-y-2">
@@ -180,6 +219,16 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
                             {needsRevision ? 'Replace evidence' : active.length ? 'Add evidence' : 'Submit evidence'}
                           </Button>
                         </div>
+
+                        {needed > 1 && (
+                          <p className={`text-xs ${remaining ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            {counted} of {needed} required submitted
+                            {remaining > 0
+                              ? ` — ${remaining} more still needed before this can be reviewed.`
+                              : ' — complete.'}
+                          </p>
+                        )}
+
 
                         {[...active, ...history].map((assoc) => {
                           const meta = STATUS_META[assoc.association_status] ?? STATUS_META.claimed;
@@ -264,9 +313,56 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
                     <Label>Title</Label>
                     <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short description" />
                   </div>
-                  {target.req.accepted_evidence_types.some((t) =>
-                    ['written_annotation', 'structured_form'].includes(t),
-                  ) ? (
+                  {target.req.response_schema?.fields?.length ? (
+                    <div className="space-y-3">
+                      {[...target.req.response_schema.fields]
+                        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                        .map((f) => (
+                          <div key={f.key} className="space-y-1.5">
+                            <Label>
+                              {f.label}
+                              {f.unit && <span className="text-muted-foreground"> ({f.unit})</span>}
+                              {f.required !== false && <span className="text-destructive"> *</span>}
+                            </Label>
+                            {f.type === 'select' ? (
+                              <Select
+                                value={structured[f.key] ?? ''}
+                                onValueChange={(v) => setStructured((s) => ({ ...s, [f.key]: v }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Choose" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(f.options ?? []).map((o) => (
+                                    <SelectItem key={o} value={o}>
+                                      {o}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : f.type === 'text' ? (
+                              <Textarea
+                                rows={4}
+                                value={structured[f.key] ?? ''}
+                                onChange={(e) => setStructured((s) => ({ ...s, [f.key]: e.target.value }))}
+                              />
+                            ) : (
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                min={f.min}
+                                max={f.max}
+                                step={f.type === 'integer' ? 1 : 'any'}
+                                value={structured[f.key] ?? ''}
+                                onChange={(e) => setStructured((s) => ({ ...s, [f.key]: e.target.value }))}
+                              />
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  ) : target.req.accepted_evidence_types.some((t) =>
+                      ['written_annotation', 'structured_form'].includes(t),
+                    ) ? (
                     <div className="space-y-1.5">
                       <Label>Your written response</Label>
                       <Textarea

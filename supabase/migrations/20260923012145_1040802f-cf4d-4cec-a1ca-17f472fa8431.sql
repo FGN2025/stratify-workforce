@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.compute_signal_strength_v2(uuid, uuid) TO supabase_read_only_user;
