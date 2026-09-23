@@ -2,6 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+export type StructuredField = {
+  key: string;
+  label: string;
+  type: 'number' | 'integer' | 'text' | 'select';
+  unit?: string;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  options?: string[];
+  order?: number;
+  reviewer_guidance?: string;
+};
+
+export type ResponseSchema = { version?: number; title?: string; fields: StructuredField[] } | null;
+
 export type EvidenceRequirementRow = {
   id: string;
   task_id: string;
@@ -11,8 +26,10 @@ export type EvidenceRequirementRow = {
   accepted_evidence_types: string[];
   evidence_basis: string;
   is_required: boolean;
+  min_artifacts: number;
   min_duration_seconds: number | null;
   order_index: number;
+  response_schema: ResponseSchema;
   criteria: {
     id: string;
     criterion_key: string;
@@ -30,6 +47,7 @@ export type ArtifactRow = {
   storage_path: string | null;
   mime_type: string | null;
   body_text: string | null;
+  body_structured: Record<string, unknown> | null;
   status: string;
   created_at: string;
 };
