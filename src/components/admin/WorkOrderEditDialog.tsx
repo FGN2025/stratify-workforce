@@ -28,6 +28,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { MediaPickerDialog } from './MediaPickerDialog';
+import { WorkOrderVisibilityPanel } from './WorkOrderVisibilityPanel';
 import { ImportChallengeDialog, type MappedChallengeData, type ExternalTask } from './ImportChallengeDialog';
 import { Loader2, ChevronDown, FileUp, ImageIcon, X, Download } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
