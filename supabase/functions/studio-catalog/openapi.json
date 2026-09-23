@@ -1,0 +1,115 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FGN Academy — Studio Catalog API (read-only)",
+    "version": "2026-09-23.1",
+    "description": "Read-only catalog contract for the FGN Studio authoring tool. No write path, no submission path. Academy owns approval; Studio-side approvals are never authoritative.\n\nAuthentication: short-lived, tenant-scoped bearer tokens (15 min TTL). The durable operator app key never leaves the operator proxy and is not accepted on catalog routes.\n\nException: /capabilities and /openapi.json may be called with no credential and from any origin. Every other route returns 401 without a valid token."
+  },
+  "servers": [
+    { "url": "https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-catalog" }
+  ],
+  "security": [{ "studioToken": [] }],
+  "components": {
+    "securitySchemes": {
+      "studioToken": { "type": "http", "scheme": "bearer", "description": "Short-lived Studio token issued by POST /studio-token." },
+      "operatorKey": { "type": "apiKey", "in": "header", "name": "X-App-Key", "description": "Durable operator key. Server-to-server only; rejected when an Origin header is present." }
+    },
+    "parameters": {
+      "contract": { "name": "X-Studio-Contract", "in": "header", "required": true, "schema": { "type": "string", "example": "2026-09-23.1" } },
+      "cursor": { "name": "cursor", "in": "query", "schema": { "type": "string" }, "description": "Opaque, scope-bound cursor. Re-sending the same cursor is a safe, idempotent retry and returns the same page." },
+      "limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 200 } }
+    },
+    "responses": {
+      "Unauthorized": { "description": "credential_absent | credential_invalid | credential_expired | credential_revoked" },
+      "Forbidden": { "description": "scope_denied | forbidden_origin | cursor_scope_mismatch" },
+      "BadRequest": { "description": "contract_version_mismatch | cursor_invalid | cursor_query_mismatch" },
+      "Conflict": { "description": "catalog_changed — the catalog version moved during a paginated walk. The walk is incomplete; restart it." },
+      "RateLimited": { "description": "rate_limited — 120 requests per 60s window, Retry-After header set." }
+    }
+  },
+  "paths": {
+    "/capabilities": {
+      "get": {
+        "summary": "Discovery. No credential required, any origin.",
+        "security": [],
+        "responses": {
+          "200": { "description": "Contract version, catalog versions, authentication status, tenant scope when authenticated, and an explicit unsupported[] list." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": { "summary": "This document. No credential required, any origin.", "security": [], "responses": { "200": { "description": "OpenAPI document" } } }
+    },
+    "/studio-token": {
+      "post": {
+        "summary": "Exchange the durable operator key for a short-lived, tenant-scoped read token.",
+        "description": "Server-to-server only. Rejected with 403 forbidden_origin if called from a browser origin. Returns token, expiresAt, expiresInSeconds (900), scopes, tenantId, includesDescendants. Revocation is performed by an Academy administrator and takes effect on the next request.",
+        "security": [{ "operatorKey": [] }],
+        "responses": { "201": { "description": "Token issued" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/skills": {
+      "get": {
+        "summary": "Canonical skill catalog with aliases and ambiguity report.",
+        "parameters": [
+          { "$ref": "#/components/parameters/contract" },
+          { "name": "query", "in": "query", "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/cursor" },
+          { "$ref": "#/components/parameters/limit" }
+        ],
+        "responses": {
+          "200": { "description": "catalogVersion, items[] (skillId, skillKey, label, domain, classification, curationState, recordVersion, aliases[{aliasKey, gameScope, ambiguous}]), ambiguousAliases[], nextCursor. The skill catalog is platform-global and is not tenant-filtered." },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/work-orders": {
+      "get": {
+        "summary": "Work Orders and their activity relationships. No filter required.",
+        "description": "Returns every Work Order within the credential's tenant scope, including Academy-native ones (activityId null) and unclassified maturity. Multiple Work Orders per activity are preserved as distinct interpretations. Maturity and visibility are separate fields. Curation metadata is filtered to the credential's tenant scope.",
+        "parameters": [
+          { "$ref": "#/components/parameters/contract" },
+          { "name": "activityIds", "in": "query", "schema": { "type": "string" }, "description": "Optional comma-separated filter. Never required." },
+          { "name": "maturity", "in": "query", "schema": { "type": "string", "example": "level_3,unclassified" } },
+          { "$ref": "#/components/parameters/cursor" },
+          { "$ref": "#/components/parameters/limit" }
+        ],
+        "responses": {
+          "200": { "description": "catalogVersion, scope, items[] with maturity/maturityState/maturityApprovedAt and visibility{ownerTenantId, visibilityMode, curationSupported, curatedForTenants[]}, recordVersion, nextCursor." },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/work-order-relationships": {
+      "get": {
+        "summary": "Alias of /work-orders, identical behaviour.",
+        "parameters": [{ "$ref": "#/components/parameters/contract" }],
+        "responses": { "200": { "description": "See /work-orders" } }
+      }
+    },
+    "/vocabulary": {
+      "get": {
+        "summary": "Supported evidence and assessment vocabulary, derived live from the database.",
+        "description": "vocabularyVersion is a content hash recomputed per request; it changes the moment the underlying enums or constraints change. No time-based freshness is claimed. A constraint expression that cannot be parsed into an enumeration is omitted, listed in unsupported[], and the response is marked partial (fail-closed).",
+        "parameters": [{ "$ref": "#/components/parameters/contract" }],
+        "responses": { "200": { "description": "vocabularyVersion, partial, unsupported[], plus artifactKinds, evidenceTypes, evidenceBases, evidenceQuality, assessmentOutcomes, demonstrationStatuses, signalStrengths, signalStrengthSchemes, maturityStates, curationStates." } }
+      }
+    },
+    "/sources": {
+      "get": {
+        "summary": "Source registry with versions.",
+        "parameters": [{ "$ref": "#/components/parameters/contract" }],
+        "responses": { "200": { "description": "items[] (sourceId, label, sourceVersion, lastChangedAt, lastSyncedAt, owner)" } }
+      }
+    }
+  }
+}
