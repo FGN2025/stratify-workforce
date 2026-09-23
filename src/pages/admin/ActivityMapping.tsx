@@ -312,6 +312,9 @@ export default function ActivityMapping() {
           </Card>
         )}
 
+        <MigrationMaturityPanel />
+
+
 
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
