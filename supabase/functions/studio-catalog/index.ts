@@ -1,6 +1,7 @@
 // FGN Studio catalog API — READ ONLY.
 // No write path, no submission path. Phase 4 remains blocked.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import spec from './openapi.json' with { type: 'json' };
 import {
   CONTRACT_VERSION,
   SUPPORTED_CONTRACT_VERSIONS,
@@ -77,8 +78,7 @@ Deno.serve(async (req) => {
   try {
     // ---------- discovery: no credential, any origin ----------
     if (head === 'openapi.json' || head === '') {
-      const spec = await Deno.readTextFile(new URL('./openapi.json', import.meta.url));
-      return new Response(spec, {
+      return new Response(JSON.stringify(spec, null, 2), {
         headers: { ...discoveryCors, 'Content-Type': 'application/json' },
       });
     }
