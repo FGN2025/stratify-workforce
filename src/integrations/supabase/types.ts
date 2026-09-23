@@ -3647,6 +3647,7 @@ export type Database = {
           approved_by: string | null
           canonical_skill_id: string | null
           created_at: string
+          direct_evidence_bases: Database["public"]["Enums"]["evidence_basis"][]
           expected_evidence_basis: Database["public"]["Enums"]["evidence_basis"][]
           id: string
           is_active: boolean
@@ -3655,6 +3656,7 @@ export type Database = {
           rationale: string | null
           relationship: Database["public"]["Enums"]["skill_relationship"]
           skill_key: string
+          supporting_evidence_bases: Database["public"]["Enums"]["evidence_basis"][]
           task_id: string
           updated_at: string
         }
@@ -3663,6 +3665,7 @@ export type Database = {
           approved_by?: string | null
           canonical_skill_id?: string | null
           created_at?: string
+          direct_evidence_bases?: Database["public"]["Enums"]["evidence_basis"][]
           expected_evidence_basis?: Database["public"]["Enums"]["evidence_basis"][]
           id?: string
           is_active?: boolean
@@ -3671,6 +3674,7 @@ export type Database = {
           rationale?: string | null
           relationship?: Database["public"]["Enums"]["skill_relationship"]
           skill_key: string
+          supporting_evidence_bases?: Database["public"]["Enums"]["evidence_basis"][]
           task_id: string
           updated_at?: string
         }
@@ -3679,6 +3683,7 @@ export type Database = {
           approved_by?: string | null
           canonical_skill_id?: string | null
           created_at?: string
+          direct_evidence_bases?: Database["public"]["Enums"]["evidence_basis"][]
           expected_evidence_basis?: Database["public"]["Enums"]["evidence_basis"][]
           id?: string
           is_active?: boolean
@@ -3687,6 +3692,7 @@ export type Database = {
           rationale?: string | null
           relationship?: Database["public"]["Enums"]["skill_relationship"]
           skill_key?: string
+          supporting_evidence_bases?: Database["public"]["Enums"]["evidence_basis"][]
           task_id?: string
           updated_at?: string
         }
@@ -5165,6 +5171,7 @@ export type Database = {
           provenance: string
           requirement_key: string
           requires_pair: boolean
+          response_schema: Json | null
           task_id: string
           updated_at: string
         }
@@ -5184,6 +5191,7 @@ export type Database = {
           provenance?: string
           requirement_key: string
           requires_pair?: boolean
+          response_schema?: Json | null
           task_id: string
           updated_at?: string
         }
@@ -5203,6 +5211,7 @@ export type Database = {
           provenance?: string
           requirement_key?: string
           requires_pair?: boolean
+          response_schema?: Json | null
           task_id?: string
           updated_at?: string
         }
@@ -5639,6 +5648,10 @@ export type Database = {
         Args: { p_demonstration_id: string }
         Returns: Json
       }
+      compute_signal_strength_v2: {
+        Args: { p_demo: string; p_mapping: string }
+        Returns: Json
+      }
       create_skill_signals_for_demonstration: {
         Args: { p_demo: string }
         Returns: number
@@ -5826,6 +5839,10 @@ export type Database = {
           p_skill_key: string
         }
         Returns: string
+      }
+      shadow_signal_strength_v2: {
+        Args: { p_signal_id: string }
+        Returns: Json
       }
       task_work_order_id: { Args: { p_task: string }; Returns: string }
       tenant_curation_enforced: { Args: never; Returns: boolean }
