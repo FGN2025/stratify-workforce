@@ -41,6 +41,8 @@ type Pending = {
   artifact_kind: string;
   storage_path: string | null;
   body_text: string | null;
+  body_structured: Record<string, unknown> | null;
+  response_schema: { fields?: StructuredField[] } | null;
 };
 
 function mmss(s?: number | null) {
