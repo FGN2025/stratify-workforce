@@ -1,24 +1,14 @@
-# Phase 2 — Evidence + Skills Architecture (proposed, not implemented)
+# Phase 2 — Evidence + Skills Architecture (final build spec, not implemented)
 
-Status: **APPROVED IN PRINCIPLE, NOT IMPLEMENTED.** No Phase 2 tables have been created.
-Nothing in this document runs. It is the design of record awaiting an explicit build
-instruction.
+Status: **FINAL SPEC AWAITING BUILD APPROVAL.** No Phase 2 tables have been created.
+Nothing in this document runs.
 
-Out of scope for Phase 2: AI scoring of any kind, telemetry ingestion, new credential
-types or issuance, Skills Taxonomy redesign, retroactive XP or badges, learner UI
-redesign, recalibration of existing `success_criteria`.
+Out of scope, unchanged: AI scoring, telemetry ingestion, automatic Skill Verification, new
+credential types or issuance, Skills Taxonomy redesign, retroactive skill claims, retroactive
+XP or badges, learner UI redesign, bulk catalog migration, recalibration of existing
+`success_criteria`.
 
----
-
-## 1. The problem this solves
-
-Today a Work Order carries a single generic evidence bucket (`work_orders.evidence_requirements`,
-typically "1–5 uploads"). A four-task assignment can therefore be satisfied by one
-screenshot. There is no way to say "task 3 requires a continuous video, task 5 requires a
-written rationale", no review criteria, and no traceable path from an upload to a claim
-about a person's skill.
-
-Four distinctions must remain permanently separate and are never collapsed:
+Four distinctions remain permanently separate:
 
 ```text
 Evidence collected  ≠  Task demonstrated  ≠  Skill signal  ≠  Skill verified
@@ -26,189 +16,193 @@ Evidence collected  ≠  Task demonstrated  ≠  Skill signal  ≠  Skill verifi
 
 ---
 
-## 2. Entity model
+## 1. Entity model
 
 ```text
-Work Order
-  └─ Task  (work_order_tasks, exists today)
-       ├─ Task Skill Mapping ──► skills_taxonomy (explicit, human approved)
-       └─ Evidence Requirement  (one per thing that must be shown)
-             ├─ Assessment Criterion  (what a reviewer checks; some are gating)
-             └─ ◄── Evidence Artifact Requirement (M:N) ──► Evidence Artifact
-                        └─ Assessment Result  (per criterion, per association)
-  Task Demonstration  (per user, per task — computed from the above + human review)
-       └─ Skill Signal  (per approved mapping; not a credential)
-              └─ Skill Verification  (separate, sparse, human only)
+User
+ └─ Work Order Attempt  (user_work_order_completions — EXISTING, authoritative)
+      └─ Work Order
+           └─ Task  (work_order_tasks — existing)
+                ├─ Task Skill Mapping ──► skills_taxonomy (explicit, human approved)
+                └─ Evidence Requirement
+                      ├─ accepted_evidence_types[]  (several artifact forms allowed)
+                      ├─ Assessment Criterion  (some gating)
+                      └─ ◄─ Evidence Artifact Requirement (M:N, carries locator
+                             + association lifecycle) ─► Evidence Artifact
+                                   └─ Assessment Result (per criterion, per association)
+      └─ Task Demonstration  (per user, per task, PER ATTEMPT)
+           └─ Skill Signal
+                 └─ (human only) Skill Verification ─► skill_verification_signals
 ```
 
-Cardinality:
+### Attempt model
 
-| Relationship | Cardinality |
-| --- | --- |
-| Work Order → Task | 1:N |
-| Task → Evidence Requirement | 1:N |
-| Task → Task Skill Mapping | 1:N |
-| Evidence Requirement → Assessment Criterion | 1:N |
-| Evidence Artifact ↔ Evidence Requirement | **M:N** via `evidence_artifact_requirements` |
-| Artifact-Requirement association → Assessment Result | 1:N (one per criterion per reviewer) |
-| User + Task → Task Demonstration | 1:1 |
-| Task Demonstration → Skill Signal | 1:N |
-| Skill Signal → Skill Verification | N:1, never automatic |
+Academy already has an authoritative attempt entity: `user_work_order_completions`
+(`id`, `user_id`, `work_order_id`, `status`, `score`, `attempt_number`, `started_at`,
+`completed_at`). **No parallel attempt model is created.** `work_order_evidence` already
+references it via `completion_id`; Phase 2 keeps that convention and names the column
+`completion_id` (the Work Order attempt).
+
+Failed or incomplete attempts are never overwritten: demonstrations and artifacts are
+attempt-scoped rows, so earlier attempts remain historically visible after a later success.
 
 ---
 
-## 3. Proposed tables
+## 2. Tables
 
-### 3.1 `work_order_task_evidence_requirements`
-
-Per-task, replaces the generic blob for newly authored content.
+### 2.1 `work_order_task_evidence_requirements`
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | id | uuid pk | |
-| task_id | uuid → work_order_tasks | cascade |
+| task_id | uuid → work_order_tasks(id) on delete cascade | |
 | requirement_key | text | unique per task |
-| label | text | learner-facing |
-| instructions | text | what to capture |
-| evidence_type | enum `evidence_type` | see §5 |
-| evidence_basis | enum `evidence_basis` | see §5 |
+| label, instructions | text | learner-facing |
+| accepted_evidence_types | `evidence_type[]` not null | ≥1; a requirement may be satisfied by any listed form |
+| evidence_basis | `evidence_basis` | epistemic basis, independent of artifact form |
 | min_artifacts / max_artifacts | int | default 1 / 1 |
-| is_required | boolean | default true |
-| min_duration_seconds | int null | for video |
-| requires_pair | boolean | before/after |
+| is_required | boolean default true | |
+| min_duration_seconds | int null | video only |
+| requires_pair | boolean default false | before/after |
 | order_index | int | |
-| provenance | text | `authored` or `derived_from_legacy_blob` |
-| is_active | boolean | |
+| provenance | text | `authored` \| `derived_from_legacy_blob` |
+| is_active | boolean default true | |
+| created_at / updated_at | timestamptz | |
 
-Unique: (`task_id`, `requirement_key`).
+Unique: (`task_id`, `requirement_key`). Index: (`task_id`, `order_index`).
 
-### 3.2 `evidence_artifacts`
+### 2.2 `evidence_artifacts`
 
-A thing the learner produced. Deliberately **not** tied to a requirement.
+A thing the learner produced. Not tied to a requirement. **Lifecycle status only.**
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | id | uuid pk | |
-| user_id | uuid | |
-| work_order_id | uuid | |
-| artifact_kind | text | `file` or `text` |
-| storage_path | text null | private bucket, signed URL reads |
-| mime_type, duration_seconds | | |
-| body_text | text null | written annotations stored as real text |
+| user_id | uuid not null | |
+| work_order_id | uuid → work_orders | |
+| completion_id | uuid → user_work_order_completions null | the attempt; null only for legacy imports |
+| artifact_kind | text | `file` \| `text` |
+| storage_path | text null | private `evidence` bucket, signed-URL reads |
+| mime_type, duration_seconds, file_size | | |
+| body_text | text null | written annotations as real text |
 | body_structured | jsonb null | structured form answers |
 | title, captured_at, submitted_at | | |
-| status | enum | draft / submitted / under_review / accepted / rejected / needs_revision / superseded |
-| superseded_by_artifact_id | uuid null | revision chain |
-| is_legacy | boolean | imported historical evidence |
+| status | `artifact_status` | `draft` \| `submitted` \| `under_review` \| `superseded` \| `withdrawn` |
+| superseded_by_artifact_id | uuid → evidence_artifacts null | revision chain |
+| is_legacy | boolean default false | |
+| legacy_evidence_id | uuid → work_order_evidence null | provenance for migrated rows |
+| created_at / updated_at | | |
 
-### 3.3 `evidence_artifact_requirements` (the many-to-many)
+**`accepted` / `rejected` / `needs_revision` do not exist at artifact level.** Indexes:
+(`user_id`, `work_order_id`), (`completion_id`).
 
-One legitimate artifact may support several requirements — a single ATS process clip can
-contain mirror discipline, approach control and trailer positioning.
-
-| Column | Type |
-| --- | --- |
-| id | uuid pk |
-| artifact_id | uuid → evidence_artifacts |
-| requirement_id | uuid → work_order_task_evidence_requirements |
-| learner_rationale | text null |
-| association_status | enum: claimed / accepted / rejected |
-| reviewed_by, reviewed_at | |
-
-Unique: (`artifact_id`, `requirement_id`).
-
-**Governing rule.** Every required Evidence Requirement must be **independently
-satisfied**. An artifact may serve several requirements only when it is explicitly
-associated with each one, each association carries that requirement's own assessment
-criteria, and the artifact is assessed against those criteria separately. The same file is
-never uploaded twice merely to satisfy the data model — and acceptance for one requirement
-never implies acceptance for another.
-
-### 3.4 `assessment_criteria`
+### 2.3 `evidence_artifact_requirements` (M:N + assessment state + locator)
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | id | uuid pk | |
-| requirement_id | uuid | |
-| criterion_key, criterion_text | text | |
-| guidance_for_reviewer | text | |
-| weight | numeric | |
-| is_gating | boolean | a gating criterion must be met for demonstration |
-| order_index, is_active | | |
+| artifact_id | uuid → evidence_artifacts on delete cascade | |
+| requirement_id | uuid → work_order_task_evidence_requirements | |
+| completion_id | uuid → user_work_order_completions null | attempt the claim belongs to |
+| association_status | `association_status` | `claimed` \| `under_review` \| `accepted` \| `rejected` \| `needs_revision` |
+| learner_rationale | text null | |
+| timecode_start_seconds / timecode_end_seconds | numeric null | "demonstrated at 00:42–00:58" |
+| page_number | int null | documents |
+| frame_reference | text null | named frame / still |
+| reviewed_by, reviewed_at | | |
+| is_active | boolean default true | superseded claims set false |
+| created_at / updated_at | | |
 
-### 3.5 `assessment_results`
+Unique: (`artifact_id`, `requirement_id`, `completion_id`).
+Indexes: (`requirement_id`, `association_status`), (`completion_id`).
+
+**Governing rule.** Every required Evidence Requirement must be **independently satisfied**.
+One artifact may serve several requirements only when explicitly associated with each; each
+association carries its own criteria, locator and decision. Acceptance for one requirement
+never implies acceptance for another, and the same file is never uploaded twice merely to
+satisfy the data model.
+
+### 2.4 `assessment_criteria`
 
 | Column | Type |
 | --- | --- |
 | id | uuid pk |
-| artifact_requirement_id | uuid → evidence_artifact_requirements |
+| requirement_id | uuid → work_order_task_evidence_requirements |
+| criterion_key, criterion_text, guidance_for_reviewer | text |
+| weight | numeric default 1 |
+| is_gating | boolean default false |
+| order_index, is_active, created_at, updated_at | |
+
+Unique: (`requirement_id`, `criterion_key`).
+
+### 2.5 `assessment_results`
+
+| Column | Type |
+| --- | --- |
+| id | uuid pk |
+| artifact_requirement_id | uuid → evidence_artifact_requirements on delete cascade |
 | criterion_id | uuid → assessment_criteria |
-| outcome | enum: met / partially_met / not_met |
-| evidence_quality | enum: insufficient / adequate / strong |
+| outcome | `assessment_outcome`: met / partially_met / not_met |
+| evidence_quality | `evidence_quality`: insufficient / adequate / strong |
 | reviewer_id, reviewer_note, reviewed_at | |
 
 Unique: (`artifact_requirement_id`, `criterion_id`, `reviewer_id`). Human review only.
 
-### 3.6 `task_skill_mappings`
-
-Explicit. Never inferred from titles, never AI-generated.
+### 2.6 `task_skill_mappings`
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | id | uuid pk | |
-| task_id | uuid | |
+| task_id | uuid → work_order_tasks | |
 | skill_key | text → skills_taxonomy | existing keys used where they exist |
-| relationship | enum: primary / supporting / prerequisite_context | |
-| expected_evidence_basis | enum array | which bases can support this claim |
+| relationship | `skill_relationship`: primary / supporting / prerequisite_context | |
+| expected_evidence_basis | `evidence_basis[]` | |
 | max_signal_strength | text | cap; outcome-only capture can never reach the top band |
 | rationale | text | |
-| mapping_version | int | |
+| mapping_version | int default 1 | |
 | is_active | boolean | |
-| approved_by, approved_at | | **a mapping is effective only when approved_by is set** |
+| approved_by, approved_at | | **effective only when approved_by is set** |
 
-Unique: (`task_id`, `skill_key`, `mapping_version`).
+Unique: (`task_id`, `skill_key`, `mapping_version`). Never inferred from titles, never AI-generated.
 
-Taxonomy note: `skills_taxonomy` currently has no duplicate keys, but entries are scoped
-per game via `game_title`, so cross-industry skills will fragment as more games arrive.
-Recorded for later review; no redesign in Phase 2.
+Taxonomy note: no duplicate keys today, but entries are game-scoped via `game_title`, so
+cross-industry skills will fragment. Recorded for later review; no redesign in Phase 2.
 
-### 3.7 `task_demonstrations`
+### 2.7 `task_demonstrations` (attempt-aware)
 
 | Column | Type |
 | --- | --- |
 | id | uuid pk |
 | user_id, task_id, work_order_id | uuid |
-| status | enum: not_started / evidence_submitted / under_review / needs_revision / demonstrated / not_demonstrated |
+| completion_id | uuid → user_work_order_completions **not null** |
+| status | `demonstration_status`: not_started / evidence_submitted / under_review / needs_revision / demonstrated / not_demonstrated |
 | demonstrated_at, reviewed_by, review_completed_at | |
 | computed_note | jsonb (which requirements satisfied by which associations) |
 
-Unique: (`user_id`, `task_id`).
+Unique: (`user_id`, `task_id`, `completion_id`). Index: (`completion_id`, `status`).
 
-A task becomes `demonstrated` only when **all three** hold: every required Evidence
-Requirement is independently satisfied by accepted associations; every gating Assessment
-Criterion is met; the required human review has occurred.
-
-### 3.8 `skill_signals`
-
-Evidence-supported information about demonstrated capability. Not a credential.
+### 2.8 `skill_signals`
 
 | Column | Type |
 | --- | --- |
 | id | uuid pk |
 | user_id, skill_key | |
-| task_demonstration_id, task_skill_mapping_id | uuid |
+| task_demonstration_id → task_demonstrations | uuid |
+| task_skill_mapping_id → task_skill_mappings | uuid |
+| completion_id | uuid (denormalized attempt reference) |
 | evidence_basis | enum |
-| signal_strength_scheme | text (e.g. `v1_three_band`) |
-| signal_strength_value | text |
+| signal_strength_scheme, signal_strength_value | text |
 | confidence | numeric 0–1 |
 | provenance | jsonb |
 | observed_at, is_superseded | |
 
-Provenance always traces back: Skill Signal → Task Demonstration → Assessment Results →
+Unique: (`task_demonstration_id`, `task_skill_mapping_id`).
+
+Provenance always traces: Skill Signal → Task Demonstration → Assessment Results →
 Evidence Requirements → Evidence Artifacts → Academy Task → Academy Work Order →
 `simulation_activity_id` where applicable.
 
-### 3.9 `skill_verifications`
+### 2.9 `skill_verifications`
 
 | Column | Type |
 | --- | --- |
@@ -216,96 +210,199 @@ Evidence Requirements → Evidence Artifacts → Academy Task → Academy Work O
 | user_id, skill_key | |
 | verified_by | uuid (a person) |
 | verification_policy_ref | text |
-| basis_signal_ids | uuid[] |
 | verified_at, expires_at, revoked_at, revocation_reason, notes | |
 
-**No trigger, function or scheduled job may insert here.** There is no automatic path from
-a Skill Signal to a Skill Verification, and no connection to credential issuance in this
-phase.
+No `basis_signal_ids` array.
+
+### 2.10 `skill_verification_signals` (junction)
+
+| Column | Type |
+| --- | --- |
+| id | uuid pk |
+| skill_verification_id | uuid → skill_verifications on delete cascade |
+| skill_signal_id | uuid → skill_signals |
+| created_at | timestamptz |
+
+Unique: (`skill_verification_id`, `skill_signal_id`).
+
+**No trigger, function or scheduled job may insert into `skill_verifications` or this
+junction.** No automatic path from Skill Signal to Skill Verification; no connection to
+credential issuance in this phase.
 
 ---
 
-## 4. Lifecycles
+## 3. Lifecycles
 
-**Evidence Artifact:** `draft → submitted → under_review → accepted | rejected | needs_revision`.
-A revised upload creates a *new* artifact and sets `superseded_by_artifact_id` on the old
-one; nothing is overwritten. One artifact may be accepted for one requirement and rejected
-for another — those are association-level outcomes, not artifact-level ones.
+**Artifact (lifecycle only):** `draft → submitted → under_review → superseded | withdrawn`.
+A revision creates a *new* artifact; the old one becomes `superseded` via
+`superseded_by_artifact_id`. Nothing is overwritten.
 
-**Task Demonstration:** `not_started → evidence_submitted → under_review → needs_revision ⇄ under_review → demonstrated | not_demonstrated`.
-Recomputed whenever an association or assessment result changes, but only a human review
-completion can move it to `demonstrated`.
+**Association (assessment state):** `claimed → under_review → accepted | rejected | needs_revision`.
+Per requirement. One artifact may be accepted for A, need revision for B and be rejected for C.
+
+**Assessment:** a reviewer records one `assessment_results` row per criterion per association.
+Human review only.
+
+**Task Demonstration:** `not_started → evidence_submitted → under_review → needs_revision ⇄ under_review → demonstrated | not_demonstrated`,
+scoped to one attempt. Recomputed whenever an association or assessment result on that
+attempt changes; only a completed human review can move it to `demonstrated`.
 
 ---
 
-## 5. Evidence basis, quality and strength (recommendation)
+## 4. Evidence type, basis, quality, strength
 
-Three separate concepts, deliberately not merged:
-
-| Concept | Where it lives | Meaning |
+| Concept | Where | Meaning |
 | --- | --- | --- |
-| Evidence **type** | `evidence_type` on the requirement | the artifact's form: screenshot, video_clip, before_after_pair, written_annotation, structured_form, document |
-| Evidence **basis** | `evidence_basis` | what the evidence can epistemically support: outcome_capture, process_capture, written_reasoning, structured_result, human_observation, telemetry |
-| Evidence **quality** | `assessment_results.evidence_quality` | how good this particular artifact is: insufficient / adequate / strong |
-| Signal **strength / confidence** | `skill_signals` | how strongly the accumulated evidence supports the skill claim |
+| Evidence **type** | `accepted_evidence_types[]` on the requirement | artifact form: screenshot, video_clip, video_timecode_reference, before_after_pair, written_annotation, structured_form, document |
+| Evidence **basis** | `evidence_basis` | what it can epistemically support: outcome_capture, process_capture, written_reasoning, structured_result, human_observation, telemetry |
+| Evidence **quality** | `assessment_results.evidence_quality` | insufficient / adequate / strong |
+| Signal **strength / confidence** | `skill_signals` | how strongly accumulated evidence supports the claim |
 
-`telemetry` is defined as a basis now; no telemetry ingestion is built.
+Type and basis are independent: `video_clip` + `process_capture`, or `screenshot` +
+`outcome_capture`. `telemetry` is defined as a basis; no ingestion is built.
 
-Recommendation on strength: do **not** hard-code weak/moderate/strong as the only possible
-representation. Store a versioned scheme — `signal_strength_scheme` (text) +
-`signal_strength_value` (text) + `confidence` (numeric 0–1) — backed by a small
-`signal_strength_schemes` reference table. Scheme `v1_three_band` derives strength from
-basis plus quality, capped by the mapping's `max_signal_strength`. Under v1, outcome-only
-capture can never produce the top band. When the model is tested against real reviews the
-scheme can be revised without a migration or loss of historical meaning.
+Strength stays versioned: `signal_strength_scheme` + `signal_strength_value` + `confidence`,
+backed by a small `signal_strength_schemes` reference table. Scheme `v1_three_band` derives
+strength from basis plus quality, capped by the mapping's `max_signal_strength`; outcome-only
+capture can never produce the top band.
 
----
-
-## 6. Migration strategy (additive, nothing dropped)
-
-1. Create the new tables. `work_orders.evidence_requirements` is left untouched and still read.
-2. Backfill one derived requirement per existing task from the blob, marked
-   `provenance = 'derived_from_legacy_blob'`, carrying **no** assessment criteria — so no
-   legacy Work Order can reach `demonstrated` until an admin authors criteria.
-3. Readers prefer per-task requirements when present, else fall back to the blob.
-4. Import historical `work_order_evidence` rows as `evidence_artifacts` with
-   `status = 'accepted'` where already approved, associated to the derived requirement,
-   marked `is_legacy = true`. Legacy artifacts never generate Skill Signals. Existing
-   completions, XP and credentials are unaffected.
-5. Author the ATS prototype natively with real per-task requirements and criteria.
+**`confidence` is an internal evidence-strength measure. It is NOT a calibrated probability
+that a person possesses a real-world occupational skill and must never be presented as
+statistical certainty.** No AI calculation in this phase.
 
 ---
 
-## 7. ATS Golden Path worked example — Trailer Positioning and Dock Approach
+## 5. Legacy evidence migration (two paths, nothing fabricated)
+
+Current state: `work_order_evidence` holds **0 rows**, and none carry task provenance in
+`metadata`. The rules below still bind any future import.
+
+**Path A — deterministic task provenance present** (`metadata.task_id` /
+`work_order_task_id` / matching `source_task_id`): migrate to an `evidence_artifacts` row
+with `is_legacy = true`, `legacy_evidence_id`, `completion_id` copied from the source row,
+and an association to the corresponding task requirement.
+
+**Path B — no deterministic task provenance (the default):** import as an
+`evidence_artifacts` row marked `is_legacy = true`, `legacy_task_attribution = 'unknown'`,
+with **no** association rows. Such evidence is labelled **LEGACY WORK ORDER EVIDENCE —
+TASK ATTRIBUTION UNKNOWN**. It is never attributed to every task, never mapped to an
+invented requirement, never silently reinterpreted as task-level evidence. It **does not**
+create a Task Demonstration and **does not** create a Skill Signal. It remains valid for the
+historical Work Order completion under the rules in force at the time.
+
+Other migration rules: new tables are additive; `work_orders.evidence_requirements` is left
+untouched and still read; readers prefer per-task requirements when present and fall back to
+the blob; derived legacy requirements carry **no** assessment criteria, so no legacy Work
+Order can reach `demonstrated` until an admin authors criteria. Existing completions, XP,
+badges and credentials are unaffected.
+
+---
+
+## 6. ATS worked example — Trailer Positioning and Dock Approach
 
 ```text
 GG Challenge  f969023f-d69e-4323-a508-778c6a92e7fa
    └─ Canonical Simulation Activity  b6e90c9b-0c62-4232-ab04-a92064af191b
         └─ Academy Work Order (to be authored; carries simulation_activity_id)
-             └─ Tasks → Task Skill Mappings → Evidence Requirements
-                  → Artifacts → Assessment Criteria → Human Assessment
-                  → Task Demonstration → Skill Signals
+             └─ Learner → Work Order Attempt (user_work_order_completions.id = ATT-1)
+                  └─ 5 Tasks → Task Skill Mappings → Evidence Requirements
+                       → Artifacts → Associations (+ locators) → Criteria
+                       → Human Assessment → Task Demonstration (per attempt) → Skill Signals
 ```
 
-| # | Task | Skill mapping | Evidence requirement | Gating criteria (*) |
+| # | Task | Skill mapping | Requirement (accepted types) | Gating criteria (*) |
 | --- | --- | --- | --- | --- |
-| 1 | Straight-line reverse, centered | `backing_maneuvers` primary, cap moderate, outcome_capture | `final_position_shot` (screenshot) | trailer centered within bay markings* |
-| 2 | Offset backing | `backing_maneuvers` primary | `offset_final_shot` (screenshot) | trailer fully inside target box*; no contact with adjacent obstacle* |
-| 3 | 90-degree alley dock | `docking` primary | `alley_dock_shot` (screenshot) | squared to dock face*; within dock tolerance |
+| 1 | Straight-line reverse, centered | `backing_maneuvers` primary, cap moderate, outcome_capture | `final_position_shot` (screenshot, video_timecode_reference) | trailer centered within bay markings* |
+| 2 | Offset backing | `backing_maneuvers` primary | `offset_final_shot` (screenshot, video_timecode_reference) | fully inside target box*; no contact with obstacle* |
+| 3 | 90-degree alley dock | `docking` primary | `alley_dock_final_position` (screenshot, video_clip, video_timecode_reference) | squared to dock face*; within dock tolerance |
 | 4 | Mirror discipline | `defensive_driving` primary, `backing_maneuvers` supporting, process_capture, cap strong | `mirror_discipline_clip` (video_clip, min 30s) | mirror checks visible before each correction*; drift corrected early; continuous unedited take* |
-| 5 | Setup and rationale | `docking` primary, `route_planning` supporting, before_after_pair + written_reasoning | `setup_pair` (before_after_pair) and `setup_rationale` (written_annotation) | setup angle visible in before frame*; annotation explains why that setup was chosen*; annotation names a stop condition |
+| 5 | Setup and rationale | `docking` primary, `route_planning` supporting | `setup_pair` (before_after_pair) and `setup_rationale` (written_annotation, structured_form) | setup angle visible in before frame*; annotation explains why that setup was chosen*; annotation names a stop condition |
 
-All four ATS skill keys already exist in the taxonomy — no new keys required.
+All four skill keys already exist in the taxonomy; no new keys required.
 
-How the M:N model behaves here: the learner submits **one** continuous clip and associates
-it with both `mirror_discipline_clip` and `alley_dock_shot`. Each association is assessed
-separately against that requirement's own criteria. The reviewer may accept it for mirror
-discipline and reject it for the alley dock — in which case task 4 can be demonstrated and
-task 3 cannot, without any duplicate upload.
+### One video, two requirements, two outcomes
 
-Written annotations are stored as real structured text in `body_text` / `body_structured`,
-never as screenshots of text, and are assessed against explicit criteria with outcomes
-met / partially_met / not_met by a human reviewer.
+Attempt ATT-1. The learner submits **one** continuous clip, artifact `ART-1`
+(`status = submitted`, `completion_id = ATT-1`), and claims it twice:
+
+| Association | Requirement | Locator | Status |
+| --- | --- | --- | --- |
+| `AR-1` | `mirror_discipline_clip` (task 4) | 00:00–02:30 | **accepted** |
+| `AR-2` | `alley_dock_final_position` (task 3) | 00:42–00:58 | **needs_revision** (dock face not visible in frame) |
+
+Each association is assessed against its own criteria and carries its own
+`assessment_results`. Task 4 reaches `demonstrated` for ATT-1; task 3 stays
+`needs_revision`. `ART-1` itself remains `submitted` — no artifact-level verdict exists.
+
+### Revising without destroying the accepted assessment
+
+The learner uploads a corrected still, artifact `ART-2`, and creates a new association
+`AR-3` (`ART-2` → `alley_dock_final_position`, ATT-1, `claimed`). `AR-2` is set
+`is_active = false` and remains in history with its assessment results intact. `AR-1`,
+`ART-1` and the task 4 demonstration are untouched — nothing about the accepted mirror
+discipline assessment is replaced or deleted. When `AR-3` is accepted and every gating
+criterion for task 3 is met, task 3 becomes `demonstrated` for ATT-1.
+
+### Attempt history
+
+If the learner later runs ATT-2, new artifacts, associations and a **new** row in
+`task_demonstrations` are created for `(user, task, ATT-2)`. The ATT-1 rows, including any
+`not_demonstrated` outcome, remain queryable forever.
 
 Signals flow only through approved mappings. No Skill Verification is produced and no
 credential is issued by this flow.
+
+---
+
+## 7. RLS requirements
+
+All nine (plus junction) tables: RLS enabled, explicit `GRANT`s, no `USING (true)`.
+
+- `work_order_task_evidence_requirements`, `assessment_criteria`, `task_skill_mappings`:
+  read for authenticated users who can see the parent Work Order
+  (`public.is_work_order_visible(auth.uid(), work_order_id)` via the task join); write for
+  platform admins and tenant admins of the owning tenant.
+- `evidence_artifacts`, `evidence_artifact_requirements`: learner reads and writes own rows
+  (insert/update only while `draft`/`submitted`/`claimed`); reviewers = platform admins and
+  tenant admins of the Work Order's tenant read all and update review fields. Files stay in
+  the private `evidence` bucket, read via signed URLs.
+- `assessment_results`: insert/update restricted to reviewers; learner may read results on
+  their own associations.
+- `task_demonstrations`: learner reads own; reviewers read/write within their tenant. No
+  client-side path may set `demonstrated`.
+- `skill_signals`: learner reads own; admins read within tenant; writes service_role only.
+- `skill_verifications`, `skill_verification_signals`: read by the subject and admins; insert
+  restricted to a verifier role, **never** by trigger, function or job.
+- `service_role` granted ALL on every table.
+
+---
+
+## 8. Final build spec summary
+
+**Create (11 objects):** `work_order_task_evidence_requirements`, `evidence_artifacts`,
+`evidence_artifact_requirements`, `assessment_criteria`, `assessment_results`,
+`task_skill_mappings`, `task_demonstrations`, `skill_signals`, `skill_verifications`,
+`skill_verification_signals`, `signal_strength_schemes`.
+
+**Enums:** `evidence_type`, `evidence_basis`, `artifact_status`, `association_status`,
+`assessment_outcome`, `evidence_quality`, `skill_relationship`, `demonstration_status`.
+
+**Attempt relationship:** `user_work_order_completions.id` is the attempt; carried on
+`evidence_artifacts.completion_id`, `evidence_artifact_requirements.completion_id`,
+`task_demonstrations.completion_id` (not null), `skill_signals.completion_id`.
+
+**Task Demonstration computation** (recompute on association/result change; human review
+required to finalize): for the given `(user, task, completion)`, every `is_required`
+requirement must have at least one `accepted` active association, every `is_gating`
+criterion across those associations must have outcome `met`, and `review_completed_at` must
+be set.
+
+**Skill Signal creation rule:** one signal per `(task_demonstration, approved active
+task_skill_mapping)` when the demonstration reaches `demonstrated`; basis from the
+requirement; strength from the versioned scheme capped by `max_signal_strength`. Legacy
+artifacts never generate signals.
+
+**Skill Verification boundary:** human-only inserts, linked to signals through
+`skill_verification_signals`; no automation, no credential issuance.
+
+No tables are created until this spec is approved.
