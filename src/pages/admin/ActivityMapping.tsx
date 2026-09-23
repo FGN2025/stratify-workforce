@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Loader2, RefreshCw, Check, Link2Off, Layers } from 'lucide-react';
+import { MigrationMaturityPanel } from '@/components/admin/MigrationMaturityPanel';
 
 type Status =
   | 'MATCHED'
