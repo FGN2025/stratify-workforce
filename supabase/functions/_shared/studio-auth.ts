@@ -157,22 +157,16 @@ export async function checkRateLimit(
     Math.floor(now / (RATE_LIMIT_WINDOW_SECONDS * 1000)) * RATE_LIMIT_WINDOW_SECONDS * 1000,
   ).toISOString();
 
-  const { data } = await admin
-    .from('studio_rate_limit')
-    .select('request_count')
-    .eq('token_hash', tokenHash)
-    .eq('window_start', windowStart)
-    .maybeSingle();
-
-  const count = (data?.request_count ?? 0) + 1;
-  await admin
-    .from('studio_rate_limit')
-    .upsert({ token_hash: tokenHash, window_start: windowStart, request_count: count });
+  const { data: count, error } = await admin.rpc('studio_rate_limit_hit', {
+    p_hash: tokenHash,
+    p_window: windowStart,
+  });
+  if (error) throw error;
 
   const retryAfter = Math.ceil(
     (new Date(windowStart).getTime() + RATE_LIMIT_WINDOW_SECONDS * 1000 - now) / 1000,
   );
-  return { allowed: count <= RATE_LIMIT_MAX_REQUESTS, retryAfter: Math.max(retryAfter, 1) };
+  return { allowed: Number(count ?? 0) <= RATE_LIMIT_MAX_REQUESTS, retryAfter: Math.max(retryAfter, 1) };
 }
 
 /** Tenant scope: the token's tenant, plus descendants only when explicitly granted. */
