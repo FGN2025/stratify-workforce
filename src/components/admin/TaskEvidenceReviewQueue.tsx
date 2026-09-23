@@ -289,10 +289,18 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
         >
           Accept
         </Button>
-        <Button variant="outline" disabled={decide.isPending} onClick={() => decide.mutate('needs_revision')}>
+        <Button
+          variant="outline"
+          disabled={decide.isPending || unassessed.length > 0}
+          onClick={() => decide.mutate('needs_revision')}
+        >
           Needs revision
         </Button>
-        <Button variant="ghost" disabled={decide.isPending} onClick={() => decide.mutate('rejected')}>
+        <Button
+          variant="ghost"
+          disabled={decide.isPending || unassessed.length > 0}
+          onClick={() => decide.mutate('rejected')}
+        >
           Not accepted
         </Button>
       </div>
