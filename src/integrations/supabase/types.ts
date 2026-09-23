@@ -472,6 +472,51 @@ export type Database = {
         }
         Relationships: []
       }
+      canonical_skills: {
+        Row: {
+          classification: Database["public"]["Enums"]["skill_classification"]
+          created_at: string
+          description: string | null
+          domain: string | null
+          id: string
+          provenance: Json
+          review_note: string | null
+          skill_key: string
+          skill_name: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          classification?: Database["public"]["Enums"]["skill_classification"]
+          created_at?: string
+          description?: string | null
+          domain?: string | null
+          id?: string
+          provenance?: Json
+          review_note?: string | null
+          skill_key: string
+          skill_name: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          classification?: Database["public"]["Enums"]["skill_classification"]
+          created_at?: string
+          description?: string | null
+          domain?: string | null
+          id?: string
+          provenance?: Json
+          review_note?: string | null
+          skill_key?: string
+          skill_name?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       career_path_requirements: {
         Row: {
           career_path_id: string
@@ -1096,6 +1141,13 @@ export type Database = {
             foreignKeyName: "events_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -1320,6 +1372,13 @@ export type Database = {
             foreignKeyName: "evidence_artifacts_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -1478,6 +1537,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_embed_configs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "leaderboard_embed_configs_work_order_id_fkey"
@@ -1701,6 +1767,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "lessons_work_order_id_fkey"
@@ -2210,6 +2283,13 @@ export type Database = {
             foreignKeyName: "scorm_course_work_orders_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "scorm_course_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -2280,6 +2360,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scorm_courses_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "scorm_courses_work_order_id_fkey"
@@ -2674,6 +2761,13 @@ export type Database = {
             foreignKeyName: "simulation_activity_reconciliation_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: true
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "simulation_activity_reconciliation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -2806,6 +2900,13 @@ export type Database = {
             foreignKeyName: "simulation_runs_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "simulation_runs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -2901,6 +3002,13 @@ export type Database = {
             foreignKeyName: "simulations_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "simulations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -2944,6 +3052,51 @@ export type Database = {
           url?: string
         }
         Relationships: []
+      }
+      skill_aliases: {
+        Row: {
+          alias_key: string
+          canonical_skill_id: string
+          created_at: string
+          game_title: Database["public"]["Enums"]["game_title"] | null
+          id: string
+          note: string | null
+          source: string
+        }
+        Insert: {
+          alias_key: string
+          canonical_skill_id: string
+          created_at?: string
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          id?: string
+          note?: string | null
+          source?: string
+        }
+        Update: {
+          alias_key?: string
+          canonical_skill_id?: string
+          created_at?: string
+          game_title?: Database["public"]["Enums"]["game_title"] | null
+          id?: string
+          note?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_aliases_canonical_skill_id_fkey"
+            columns: ["canonical_skill_id"]
+            isOneToOne: false
+            referencedRelation: "canonical_skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_aliases_canonical_skill_id_fkey"
+            columns: ["canonical_skill_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["canonical_skill_id"]
+          },
+        ]
       }
       skill_credentials: {
         Row: {
@@ -3122,6 +3275,13 @@ export type Database = {
             referencedRelation: "skill_signals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "skill_signal_evidence_bases_skill_signal_id_fkey"
+            columns: ["skill_signal_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["id"]
+          },
         ]
       }
       skill_signals: {
@@ -3236,6 +3396,13 @@ export type Database = {
             columns: ["skill_signal_id"]
             isOneToOne: false
             referencedRelation: "skill_signals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_verification_signals_skill_signal_id_fkey"
+            columns: ["skill_signal_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
             referencedColumns: ["id"]
           },
           {
@@ -3462,6 +3629,13 @@ export type Database = {
             foreignKeyName: "task_demonstrations_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "task_demonstrations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -3471,6 +3645,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          canonical_skill_id: string | null
           created_at: string
           expected_evidence_basis: Database["public"]["Enums"]["evidence_basis"][]
           id: string
@@ -3486,6 +3661,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          canonical_skill_id?: string | null
           created_at?: string
           expected_evidence_basis?: Database["public"]["Enums"]["evidence_basis"][]
           id?: string
@@ -3501,6 +3677,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          canonical_skill_id?: string | null
           created_at?: string
           expected_evidence_basis?: Database["public"]["Enums"]["evidence_basis"][]
           id?: string
@@ -3514,6 +3691,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_skill_mappings_canonical_skill_id_fkey"
+            columns: ["canonical_skill_id"]
+            isOneToOne: false
+            referencedRelation: "canonical_skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_skill_mappings_canonical_skill_id_fkey"
+            columns: ["canonical_skill_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["canonical_skill_id"]
+          },
           {
             foreignKeyName: "task_skill_mappings_task_id_fkey"
             columns: ["task_id"]
@@ -3575,6 +3766,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemetry_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "telemetry_sessions_work_order_id_fkey"
@@ -3720,6 +3918,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_work_order_curation_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "tenant_work_order_curation_work_order_id_fkey"
@@ -4592,6 +4797,13 @@ export type Database = {
             foreignKeyName: "user_task_progress_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "user_task_progress_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -4651,6 +4863,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_work_order_completions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "user_work_order_completions_work_order_id_fkey"
@@ -4817,6 +5036,13 @@ export type Database = {
             foreignKeyName: "work_order_assignments_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -4905,6 +5131,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_evidence_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "work_order_evidence_work_order_id_fkey"
@@ -5018,6 +5251,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_work_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_tasks_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "work_order_tasks_work_order_id_fkey"
@@ -5298,6 +5538,71 @@ export type Database = {
           },
         ]
       }
+      skill_signals_canonical: {
+        Row: {
+          canonical_classification:
+            | Database["public"]["Enums"]["skill_classification"]
+            | null
+          canonical_domain: string | null
+          canonical_skill_id: string | null
+          canonical_skill_key: string | null
+          canonical_skill_name: string | null
+          completion_id: string | null
+          confidence: number | null
+          created_at: string | null
+          id: string | null
+          is_superseded: boolean | null
+          observed_at: string | null
+          observed_in_game: Database["public"]["Enums"]["game_title"] | null
+          provenance: Json | null
+          signal_strength_scheme: string | null
+          signal_strength_value: string | null
+          simulation_activity_id: string | null
+          skill_key: string | null
+          task_demonstration_id: string | null
+          task_skill_mapping_id: string | null
+          tenant_id: string | null
+          user_id: string | null
+          work_order_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_signals_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "user_work_order_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_task_demonstration_id_fkey"
+            columns: ["task_demonstration_id"]
+            isOneToOne: false
+            referencedRelation: "task_demonstrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_task_skill_mapping_id_fkey"
+            columns: ["task_skill_mapping_id"]
+            isOneToOne: false
+            referencedRelation: "task_skill_mappings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       backfill_credentials_for_course: {
@@ -5515,6 +5820,13 @@ export type Database = {
         Returns: Database["public"]["Enums"]["demonstration_status"]
       }
       requirement_task_id: { Args: { p_requirement: string }; Returns: string }
+      resolve_canonical_skill: {
+        Args: {
+          p_game?: Database["public"]["Enums"]["game_title"]
+          p_skill_key: string
+        }
+        Returns: string
+      }
       task_work_order_id: { Args: { p_task: string }; Returns: string }
       tenant_curation_enforced: { Args: never; Returns: boolean }
       upsert_scorm_course_bundle: {
@@ -5681,6 +5993,11 @@ export type Database = {
       points_type: "xp" | "credits" | "tokens"
       progress_status: "not_started" | "in_progress" | "completed" | "failed"
       registration_status: "registered" | "confirmed" | "cancelled" | "no_show"
+      skill_classification:
+        | "transferable"
+        | "domain_specific"
+        | "simulation_specific"
+        | "needs_review"
       skill_relationship: "primary" | "supporting" | "prerequisite_context"
       source_type:
         | "lesson"
@@ -5955,6 +6272,12 @@ export const Constants = {
       points_type: ["xp", "credits", "tokens"],
       progress_status: ["not_started", "in_progress", "completed", "failed"],
       registration_status: ["registered", "confirmed", "cancelled", "no_show"],
+      skill_classification: [
+        "transferable",
+        "domain_specific",
+        "simulation_specific",
+        "needs_review",
+      ],
       skill_relationship: ["primary", "supporting", "prerequisite_context"],
       source_type: [
         "lesson",
