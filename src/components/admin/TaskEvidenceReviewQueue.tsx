@@ -144,6 +144,37 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
     },
   });
 
+  /** Earlier submissions by the same learner against this same requirement, with how they were assessed. */
+  const { data: priorRounds = [] } = useQuery({
+    queryKey: ['prior-evidence-rounds', item.requirement_id, item.user_id, item.completion_id],
+    queryFn: async () => {
+      const { data: prior, error } = await supabase
+        .from('evidence_artifact_requirements')
+        .select('*')
+        .eq('requirement_id', item.requirement_id)
+        .eq('user_id', item.user_id)
+        .eq('completion_id', item.completion_id)
+        .neq('id', item.assoc_id)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      if (!prior?.length) return [];
+      const { data: results } = await supabase
+        .from('assessment_results')
+        .select('*')
+        .in('artifact_requirement_id', prior.map((p) => p.id));
+      const { data: artifacts } = await supabase
+        .from('evidence_artifacts')
+        .select('id, title')
+        .in('id', prior.map((p) => p.artifact_id));
+      return prior.map((p) => ({
+        ...p,
+        artifact_title: artifacts?.find((a) => a.id === p.artifact_id)?.title ?? 'Evidence',
+        results: (results ?? []).filter((r) => r.artifact_requirement_id === p.id),
+      }));
+    },
+  });
+
+
   const openFile = async () => {
     if (!item.storage_path) return;
     const { data, error } = await supabase.storage.from('evidence').createSignedUrl(item.storage_path, 300);
