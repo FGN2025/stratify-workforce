@@ -68,7 +68,7 @@ function usePendingTaskEvidence() {
           supabase.from('evidence_artifacts').select('*').in('id', assocs.map((a) => a.artifact_id)),
           supabase
             .from('work_order_task_evidence_requirements')
-            .select('id, label, task_id')
+            .select('id, label, task_id, response_schema')
             .in('id', assocs.map((a) => a.requirement_id)),
           supabase.rpc('get_public_profile_data', { profile_ids: assocs.map((a) => a.user_id) }),
           supabase.from('tenants').select('id, name'),
@@ -96,6 +96,7 @@ function usePendingTaskEvidence() {
         const demo = demos?.find((d) => d.task_id === req?.task_id && d.completion_id === a.completion_id);
         return {
           assoc_id: a.id,
+          user_id: a.user_id,
           association_status: a.association_status,
           learner_rationale: a.learner_rationale,
           timecode_start_seconds: a.timecode_start_seconds,
@@ -114,6 +115,8 @@ function usePendingTaskEvidence() {
           artifact_kind: artifact?.artifact_kind ?? 'file',
           storage_path: artifact?.storage_path ?? null,
           body_text: artifact?.body_text ?? null,
+          body_structured: (artifact?.body_structured as Record<string, unknown> | null) ?? null,
+          response_schema: (req?.response_schema as { fields?: StructuredField[] } | null) ?? null,
         };
       });
     },
