@@ -155,6 +155,127 @@ export type Database = {
         }
         Relationships: []
       }
+      assessment_criteria: {
+        Row: {
+          created_at: string
+          criterion_key: string
+          criterion_text: string
+          guidance_for_reviewer: string | null
+          id: string
+          is_active: boolean
+          is_gating: boolean
+          order_index: number
+          requirement_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          criterion_key: string
+          criterion_text: string
+          guidance_for_reviewer?: string | null
+          id?: string
+          is_active?: boolean
+          is_gating?: boolean
+          order_index?: number
+          requirement_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          criterion_key?: string
+          criterion_text?: string
+          guidance_for_reviewer?: string | null
+          id?: string
+          is_active?: boolean
+          is_gating?: boolean
+          order_index?: number
+          requirement_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_criteria_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_task_evidence_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_results: {
+        Row: {
+          artifact_requirement_id: string
+          created_at: string
+          criterion_id: string
+          evidence_quality: Database["public"]["Enums"]["evidence_quality"]
+          id: string
+          outcome: Database["public"]["Enums"]["assessment_outcome"]
+          reviewed_at: string
+          reviewer_id: string
+          reviewer_note: string | null
+          subject_user_id: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          artifact_requirement_id: string
+          created_at?: string
+          criterion_id: string
+          evidence_quality: Database["public"]["Enums"]["evidence_quality"]
+          id?: string
+          outcome: Database["public"]["Enums"]["assessment_outcome"]
+          reviewed_at?: string
+          reviewer_id: string
+          reviewer_note?: string | null
+          subject_user_id?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          artifact_requirement_id?: string
+          created_at?: string
+          criterion_id?: string
+          evidence_quality?: Database["public"]["Enums"]["evidence_quality"]
+          id?: string
+          outcome?: Database["public"]["Enums"]["assessment_outcome"]
+          reviewed_at?: string
+          reviewer_id?: string
+          reviewer_note?: string | null
+          subject_user_id?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_results_artifact_requirement_id_fkey"
+            columns: ["artifact_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_artifact_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_results_criterion_id_fkey"
+            columns: ["criterion_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       authorized_apps: {
         Row: {
           allowed_origins: string[]
@@ -973,6 +1094,230 @@ export type Database = {
           },
           {
             foreignKeyName: "events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_artifact_requirements: {
+        Row: {
+          artifact_id: string
+          association_status: Database["public"]["Enums"]["association_status"]
+          completion_id: string | null
+          created_at: string
+          frame_reference: string | null
+          id: string
+          is_active: boolean
+          learner_rationale: string | null
+          page_number: number | null
+          requirement_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_note: string | null
+          tenant_id: string | null
+          timecode_end_seconds: number | null
+          timecode_start_seconds: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artifact_id: string
+          association_status?: Database["public"]["Enums"]["association_status"]
+          completion_id?: string | null
+          created_at?: string
+          frame_reference?: string | null
+          id?: string
+          is_active?: boolean
+          learner_rationale?: string | null
+          page_number?: number | null
+          requirement_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          tenant_id?: string | null
+          timecode_end_seconds?: number | null
+          timecode_start_seconds?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          artifact_id?: string
+          association_status?: Database["public"]["Enums"]["association_status"]
+          completion_id?: string | null
+          created_at?: string
+          frame_reference?: string | null
+          id?: string
+          is_active?: boolean
+          learner_rationale?: string | null
+          page_number?: number | null
+          requirement_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          tenant_id?: string | null
+          timecode_end_seconds?: number | null
+          timecode_start_seconds?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_artifact_requirements_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_artifacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifact_requirements_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "user_work_order_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifact_requirements_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_task_evidence_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifact_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifact_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_artifacts: {
+        Row: {
+          artifact_kind: string
+          body_structured: Json | null
+          body_text: string | null
+          captured_at: string | null
+          completion_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          file_size: number | null
+          id: string
+          is_legacy: boolean
+          legacy_evidence_id: string | null
+          legacy_task_attribution: string
+          mime_type: string | null
+          status: Database["public"]["Enums"]["artifact_status"]
+          storage_path: string | null
+          submitted_at: string | null
+          superseded_by_artifact_id: string | null
+          tenant_id: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+          work_order_id: string
+        }
+        Insert: {
+          artifact_kind?: string
+          body_structured?: Json | null
+          body_text?: string | null
+          captured_at?: string | null
+          completion_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          file_size?: number | null
+          id?: string
+          is_legacy?: boolean
+          legacy_evidence_id?: string | null
+          legacy_task_attribution?: string
+          mime_type?: string | null
+          status?: Database["public"]["Enums"]["artifact_status"]
+          storage_path?: string | null
+          submitted_at?: string | null
+          superseded_by_artifact_id?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          work_order_id: string
+        }
+        Update: {
+          artifact_kind?: string
+          body_structured?: Json | null
+          body_text?: string | null
+          captured_at?: string | null
+          completion_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          file_size?: number | null
+          id?: string
+          is_legacy?: boolean
+          legacy_evidence_id?: string | null
+          legacy_task_attribution?: string
+          mime_type?: string | null
+          status?: Database["public"]["Enums"]["artifact_status"]
+          storage_path?: string | null
+          submitted_at?: string | null
+          superseded_by_artifact_id?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_artifacts_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "user_work_order_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_legacy_evidence_id_fkey"
+            columns: ["legacy_evidence_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_evidence"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_superseded_by_artifact_id_fkey"
+            columns: ["superseded_by_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_artifacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_artifacts_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
@@ -1987,6 +2332,33 @@ export type Database = {
         }
         Relationships: []
       }
+      signal_strength_schemes: {
+        Row: {
+          allowed_values: string[]
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          scheme_key: string
+        }
+        Insert: {
+          allowed_values: string[]
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          scheme_key: string
+        }
+        Update: {
+          allowed_values?: string[]
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          scheme_key?: string
+        }
+        Relationships: []
+      }
       sim_categories: {
         Row: {
           accent_color: string
@@ -2720,6 +3092,221 @@ export type Database = {
         }
         Relationships: []
       }
+      skill_signal_evidence_bases: {
+        Row: {
+          created_at: string
+          evidence_basis: Database["public"]["Enums"]["evidence_basis"]
+          id: string
+          is_primary: boolean
+          skill_signal_id: string
+        }
+        Insert: {
+          created_at?: string
+          evidence_basis: Database["public"]["Enums"]["evidence_basis"]
+          id?: string
+          is_primary?: boolean
+          skill_signal_id: string
+        }
+        Update: {
+          created_at?: string
+          evidence_basis?: Database["public"]["Enums"]["evidence_basis"]
+          id?: string
+          is_primary?: boolean
+          skill_signal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_signal_evidence_bases_skill_signal_id_fkey"
+            columns: ["skill_signal_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skill_signals: {
+        Row: {
+          completion_id: string | null
+          confidence: number
+          created_at: string
+          id: string
+          is_superseded: boolean
+          observed_at: string
+          provenance: Json
+          signal_strength_scheme: string
+          signal_strength_value: string
+          skill_key: string
+          task_demonstration_id: string
+          task_skill_mapping_id: string
+          tenant_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completion_id?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          is_superseded?: boolean
+          observed_at?: string
+          provenance?: Json
+          signal_strength_scheme?: string
+          signal_strength_value: string
+          skill_key: string
+          task_demonstration_id: string
+          task_skill_mapping_id: string
+          tenant_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completion_id?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          is_superseded?: boolean
+          observed_at?: string
+          provenance?: Json
+          signal_strength_scheme?: string
+          signal_strength_value?: string
+          skill_key?: string
+          task_demonstration_id?: string
+          task_skill_mapping_id?: string
+          tenant_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_signals_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "user_work_order_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_task_demonstration_id_fkey"
+            columns: ["task_demonstration_id"]
+            isOneToOne: false
+            referencedRelation: "task_demonstrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_task_skill_mapping_id_fkey"
+            columns: ["task_skill_mapping_id"]
+            isOneToOne: false
+            referencedRelation: "task_skill_mappings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skill_verification_signals: {
+        Row: {
+          created_at: string
+          id: string
+          skill_signal_id: string
+          skill_verification_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          skill_signal_id: string
+          skill_verification_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          skill_signal_id?: string
+          skill_verification_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_verification_signals_skill_signal_id_fkey"
+            columns: ["skill_signal_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_verification_signals_skill_verification_id_fkey"
+            columns: ["skill_verification_id"]
+            isOneToOne: false
+            referencedRelation: "skill_verifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skill_verifications: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          skill_key: string
+          tenant_id: string | null
+          user_id: string
+          verification_policy_ref: string
+          verified_at: string
+          verified_by: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          skill_key: string
+          tenant_id?: string | null
+          user_id: string
+          verification_policy_ref: string
+          verified_at?: string
+          verified_by: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          skill_key?: string
+          tenant_id?: string | null
+          user_id?: string
+          verification_policy_ref?: string
+          verified_at?: string
+          verified_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_verifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_verifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skills_taxonomy: {
         Row: {
           category: string
@@ -2788,6 +3375,153 @@ export type Database = {
           resource_type?: string
         }
         Relationships: []
+      }
+      task_demonstrations: {
+        Row: {
+          completion_id: string
+          computed_note: Json
+          created_at: string
+          demonstrated_at: string | null
+          id: string
+          review_completed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["demonstration_status"]
+          task_id: string
+          tenant_id: string | null
+          updated_at: string
+          user_id: string
+          work_order_id: string
+        }
+        Insert: {
+          completion_id: string
+          computed_note?: Json
+          created_at?: string
+          demonstrated_at?: string | null
+          id?: string
+          review_completed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["demonstration_status"]
+          task_id: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id: string
+          work_order_id: string
+        }
+        Update: {
+          completion_id?: string
+          computed_note?: Json
+          created_at?: string
+          demonstrated_at?: string | null
+          id?: string
+          review_completed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["demonstration_status"]
+          task_id?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_demonstrations_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "user_work_order_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_demonstrations_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_demonstrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_demonstrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_demonstrations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_demonstrations_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_skill_mappings: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          expected_evidence_basis: Database["public"]["Enums"]["evidence_basis"][]
+          id: string
+          is_active: boolean
+          mapping_version: number
+          max_signal_strength: string
+          rationale: string | null
+          relationship: Database["public"]["Enums"]["skill_relationship"]
+          skill_key: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          expected_evidence_basis?: Database["public"]["Enums"]["evidence_basis"][]
+          id?: string
+          is_active?: boolean
+          mapping_version?: number
+          max_signal_strength?: string
+          rationale?: string | null
+          relationship?: Database["public"]["Enums"]["skill_relationship"]
+          skill_key: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          expected_evidence_basis?: Database["public"]["Enums"]["evidence_basis"][]
+          id?: string
+          is_active?: boolean
+          mapping_version?: number
+          max_signal_strength?: string
+          rationale?: string | null
+          relationship?: Database["public"]["Enums"]["skill_relationship"]
+          skill_key?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_skill_mappings_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       telemetry_sessions: {
         Row: {
@@ -4181,6 +4915,74 @@ export type Database = {
           },
         ]
       }
+      work_order_task_evidence_requirements: {
+        Row: {
+          accepted_evidence_types: Database["public"]["Enums"]["evidence_type"][]
+          created_at: string
+          evidence_basis: Database["public"]["Enums"]["evidence_basis"]
+          id: string
+          instructions: string | null
+          is_active: boolean
+          is_required: boolean
+          label: string
+          max_artifacts: number
+          min_artifacts: number
+          min_duration_seconds: number | null
+          order_index: number
+          provenance: string
+          requirement_key: string
+          requires_pair: boolean
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_evidence_types: Database["public"]["Enums"]["evidence_type"][]
+          created_at?: string
+          evidence_basis: Database["public"]["Enums"]["evidence_basis"]
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          is_required?: boolean
+          label: string
+          max_artifacts?: number
+          min_artifacts?: number
+          min_duration_seconds?: number | null
+          order_index?: number
+          provenance?: string
+          requirement_key: string
+          requires_pair?: boolean
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_evidence_types?: Database["public"]["Enums"]["evidence_type"][]
+          created_at?: string
+          evidence_basis?: Database["public"]["Enums"]["evidence_basis"]
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          is_required?: boolean
+          label?: string
+          max_artifacts?: number
+          min_artifacts?: number
+          min_duration_seconds?: number | null
+          order_index?: number
+          provenance?: string
+          requirement_key?: string
+          requires_pair?: boolean
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_task_evidence_requirements_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_tasks: {
         Row: {
           created_at: string
@@ -4520,13 +5322,30 @@ export type Database = {
         Args: { p_lesson_id: string; p_user_id: string }
         Returns: boolean
       }
+      can_review_tenant_evidence: {
+        Args: { p_tenant: string }
+        Returns: boolean
+      }
       can_view_profile: {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
       }
+      complete_task_review: {
+        Args: { p_demonstration_id: string }
+        Returns: Json
+      }
+      create_skill_signals_for_demonstration: {
+        Args: { p_demo: string }
+        Returns: number
+      }
       current_or_user_tenant: { Args: { p_user?: string }; Returns: string }
       current_tenant_id: { Args: { p_user?: string }; Returns: string }
       ensure_skill_passport: { Args: { p_user_id: string }; Returns: string }
+      ensure_task_demonstration: {
+        Args: { p_completion_id: string; p_task_id: string }
+        Returns: string
+      }
+      evidence_tenant_for_user: { Args: { p_user: string }; Returns: string }
       generate_app_api_key: { Args: { p_app_id: string }; Returns: string }
       get_accessible_tenants: {
         Args: { p_user_id?: string }
@@ -4676,7 +5495,17 @@ export type Database = {
       provision_fgn_scorm_toolkit_app: { Args: never; Returns: string }
       purge_expired_passport_link_tokens: { Args: never; Returns: number }
       purge_expired_scorm_launch_tokens: { Args: never; Returns: number }
+      recompute_task_demonstration: {
+        Args: { p_demo: string }
+        Returns: Database["public"]["Enums"]["demonstration_status"]
+      }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
+      reopen_task_review: {
+        Args: { p_demonstration_id: string }
+        Returns: Database["public"]["Enums"]["demonstration_status"]
+      }
+      requirement_task_id: { Args: { p_requirement: string }; Returns: string }
+      task_work_order_id: { Args: { p_task: string }; Returns: string }
       tenant_curation_enforced: { Args: never; Returns: boolean }
       upsert_scorm_course_bundle: {
         Args: {
@@ -4729,6 +5558,19 @@ export type Database = {
         | "score"
         | "streak"
       app_role: "admin" | "moderator" | "user" | "super_admin" | "developer"
+      artifact_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "superseded"
+        | "withdrawn"
+      assessment_outcome: "met" | "partially_met" | "not_met"
+      association_status:
+        | "claimed"
+        | "under_review"
+        | "accepted"
+        | "rejected"
+        | "needs_revision"
       community_approval_status:
         | "pending"
         | "approved"
@@ -4763,6 +5605,13 @@ export type Database = {
         | "certification"
         | "badge"
         | "skill_verification"
+      demonstration_status:
+        | "not_started"
+        | "evidence_submitted"
+        | "under_review"
+        | "needs_revision"
+        | "demonstrated"
+        | "not_demonstrated"
       difficulty_level: "beginner" | "intermediate" | "advanced"
       event_status:
         | "draft"
@@ -4772,11 +5621,27 @@ export type Database = {
         | "completed"
         | "cancelled"
       event_type: "quest" | "head_to_head"
+      evidence_basis:
+        | "outcome_capture"
+        | "process_capture"
+        | "written_reasoning"
+        | "structured_result"
+        | "human_observation"
+        | "telemetry"
+      evidence_quality: "insufficient" | "adequate" | "strong"
       evidence_review_status:
         | "pending"
         | "approved"
         | "rejected"
         | "needs_revision"
+      evidence_type:
+        | "screenshot"
+        | "video_clip"
+        | "video_timecode_reference"
+        | "before_after_pair"
+        | "written_annotation"
+        | "structured_form"
+        | "document"
       game_title:
         | "ATS"
         | "Farming_Sim"
@@ -4806,6 +5671,7 @@ export type Database = {
       points_type: "xp" | "credits" | "tokens"
       progress_status: "not_started" | "in_progress" | "completed" | "failed"
       registration_status: "registered" | "confirmed" | "cancelled" | "no_show"
+      skill_relationship: "primary" | "supporting" | "prerequisite_context"
       source_type:
         | "lesson"
         | "module"
@@ -4953,6 +5819,21 @@ export const Constants = {
         "streak",
       ],
       app_role: ["admin", "moderator", "user", "super_admin", "developer"],
+      artifact_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "superseded",
+        "withdrawn",
+      ],
+      assessment_outcome: ["met", "partially_met", "not_met"],
+      association_status: [
+        "claimed",
+        "under_review",
+        "accepted",
+        "rejected",
+        "needs_revision",
+      ],
       community_approval_status: [
         "pending",
         "approved",
@@ -4991,6 +5872,14 @@ export const Constants = {
         "badge",
         "skill_verification",
       ],
+      demonstration_status: [
+        "not_started",
+        "evidence_submitted",
+        "under_review",
+        "needs_revision",
+        "demonstrated",
+        "not_demonstrated",
+      ],
       difficulty_level: ["beginner", "intermediate", "advanced"],
       event_status: [
         "draft",
@@ -5001,11 +5890,29 @@ export const Constants = {
         "cancelled",
       ],
       event_type: ["quest", "head_to_head"],
+      evidence_basis: [
+        "outcome_capture",
+        "process_capture",
+        "written_reasoning",
+        "structured_result",
+        "human_observation",
+        "telemetry",
+      ],
+      evidence_quality: ["insufficient", "adequate", "strong"],
       evidence_review_status: [
         "pending",
         "approved",
         "rejected",
         "needs_revision",
+      ],
+      evidence_type: [
+        "screenshot",
+        "video_clip",
+        "video_timecode_reference",
+        "before_after_pair",
+        "written_annotation",
+        "structured_form",
+        "document",
       ],
       game_title: [
         "ATS",
@@ -5038,6 +5945,7 @@ export const Constants = {
       points_type: ["xp", "credits", "tokens"],
       progress_status: ["not_started", "in_progress", "completed", "failed"],
       registration_status: ["registered", "confirmed", "cancelled", "no_show"],
+      skill_relationship: ["primary", "supporting", "prerequisite_context"],
       source_type: [
         "lesson",
         "module",
