@@ -283,7 +283,10 @@ export type Database = {
           app_name: string
           app_slug: string
           can_issue_credentials: boolean
+          can_read_catalog: boolean
           can_read_credentials: boolean
+          catalog_include_descendants: boolean
+          catalog_tenant_id: string | null
           created_at: string
           credential_types_allowed: string[]
           id: string
@@ -298,7 +301,10 @@ export type Database = {
           app_name: string
           app_slug: string
           can_issue_credentials?: boolean
+          can_read_catalog?: boolean
           can_read_credentials?: boolean
+          catalog_include_descendants?: boolean
+          catalog_tenant_id?: string | null
           created_at?: string
           credential_types_allowed?: string[]
           id?: string
@@ -313,7 +319,10 @@ export type Database = {
           app_name?: string
           app_slug?: string
           can_issue_credentials?: boolean
+          can_read_catalog?: boolean
           can_read_credentials?: boolean
+          catalog_include_descendants?: boolean
+          catalog_tenant_id?: string | null
           created_at?: string
           credential_types_allowed?: string[]
           id?: string
@@ -323,6 +332,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "authorized_apps_catalog_tenant_id_fkey"
+            columns: ["catalog_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "authorized_apps_catalog_tenant_id_fkey"
+            columns: ["catalog_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "authorized_apps_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -480,6 +503,7 @@ export type Database = {
           domain: string | null
           id: string
           provenance: Json
+          record_version: number
           review_note: string | null
           skill_key: string
           skill_name: string
@@ -494,6 +518,7 @@ export type Database = {
           domain?: string | null
           id?: string
           provenance?: Json
+          record_version?: number
           review_note?: string | null
           skill_key: string
           skill_name: string
@@ -508,6 +533,7 @@ export type Database = {
           domain?: string | null
           id?: string
           provenance?: Json
+          record_version?: number
           review_note?: string | null
           skill_key?: string
           skill_name?: string
@@ -577,6 +603,27 @@ export type Database = {
           training_bridge_label?: string | null
           training_bridge_url?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      catalog_versions: {
+        Row: {
+          label: string
+          last_changed_at: string
+          source_key: string
+          version: number
+        }
+        Insert: {
+          label: string
+          last_changed_at?: string
+          source_key: string
+          version?: number
+        }
+        Update: {
+          label?: string
+          last_changed_at?: string
+          source_key?: string
+          version?: number
         }
         Relationships: []
       }
@@ -3573,6 +3620,97 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_rate_limit: {
+        Row: {
+          request_count: number
+          token_hash: string
+          window_start: string
+        }
+        Insert: {
+          request_count?: number
+          token_hash: string
+          window_start: string
+        }
+        Update: {
+          request_count?: number
+          token_hash?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      studio_tokens: {
+        Row: {
+          app_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          include_descendants: boolean
+          issued_to: string | null
+          last_used_at: string | null
+          request_count: number
+          revoked_at: string | null
+          revoked_reason: string | null
+          scopes: string[]
+          tenant_id: string
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          include_descendants?: boolean
+          issued_to?: string | null
+          last_used_at?: string | null
+          request_count?: number
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          scopes?: string[]
+          tenant_id: string
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          include_descendants?: boolean
+          issued_to?: string | null
+          last_used_at?: string | null
+          request_count?: number
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          scopes?: string[]
+          tenant_id?: string
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_tokens_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_audit_logs: {
         Row: {
           action: string
@@ -5486,6 +5624,7 @@ export type Database = {
           max_attempts: number | null
           metadata: Json
           owner_tenant_id: string | null
+          record_version: number
           simulation_activity_id: string | null
           source_challenge_id: string | null
           success_criteria: Json | null
@@ -5512,6 +5651,7 @@ export type Database = {
           max_attempts?: number | null
           metadata?: Json
           owner_tenant_id?: string | null
+          record_version?: number
           simulation_activity_id?: string | null
           source_challenge_id?: string | null
           success_criteria?: Json | null
@@ -5538,6 +5678,7 @@ export type Database = {
           max_attempts?: number | null
           metadata?: Json
           owner_tenant_id?: string | null
+          record_version?: number
           simulation_activity_id?: string | null
           source_challenge_id?: string | null
           success_criteria?: Json | null
@@ -5859,6 +6000,7 @@ export type Database = {
           skipped_count: number
         }[]
       }
+      bump_catalog_version: { Args: { p_source: string }; Returns: undefined }
       calculate_readiness: {
         Args: { p_career_path_id?: string; p_user_id: string }
         Returns: {
