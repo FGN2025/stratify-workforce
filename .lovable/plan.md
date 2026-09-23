@@ -1,47 +1,69 @@
-# Reply to FGN Studio — Studio Catalog Read API (Phase 3 prep)
+# Reply to FGN Studio — Studio Catalog Read API (Phase 3 prep, rev 2)
 
-## Answers to the brief (facts, before any build)
+Read-only. No write path, no submission path. Studio approvals stay simulated; Phase 4 remains blocked.
 
-**1. Address.** The Academy application is live at `https://fgn.academy` (also `https://www.fgn.academy`). `academy.fgn.gg` and `api.fgn.gg` were never ours — correctly discarded. The API is served from the Academy backend functions host, base path `/functions/v1/<api-name>`; the exact host string is already published in `docs/api/README.md` and will be sent to Studio with the credential. An API does exist today: a public catalog read API and a credential API.
+## Answers to the brief
 
-**2. Assumptions, corrected.**
-- Canonical skill catalog: exists. 35 canonical skills, server-issued UUID plus a stable `skill_key`, with a separate alias table. Skills are game-independent; a skill carries domain, classification and status.
-- Aliases: exist, and an alias can be global or game-scoped. Some alias keys legitimately appear more than once across games — so the ambiguity rule in section 6 is correct and necessary.
-- Work Order ↔ activity: readable. Work Orders carry the canonical `simulation_activity_id` owned by FGN.GG. One activity may legitimately have **several** Work Orders (two valid interpretations of Excavation and Trenching already exist). Studio must not treat "activity already has a Work Order" as duplicate.
-- Vocabulary: constrained, not free text — evidence artifact kinds, accepted evidence types, evidence bases, assessment outcomes and signal strengths are all enumerated server-side.
-- Tenancy: exists. Third-party credentials live in an authorized-apps table with a tenant column; today it is not enforced on reads because no read endpoint uses it. That enforcement is part of this build.
-- Curation state: exists for skills (status) and for Work Orders as the migration maturity level (Level 1/2/3, approval-only).
+**Address.** The Academy application is live at `https://fgn.academy` (and `www.fgn.academy`). `academy.fgn.gg` / `api.fgn.gg` were never ours. The API runs on the Academy backend functions host at `/functions/v1/<api-name>`; the exact absolute URL, the fetchable OpenAPI document and the CORS rules go in `docs/api/studio-catalog/README.md` and are shareable without any credential.
 
-**3. Approval ownership.** Academy owns approval. No Studio-side approval is authoritative; Studio approvals stay labelled simulated until a separate write gate exists. This brief is read-only and we keep it that way.
+**Assumptions, corrected.**
+- Canonical skills: 35, server-issued UUID plus stable `skill_key`, game-independent, with domain, classification and status. Aliases live in a separate table and may be global or game-scoped; the same alias key can legitimately point at different skills across games, so the ambiguity rule is necessary.
+- Work Order ↔ activity: readable. One activity may legitimately carry several Work Orders — two valid interpretations of Excavation and Trenching already exist, and both must survive your de-duplication logic.
+- Vocabulary: enumerated server-side (artifact kinds, accepted evidence types, evidence bases, assessment outcomes, signal strengths), not free text.
+- Tenancy: real — parent/child hierarchy, plus per-tenant curation of Work Orders.
+- Maturity and visibility are **different things** and are reported separately (see below).
 
-## What gets built
+**Approval ownership.** Academy owns approval. Nothing Studio approves is authoritative.
 
-A new read-only API `studio-catalog`, versioned `X-Studio-Contract: 2026-09-23.1`, authenticated with an Academy-issued app key (`X-App-Key`, the existing authorized-apps mechanism, extended with a read scope for Studio and server-enforced tenant scoping). Bearer-token form accepted as an alias for the same key so Studio's client needs no change.
+## Tenants — your confirmation needed before any credential
 
-Routes (all GET, JSON, cursor pagination `cursor` + `limit`, max 200):
+| Tenant | Level | ID |
+|---|---|---|
+| FGN Global | root | `efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca` |
+| Acme Broadband | root | `6c53d350-fd36-4f86-915d-fdce66606414` |
+| Oil and Gas Community | root | `6005ec7f-44d1-4be2-8f13-5b2029a9eb41` |
+| └ OK Construction | child of Oil and Gas | `83933ba4-41e2-4eef-8d09-efaea38b90ff` |
+| Scouting America | root | `4debf215-01e7-470c-bff4-e4cbe9ee43c4` |
+| Updated Test Community | root | `d8ea0fe9-6aa0-4803-ad0f-6956daf01c14` |
 
-- `/capabilities` — `{ contractVersion, tenantId, tenantLabel, authenticated, capabilities[] }`. Returns 200 with `authenticated:false` and no tenant only for an absent credential probe; an invalid credential is 401.
-- `/skills?query=&cursor=&limit=` — `{ items:[{ skillId, skillKey, label, description, aliases[], classification, domain, catalogVersion, curationState }], nextCursor, catalogVersion }`. Aliases include their game scope. An alias resolving to more than one skill is returned in an `ambiguousAliases[]` block rather than silently bound.
-- `/work-order-relationships?activityIds=&cursor=&limit=` — `{ items:[{ activityId, workOrderId, title, maturity, interpretationNote, academyNative }], nextCursor }`. `maturity` is `level_1|level_2|level_3` from the approved migration maturity record; `academyNative:true` means no GG activity, which is valid.
-- `/vocabulary` — `{ vocabularyVersion, artifactKinds[], acceptedEvidenceTypes[], evidenceBases[], assessmentOutcomes[], signalStrengths[], curationStates[], maturityLevels[] }`, each value with key + human label, derived from the live database constraints/enums so it cannot drift from what we accept.
-- `/sources` — `{ items:[{ sourceId, label, sourceVersion, lastSyncedAt }], nextCursor }` covering the canonical skill catalog, the vocabulary, the GG activity cache and the Work Order catalog, so a stale read is detectable.
+My recommendation is **FGN Global, without descendants** for the Studio authoring credential. Descendant access, if you grant it, means the credential additionally reads Work Order relationships and curation rows owned by every tenant beneath the chosen one (today only Oil and Gas → OK Construction is a real parent/child pair) — it is not platform-wide, and roots are siblings, so FGN Global does not imply the others. No credential is issued until you name the tenant and say descendants yes/no.
 
-Conventions honoured: server-issued stable identifiers (UUIDs; we never emit `local:`, `proposal:`, `sim-`), opaque cursors that never repeat, `catalogVersion`/`sourceVersion` on every read, explicit curation state, and status codes 401 (absent/invalid/expired), 403 (out-of-scope), 429 (rate limited), 200 otherwise.
+## Endpoints
+
+Base `…/functions/v1/studio-catalog`. All GET, JSON, `X-Studio-Contract: 2026-09-23.1`.
+
+- `/capabilities` — `{ contractVersion, supportedContractVersions[], authenticated, tenantId, tenantLabel, includesDescendants, capabilities[], unsupported[] }`. Unauthenticated probe is allowed here and returns `authenticated:false` with no tenant; **every other route returns 401 without a valid token**. This single documented exception is stated on the route itself and in the README.
+- `/skills?query=&cursor=&limit=` — `{ catalogVersion, items:[{ skillId, skillKey, label, description, domain, classification, curationState, aliases:[{ aliasKey, gameScope, ambiguous }] }], ambiguousAliases[], nextCursor }`.
+- `/work-orders?maturity=&activityIds=&tenantId=&cursor=&limit=` — the relationship read, reachable **without** any filter. Returns every Work Order the credential is authorized to see, including Academy-native ones with `activityId: null` and legacy ones with `maturity: null` (`maturityState: "unclassified"`). Filters narrow; they are never required. `/work-order-relationships` is kept as an alias of the same route for your existing client. Each item: `{ workOrderId, title, activityId, academyNative, maturity, maturityState, maturityApprovedAt, interpretationNote, visibility:{ ownerTenantId, ownerTenantLabel, visibilityMode, curatedForTenants[], curationSupported:true }, catalogVersion, recordVersion }`. Nothing is promoted, retired or hidden to tidy the response.
+- `/vocabulary` — `{ vocabularyVersion, artifactKinds[], acceptedEvidenceTypes[], evidenceBases[], assessmentOutcomes[], signalStrengths[], maturityStates[], visibilityModes[], curationStates[] }`.
+- `/sources` — `{ items:[{ sourceId, label, sourceVersion, lastChangedAt, lastSyncedAt }], nextCursor }` for skills, vocabulary, the GG activity cache and the Work Order catalog.
+
+## The contract corrections, point by point
+
+**Credential.** No durable app key is handed to a browser. Academy mints **short-lived, tenant-scoped Studio tokens**: an operator-owned durable key stays server-side in your proxy and exchanges (`POST /studio-token`, the one non-GET route, operator-to-operator) for a bearer token with a 15-minute TTL, a single tenant, a `descendants` flag and a read-only scope. Tokens are opaque, hashed at rest, and revocable individually or by key — revocation takes effect on the next request. Expiry, rotation and revocation are documented; an expired or revoked token is 401, a token without catalog read scope is 403.
+
+**Maturity vs visibility.** Separate fields, as above. Maturity is the migration level (1/2/3, `null` = unclassified). Visibility is owner tenant, the Work Order's visibility mode, and the curated-inclusion list from the tenant curation table. Both are supported, so neither is reported as unsupported; anything we cannot answer appears in `unsupported[]` on `/capabilities` rather than being faked.
+
+**Versions.** `catalogVersion` on every catalog response including Work Order relationships, `recordVersion` per item, `vocabularyVersion`, `sourceVersion`. Versions are maintained by database triggers on the underlying rows, and bump on content edits, deletion/deactivation, skill-mapping changes, maturity approvals and visibility/curation changes. Cursors embed the `catalogVersion` they started on: if the catalog changes mid-walk the next page returns `409 catalog_changed` with the new version, so a concurrent edit is never silently stitched into one read. A repeated or malformed cursor is `400`.
+
+**Vocabulary freshness.** No time-based freshness claim. Values are derived from the live enum and check-constraint catalog and cached against `vocabularyVersion`, which is recomputed from a catalog hash on every request; a changed hash invalidates immediately. A constraint expression we cannot parse into an enumeration is **fail-closed**: that vocabulary group is omitted, listed in `unsupported[]`, and the response carries `partial: true` rather than a guessed list.
+
+**Docs and CORS.** `docs/api/studio-catalog/README.md` plus a fetchable `GET /openapi.json` (and `docs/openapi/studio-catalog.yaml`), both credential-free. CORS allows the approved origins registered against the operator key plus `null`-origin server calls; unapproved origins get no allow header. A request whose `X-Studio-Contract` is absent or unsupported returns `400 contract_version_mismatch` with `{ supportedContractVersions, currentContractVersion }`.
 
 ## Technical notes
 
-- New edge function `supabase/functions/studio-catalog/index.ts`, plus `_shared/studio-auth.ts` for key hashing, tenant resolution and rate limiting. Public via `verify_jwt=false`, with in-code key validation.
-- Migration: add `can_read_catalog` boolean and require `tenant_id` on authorized apps used by Studio; add an `api_key_last_used_at`, `revoked_at` and a per-key request counter table for 429. Grants + RLS per the standard pattern; the function reads with the service role only after the key resolves to an active, non-revoked app.
-- Tenant scoping is applied in SQL on every query (skills are platform-global and marked as such in `/capabilities`; Work Order relationships are filtered to the app's tenant and its descendants via the existing hierarchy helper).
-- Vocabulary values are read from `pg_constraint`/enum catalogs at request time and cached 5 minutes, so the endpoint cannot advertise a value the database rejects.
-- OpenAPI written to `docs/openapi/studio-catalog.yaml`, with `docs/api/studio-catalog/README.md` describing auth, pagination, versions and the ambiguity rule.
-- Admin UI: the Authorized Apps manager gains the catalog-read toggle and a required tenant selector for catalog-read apps.
-- Nothing in FGN.GG, Merits, Maritime, Railroading or Sim Racing is touched. No write path, no submission path, no change to Phase 2D state.
+- New function `supabase/functions/studio-catalog/index.ts` + `_shared/studio-auth.ts` (token mint, hash, TTL, revocation, tenant resolution, rate limit → 429 with `Retry-After`).
+- Migration: `studio_tokens` table (hashed token, tenant, descendants flag, scopes, expires_at, revoked_at, last_used_at), `catalog_versions` table plus bump triggers on `canonical_skills`, `skill_aliases`, `work_orders`, `work_order_migration_maturity`, `tenant_work_order_curation`, `task_skill_mappings`; `can_read_catalog` scope on authorized apps. Standard GRANT + RLS; the function reads with the service role only after the token resolves.
+- Tenant scope enforced in SQL on every query using the existing `get_child_tenants` helper when descendants are granted.
+- Admin UI: Authorized Apps gains the catalog-read scope, tenant + descendants selector, and a token list with revoke.
+- Nothing in FGN.GG, Merits, Maritime, Railroading or Sim Racing is touched; no Phase 2D state changes.
 
-## Verification before I hand over a credential
+## Verification before handoff (executed, then reported as completed vs planned)
 
-Absent/invalid/valid key checks; tenant-A key returning zero tenant-B Work Order relationships; a >1-page skill walk read to exhaustion with no repeated cursor; alias ambiguity surfaced on a known duplicated alias; every vocabulary value cross-checked against the live constraints; revoked key returns 401.
+Executed here: absent/invalid/expired/revoked token → 401; valid → 200; read-scope denial → 403; tenant-A token returns zero tenant-B records, with and without the descendants flag; pagination walked to exhaustion, repeated cursor rejected, mid-walk edit → 409; alias ambiguity surfaced on a known duplicated alias; every vocabulary value cross-checked against live constraints; version bumps observed after an edit, a maturity approval and a curation change; unclassified and Academy-native Work Orders present in an unfiltered read; rate limit returns 429.
 
-## What I still need from you
+Reported as planned (needs Studio): end-to-end run of your Phase 3 acceptance suite against a real credential, and approved-origin CORS from Studio's own browser origin.
 
-The tenant that the Studio credential should be scoped to, and whether Studio should see Level 1/2 (not yet evidence-validated) Work Orders or only Level 3.
+## Still needed from you
+
+The authoring tenant, and descendants yes/no.

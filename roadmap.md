@@ -33,3 +33,16 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Security/RLS regression (learner, reviewer, cross-community admin, signed out)
 - [x] A–M report in `docs/phase-2d-build-report.md`
 - [ ] AWAITING APPROVAL — no further industry migration until the review gate is cleared
+
+# Phase 3 prep — FGN Studio read-only catalog contract
+
+- [ ] Confirm authoring tenant + descendant scope with owner before issuing any credential
+- [ ] Short-lived tenant-scoped Studio tokens (expiry + revocation documented); durable app key stays operator-side
+- [ ] `studio-catalog` read API: /capabilities, /skills, /work-order-relationships, /vocabulary, /sources
+- [ ] All maturity levels incl. null/unclassified + Academy-native retrievable without an activityIds filter
+- [ ] Visibility/curation reported separately from maturity (or declared unsupported)
+- [ ] Explicit versions on every response; stale-read + concurrent-pagination semantics documented
+- [ ] Vocabulary versioning/invalidation, fail-closed on unknown constraint formats
+- [ ] Public OpenAPI doc, approved-origin CORS, contract-version mismatch response
+- [ ] Pre-handoff verification suite; completed vs planned clearly distinguished
+- [ ] Read-only; Studio approvals simulated; Phase 4 (writes) blocked
