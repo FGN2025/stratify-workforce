@@ -6223,6 +6223,7 @@ export type Database = {
         Args: { p_signal_id: string }
         Returns: Json
       }
+      studio_vocabulary: { Args: never; Returns: Json }
       task_work_order_id: { Args: { p_task: string }; Returns: string }
       tenant_curation_enforced: { Args: never; Returns: boolean }
       upsert_scorm_course_bundle: {
