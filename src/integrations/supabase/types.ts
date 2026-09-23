@@ -5452,6 +5452,16 @@ export type Database = {
       get_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_user_level: { Args: { p_user_id: string }; Returns: number }
       get_user_total_xp: { Args: { p_user_id: string }; Returns: number }
+      get_work_order_visibility_report: {
+        Args: { p_work_order_id: string }
+        Returns: {
+          included: boolean
+          is_owner: boolean
+          tenant_id: string
+          tenant_name: string
+          uses_curation: boolean
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -5564,7 +5574,7 @@ export type Database = {
         | "under_review"
         | "superseded"
         | "withdrawn"
-      assessment_outcome: "met" | "partially_met" | "not_met"
+      assessment_outcome: "met" | "partially_met" | "not_met" | "not_observed"
       association_status:
         | "claimed"
         | "under_review"
@@ -5826,7 +5836,7 @@ export const Constants = {
         "superseded",
         "withdrawn",
       ],
-      assessment_outcome: ["met", "partially_met", "not_met"],
+      assessment_outcome: ["met", "partially_met", "not_met", "not_observed"],
       association_status: [
         "claimed",
         "under_review",

@@ -28,6 +28,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { MediaPickerDialog } from './MediaPickerDialog';
+import { WorkOrderVisibilityPanel } from './WorkOrderVisibilityPanel';
 import { ImportChallengeDialog, type MappedChallengeData, type ExternalTask } from './ImportChallengeDialog';
 import { Loader2, ChevronDown, FileUp, ImageIcon, X, Download } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
@@ -982,6 +983,8 @@ export function WorkOrderEditDialog({
             </div>
             <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
           </div>
+
+          <WorkOrderVisibilityPanel workOrderId={workOrder?.id} />
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
