@@ -371,8 +371,13 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
               </SelectContent>
             </Select>
           </div>
-        ))}
+          );
+              })}
+            </div>
+          );
+        })}
       </div>
+
 
       <div className="space-y-1.5">
         <Label>Note to the learner</Label>
