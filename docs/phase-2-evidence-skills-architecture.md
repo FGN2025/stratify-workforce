@@ -1,7 +1,9 @@
 # Phase 2 — Evidence + Skills Architecture (final build spec, not implemented)
 
-Status: **FINAL SPEC AWAITING BUILD APPROVAL.** No Phase 2 tables have been created.
-Nothing in this document runs.
+Status: **BUILT (Phase 2A).** The schema, review engine and ATS prototype described here are
+live. See `docs/phase-2a-build-report.md` for what was actually created, the deltas made
+during implementation, and the acceptance and security test results.
+
 
 Out of scope, unchanged: AI scoring, telemetry ingestion, automatic Skill Verification, new
 credential types or issuance, Skills Taxonomy redesign, retroactive skill claims, retroactive
