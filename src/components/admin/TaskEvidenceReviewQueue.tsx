@@ -196,6 +196,29 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
   const gatingBlocked = criteria.some(
     (c) => c.is_gating && outcomes[c.id] && outcomes[c.id] !== 'met'
   );
+  const gatingCriteria = criteria.filter((c) => c.is_gating);
+  const otherCriteria = criteria.filter((c) => !c.is_gating);
+
+  const structuredRows = (() => {
+    const body = item.body_structured;
+    if (!body) return [];
+    const fields = item.response_schema?.fields ?? [];
+    const known = [...fields]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .filter((f) => body[f.key] != null)
+      .map((f) => ({
+        key: f.key,
+        label: f.label,
+        unit: f.unit,
+        guidance: f.reviewer_guidance,
+        value: String(body[f.key]),
+      }));
+    const extras = Object.keys(body)
+      .filter((k) => k !== 'schema_version' && !fields.some((f) => f.key === k))
+      .map((k) => ({ key: k, label: k.replace(/_/g, ' '), unit: undefined, guidance: undefined, value: String(body[k]) }));
+    return [...known, ...extras];
+  })();
+
 
   const decide = useMutation({
     mutationFn: async (decision: 'accepted' | 'needs_revision' | 'rejected') => {
