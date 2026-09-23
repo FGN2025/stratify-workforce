@@ -983,6 +983,8 @@ export function WorkOrderEditDialog({
             <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
           </div>
 
+          <WorkOrderVisibilityPanel workOrderId={workOrder?.id} />
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
