@@ -45,6 +45,13 @@ type Pending = {
   response_schema: { fields?: StructuredField[] } | null;
 };
 
+const OUTCOME_LABEL: Record<string, string> = {
+  met: 'Met',
+  partially_met: 'Partially met',
+  not_met: 'Not met',
+  not_observed: 'Not enough shown to judge',
+};
+
 function mmss(s?: number | null) {
   if (s == null) return null;
   return `${Math.floor(s / 60)}:${Math.round(s % 60).toString().padStart(2, '0')}`;
