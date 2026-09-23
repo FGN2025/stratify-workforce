@@ -160,6 +160,7 @@ type SubmitArgs = {
   title?: string;
   file?: File;
   bodyText?: string;
+  bodyStructured?: Record<string, unknown>;
   learnerRationale?: string;
   timecodeStart?: number | null;
   timecodeEnd?: number | null;
