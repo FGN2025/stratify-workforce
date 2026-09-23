@@ -248,6 +248,7 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
                 <SelectItem value="met">Met</SelectItem>
                 <SelectItem value="partially_met">Partially met</SelectItem>
                 <SelectItem value="not_met">Not met</SelectItem>
+                <SelectItem value="not_observed">Not enough shown to judge</SelectItem>
               </SelectContent>
             </Select>
             <Select value={quality[c.id] ?? ''} onValueChange={(v) => setQuality((q) => ({ ...q, [c.id]: v }))}>
