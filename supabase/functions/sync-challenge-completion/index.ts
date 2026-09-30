@@ -206,7 +206,6 @@ Deno.serve(async (req) => {
       };
     }
     // X-App-Key retired on this endpoint (contract inventory 2026-10-01.1 §3).
-    }
 
     if (!app) {
       console.warn('[sync-challenge-completion] auth failed', {
@@ -217,7 +216,9 @@ Deno.serve(async (req) => {
       await writeMirror('failed', { http_status: 401 }, 'auth_failed');
       return new Response(
         JSON.stringify({
-          error: 'Authentication failed: provide a valid X-App-Key or X-Ecosystem-Key header',
+          error: appKey && !ecosystemKey
+            ? 'X-App-Key is retired on this endpoint; send X-Ecosystem-Key'
+            : 'Authentication failed: provide a valid X-Ecosystem-Key header',
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );

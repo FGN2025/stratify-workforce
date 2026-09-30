@@ -61,13 +61,10 @@ Deno.serve(async (req) => {
       latency_ms: 0,
       error: "No API key provided and ECOSYSTEM_API_KEY not configured — sync endpoint test skipped",
     };
-    if (apiKey) {
-      syncResult = await testSyncEndpoint(supabaseUrl, authHeader, apiKey, "x-app-key");
-    } else {
-      const ecosystemKey = Deno.env.get("ECOSYSTEM_API_KEY");
-      if (ecosystemKey) {
-        syncResult = await testSyncEndpoint(supabaseUrl, authHeader, ecosystemKey, "x-ecosystem-key");
-      }
+    // X-App-Key is retired on sync-challenge-completion; always probe with the ecosystem key.
+    const ecosystemKey = Deno.env.get("ECOSYSTEM_API_KEY");
+    if (ecosystemKey) {
+      syncResult = await testSyncEndpoint(supabaseUrl, authHeader, ecosystemKey, "x-ecosystem-key");
     }
 
     // Canonical Simulation Activity identity checks. Every one of these hits the
