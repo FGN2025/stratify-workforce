@@ -94,7 +94,7 @@ export function TopNav() {
                 <NavLink to="/auth">Login</NavLink>
               </Button>
               <Button asChild>
-                <NavLink to="/auth">Register</NavLink>
+                <NavLink to="/auth?mode=signup">Register</NavLink>
               </Button>
             </div>
           )}

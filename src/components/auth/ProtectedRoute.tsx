@@ -22,7 +22,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}${location.hash}` }} replace />;
   }
 
   return <>{children}</>;

@@ -21,7 +21,9 @@ const signupSchema = z.object({
 });
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(
+    () => new URLSearchParams(window.location.search).get('mode') !== 'signup',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -34,7 +36,12 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = (location.state as { from?: string })?.from || '/workspace';
+  const rawFrom =
+    (location.state as { from?: string })?.from ||
+    new URLSearchParams(location.search).get('next') ||
+    '/workspace';
+  // Only same-site paths are honoured as return destinations.
+  const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/workspace';
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
