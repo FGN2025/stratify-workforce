@@ -64,3 +64,9 @@ Completed (deployed endpoints, no mocks):
 Defects found and fixed during testing: identity-link replay trigger violated the queue's reason constraint (every link would have errored); replay overwrote identity fields on failure (row became unfindable); per-credential uniqueness existed only for Play keys (a second credential was issued, then removed, before the generic index was added).
 
 Planned, not yet run: concurrent `redeem_points` overspend test and refund reversal (needs a signed-in test learner with credits); full pilot journey with a real reviewer; browser check of sign-in intent through email confirmation.
+
+## Release-gate clarifications (2026-09-30)
+- Duplicate deliveries: completed duplicate → 200 `{duplicate:true, learner_outcome:true}`, no new outcome. In-flight duplicate (processing/queued) → 409 with `Retry-After: 30`; partner retries with the SAME delivery id. Failed → re-claimed on retry.
+- Signed-in Passport audited: score shows "Not yet scored" when absent; organization average renders only when real data is passed (none is today); records grouped Participation / Reviewed Demonstrations / FGN Educational Merits / Organization-Issued with non-certification language.
+- redeem_points(option, request_key): repeated request with the same key returns the original redemption (one debit). Per-learner lock prevents overspend; refunds refuse a second reversal.
+- Pending: live concurrent redemption, pilot journey, browser sign-in return tests (need a signed-in test learner and reviewer), Merits review, scanner triage.
