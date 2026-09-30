@@ -44,7 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/auth?next=${encodeURIComponent(
+          sessionStorage.getItem('fgn_post_auth_next') || '/workspace',
+        )}`,
         data: {
           username: username || email.split('@')[0],
         },
