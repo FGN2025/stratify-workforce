@@ -1747,6 +1747,7 @@ export type Database = {
           icon_url: string | null
           ingestion_mode: string
           is_active: boolean
+          shadow_mode: boolean
           skill_tag_pattern: string
           slug: string
           strict_mode: boolean
@@ -1759,6 +1760,7 @@ export type Database = {
           icon_url?: string | null
           ingestion_mode?: string
           is_active?: boolean
+          shadow_mode?: boolean
           skill_tag_pattern?: string
           slug: string
           strict_mode?: boolean
@@ -1771,6 +1773,7 @@ export type Database = {
           icon_url?: string | null
           ingestion_mode?: string
           is_active?: boolean
+          shadow_mode?: boolean
           skill_tag_pattern?: string
           slug?: string
           strict_mode?: boolean
@@ -3550,6 +3553,7 @@ export type Database = {
       skill_credentials: {
         Row: {
           attempts: number | null
+          award_pathway: string
           course_id: string | null
           created_at: string
           credential_type: Database["public"]["Enums"]["credential_type"]
@@ -3576,6 +3580,7 @@ export type Database = {
         }
         Insert: {
           attempts?: number | null
+          award_pathway?: string
           course_id?: string | null
           created_at?: string
           credential_type: Database["public"]["Enums"]["credential_type"]
@@ -3602,6 +3607,7 @@ export type Database = {
         }
         Update: {
           attempts?: number | null
+          award_pathway?: string
           course_id?: string | null
           created_at?: string
           credential_type?: Database["public"]["Enums"]["credential_type"]
@@ -5486,10 +5492,12 @@ export type Database = {
       user_work_order_completions: {
         Row: {
           attempt_number: number
+          causation_event_id: string | null
           completed_at: string | null
           created_at: string
           id: string
           metadata: Json | null
+          origin_site: string
           score: number | null
           started_at: string
           status: Database["public"]["Enums"]["completion_status"]
@@ -5499,10 +5507,12 @@ export type Database = {
         }
         Insert: {
           attempt_number?: number
+          causation_event_id?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
+          origin_site?: string
           score?: number | null
           started_at?: string
           status?: Database["public"]["Enums"]["completion_status"]
@@ -5512,10 +5522,12 @@ export type Database = {
         }
         Update: {
           attempt_number?: number
+          causation_event_id?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
+          origin_site?: string
           score?: number | null
           started_at?: string
           status?: Database["public"]["Enums"]["completion_status"]
