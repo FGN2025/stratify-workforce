@@ -8,7 +8,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CONTRACT_VERSION = "2026-10-01.1";
+const CONTRACT_VERSION = "2026-10-01.2";
+
+type HealthState = "not_connected" | "untested" | "healthy" | "degraded" | "failed";
+// A program/source is never "healthy" without at least one real success.
+function computeState(opts: { connected: boolean; lastSuccess: string | null; failures: number; dead: number; backlog: number; queryError: boolean }): HealthState {
+  if (opts.queryError) return "failed";
+  if (!opts.connected) return "not_connected";
+  if (!opts.lastSuccess) return opts.failures + opts.dead > 0 ? "failed" : "untested";
+  if (opts.dead > 0 || opts.failures > 0 || opts.backlog > 0) return "degraded";
+  return "healthy";
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -55,7 +65,7 @@ Deno.serve(async (req) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
 
     const [sourcesRes, attemptsRes, replayRes, programsRes, gamesRes, woRes, completionsRes, outboundRes] = await Promise.all([
-      admin.from("learning_sources").select("slug, display_name, is_active, strict_mode, shadow_mode"),
+      admin.from("learning_sources").select("slug, display_name, is_active, strict_mode, shadow_mode, ingestion_mode, hmac_secret_env_name"),
       admin.from("learning_source_pull_attempts").select("source_slug, status, created_at").gte("created_at", sevenDaysAgo),
       admin.from("play_replay_queue").select("source_slug, status"),
       admin.from("programs").select("id, key, name, availability"),
@@ -64,6 +74,11 @@ Deno.serve(async (req) => {
       admin.from("user_work_order_completions").select("id, work_order_id"),
       admin.from("play_outbound_queue").select("payload, status, created_at, completed_at"),
     ]);
+    const queryErrors: Record<string, string> = {};
+    for (const [k, r] of Object.entries({ attemptsRes, replayRes, gamesRes, woRes, completionsRes, outboundRes })) {
+      if ((r as { error: { message: string } | null }).error) queryErrors[k] = (r as { error: { message: string } }).error.message;
+    }
+    const hasSecret = (name: string | null) => !!(name && Deno.env.get(name));
 
     if (sourcesRes.error || programsRes.error) {
       return new Response(
@@ -93,7 +108,17 @@ Deno.serve(async (req) => {
         last_success_at: lastSuccess,
         failures_7d: failures.length,
         retry_backlog: backlog,
-        status: s.is_active && backlog === 0 && failures.length === 0 ? "pass" : failures.length > 0 ? "warn" : "pass",
+        // Receiver-specific signing: outcomes require a verified signature.
+        signing: !s.hmac_secret_env_name ? "no_secret_registered" : hasSecret(s.hmac_secret_env_name) ? (s.strict_mode ? "strict" : "verified_or_record_only") : "secret_missing",
+        dead_or_failed_replays: (replayRes.data ?? []).filter((r) => r.source_slug === s.slug && r.status === "failed").length,
+        state: computeState({
+          connected: s.is_active && s.ingestion_mode === "push",
+          lastSuccess,
+          failures: failures.length,
+          dead: (replayRes.data ?? []).filter((r) => r.source_slug === s.slug && r.status === "failed").length,
+          backlog,
+          queryError: !!(queryErrors.attemptsRes || queryErrors.replayRes),
+        }),
       };
     });
 
@@ -121,7 +146,8 @@ Deno.serve(async (req) => {
       const gameWoIds = new Set(games.flatMap((g) => woIdByGame.get(g) ?? []));
       const programOutbound = outboundRows.filter((o) => {
         const cid = o.payload?.completion_id;
-        const woId = cid ? completionToWo.get(cid) : undefined;
+        // Task events carry work_order_id directly (no completion id).
+        const woId = (cid ? completionToWo.get(cid) : undefined) ?? o.payload?.work_order_id;
         return woId && gameWoIds.has(woId);
       });
       const backlog = programOutbound.filter(
@@ -139,7 +165,15 @@ Deno.serve(async (req) => {
         work_orders: woCount,
         outbound_backlog: backlog,
         last_outbound_success_at: lastSuccess,
-        status: backlog === 0 ? "pass" : "warn",
+        failed_or_dead: programOutbound.filter((o) => ["failed", "dead"].includes(o.status ?? "")).length,
+        state: computeState({
+          connected: woCount > 0 && p.availability !== "coming_soon" && p.availability !== "hidden",
+          lastSuccess,
+          failures: 0,
+          dead: programOutbound.filter((o) => ["failed", "dead"].includes(o.status ?? "")).length,
+          backlog,
+          queryError: !!(queryErrors.outboundRes || queryErrors.woRes || queryErrors.completionsRes || queryErrors.gamesRes),
+        }),
       };
     });
 
@@ -149,6 +183,7 @@ Deno.serve(async (req) => {
         checked_at: new Date().toISOString(),
         sources,
         programs,
+        query_errors: queryErrors,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
