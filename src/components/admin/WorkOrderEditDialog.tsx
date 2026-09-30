@@ -227,8 +227,11 @@ export function WorkOrderEditDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const sourceName = typeof pendingPlaySource?.name === 'string' ? pendingPlaySource.name.trim() : '';
-    const sourceImage = typeof pendingPlaySource?.cover_image_url === 'string' ? pendingPlaySource.cover_image_url.trim() : '';
+    const savedPlaySource = workOrder?.metadata?.play_source;
+    const playSource = pendingPlaySource
+      ?? (savedPlaySource && typeof savedPlaySource === 'object' ? savedPlaySource as Record<string, unknown> : null);
+    const sourceName = typeof playSource?.name === 'string' ? playSource.name.trim() : '';
+    const sourceImage = typeof playSource?.cover_image_url === 'string' ? playSource.cover_image_url.trim() : '';
     const publicationIssues = [
       !(title.trim() || generatedName.trim() || sourceName) ? 'a meaningful title' : null,
       description.trim().length < 40 ? 'a summary of at least 40 characters' : null,
@@ -389,7 +392,11 @@ export function WorkOrderEditDialog({
       onSave();
     } catch (error) {
       console.error('Error saving work order:', error);
-      const message = error instanceof Error ? error.message : 'Failed to save work order.';
+      const message = error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error && 'message' in error
+          ? String(error.message)
+          : 'Failed to save work order.';
       toast({
         title: 'Could not save Work Order',
         description: message,
