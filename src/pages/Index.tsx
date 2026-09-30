@@ -5,14 +5,12 @@ import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel'
 import { EventCard } from '@/components/marketplace/EventCard';
 import { CommunityCard } from '@/components/marketplace/CommunityCard';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/contexts/TenantContext';
 import { useWorkOrders } from '@/hooks/useWorkOrders';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, Flame, Users, Zap } from 'lucide-react';
 import type { WorkOrder, Tenant } from '@/types/tenant';
 
 const Index = () => {
-  const { tenant } = useTenant();
   const { data: curatedWorkOrders, isLoading: workOrdersLoading } = useWorkOrders('all');
   const [communities, setCommunities] = useState<Tenant[]>([]);
   const [communityMap, setCommunityMap] = useState<Record<string, Tenant>>({});
@@ -89,7 +87,7 @@ const Index = () => {
           title="Trending Work Orders"
           subtitle={
             workOrders.length === 0
-              ? `No work orders in ${tenant?.name ?? 'this community'} yet — admins can curate the catalog in Admin → Curation.`
+              ? 'No work orders are available yet.'
               : 'Discover the most popular training scenarios filling up fast!'
           }
           viewAllLink="/work-orders"
