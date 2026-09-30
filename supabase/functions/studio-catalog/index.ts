@@ -334,6 +334,45 @@ Deno.serve(async (req) => {
         aliasTargets.get(key)!.add(a.canonical_skill_id as string);
       });
 
+      // Evidence status derives from the existing evidence model: a skill is only
+      // "evidence_validated" when an approved, active task mapping ties it to a
+      // Work Order whose migration maturity is admin-approved at Level 3.
+      // Catalog membership alone never implies validation.
+      const { data: mapRows } = await admin
+        .from('task_skill_mappings')
+        .select('canonical_skill_id, task_id, approved_at, is_active')
+        .eq('is_active', true)
+        .not('approved_at', 'is', null)
+        .not('canonical_skill_id', 'is', null);
+      const taskIds = Array.from(new Set((mapRows ?? []).map((m: Record<string, unknown>) => m.task_id as string)));
+      const { data: taskRows } = taskIds.length
+        ? await admin.from('work_order_tasks').select('id, work_order_id').in('id', taskIds)
+        : { data: [] };
+      const taskToWo = new Map((taskRows ?? []).map((t: Record<string, unknown>) => [t.id as string, t.work_order_id as string]));
+      const { data: l3Rows } = await admin
+        .from('work_order_migration_maturity')
+        .select('work_order_id')
+        .not('level3_approved_at', 'is', null);
+      const l3 = new Set((l3Rows ?? []).map((r: Record<string, unknown>) => r.work_order_id as string));
+      const skillEvidence = new Map<string, { mapped: Set<string>; l3: Set<string> }>();
+      (mapRows ?? []).forEach((m: Record<string, unknown>) => {
+        const sid = m.canonical_skill_id as string;
+        const wo = taskToWo.get(m.task_id as string);
+        if (!wo) return;
+        if (!skillEvidence.has(sid)) skillEvidence.set(sid, { mapped: new Set(), l3: new Set() });
+        const e = skillEvidence.get(sid)!;
+        e.mapped.add(wo);
+        if (l3.has(wo)) e.l3.add(wo);
+      });
+      const evidenceOf = (id: string) => {
+        const e = skillEvidence.get(id);
+        if (e?.l3.size) return { evidenceStatus: 'evidence_validated', level3WorkOrderCount: e.l3.size, mappedWorkOrderCount: e.mapped.size };
+        if (e?.mapped.size) return { evidenceStatus: 'mapped_not_validated', level3WorkOrderCount: 0, mappedWorkOrderCount: e.mapped.size };
+        return { evidenceStatus: 'catalogued_only', level3WorkOrderCount: 0, mappedWorkOrderCount: 0 };
+      };
+      const { count: totalSkills } = await admin.from('canonical_skills').select('id', { count: 'exact', head: true });
+      const validatedTotal = Array.from(skillEvidence.values()).filter((e) => e.l3.size > 0).length;
+
       const items = (skills ?? []).map((s: Record<string, unknown>) => ({
         skillId: s.id,
         skillKey: s.skill_key,
@@ -342,6 +381,7 @@ Deno.serve(async (req) => {
         domain: s.domain,
         classification: s.classification,
         curationState: s.status,
+        ...evidenceOf(s.id as string),
         skillVersion: s.version,
         recordVersion: Number(s.record_version),
         updatedAt: s.updated_at,
@@ -370,6 +410,12 @@ Deno.serve(async (req) => {
           totalCount: count ?? 0,
           items,
           ambiguousAliases,
+          evidenceCoverage: {
+            catalogSkillCount: totalSkills ?? 0,
+            evidenceValidatedSkillCount: validatedTotal,
+            level3WorkOrderCount: l3.size,
+            note: 'Catalog membership is not evidence validation. Only skills mapped to admin-approved Level 3 Work Orders carry evidenceStatus "evidence_validated"; broader migration remains gated.',
+          },
           nextCursor: hasMore ? encodeCursor({ s: scopeFp, v: currentVersion, o: nextOffset, q: qFp.slice(0, 16) }) : null,
         },
         200,
