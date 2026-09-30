@@ -2183,6 +2183,7 @@ export type Database = {
           ledger_entry_id: string | null
           note: string | null
           option_id: string
+          request_key: string | null
           status: string
           tenant_id: string | null
           updated_at: string
@@ -2197,6 +2198,7 @@ export type Database = {
           ledger_entry_id?: string | null
           note?: string | null
           option_id: string
+          request_key?: string | null
           status?: string
           tenant_id?: string | null
           updated_at?: string
@@ -2211,6 +2213,7 @@ export type Database = {
           ledger_entry_id?: string | null
           note?: string | null
           option_id?: string
+          request_key?: string | null
           status?: string
           tenant_id?: string | null
           updated_at?: string
@@ -6703,7 +6706,10 @@ export type Database = {
         Args: { p_demo: string }
         Returns: Database["public"]["Enums"]["demonstration_status"]
       }
-      redeem_points: { Args: { p_option_id: string }; Returns: string }
+      redeem_points: {
+        Args: { p_option_id: string; p_request_key?: string }
+        Returns: string
+      }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
       reopen_task_review: {
         Args: { p_demonstration_id: string }
