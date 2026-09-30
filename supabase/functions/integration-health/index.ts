@@ -54,13 +54,14 @@ Deno.serve(async (req) => {
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
 
-    const [sourcesRes, attemptsRes, replayRes, programsRes, gamesRes, woRes, outboundRes] = await Promise.all([
+    const [sourcesRes, attemptsRes, replayRes, programsRes, gamesRes, woRes, completionsRes, outboundRes] = await Promise.all([
       admin.from("learning_sources").select("slug, display_name, is_active, strict_mode, shadow_mode"),
       admin.from("learning_source_pull_attempts").select("source_slug, status, created_at").gte("created_at", sevenDaysAgo),
       admin.from("play_replay_queue").select("source_slug, status"),
       admin.from("programs").select("id, key, name, availability"),
       admin.from("program_games").select("program_id, game_title"),
       admin.from("work_orders").select("id, game_title, is_active"),
+      admin.from("user_work_order_completions").select("id, work_order_id"),
       admin.from("play_outbound_queue").select("payload, status, created_at, completed_at"),
     ]);
 
