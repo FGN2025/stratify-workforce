@@ -8,7 +8,7 @@ FGN.Academy APIs use three authentication methods depending on the endpoint type
 |--------|--------|--------------|
 | **None** | - | Public endpoints |
 | **Bearer Token** | `Authorization: Bearer <jwt>` | User's own data |
-| **API Key** | `X-App-Key: <key>` | Authorized external apps |
+| **API Key** | `X-App-Key: <key>` | Authorized external apps (not accepted by `sync-challenge-completion`, which uses `X-Ecosystem-Key`) |
 
 ---
 
