@@ -18,7 +18,7 @@ import { useSaveSimCategory } from '@/hooks/useSaveSimCategory';
 import type { SimCategory } from '@/hooks/useSimCategories';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Filter, Flame, Clock, Trophy, Target, Zap, Edit } from 'lucide-react';
+import { Plus, Filter, Clock, Trophy, Target, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Tenant } from '@/types/tenant';
 import { supabase } from '@/integrations/supabase/client';
@@ -180,17 +180,17 @@ const WorkOrders = () => {
         />
 
         {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Trending Now" subtitle="Most popular training scenarios this week" icon={<Flame className="h-5 w-5" />} gridOnDesktop>
+          <HorizontalCarousel title="Featured Work Orders" subtitle="Training scenarios available in your current view" icon={<Target className="h-5 w-5" />} gridOnDesktop>
             {filteredWorkOrders.slice(0, 6).map((wo, idx) => (
               <EventCard key={wo.id} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant={idx === 0 ? 'featured' : 'default'} />
             ))}
           </HorizontalCarousel>
         )}
 
-        {filteredWorkOrders.length > 0 && (
-          <HorizontalCarousel title="Recently Added" subtitle="Fresh scenarios just dropped" icon={<Zap className="h-5 w-5" />} gridOnDesktop>
-            {filteredWorkOrders.slice(0, 4).map((wo) => (
-              <EventCard key={`recent-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
+        {filteredWorkOrders.length > 6 && (
+          <HorizontalCarousel title="More Work Orders" subtitle="Additional training scenarios in your current view" icon={<Clock className="h-5 w-5" />} gridOnDesktop>
+            {filteredWorkOrders.slice(6, 10).map((wo) => (
+              <EventCard key={`more-${wo.id}`} workOrder={wo} isCompleted={completedWorkOrderIds.has(wo.id)} community={resolveCommunity(wo.tenant_id)} variant="compact" />
             ))}
           </HorizontalCarousel>
         )}
@@ -199,7 +199,7 @@ const WorkOrders = () => {
         {categories.map((cat) => {
           const catItems = filteredWorkOrders.filter((wo) => wo.resolved_category === cat.key);
           if (catItems.length === 0 && cat.deep_dive_resources.length === 0) return null;
-          // Hide a category's main carousel when the user explicitly filtered to it (already shown via Trending/Recent above)
+          // Hide a category's main carousel when the user explicitly filtered to it (already shown above).
           const showMain = catItems.length > 0 && activeFilter !== cat.key;
           const Icon = getIconByKey(cat.icon_key);
           return (
