@@ -87,4 +87,4 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [ ] Community-admin screen to turn programs on for their organization
 - [ ] Link Courses/Work Orders to programs (program_pathways is empty)
 - [ ] Assessment doc: registry vs each live site (capabilities marked "unverified" until checked)
-- [ ] railway.fgn.gg does not resolve yet (blocked: DNS owner); railway.fgn.academy responds and is recorded as legacy
+- [ ] railway.fgn.academy is the canonical Railroading address (registry corrected; railway.fgn.gg recorded as legacy — redirect to set up if FGN controls it)
