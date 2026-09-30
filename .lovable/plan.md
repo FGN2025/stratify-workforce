@@ -5,7 +5,7 @@ On each Apprenticeship Pathway card on the Careers page, the main button "View o
 - **the trade sector already selected** for that pathway (for example, CDL Class A Driver opens "CDL truck drivers"), and
 - **the learner's state already selected**, taken from the address saved on their Academy account.
 
-The Apprenticeship.gov link stays available as a small secondary link, so nothing is lost. Partner buttons (CDL Quest, CDL Exchange, Broadband Workforce) stay as they are.
+The Apprenticeship.gov link stays as a small secondary link on every card. It now goes to the Apprenticeship Job Finder (https://www.apprenticeship.gov/apprenticeship-job-finder) instead of a separate occupation page for each pathway. Partner buttons (CDL Quest, CDL Exchange, Broadband Workforce) stay as they are.
 
 ## What we found
 - The Workforce map already supports opening on a chosen trade and state from its web address (`?metric=workforce&trade=<id>&state=<XX>`). **No change is needed in the Workforce map project.**
