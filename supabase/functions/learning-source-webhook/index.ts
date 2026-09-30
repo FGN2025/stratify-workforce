@@ -25,6 +25,8 @@ import {
   SUPPORTED_EVENTS,
   verifySignature,
   sanitizeSkillTags,
+  EVIDENCE_APPROVED_ENABLED,
+  EVIDENCE_NOT_ENABLED_BODY,
 } from '../_shared/learning-source/handlers.ts';
 
 const corsHeaders = {
@@ -236,8 +238,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  const finalStatus =
-    dispatch.status >= 200 && dispatch.status < 300 ? 'completed' : 'failed';
+  const unmapped =
+    dispatch.status === 202 &&
+    (dispatch.body as Record<string, unknown> | null)?.reason === 'unmapped_identity';
+  const finalStatus = unmapped
+    ? 'unmapped'
+    : dispatch.status >= 200 && dispatch.status < 300 ? 'completed' : 'failed';
   await supabase
     .from('learning_source_pull_attempts')
     .update({ status: finalStatus, response: dispatch.body })
