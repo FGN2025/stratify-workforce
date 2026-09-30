@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_award_flow_guard() FROM anon, authenticated, public;
