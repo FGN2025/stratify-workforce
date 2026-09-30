@@ -44,6 +44,19 @@ Assessment deliverable: a short document that compares the registry with what ea
 - Shared first: a published, versioned registry feed (read-only) that sites can use for cross-site navigation; a shared vocabulary (programs, pathways, Work Orders, evidence); reusable header and program-switcher designs.
 - Repository or database consolidation is out of scope until the shared contracts have proven stable.
 
+## 5. Preserve the FGN.GG competition-to-skills path
+The current path stays exactly as it is:
+
+```text
+play FGN.GG challenge -> completion sent to Academy -> matching Work Order / Course progress -> evidence -> Skill Passport
+```
+
+- No changes to the challenge import, completion sync, achievement polling, retry queue, or challenge-to-lesson mappings.
+- Challenge links keep using the plural `/challenges/:id` form and the FGN origin challenge ID.
+- FGN.GG (Arena Hub) is listed in the registry as the competition source with "progress inbound" capability, but it is not treated as an Academy program and nothing in that project changes.
+- The new navigation makes this path easier to see: on Work Orders and Courses that came from a challenge, "My learning" shows "From FGN.GG challenge", and program pages link to the related challenges.
+- Verification: an existing challenge-backed Work Order still opens from its FGN.GG link, still shows its progress, and still links back to the challenge.
+
 ## Technical details
 - New `programs` table (with GRANTs and RLS: public read of live/preview rows through a `public_programs` view, admin-only writes), seeded with the four sites plus the existing trades mapped from `game_channels`.
 - Admin screen to edit registry entries, following the existing admin pattern.
