@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useTenant } from '@/contexts/TenantContext';
 
 export function Footer() {
   const { tenant } = useTenant();
