@@ -207,6 +207,11 @@ Deno.serve(async (req) => {
     }
     // X-App-Key retired on this endpoint (contract inventory 2026-10-01.1 §3).
 
+    // A3 origin tracking: completions pushed by a learning source carry that
+    // source's slug (X-Ecosystem-App) so the outbound queue never bounces them
+    // back to their origin. Legacy direct Play pushes default to 'play'.
+    const originSite = (req.headers.get('x-ecosystem-app') || 'play').trim().toLowerCase() || 'play';
+
     if (!app) {
       console.warn('[sync-challenge-completion] auth failed', {
         had_x_app_key: !!appKey,
@@ -377,6 +382,7 @@ Deno.serve(async (req) => {
         source_type: 'work_order',
         source_id: workOrder.id,
         description: `Completed challenge: ${workOrder.title}`,
+        award_pathway: 'legacy_completion',
       });
     }
 
