@@ -273,15 +273,21 @@ Deno.serve(async (req) => {
     .update({ status: finalStatus, response: dispatch.body })
     .eq('id', attempt.id);
 
+  // Failed processing returns non-2xx so the partner retries; the same
+  // delivery id will be re-processed (not reported as duplicate).
   return new Response(
     JSON.stringify({
-      ok: true,
+      ok: finalStatus !== 'failed',
       attempt_id: attempt.id,
       source: source.slug,
       event: eventType,
       sig_mode: verify.mode,
+      status: finalStatus,
       dispatch_status: dispatch.status,
     }),
-    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    {
+      status: finalStatus === 'failed' ? 502 : 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
   );
 });
