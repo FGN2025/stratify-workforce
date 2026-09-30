@@ -202,6 +202,19 @@ Deno.serve(async (req) => {
     });
   }
 
+  // A2 shadow mode: record the event, produce no learner outcome. No
+  // credential minting and no completion sync for shadow sources.
+  if (source.shadow_mode) {
+    await supabase
+      .from('learning_source_pull_attempts')
+      .update({ status: 'shadow', response: { reason: 'shadow_mode', event: eventType } })
+      .eq('id', attempt.id);
+    return new Response(
+      JSON.stringify({ ok: true, recorded: true, reason: 'shadow_mode', source: source.slug, event: eventType }),
+      { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+
   let dispatch: { status: number; body: unknown } = { status: 202, body: { dispatched: false } };
   try {
     if (eventType === 'achievement.earned' || eventType === 'enrollment.completed') {
