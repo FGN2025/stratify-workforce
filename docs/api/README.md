@@ -69,14 +69,7 @@ curl -X POST \
 
 ## Response Format
 
-All API responses are JSON with consistent structure:
-
-```json
-{
-  "data": { ... },
-  "error": null
-}
-```
+All responses are JSON, but envelopes differ by surface (e.g. `credential-api` returns `{ "success": true, ... }`, webhooks return `{ "ok": true, ... }`, errors return `{ "error": "..." }`). See the [Contract Inventory](./contract-inventory.md) for the exact per-surface shapes.
 
 Error responses include HTTP status codes:
 
