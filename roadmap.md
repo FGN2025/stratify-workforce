@@ -88,3 +88,17 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [ ] Link Courses/Work Orders to programs (program_pathways is empty)
 - [ ] Assessment doc: registry vs each live site (capabilities marked "unverified" until checked)
 - [ ] railway.fgn.academy is the canonical Railroading address (registry corrected; railway.fgn.gg recorded as legacy — redirect to set up if FGN controls it)
+
+## External review response (2026-09-30) — plan archived in .lovable/plan/
+- [x] Foundation schema: points ledger fields (origin, program, org, award flow, reversal), redemption options + requests, task stages, "needs practice" result, outbound origin/causation, versioned program requirements, balance view
+- [ ] A1 Enforce award flow in credential/XP/badge triggers + tests
+- [ ] A2 Shadow-mode sources produce no learner outcomes (tests)
+- [ ] A3 Outbound enqueue skips events originating at the target site
+- [ ] A4 Scripted regression suite (duplicate, out-of-order, unmapped, cross-org, withdrawn, outage)
+- [ ] A5 Per-program integration health
+- [ ] B Merits passport-outbox review (read-only)
+- [ ] C Stage tagging UI, needs-practice review action, Merits requirement mapping, 4-section Skill Passport, coach context
+- [ ] D Homepage program cards/entry choices, Workspace order, pre-activity panel, cross-site return path, registry/offering admin screens
+- [ ] D2 Points: redemption request flow + balance page; per-program stores later (FGN.GG prizes, Merits badges, apprenticeship steps)
+- [ ] E Pilot journey per program (blocked: user picks activities)
+- [ ] Decisions pending: activity time display vs no-time rule; decision 4
