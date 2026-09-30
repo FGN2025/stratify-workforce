@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useTenant } from '@/contexts/TenantContext';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 import { JoinFGNAcademyDialog } from './JoinFGNAcademyDialog';
 import { ArrowRight, Play } from 'lucide-react';
 
 export function HeroSection() {
-  const { tenant, appName } = useTenant();
   const heroImageUrl = useSiteMediaUrl('home_hero_image');
   const [showSkillsDialog, setShowSkillsDialog] = useState(false);
 
@@ -43,7 +41,7 @@ export function HeroSection() {
               className="gap-2 h-12 px-6 w-full sm:w-auto"
               onClick={() => setShowSkillsDialog(true)}
             >
-              Join {appName}
+               Join FGN Academy
               <ArrowRight className="h-4 w-4" />
             </Button>
             <a href="https://youtu.be/CaahdKITpEs" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">

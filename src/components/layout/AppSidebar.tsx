@@ -87,6 +87,12 @@ const mainNavItems = [
   { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
 ];
 
+const publicNavItems = [
+  { title: 'Discover', url: '/', icon: LayoutDashboard },
+  { title: 'Learn', url: '/learn', icon: GraduationCap },
+  { title: 'Communities', url: '/communities', icon: Users },
+];
+
 type AdminTier = 'community' | 'platform';
 
 type AdminLeaf = {
@@ -191,8 +197,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
-  const { tenant } = useTenant();
-  const { isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { isAdmin, isDeveloper, isSuperAdmin, isLoading: roleLoading } = useUserRole();
   const { isTenantAdmin } = useTenantAdminGuard();
   
@@ -283,13 +288,13 @@ export function AppSidebar() {
 
   const isActive = (path: string) => location.pathname === path;
   
-  // Show admin items while loading (optimistic) to prevent race condition
-  const isLoadingAuth = authLoading || roleLoading;
-  const showPlatformAdmin = isLoadingAuth || isAdmin;
-  const showCommunityAdmin = isLoadingAuth || isAdmin || isTenantAdmin;
+  const isAuthenticated = Boolean(user);
+  const navigationItems = isAuthenticated ? mainNavItems : publicNavItems;
+  const showPlatformAdmin = isAuthenticated && !authLoading && !roleLoading && isAdmin;
+  const showCommunityAdmin = isAuthenticated && !authLoading && !roleLoading && (isAdmin || isTenantAdmin);
   const showAdmin = showPlatformAdmin || showCommunityAdmin;
-  const showSuperAdmin = isLoadingAuth || isSuperAdmin;
-  const showDeveloper = isLoadingAuth || isDeveloper || isAdmin;
+  const showSuperAdmin = isAuthenticated && !authLoading && !roleLoading && isSuperAdmin;
+  const showDeveloper = isAuthenticated && !authLoading && !roleLoading && (isDeveloper || isAdmin);
 
   const visibleAdminSubItems = adminSubItems.filter((item) => {
     if (item.tier === 'platform') return showPlatformAdmin;
@@ -331,9 +336,6 @@ export function AppSidebar() {
     return ICON_MAP[iconName] || LinkIcon;
   };
 
-  const appName = tenant?.nav_app_name || tenant?.name || 'FGN Academy';
-  const logoSrc = tenant?.logo_url || '/fgn-logo.png';
-
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border p-0 h-16">
@@ -341,8 +343,8 @@ export function AppSidebar() {
           "flex items-center justify-center h-full w-full overflow-hidden",
         )}>
           <img
-            src={logoSrc}
-            alt={appName}
+            src="/fgn-logo.png"
+            alt="FGN Academy"
             className={cn("object-contain", collapsed ? "h-9 w-9" : "h-full w-auto max-w-full")}
           />
         </div>
@@ -351,12 +353,14 @@ export function AppSidebar() {
       <SidebarContent className="scrollbar-dark">
         {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-            Operations
-          </SidebarGroupLabel>
+          {isAuthenticated && (
+            <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
+              Academy
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -383,7 +387,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Sim Categories */}
-        <SidebarGroup>
+        {isAuthenticated && <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
             Sim Categories
           </SidebarGroupLabel>
@@ -537,7 +541,7 @@ export function AppSidebar() {
               })}
             </SidebarMenu>
           </SidebarGroupContent>
-        </SidebarGroup>
+        </SidebarGroup>}
 
 
         {/* Admin Section */}
@@ -752,7 +756,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {!collapsed && (
           <div className="text-xs text-muted-foreground/50 text-center">
-            v1.0.0 • Industrial LMS
+            FGN Academy
           </div>
         )}
       </SidebarFooter>

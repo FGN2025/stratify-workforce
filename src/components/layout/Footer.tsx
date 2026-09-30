@@ -1,8 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { useTenant } from '@/contexts/TenantContext';
 
 export function Footer() {
-  const { tenant, appName } = useTenant();
+  const { tenant } = useTenant();
   const supportEmail = tenant?.support_email;
   const termsUrl = tenant?.terms_url;
   const privacyUrl = tenant?.privacy_url;
@@ -11,7 +10,7 @@ export function Footer() {
     <footer className="border-t border-border bg-background/50 backdrop-blur-xl py-6 px-6">
       <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
         <p>
-          © {new Date().getFullYear()} {appName}. All rights reserved.
+          © {new Date().getFullYear()} FGN Academy. All rights reserved.
           {supportEmail && (
             <>
               {' · '}

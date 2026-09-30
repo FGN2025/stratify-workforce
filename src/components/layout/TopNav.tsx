@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Search, Menu, LogOut, User } from 'lucide-react';
+import { Search, Menu, LogOut, User, Building2 } from 'lucide-react';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ export function TopNav() {
             <Menu className="h-5 w-5" />
           </SidebarTrigger>
           
-          <TenantSwitcher />
+          {!user && <span className="font-display font-semibold text-foreground">FGN Academy</span>}
         </div>
 
         {/* Center - Search */}
@@ -69,6 +69,14 @@ export function TopNav() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="space-y-2 font-normal">
+                    <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                      <Building2 className="h-3.5 w-3.5" />
+                      Organization
+                    </span>
+                    <TenantSwitcher />
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <NavLink to="/profile" className="flex items-center gap-2 cursor-pointer">
