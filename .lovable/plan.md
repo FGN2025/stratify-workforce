@@ -10,27 +10,26 @@ The Apprenticeship.gov link stays as a small secondary link on every card. It no
 ## What we found
 - The Workforce map already supports opening on a chosen trade and state from its web address (`?metric=workforce&trade=<id>&state=<XX>`). **No change is needed in the Workforce map project.**
 - Academy stores each learner's state on their saved address (from onboarding).
-- The Workforce map requires its own sign-in and admin approval. Academy learners who aren't approved there will see its sign-in or "pending approval" page first; after signing in they return to the pre-selected trade and state.
+- The Workforce map currently requires its own sign-in and admin approval. **Decision:** it will move to a shared fgn.academy sign-in. That change is made in the Workforce map project, not here. Until it ships, learners may see the map's sign-in page first; after signing in, they return to the trade and state that were already selected.
 
-## Pathway to trade sector mapping
+## Pathway to trade sector mapping (one or more sectors per pathway)
 
-| Academy pathway | Workforce map trade sector |
+| Academy pathway | Workforce map trade sectors |
 |---|---|
 | CDL Class A Driver | CDL truck drivers |
-| Fiber Optic Technician | Fiber splicing (alternative: Telecom line & fiber) |
-| Heavy Equipment Operator | Heavy equipment operators |
+| Fiber Optic Technician | Fiber splicing, Telecom line & fiber |
+| Heavy Equipment Operator | Heavy equipment operators (candidate: Mobile heavy equipment mechanics) |
 | Agricultural Equipment Technician | Precision agriculture technicians |
 | Diesel Mechanic | Diesel mechanics |
 
-If a pathway has no match, the button opens the map on its default trade. If the learner has no saved state, the map opens on its default state.
+The main button opens the first sector in the list. When a pathway has more than one sector, small links under the main button ("Also see: Telecom line & fiber") open the map on each of the other sectors, with the learner's state still selected. If a pathway has no match, the map opens on its default trade. If the learner has no saved state, the map opens on its default state.
 
-## Needs your decision
-1. **Sign-in on the Workforce map.** Keep it as is (learners must sign in and be approved there), or later make the workforce view public or shared-sign-in? That would be a change in the Workforce map project, outside this plan.
-2. **Fiber pathway**: "Fiber splicing" or "Telecom line & fiber"?
+## Follow-up (Workforce map project, separate)
+- Shared fgn.academy sign-in on workforce.fgn.academy, replacing its separate sign-in and approval gate for Academy learners.
 
 ## Technical details
-- `src/pages/Careers.tsx`: add a `workforceSector` field to each career entry; replace the primary button's label and href; move the apprenticeship.gov link to a secondary outline or text link.
-- New small hook `useUserState()`: reads `user_addresses.state` for the signed-in user (primary/most recent row), normalized to a two-letter uppercase code. The query waits for `session?.access_token`.
-- The URL builder is `https://workforce.fgn.academy/?metric=workforce&trade=<id>&state=<XX>`, omitting any missing parts. Keep it in one helper so the base address lives in one place.
-- Trade sector IDs are stored as rows in the Workforce map's database (only `telecom`, `electrical`, `fiber_splicing`, `tower_line`, `hvac` appear in its code). Before shipping, confirm the exact IDs for CDL, heavy equipment, precision agriculture, and diesel against that project's live data, then hard-code the mapping.
+- `src/pages/Careers.tsx`: add `workforceSectors: {id, label}[]` to each career entry. The primary button gets the new label and a link to the first sector. Additional sectors render as secondary links. The apprenticeship.gov link moves to a secondary link that points to the Job Finder URL.
+- New hook `useUserState()`: reads the signed-in user's `user_addresses.state` (primary or most recent row) and returns an uppercase two-letter code. It waits for `session?.access_token`.
+- One helper, `workforceMapUrl(sectorId, state)`, builds `https://workforce.fgn.academy/?metric=workforce&trade=<id>&state=<XX>` and leaves out any missing parts.
+- Trade sector IDs are data rows in the Workforce map project. Only `telecom`, `electrical`, `fiber_splicing`, `tower_line`, and `hvac` appear in its code. Confirm the IDs for CDL, heavy equipment, precision agriculture, and diesel against its live data before hard-coding them.
 - Verification: open the Careers page and confirm each button's link contains the correct trade and state; open one link and check that the map lands on that trade and state (after sign-in).
