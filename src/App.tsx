@@ -53,6 +53,7 @@ import Configurator from "./pages/admin/Configurator";
 import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
 import SimIndustry from "./pages/SimIndustry";
+import Workspace from "./pages/Workspace";
 import NotFound from "./pages/NotFound";
 import { TenantRouteRedirect } from "@/components/TenantRouteRedirect";
 import { HelpRedirect } from "@/components/HelpRedirect";
@@ -79,6 +80,9 @@ const App = () => (
               <Route path="/auth/discord/callback" element={<AuthDiscordCallback />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/" element={<Index />} />
+              <Route path="/workspace" element={
+                <ProtectedRoute><Workspace /></ProtectedRoute>
+              } />
               <Route path="/passport/link" element={<PassportLink />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
               <Route path="/embed/passport/:slug" element={<EmbedPassport />} />

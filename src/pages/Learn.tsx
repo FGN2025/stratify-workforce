@@ -1,4 +1,4 @@
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { CourseCard } from '@/components/learn/CourseCard';
@@ -22,7 +22,7 @@ export default function Learn() {
   const enrolledCourses = courses?.filter((c) => enrolledCourseIds.has(c.id)) || [];
 
   return (
-    <AppLayout>
+    <AcademyLayout>
       <div className="space-y-8">
         {/* Hero Section */}
         <PageHero
@@ -118,6 +118,6 @@ export default function Learn() {
         </HorizontalCarousel>
         </div>
       </div>
-    </AppLayout>
+    </AcademyLayout>
   );
 }
