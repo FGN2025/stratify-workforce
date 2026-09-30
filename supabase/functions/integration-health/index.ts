@@ -108,7 +108,12 @@ Deno.serve(async (req) => {
       if (!wo.is_active) continue;
       woIdByGame.set(wo.game_title, [...(woIdByGame.get(wo.game_title) ?? []), wo.id]);
     }
-    const completionRows = (outboundRes.data ?? []);
+    // completion id -> work order id, so outbound queue payloads map to programs
+    const completionToWo = new Map<string, string>();
+    for (const c of completionsRes.data ?? []) {
+      completionToWo.set(c.id, c.work_order_id);
+    }
+    const outboundRows = (outboundRes.data ?? []);
 
     const programs = (programsRes.data ?? []).map((p) => {
       const games = (gamesRes.data ?? []).filter((g) => g.program_id === p.id).map((g) => g.game_title);
