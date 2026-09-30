@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      _zz_stage_a_results: {
+        Row: {
+          detail: string | null
+          passed: boolean | null
+          test: string | null
+        }
+        Insert: {
+          detail?: string | null
+          passed?: boolean | null
+          test?: string | null
+        }
+        Update: {
+          detail?: string | null
+          passed?: boolean | null
+          test?: string | null
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           category: Database["public"]["Enums"]["achievement_category"]
