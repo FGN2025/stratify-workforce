@@ -1669,6 +1669,7 @@ export type Database = {
           created_at: string
           direction: string
           error: string | null
+          error_history: Json
           external_attempt_id: string | null
           id: string
           request: Json | null
@@ -1681,6 +1682,7 @@ export type Database = {
           created_at?: string
           direction?: string
           error?: string | null
+          error_history?: Json
           external_attempt_id?: string | null
           id?: string
           request?: Json | null
@@ -1693,6 +1695,7 @@ export type Database = {
           created_at?: string
           direction?: string
           error?: string | null
+          error_history?: Json
           external_attempt_id?: string | null
           id?: string
           request?: Json | null
@@ -2243,6 +2246,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      post_auth_intents: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          path: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          path?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -6447,6 +6471,10 @@ export type Database = {
       }
     }
     Functions: {
+      award_pilot_review_reward: {
+        Args: { p_amount?: number; p_demonstration_id: string }
+        Returns: string
+      }
       backfill_credentials_for_course: {
         Args: { p_course_id: string }
         Returns: {
@@ -6478,6 +6506,19 @@ export type Database = {
         Args: { profile_id: string; viewer_id: string }
         Returns: boolean
       }
+      claim_learning_source_attempt: {
+        Args: {
+          p_action: string
+          p_delivery_id: string
+          p_request: Json
+          p_source_slug: string
+        }
+        Returns: {
+          attempt_id: string
+          claimed: boolean
+          prior_status: string
+        }[]
+      }
       complete_task_review: {
         Args: { p_demonstration_id: string }
         Returns: Json
@@ -6486,6 +6527,7 @@ export type Database = {
         Args: { p_demo: string; p_mapping: string }
         Returns: Json
       }
+      create_post_auth_intent: { Args: { p_path: string }; Returns: string }
       create_skill_signals_for_demonstration: {
         Args: { p_demo: string }
         Returns: number
@@ -6661,6 +6703,7 @@ export type Database = {
         Args: { p_demo: string }
         Returns: Database["public"]["Enums"]["demonstration_status"]
       }
+      redeem_points: { Args: { p_option_id: string }; Returns: string }
       redeem_registration_code: { Args: { p_code: string }; Returns: string }
       reopen_task_review: {
         Args: { p_demonstration_id: string }
@@ -6672,6 +6715,11 @@ export type Database = {
           p_game?: Database["public"]["Enums"]["game_title"]
           p_skill_key: string
         }
+        Returns: string
+      }
+      resolve_post_auth_intent: { Args: { p_id: string }; Returns: string }
+      reverse_redemption: {
+        Args: { p_note?: string; p_redemption_id: string }
         Returns: string
       }
       shadow_signal_strength_v2: {
