@@ -14,6 +14,13 @@
 - [x] Route sign-in and product-home actions to the correct public or workspace destination
 - [x] Verify signed-out and signed-in experiences on desktop and mobile
 
+## Work Order publication readiness (2026-09-30)
+
+- [x] Block publication without a meaningful title, summary, image, and usable task briefs
+- [x] Return the missing requirements from every admin activation path
+- [x] Allow meaningful Work Order and task titles to wrap
+- [x] Verify the signed-in workspace on desktop and mobile
+
 - [x] Step 1 — Discover live FGN.GG contract (probe + `docs/api/integration-guides/gg-simulation-activity-contract.md`)
 - [x] Step 2 — `work_orders.simulation_activity_id` (uuid, nullable, no FK) + disposable `simulation_activity_cache`
 - [x] Step 3 — Carry canonical id through `import-challenge-as-workorder`; completion sync validates provenance only
