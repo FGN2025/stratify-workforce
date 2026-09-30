@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     const ecosystemKeyExpected = Deno.env.get('ECOSYSTEM_API_KEY');
 
     let app: { app_slug: string; can_read: boolean; can_issue: boolean; types_allowed: string[] } | null = null;
-    let authHeaderUsed: 'x-ecosystem-key' | 'x-app-key' | null = null;
+    let authHeaderUsed: 'x-ecosystem-key' | null = null;
 
     if (ecosystemKey && ecosystemKeyExpected && ecosystemKey === ecosystemKeyExpected) {
       authHeaderUsed = 'x-ecosystem-key';
@@ -204,14 +204,8 @@ Deno.serve(async (req) => {
         can_issue: true,
         types_allowed: ['skill_verification', 'course_completion'],
       };
-    } else if (appKey) {
-      const { data: appData, error: appError } = await supabase.rpc('verify_app_api_key', {
-        p_api_key: appKey,
-      });
-      if (!appError && appData && appData.length > 0) {
-        authHeaderUsed = 'x-app-key';
-        app = appData[0];
-      }
+    }
+    // X-App-Key retired on this endpoint (contract inventory 2026-10-01.1 §3).
     }
 
     if (!app) {
