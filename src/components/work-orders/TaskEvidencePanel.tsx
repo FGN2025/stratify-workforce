@@ -177,7 +177,7 @@ export function TaskEvidencePanel({ workOrderId, completionId }: Props) {
               return (
                 <div key={task.id} className="rounded-lg border border-border p-4 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="font-semibold">
+                    <h4 className="min-w-0 break-words font-semibold">
                       {task.order_index}. {task.title}
                     </h4>
                     {demo?.status === 'demonstrated' ? (

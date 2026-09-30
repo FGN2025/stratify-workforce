@@ -122,7 +122,7 @@ export function EventCard({
                   </div>
                 )}
                 
-                <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+                <h3 className="whitespace-normal break-words font-semibold text-sm group-hover:text-primary transition-colors">
                   {getWorkOrderDisplayName(workOrder)}
                 </h3>
                 
@@ -235,7 +235,7 @@ export function EventCard({
           )}
           
           {/* Title */}
-          <h3 className="font-semibold text-base group-hover:text-primary transition-colors line-clamp-1">
+          <h3 className="whitespace-normal break-words font-semibold text-base group-hover:text-primary transition-colors">
             {getWorkOrderDisplayName(workOrder)}
           </h3>
           

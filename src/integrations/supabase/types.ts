@@ -6269,6 +6269,10 @@ export type Database = {
           types_allowed: string[]
         }[]
       }
+      work_order_publication_issues: {
+        Args: { p_work_order_id: string }
+        Returns: string[]
+      }
     }
     Enums: {
       achievement_category: "mastery" | "streak" | "social" | "special"

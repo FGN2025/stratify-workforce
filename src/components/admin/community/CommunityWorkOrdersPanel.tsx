@@ -44,7 +44,11 @@ export function CommunityWorkOrdersPanel({ tenantId }: { tenantId: string }) {
   const toggleActive = async (id: string, next: boolean) => {
     const { error } = await supabase.from('work_orders').update({ is_active: next }).eq('id', id);
     if (error) {
-      toast({ title: 'Could not update', description: error.message, variant: 'destructive' });
+      toast({
+        title: next ? 'Work Order is not ready to publish' : 'Could not hide Work Order',
+        description: error.message,
+        variant: 'destructive',
+      });
       return;
     }
     qc.invalidateQueries({ queryKey: ['community-work-orders', tenantId] });
@@ -85,7 +89,7 @@ export function CommunityWorkOrdersPanel({ tenantId }: { tenantId: string }) {
                 className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{getWorkOrderDisplayName(wo as Parameters<typeof getWorkOrderDisplayName>[0])}</p>
+                  <p className="whitespace-normal break-words text-sm font-medium">{getWorkOrderDisplayName(wo as Parameters<typeof getWorkOrderDisplayName>[0])}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">
                       {wo.game_title}

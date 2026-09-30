@@ -152,8 +152,8 @@ export function WorkOrdersManager() {
     } catch (error) {
       console.error('Error toggling status:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update status.',
+        title: currentStatus ? 'Could not hide Work Order' : 'Work Order is not ready to publish',
+        description: error instanceof Error ? error.message : 'Failed to update status.',
         variant: 'destructive',
       });
     }
@@ -346,7 +346,7 @@ export function WorkOrdersManager() {
                       <NavLink
                         to={`/work-orders/${wo.id}`}
                         state={{ from: 'admin' }}
-                        className="hover:text-primary hover:underline underline-offset-4 transition-colors truncate block"
+                        className="block whitespace-normal break-words hover:text-primary hover:underline underline-offset-4 transition-colors"
                       >
                         {getWorkOrderDisplayName(wo)}
                       </NavLink>
@@ -488,7 +488,7 @@ export function WorkOrdersManager() {
                   <NavLink
                     to={`/work-orders/${wo.id}`}
                     state={{ from: 'admin' }}
-                    className="font-semibold text-sm hover:text-primary transition-colors line-clamp-2 block"
+                    className="block whitespace-normal break-words font-semibold text-sm hover:text-primary transition-colors"
                   >
                     {getWorkOrderDisplayName(wo)}
                   </NavLink>
