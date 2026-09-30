@@ -12,7 +12,7 @@
 - [x] Give signed-out visitors a dedicated Course-focused public experience without the application sidebar
 - [x] Add a signed-in workspace overview for Courses, Work Orders, XP, Skill Passport progress, and upcoming activity
 - [x] Route sign-in and product-home actions to the correct public or workspace destination
-- [ ] Verify signed-out and signed-in experiences on desktop and mobile
+- [x] Verify signed-out and signed-in experiences on desktop and mobile
 
 - [x] Step 1 — Discover live FGN.GG contract (probe + `docs/api/integration-guides/gg-simulation-activity-contract.md`)
 - [x] Step 2 — `work_orders.simulation_activity_id` (uuid, nullable, no FK) + disposable `simulation_activity_cache`
