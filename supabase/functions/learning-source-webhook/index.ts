@@ -184,7 +184,15 @@ Deno.serve(async (req) => {
         status: prior,
         learner_outcome: prior === 'completed',
       }),
-      { status: inFlight ? 409 : 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      {
+        status: inFlight ? 409 : 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          // In-flight: retry later with the SAME delivery id.
+          ...(inFlight ? { 'Retry-After': '30' } : {}),
+        },
+      },
     );
   }
   const attempt = { id: claim.attempt_id as string };
