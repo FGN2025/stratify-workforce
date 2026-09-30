@@ -12,6 +12,7 @@
 // attempt row before re-firing so the receiver actually processes the body.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { handleAchievementEarned, resolveSource } from '../_shared/learning-source/handlers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
 
   const { data: intents, error: intentsErr } = await supabase
     .from('play_replay_queue')
-    .select('id, reason, email, challenge_id')
+    .select('id, reason, email, challenge_id, source_slug')
     .eq('status', 'pending')
     .order('created_at', { ascending: true })
     .limit(MAX_PER_RUN);
@@ -73,6 +74,22 @@ Deno.serve(async (req) => {
       .from('play_replay_queue')
       .update({ status: 'processing' })
       .eq('id', intent.id);
+
+    // Non-Play sources: replay parked 'unmapped' attempts through the shared
+    // credential path (contract inventory §5). Duplicate protection lives in
+    // the skill_credentials unique index.
+    if (intent.source_slug && intent.source_slug !== 'play') {
+      const r = await replayLearningSource(supabase, intent.source_slug, intent.email);
+      await supabase.from('play_replay_queue').update({
+        status: r.matched === 0 ? 'skipped' : r.error ? 'failed' : 'done',
+        attempts_matched: r.matched,
+        attempts_replayed: r.replayed,
+        last_error: r.error,
+        processed_at: new Date().toISOString(),
+      }).eq('id', intent.id);
+      results.push({ intent_id: intent.id, source: intent.source_slug, email: intent.email, ...r });
+      continue;
+    }
 
     // Find matching attempts
     let query = supabase
@@ -182,3 +199,35 @@ Deno.serve(async (req) => {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 });
+
+// deno-lint-ignore no-explicit-any
+async function replayLearningSource(supabase: any, slug: string, email: string | null) {
+  if (!email) return { matched: 0, replayed: 0, error: 'no email on intent' };
+  const source = await resolveSource(supabase, slug);
+  if (!source) return { matched: 0, replayed: 0, error: `source ${slug} inactive` };
+  const { data: rows, error } = await supabase
+    .from('learning_source_pull_attempts')
+    .select('id, action, request')
+    .eq('source_slug', slug)
+    .eq('direction', 'inbound')
+    .eq('status', 'unmapped')
+    .filter('response->>email', 'ilike', email)
+    .limit(50);
+  if (error) return { matched: 0, replayed: 0, error: error.message };
+  let replayed = 0;
+  let firstError: string | null = null;
+  for (const row of rows ?? []) {
+    const req = (row.request as Record<string, unknown>) ?? {};
+    const envelope = (req.payload as Record<string, unknown> | undefined) ?? req;
+    const inner = (envelope.payload as Record<string, unknown> | undefined) ?? envelope;
+    const action = String(row.action);
+    if (!action.endsWith('achievement.earned') && !action.endsWith('enrollment.completed')) continue;
+    const d = await handleAchievementEarned(supabase, source, inner);
+    const ok = d.status >= 200 && d.status < 300 && d.status !== 202;
+    await supabase.from('learning_source_pull_attempts')
+      .update({ status: ok ? 'completed' : d.status === 202 ? 'unmapped' : 'failed', response: d.body })
+      .eq('id', row.id);
+    if (ok) replayed++; else firstError = firstError ?? `status=${d.status}`;
+  }
+  return { matched: rows?.length ?? 0, replayed, error: firstError };
+}
