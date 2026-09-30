@@ -210,7 +210,8 @@ Deno.serve(async (req) => {
     // A3 origin tracking: completions pushed by a learning source carry that
     // source's slug (X-Ecosystem-App) so the outbound queue never bounces them
     // back to their origin. Legacy direct Play pushes default to 'play'.
-    const originSite = (req.headers.get('x-ecosystem-app') || 'play').trim().toLowerCase() || 'play';
+    const rawOriginApp = (req.headers.get('x-ecosystem-app') || 'play').trim().toLowerCase();
+    const originSite = rawOriginApp === 'play-webhook' ? 'play' : (rawOriginApp || 'play');
 
     if (!app) {
       console.warn('[sync-challenge-completion] auth failed', {
