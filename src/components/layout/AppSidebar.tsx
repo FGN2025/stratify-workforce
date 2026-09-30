@@ -73,18 +73,36 @@ import type { GameTitle } from '@/types/tenant';
 
 import type { LucideIcon } from 'lucide-react';
 
-const mainNavItems = [
-  { title: 'Workspace', url: '/workspace', icon: LayoutDashboard },
-  { title: 'Learn', url: '/learn', icon: GraduationCap },
-  { title: 'Events', url: '/events', icon: CalendarDays },
-  { title: 'Work Orders', url: '/work-orders', icon: ClipboardList },
-  { title: 'Communities', url: '/communities', icon: Users },
-  { title: 'Skill Passport', url: '/profile', icon: User },
-  { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
-  { title: 'Careers', url: '/careers', icon: Target },
-  { title: 'Help', url: '/help', icon: HelpCircle },
-  { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
+// Three separate concepts. Program browsing never changes organization or access.
+const navGroups = [
+  {
+    label: 'Explore programs',
+    items: [
+      { title: 'Programs', url: '/programs', icon: Target },
+      { title: 'Course Catalog', url: '/learn', icon: GraduationCap },
+      { title: 'Careers', url: '/careers', icon: Target },
+    ],
+  },
+  {
+    label: 'My learning',
+    items: [
+      { title: 'Workspace', url: '/workspace', icon: LayoutDashboard },
+      { title: 'Assignments', url: '/work-orders', icon: ClipboardList },
+      { title: 'Skill Passport', url: '/profile', icon: User },
+      { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
+    ],
+  },
+  {
+    label: 'My organization',
+    items: [
+      { title: 'Membership', url: '/communities', icon: Users },
+      { title: 'Cohort Events', url: '/events', icon: CalendarDays },
+      { title: 'Help', url: '/help', icon: HelpCircle },
+      { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
+    ],
+  },
 ];
+const mainNavItems = navGroups.flatMap((g) => g.items);
 
 const publicNavItems = [
   { title: 'Discover', url: '/', icon: LayoutDashboard },
@@ -350,17 +368,18 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="scrollbar-dark">
-        {/* Main Navigation */}
-        <SidebarGroup>
-          {isAuthenticated && (
+        {/* Main Navigation — three separate concepts when signed in */}
+        {(isAuthenticated ? navGroups : [{ label: '', items: navigationItems }]).map((group) => (
+        <SidebarGroup key={group.label || 'public'}>
+          {group.label && (
             <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-              Academy
+              {group.label}
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+              {group.items.map((item) => (
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
@@ -384,6 +403,8 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        ))}
+
 
         {/* Sim Categories */}
         {isAuthenticated && <SidebarGroup>

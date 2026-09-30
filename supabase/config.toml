@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.studio-catalog]
 verify_jwt = false
+
+[functions.program-registry]
+verify_jwt = false
