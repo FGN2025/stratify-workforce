@@ -81,11 +81,6 @@ function applyTenantBranding(t: Tenant) {
   if (t.font_body) root.style.setProperty('--font-body', t.font_body);
   else root.style.removeProperty('--font-body');
 
-  // <title>
-  const appName = t.nav_app_name || t.name || 'FGN Academy';
-  if (t.tagline) document.title = `${appName} — ${t.tagline}`;
-  else document.title = appName;
-
   // favicon
   if (t.favicon_url) {
     let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
@@ -109,8 +104,7 @@ function applyTenantBranding(t: Tenant) {
       m.content = content;
     };
     setMeta('og:image', t.og_image_url);
-    setMeta('og:title', appName);
-    if (t.tagline) setMeta('og:description', t.tagline);
+     setMeta('og:title', 'FGN Academy');
   }
 }
 
@@ -244,7 +238,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     const ancestors: Tenant[] = [];
     let current: Tenant | undefined = tenant;
     while (current?.parent_tenant_id) {
-      const parent = tenants.find((t) => t.id === current!.parent_tenant_id);
+      const parentTenantId = current.parent_tenant_id;
+      const parent = tenants.find((t) => t.id === parentTenantId);
       if (!parent) break;
       ancestors.push(parent);
       current = parent;
@@ -252,7 +247,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     return ancestors;
   }, [tenant, tenants]);
 
-  const appName = tenant?.nav_app_name || tenant?.name || 'FGN Academy';
+  const appName = 'FGN Academy';
 
   return (
     <TenantContext.Provider

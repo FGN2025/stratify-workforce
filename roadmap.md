@@ -1,5 +1,12 @@
 # Roadmap — Phase 1B: Canonical Simulation Activity identity
 
+## Public Academy branding (2026-09-30)
+
+- [x] Present FGN Academy as the product brand on signed-out pages
+- [x] Reduce signed-out navigation to Discover, Learn, and Communities
+- [x] Keep organization identity and selection inside the signed-in account menu
+- [x] Verify signed-out desktop/mobile presentation and signed-in organization context
+
 - [x] Step 1 — Discover live FGN.GG contract (probe + `docs/api/integration-guides/gg-simulation-activity-contract.md`)
 - [x] Step 2 — `work_orders.simulation_activity_id` (uuid, nullable, no FK) + disposable `simulation_activity_cache`
 - [x] Step 3 — Carry canonical id through `import-challenge-as-workorder`; completion sync validates provenance only
