@@ -1,5 +1,7 @@
 # Play → Academy: Webhook HMAC Contract (Phase E)
 
+> **Historical.** Current behavior is defined by [`docs/api/contract-inventory.md`](./api/contract-inventory.md). In particular, `X-App-Key` is still accepted, and strictness is controlled by `PLAY_WEBHOOK_STRICT` (defaults to strict when unset).
+
 **From:** FGN Academy (`vfzjfkcwromssjnlrhoo`)
 **To:** play.fgn.gg dev team
 **Date:** 2026-05-13
