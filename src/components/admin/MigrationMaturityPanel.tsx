@@ -38,7 +38,7 @@ const LEVEL_LABEL: Record<number, string> = {
   0: 'Not started',
   1: 'Level 1 — canonically connected',
   2: 'Level 2 — skills mapped',
-  3: 'Level 3 — evidence validated',
+  3: 'Level 3 — evidence validated (this Work Order only)',
 };
 
 function reasons(r: ReadinessRow, level: 1 | 2 | 3): string {
