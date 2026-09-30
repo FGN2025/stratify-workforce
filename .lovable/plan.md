@@ -20,13 +20,13 @@ Fields for each program:
 - Supported games (linked to the existing game list)
 - Learning pathways (linked Courses and Work Order tracks)
 - Integration capabilities: shared sign-in, Skill Passport, evidence inbound, progress outbound, credential issuance
-- Owner (responsible team or person) and contact
+- Owner: the platform admin, plus a contact
 
 Assessment deliverable: a short document that compares the registry with what each site actually runs today. It covers where the sites overlap, gaps, and which fields each site can use now. No capability is marked supported until it has been checked against the live site.
 
 ## 2. Canonical destinations and naming
-- Initial registry entries: merits.fgn.academy, maritime.fgn.academy, simracing.fgn.academy, railway.fgn.academy.
-- **Railroading vs railway:** one canonical address and one display name. Recommended: address `railway.fgn.academy` (it already exists), display name "Railroading" (matches earlier wording). The owner confirms the final choice.
+- Initial registry entries: merits.fgn.academy, maritime.fgn.academy, simracing.fgn.academy, and Railroading at railway.fgn.gg.
+- **Railroading:** canonical address `railway.fgn.gg`, display name "Railroading". Any other railroad or railway addresses FGN controls redirect there.
 - Old links redirect to the canonical address only where FGN controls the domain. Uncontrolled links are listed, not assumed.
 - Each redirect is recorded in the registry (legacy URL → canonical URL).
 
@@ -57,8 +57,29 @@ play FGN.GG challenge -> completion sent to Academy -> matching Work Order / Cou
 - The new navigation makes this path easier to see: on Work Orders and Courses that came from a challenge, "My learning" shows "From FGN.GG challenge", and program pages link to the related challenges.
 - Verification: an existing challenge-backed Work Order still opens from its FGN.GG link, still shows its progress, and still links back to the challenge.
 
+## 6. Who manages what (multi-tenant, like FGN.GG)
+- **Platform admin** owns the registry. Only they can create programs, change the canonical address, availability, games, pathways, or integrations.
+- **Community admin** (an organization's admin) manages their own organization only: its branding, its own scheduling (cohorts, events, assignment dates), members, and assigned work. They can choose which programs their organization offers, but they cannot edit the programs themselves.
+- This uses the organization admin and owner roles that already exist. Platform roles stay in their own separate table. Nothing is stored on profiles, and the organization switcher is not involved.
+
+## 7. Programs, games, and trades (many-to-many)
+The model keeps three things separate so this can grow:
+
+```text
+Game (e.g., American Truck Simulator, Farming Simulator)
+Trade skill path (e.g., Heavy Equipment) -- can draw on several games
+Program -- can be a single game, a trade across games, or a vertical (Maritime, Railroading)
+```
+
+- A game can be its own program (for example ATS or Farming Simulator) and still feed trade paths elsewhere.
+- A trade path can be its own program and also appear as a general Academy track.
+- Skills stay canonical and are never owned by a game. This matches the existing canonical-skills rule, so skills earned across several games count toward one path.
+
 ## Technical details
-- New `programs` table (with GRANTs and RLS: public read of live/preview rows through a `public_programs` view, admin-only writes), seeded with the four sites plus the existing trades mapped from `game_channels`.
+- New `programs` table (with GRANTs and RLS: public read of live/preview rows through a `public_programs` view, writes limited to `has_role(uid,'admin'|'super_admin')`), seeded with the four sites and FGN.GG as a competition source.
+- Link tables: `program_games` (program to game) and `program_pathways` (program to Course or Work Order track). There is no single-game column, so a trade can span several games and a game can belong to several programs.
+- `tenant_program_offerings` (tenant, program, enabled, schedule notes): community admins can write rows only for their own tenant (via `is_tenant_admin`); platform admins can write any row.
+- Community-admin branding and scheduling reuse the existing tenant branding fields and event and assignment tables. No new role is added unless the gap assessment finds one missing.
 - Admin screen to edit registry entries, following the existing admin pattern.
 - A read-only `program-registry` endpoint returns a versioned JSON feed, and an entry is added to the contract inventory.
 - Program selection is kept in page state or the address bar only, never in `user_active_tenant` or `TenantContext`. The organization switcher and tenant-scoped access checks stay unchanged.
@@ -71,10 +92,13 @@ play FGN.GG challenge -> completion sent to Academy -> matching Work Order / Cou
 - The registry feed is versioned and readable without sign-in; writes are refused for non-admins.
 - Redirects are tested only on controlled domains, and results are reported separately from planned checks.
 
-## Open decisions for the owner
-1. Final Railroading address and display name.
-2. Owner for each program entry.
-3. Which trades appear as their own programs and which stay grouped under Academy.
+## Decisions confirmed
+1. Railroading: canonical address `railway.fgn.gg`, display name "Railroading".
+2. Program owner: the platform admin owns every program entry.
+3. Trades can exist both as their own programs and as general Academy tracks, and a trade can draw on several games.
+
+## Remaining question
+- Should any `*.fgn.academy` railroad addresses redirect to `railway.fgn.gg`? A redirect is set up only where FGN controls the domain.
 
 ## Out of scope
 No changes to the code or data of Merits, Maritime, Sim Racing, Railway, or FGN.GG. No tenant ID, permission, or data consolidation.
