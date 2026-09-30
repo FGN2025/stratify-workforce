@@ -2094,6 +2094,7 @@ export type Database = {
           last_error: string | null
           processed_at: string | null
           reason: string
+          source_slug: string
           status: string
         }
         Insert: {
@@ -2106,6 +2107,7 @@ export type Database = {
           last_error?: string | null
           processed_at?: string | null
           reason: string
+          source_slug?: string
           status?: string
         }
         Update: {
@@ -2118,6 +2120,7 @@ export type Database = {
           last_error?: string | null
           processed_at?: string | null
           reason?: string
+          source_slug?: string
           status?: string
         }
         Relationships: []
