@@ -12,9 +12,9 @@ interface EnrolledCoursesProps {
 export function EnrolledCourses({ courses, enrollments, isLoading }: EnrolledCoursesProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex gap-4 overflow-hidden">
         {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-72 rounded-lg" />
+          <Skeleton key={i} className="h-72 w-[85vw] shrink-0 rounded-lg sm:w-72 lg:w-80" />
         ))}
       </div>
     );
@@ -43,13 +43,11 @@ export function EnrolledCourses({ courses, enrollments, isLoading }: EnrolledCou
       {inProgress.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4">In Progress</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex snap-x gap-4 overflow-x-auto pb-3 scrollbar-hide">
             {inProgress.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={{ ...course, enrolled: true }}
-                showProgress
-              />
+              <div key={course.id} className="w-[85vw] shrink-0 snap-start sm:w-72 lg:w-80">
+                <CourseCard course={{ ...course, enrolled: true }} showProgress />
+              </div>
             ))}
           </div>
         </div>
@@ -59,13 +57,11 @@ export function EnrolledCourses({ courses, enrollments, isLoading }: EnrolledCou
       {completed.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4">Completed</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex snap-x gap-4 overflow-x-auto pb-3 scrollbar-hide">
             {completed.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={{ ...course, enrolled: true, progress: 100 }}
-                showProgress
-              />
+              <div key={course.id} className="w-[85vw] shrink-0 snap-start sm:w-72 lg:w-80">
+                <CourseCard course={{ ...course, enrolled: true, progress: 100 }} showProgress />
+              </div>
             ))}
           </div>
         </div>

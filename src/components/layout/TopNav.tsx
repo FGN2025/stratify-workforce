@@ -34,7 +34,7 @@ export function TopNav() {
             <Menu className="h-5 w-5" />
           </SidebarTrigger>
           
-          {!user && <span className="font-display font-semibold text-foreground">FGN Academy</span>}
+          <NavLink to="/workspace" className="font-display font-semibold text-foreground">FGN Academy</NavLink>
         </div>
 
         {/* Center - Search */}

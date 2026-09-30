@@ -3,12 +3,24 @@ import { AppSidebar } from './AppSidebar';
 import { TopNav } from './TopNav';
 import { Footer } from './Footer';
 import { TenantSetupGate } from '@/components/TenantSetupGate';
+import { useAuth } from '@/contexts/AuthContext';
+import { PublicLayout } from './PublicLayout';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
+  if (!user) {
+    return <PublicLayout>{children}</PublicLayout>;
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
