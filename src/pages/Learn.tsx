@@ -1,4 +1,4 @@
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { PageHero } from '@/components/marketplace/PageHero';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
 import { CourseCard } from '@/components/learn/CourseCard';
@@ -22,7 +22,7 @@ export default function Learn() {
   const enrolledCourses = courses?.filter((c) => enrolledCourseIds.has(c.id)) || [];
 
   return (
-    <AppLayout>
+    <AcademyLayout>
       <div className="space-y-8">
         {/* Hero Section */}
         <PageHero
@@ -32,7 +32,7 @@ export default function Learn() {
         />
 
         {/* Course Tabs */}
-        <div className="container">
+        <div className="container mx-auto px-4">
           <Tabs defaultValue={user ? 'my-courses' : 'catalog'} className="space-y-6">
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="catalog" className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export default function Learn() {
         </div>
 
         {/* External Training Resources */}
-        <div className="container">
+        <div className="container mx-auto px-4">
         <HorizontalCarousel
           title="External Training Resources"
           subtitle="Deep-dive curriculum for American Truck Simulator"
@@ -118,6 +118,6 @@ export default function Learn() {
         </HorizontalCarousel>
         </div>
       </div>
-    </AppLayout>
+    </AcademyLayout>
   );
 }

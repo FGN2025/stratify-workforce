@@ -1,164 +1,66 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { HeroSection } from '@/components/marketplace/HeroSection';
+import { Link, Navigate } from 'react-router-dom';
+import { ArrowRight, Award, Gamepad2, GraduationCap } from 'lucide-react';
+import { PublicLayout } from '@/components/layout/PublicLayout';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
-import { EventCard } from '@/components/marketplace/EventCard';
-import { CommunityCard } from '@/components/marketplace/CommunityCard';
-import { supabase } from '@/integrations/supabase/client';
-import { useWorkOrders } from '@/hooks/useWorkOrders';
+import { CourseCard } from '@/components/learn/CourseCard';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, Flame, Users, Zap } from 'lucide-react';
-import type { WorkOrder, Tenant } from '@/types/tenant';
+import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
+import { useCourses } from '@/hooks/useCourses';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
-  const { data: curatedWorkOrders, isLoading: workOrdersLoading } = useWorkOrders('all');
-  const [communities, setCommunities] = useState<Tenant[]>([]);
-  const [communityMap, setCommunityMap] = useState<Record<string, Tenant>>({});
-  const [communitiesLoading, setCommunitiesLoading] = useState(true);
+  const { user, isLoading: authLoading } = useAuth();
+  const { data: courses = [], isLoading: coursesLoading } = useCourses();
+  const heroImageUrl = useSiteMediaUrl('home_hero_image');
 
-  // Featured Communities intentionally stays global — every tenant can discover
-  // the others at a basic card level (no cross-tenant content sharing).
-  useEffect(() => {
-    async function fetchCommunities() {
-      setCommunitiesLoading(true);
-      // Safe public projection — approved communities only, no internal fields.
-      const { data } = await supabase
-        .from('public_communities')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (data) {
-        const typed = data as unknown as Tenant[];
-        setCommunities(typed);
-        const map: Record<string, Tenant> = {};
-        typed.forEach(t => { map[t.id] = t; });
-        setCommunityMap(map);
-      }
-      setCommunitiesLoading(false);
-    }
-    fetchCommunities();
-  }, []);
-
-  // Map curated work orders (filtered server-side by RLS / curation) to the
-  // shape the marketplace cards expect.
-  const workOrders: WorkOrder[] = useMemo(() => {
-    return (curatedWorkOrders ?? []).map(wo => ({
-      id: wo.id,
-      tenant_id: wo.tenant_id,
-      title: wo.title,
-      generated_name: wo.generated_name,
-      description: wo.description,
-      game_title: wo.game_title,
-      success_criteria: wo.success_criteria,
-      is_active: wo.is_active,
-      created_at: wo.created_at,
-      cover_image_url: wo.cover_image_url,
-      metadata: wo.metadata,
-    }));
-  }, [curatedWorkOrders]);
-
-  const isLoading = workOrdersLoading || communitiesLoading;
-
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="space-y-8">
-          <Skeleton className="h-64 w-full rounded-2xl" />
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-48" />
-            <div className="flex gap-4">
-              {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-72 w-[85vw] sm:w-72 lg:w-80 shrink-0 rounded-xl" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
+  if (authLoading) return <div className="min-h-screen bg-background" />;
+  if (user) return <Navigate to="/workspace" replace />;
 
   return (
-    <AppLayout>
-      <div className="space-y-10">
-        <HeroSection />
+    <PublicLayout>
+      <section className="relative flex min-h-[72vh] items-end overflow-hidden border-b border-border">
+        <img src={heroImageUrl} alt="Simulation-based skills training" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/25" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/20" />
+        <div className="relative mx-auto w-full max-w-7xl px-4 pb-14 pt-32 sm:px-6 sm:pb-20 lg:px-8">
+          <p className="mb-4 font-data text-xs uppercase text-primary">Simulation-powered learning</p>
+          <h1 className="max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl lg:text-7xl">FGN Academy</h1>
+          <p className="mt-5 max-w-2xl text-lg text-muted-foreground sm:text-xl">Turn simulation experience into practical skills, guided Courses, and evidence you can carry forward.</p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button size="lg" asChild><Link to="/learn" className="gap-2">Explore Courses <ArrowRight className="h-4 w-4" /></Link></Button>
+            <Button size="lg" variant="outline" asChild><Link to="/auth">Sign in to learn</Link></Button>
+          </div>
+        </div>
+      </section>
 
-        {/* Trending Work Orders (curated per tenant) */}
-        <HorizontalCarousel
-          title="Trending Work Orders"
-          subtitle={
-            workOrders.length === 0
-              ? 'No work orders are available yet.'
-              : 'Discover the most popular training scenarios filling up fast!'
-          }
-          viewAllLink="/work-orders"
-          icon={<Flame className="h-5 w-5" />}
-        >
-          {workOrders.slice(0, 6).map((wo, idx) => (
-            <div key={wo.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-              <EventCard 
-                workOrder={wo}
-                community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
-                variant={idx === 0 ? 'featured' : 'default'}
-              />
-            </div>
-          ))}
-        </HorizontalCarousel>
+      <section className="mx-auto grid w-full max-w-7xl gap-px border-x border-b border-border bg-border sm:grid-cols-3">
+        {[
+          { icon: GraduationCap, title: 'Learn with purpose', copy: 'Follow structured Courses built around practical, observable skills.' },
+          { icon: Gamepad2, title: 'Practice through play', copy: 'Connect simulation activity to challenges that reflect real work.' },
+          { icon: Award, title: 'Build your record', copy: 'Collect XP and trusted evidence in your Skill Passport as you progress.' },
+        ].map((item) => (
+          <div key={item.title} className="bg-card p-6 sm:p-8"><item.icon className="h-6 w-6 text-primary" /><h2 className="mt-5 font-display text-xl font-semibold">{item.title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.copy}</p></div>
+        ))}
+      </section>
 
-        {/* Featured Communities */}
-        <HorizontalCarousel
-          title="Featured Communities"
-          subtitle="Join top training organizations and level up your skills"
-          viewAllLink="/communities"
-          icon={<Users className="h-5 w-5" />}
-        >
-          {communities.map((community, idx) => (
-            <div key={community.id} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-              <CommunityCard 
-                community={community}
-                featured={idx === 0}
-              />
-            </div>
-          ))}
-        </HorizontalCarousel>
-
-        {/* Recently Added */}
-        <HorizontalCarousel
-          title="Recently Added"
-          subtitle="Fresh training scenarios just added to the platform"
-          viewAllLink="/work-orders?sort=newest"
-          icon={<Zap className="h-5 w-5" />}
-        >
-          {workOrders.slice(0, 4).map((wo) => (
-            <div key={`recent-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-              <EventCard 
-                workOrder={wo}
-                community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
-                variant="compact"
-              />
-            </div>
-          ))}
-        </HorizontalCarousel>
-
-        {/* Popular This Week */}
-        {workOrders.length > 0 && (
+      <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        {coursesLoading ? (
+          <div className="flex gap-4 overflow-hidden">{[1, 2, 3].map((item) => <Skeleton key={item} className="h-72 w-80 shrink-0 rounded-lg" />)}</div>
+        ) : (
           <HorizontalCarousel
-            title="Popular This Week"
-            subtitle="Top-rated training scenarios based on completions"
-            icon={<TrendingUp className="h-5 w-5" />}
-            viewAllLink="/work-orders?sort=popular"
+            title="Explore Courses"
+            subtitle="Start with a Course that matches where you want to go"
+            icon={<GraduationCap className="h-5 w-5" />}
+            viewAllLink="/learn"
           >
-            {workOrders.slice(0, 6).map((wo) => (
-              <div key={`popular-${wo.id}`} className="w-[85vw] sm:w-72 lg:w-80 shrink-0 snap-start">
-                <EventCard 
-                  workOrder={wo}
-                  community={wo.tenant_id ? communityMap[wo.tenant_id] : undefined}
-                />
-              </div>
+            {courses.slice(0, 6).map((course) => (
+              <div key={course.id} className="w-[85vw] shrink-0 snap-start sm:w-72 lg:w-80"><CourseCard course={course} /></div>
             ))}
           </HorizontalCarousel>
         )}
-      </div>
-    </AppLayout>
+      </section>
+    </PublicLayout>
   );
 };
 

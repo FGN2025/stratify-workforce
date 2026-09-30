@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { setCurrentGameTitle } from '@/hooks/useTutorContext';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { useCourse } from '@/hooks/useCourses';
 import { useEnroll } from '@/hooks/useEnrollment';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,20 +66,20 @@ export default function CourseDetail() {
 
   if (isLoading) {
     return (
-      <AppLayout>
+      <AcademyLayout>
         <div className="space-y-6">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-48 w-full rounded-xl" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
-      </AppLayout>
+      </AcademyLayout>
     );
   }
 
   if (error || !course) {
     return (
-      <AppLayout>
+      <AcademyLayout>
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <GraduationCap className="h-12 w-12 text-muted-foreground" />
           <h2 className="text-xl font-semibold">Course not found</h2>
@@ -89,7 +89,7 @@ export default function CourseDetail() {
             Back to Learning Center
           </Button>
         </div>
-      </AppLayout>
+      </AcademyLayout>
     );
   }
 
@@ -109,7 +109,7 @@ export default function CourseDetail() {
   };
 
   return (
-    <AppLayout>
+    <AcademyLayout>
       <div className="space-y-6 max-w-4xl mx-auto">
         {/* Back button */}
         <Button variant="ghost" size="sm" onClick={() => navigate('/learn')}>
@@ -275,6 +275,6 @@ export default function CourseDetail() {
           </Accordion>
         </div>
       </div>
-    </AppLayout>
+    </AcademyLayout>
   );
 }

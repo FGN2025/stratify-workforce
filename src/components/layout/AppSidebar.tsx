@@ -74,7 +74,7 @@ import type { GameTitle } from '@/types/tenant';
 import type { LucideIcon } from 'lucide-react';
 
 const mainNavItems = [
-  { title: 'Discover', url: '/', icon: LayoutDashboard },
+  { title: 'Workspace', url: '/workspace', icon: LayoutDashboard },
   { title: 'Learn', url: '/learn', icon: GraduationCap },
   { title: 'Events', url: '/events', icon: CalendarDays },
   { title: 'Work Orders', url: '/work-orders', icon: ClipboardList },
@@ -338,7 +338,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border p-0 h-16">
-        <div className={cn(
+        <NavLink to={isAuthenticated ? '/workspace' : '/'} className={cn(
           "flex items-center justify-center h-full w-full overflow-hidden",
         )}>
           <img
@@ -346,7 +346,7 @@ export function AppSidebar() {
             alt="FGN Academy"
             className={cn("object-contain", collapsed ? "h-9 w-9" : "h-full w-auto max-w-full")}
           />
-        </div>
+        </NavLink>
       </SidebarHeader>
 
       <SidebarContent className="scrollbar-dark">

@@ -34,7 +34,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = (location.state as { from?: string })?.from || '/';
+  const from = (location.state as { from?: string })?.from || '/workspace';
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
