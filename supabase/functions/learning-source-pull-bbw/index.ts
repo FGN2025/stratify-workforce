@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
       .eq('external_attempt_id', achievementId)
       .maybeSingle();
 
-    if (existing && existing.status === 'completed') {
+    if (existing && (existing.status === 'completed' || existing.status === 'unmapped')) {
       lastCompletedAt = e.completed_at as string;
       continue;
     }
@@ -169,8 +169,14 @@ Deno.serve(async (req) => {
       .single();
 
     const dispatch = await handleAchievementEarned(academy, source, payload);
-    const finalStatus =
-      dispatch.status >= 200 && dispatch.status < 300 ? 'completed' : 'failed';
+    // Unmatched learners are parked as 'unmapped' and replayed by the shared
+    // source-aware retry queue on sign-up (contract inventory §5).
+    const unmapped =
+      dispatch.status === 202 &&
+      (dispatch.body as Record<string, unknown> | null)?.reason === 'unmapped_identity';
+    const finalStatus = unmapped
+      ? 'unmapped'
+      : dispatch.status >= 200 && dispatch.status < 300 ? 'completed' : 'failed';
 
     if (attempt?.id) {
       await academy
@@ -180,7 +186,7 @@ Deno.serve(async (req) => {
     }
 
     results.push({ id: e.id, status: finalStatus, dispatch_status: dispatch.status });
-    if (finalStatus === 'completed') {
+    if (finalStatus === 'completed' || finalStatus === 'unmapped') {
       processed += 1;
       lastCompletedAt = e.completed_at as string;
     } else {
