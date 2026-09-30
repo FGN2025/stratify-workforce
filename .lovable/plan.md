@@ -1,5 +1,23 @@
 # Program, learning, and organization navigation + program registry
 
+## Recommended architecture: separate layers, freely combined
+Games, trades, industries, programs, and organizations are separate layers. None owns another, and they combine through links rather than a fixed tree:
+
+```text
+Skills (canonical, shared)          <- evidence and the Skill Passport attach here
+Content: Games -> Activities -> Work Orders / Courses
+Groupings (tags, many-to-many):  Trade paths | Industries
+Programs (curated bundles of groupings + content, with their own site/branding)
+Organizations / partners (tenants): offer programs, brand them, schedule and assign
+```
+
+- **Skills are the common currency.** A Scout merit, a broadband-operator career path, and an ATS program all count the same canonical skills, so progress carries across games and organizations.
+- **Trades and industries are tags, not containers.** Content can belong to several trades and industries at once, and a trade can span several games.
+- **Programs are curated bundles.** A program can be one game (ATS), one trade (Heavy Equipment), an industry (Broadband), or a broad system like Scout Merits that spans many trades and games. Adding a program adds no new data model.
+- **Organizations (tenants) choose and brand programs; they do not own content.** Broadband operators, businesses, schools, community groups, and Scouts turn on the programs they want, apply their branding, set schedules, and assign work. The existing parent/child organization structure handles partner hierarchies.
+- **Access comes only from organization membership and roles, never from which program someone is browsing.**
+
+
 ## Goal
 Split Academy navigation into three separate ideas, each with its own selector and rules:
 
