@@ -9,10 +9,12 @@ import { SIM_RESOURCES } from '@/config/simResources';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCareerReadiness } from '@/hooks/useCareerReadiness';
 import { useCareerPaths } from '@/hooks/useCareerPaths';
+import { useUserState, workforceMapUrl } from '@/hooks/useUserState';
 
 const CAREER_PATHS = [
   {
     id: 'cdl-class-a',
+    workforceSectors: [{ id: 'cdl', label: 'CDL truck drivers' }],
     title: 'CDL Class A Driver',
     industry: 'Trucking & Logistics',
     icon: Truck,
@@ -21,7 +23,7 @@ const CAREER_PATHS = [
     description: 'Operate commercial motor vehicles over 26,001 lbs. The trucking industry is the backbone of American commerce.',
     avgSalary: '$55,000 – $80,000',
     demandLevel: 'Very High',
-    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/tractor-trailer-truck-drivers',
+    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-job-finder',
     partnerLinks: [
       { label: 'CDL Quest Training', href: 'https://simu-cdl-path.lovable.app' },
       { label: 'CDL Exchange', href: 'https://skill-truck-path.lovable.app' },
@@ -29,6 +31,7 @@ const CAREER_PATHS = [
   },
   {
     id: 'fiber-technician',
+    workforceSectors: [{ id: 'fiber_splicing', label: 'Fiber splicing' }, { id: 'telecom', label: 'Telecom line & fiber' }],
     title: 'Fiber Optic Technician',
     industry: 'Broadband & Telecommunications',
     icon: Cable,
@@ -37,13 +40,14 @@ const CAREER_PATHS = [
     description: 'Install, maintain, and repair fiber optic communication systems. Critical for bridging the digital divide in rural America.',
     avgSalary: '$45,000 – $75,000',
     demandLevel: 'Very High',
-    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/telecommunications-technicians',
+    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-job-finder',
     partnerLinks: [
       { label: 'Broadband Workforce', href: 'https://broadbandworkforce.com' },
     ],
   },
   {
     id: 'heavy-equipment-operator',
+    workforceSectors: [{ id: 'heavy_equip_operators', label: 'Heavy equipment operators' }, { id: 'heavy_equip_mechanics', label: 'Mobile heavy equipment mechanics' }],
     title: 'Heavy Equipment Operator',
     industry: 'Construction & Infrastructure',
     icon: HardHat,
@@ -52,11 +56,12 @@ const CAREER_PATHS = [
     description: 'Operate bulldozers, cranes, excavators, and other heavy machinery for infrastructure and building projects.',
     avgSalary: '$50,000 – $85,000',
     demandLevel: 'High',
-    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/operating-engineers',
+    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-job-finder',
     partnerLinks: [],
   },
   {
     id: 'ag-equipment-tech',
+    workforceSectors: [{ id: 'precision_ag', label: 'Precision agriculture technicians' }],
     title: 'Agricultural Equipment Technician',
     industry: 'Agriculture & Food Systems',
     icon: Tractor,
@@ -65,11 +70,12 @@ const CAREER_PATHS = [
     description: 'Maintain and operate precision agricultural equipment. Modern agriculture is increasingly technology-driven.',
     avgSalary: '$40,000 – $65,000',
     demandLevel: 'High',
-    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/farm-equipment-mechanics',
+    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-job-finder',
     partnerLinks: [],
   },
   {
     id: 'diesel-mechanic',
+    workforceSectors: [{ id: 'diesel', label: 'Diesel mechanics' }],
     title: 'Diesel Mechanic',
     industry: 'Automotive & Fleet Services',
     icon: Wrench,
@@ -78,7 +84,7 @@ const CAREER_PATHS = [
     description: 'Diagnose, repair, and maintain diesel engines and heavy-duty vehicles critical to transportation and agriculture.',
     avgSalary: '$48,000 – $72,000',
     demandLevel: 'High',
-    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-occupations/bus-truck-mechanics-diesel-engine-specialists',
+    apprenticeshipLink: 'https://www.apprenticeship.gov/apprenticeship-job-finder',
     partnerLinks: [],
   },
 ];
@@ -94,6 +100,7 @@ export default function Careers() {
   const { user } = useAuth();
   const { data: readinessMap } = useCareerReadiness();
   const { data: careerPathsMap } = useCareerPaths();
+  const { data: userState } = useUserState();
 
   // Fetch requirements from DB for display
   const { data: requirements } = useRequirements();
@@ -265,8 +272,13 @@ export default function Careers() {
                   {/* Links */}
                   <div className="flex flex-wrap gap-2 pt-2">
                     <Button asChild size="sm" variant="default">
+                      <a href={workforceMapUrl(career.workforceSectors[0]?.id, userState)} target="_blank" rel="noopener noreferrer">
+                        Check the job numbers in your area <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                    <Button asChild size="sm" variant="outline">
                       <a href={career.apprenticeshipLink} target="_blank" rel="noopener noreferrer">
-                        View on Apprenticeship.gov <ExternalLink className="h-3 w-3 ml-1" />
+                        Apprenticeship.gov Job Finder <ExternalLink className="h-3 w-3 ml-1" />
                       </a>
                     </Button>
                     {career.partnerLinks.map((link) => (
@@ -277,6 +289,16 @@ export default function Careers() {
                       </Button>
                     ))}
                   </div>
+                  {career.workforceSectors.length > 1 && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span>Also see:</span>
+                      {career.workforceSectors.slice(1).map((s) => (
+                        <a key={s.id} href={workforceMapUrl(s.id, userState)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          {s.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
