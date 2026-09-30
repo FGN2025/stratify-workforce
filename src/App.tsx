@@ -86,13 +86,21 @@ const App = () => (
               <Route path="/passport/link" element={<PassportLink />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
               <Route path="/embed/passport/:slug" element={<EmbedPassport />} />
-              <Route path="/communities" element={<Communities />} />
-              <Route path="/community/:slug" element={<CommunityProfile />} />
-              <Route path="/careers" element={<Careers />} />
+              <Route path="/communities" element={
+                <ProtectedRoute><Communities /></ProtectedRoute>
+              } />
+              <Route path="/community/:slug" element={
+                <ProtectedRoute><CommunityProfile /></ProtectedRoute>
+              } />
+              <Route path="/careers" element={
+                <ProtectedRoute><Careers /></ProtectedRoute>
+              } />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/eula" element={<Eula />} />
               <Route path="/verify" element={<VerifyCredential />} />
-              <Route path="/sim/:gameTitle" element={<SimIndustry />} />
+              <Route path="/sim/:gameTitle" element={
+                <ProtectedRoute><SimIndustry /></ProtectedRoute>
+              } />
               
               {/* Learning routes */}
               <Route path="/learn" element={<Learn />} />
@@ -100,7 +108,9 @@ const App = () => (
               <Route path="/learn/:courseId/lesson/:lessonId" element={<LessonDetail />} />
               
               {/* Events routes */}
-              <Route path="/events" element={<Events />} />
+              <Route path="/events" element={
+                <ProtectedRoute><Events /></ProtectedRoute>
+              } />
               <Route path="/events/:id" element={
                 <ProtectedRoute><EventDetail /></ProtectedRoute>
               } />

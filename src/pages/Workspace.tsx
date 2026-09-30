@@ -1,15 +1,13 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, BriefcaseBusiness, CalendarDays, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, BriefcaseBusiness, CalendarDays, GraduationCap, Sparkles } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { CourseCard } from '@/components/learn/CourseCard';
 import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTenant } from '@/contexts/TenantContext';
 import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollment';
 import { useUpcomingEvents } from '@/hooks/useEvents';
@@ -20,7 +18,6 @@ import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 
 export default function Workspace() {
   const { user } = useAuth();
-  const { tenant } = useTenant();
   const { data: courses = [], isLoading: coursesLoading } = useCourses();
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useEnrollments();
   const { data: workOrders = [], isLoading: workOrdersLoading } = useWorkOrders('subscribed');
@@ -46,10 +43,6 @@ export default function Workspace() {
                 Continue your Courses, take on Work Orders, and build your Skill Passport.
               </p>
             </div>
-            <Badge variant="outline" className="w-fit gap-2 px-3 py-2">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              {tenant?.name || 'Organization'}
-            </Badge>
           </div>
         </section>
 
