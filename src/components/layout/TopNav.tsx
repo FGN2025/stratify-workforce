@@ -7,6 +7,7 @@ import { TenantSwitcher } from '@/components/TenantSwitcher';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ import {
 
 export function TopNav() {
   const { user, signOut } = useAuth();
+  const { tenant } = useTenant();
 
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || 'OP';
   const userName = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Operator';
@@ -74,6 +76,9 @@ export function TopNav() {
                     <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                       <Building2 className="h-3.5 w-3.5" />
                       Organization
+                    </span>
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {tenant?.name || 'Organization unavailable'}
                     </span>
                     <TenantSwitcher />
                   </DropdownMenuLabel>
