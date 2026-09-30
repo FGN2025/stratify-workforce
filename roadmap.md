@@ -77,3 +77,14 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Docs: docs/api/studio-catalog/README.md, docs/openapi/studio-catalog.yaml, docs/phase-3-studio-handoff.md
 - [ ] Register Studio's browser origin(s) + issue operator key out-of-band (blocked: awaiting Studio's proxy/origin details)
 - [ ] Admin UI for catalog-read scope + token revoke list (server-side administration only today)
+
+## Programs, learning and organization navigation (2026-09-30)
+- [x] Program registry tables (programs, program_games, program_pathways, tenant_program_offerings) with platform-admin writes and community-admin offerings
+- [x] Public read-only `program-registry` feed (contract 2026-09-30.1)
+- [x] Public /programs directory and /programs/:key pages; header link
+- [x] Signed-in sidebar grouped: Explore programs / My learning / My organization
+- [ ] Admin screen for editing registry entries (platform admin)
+- [ ] Community-admin screen to turn programs on for their organization
+- [ ] Link Courses/Work Orders to programs (program_pathways is empty)
+- [ ] Assessment doc: registry vs each live site (capabilities marked "unverified" until checked)
+- [ ] railway.fgn.gg does not resolve yet (blocked: DNS owner); railway.fgn.academy responds and is recorded as legacy
