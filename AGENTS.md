@@ -6,3 +6,4 @@
 
 - Program selection is independent of tenant context; the `programs` registry (read publicly via the `program-registry` feed) is the single source for cross-vertical navigation. Games, trades, industries and programs link many-to-many and skills stay canonical, so programs like Scout Merits can span many trades and games without new data models.
 - One platform points ledger (`user_points`, append-only with `event_key`, `origin_site`, `program_id`, `award_pathway`, reversal entries) feeds per-program redemption options (prize, badge, pathway step). This lets each vertical spend the same points differently without separate currencies.
+- Inbound partner deliveries are claimed atomically via `claim_learning_source_attempt` (unique source+action+delivery id); unverified signatures are quarantined and never replayed. This guarantees one outcome per event under retries and concurrency.
