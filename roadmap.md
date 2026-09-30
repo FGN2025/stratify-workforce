@@ -100,5 +100,5 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [ ] C Stage tagging UI, needs-practice review action, Merits requirement mapping, 4-section Skill Passport, coach context
 - [ ] D Homepage program cards/entry choices, Workspace order, pre-activity panel, cross-site return path, registry/offering admin screens
 - [ ] D2 Points: redemption request flow + balance page; per-program stores later (FGN.GG prizes, Merits badges, apprenticeship steps)
-- [ ] E Pilot journey per program (blocked: user picks activities)
-- [ ] Decisions pending: activity time display vs no-time rule; decision 4
+- [ ] E Pilot journey: Heavy Equipment & Construction only, reusing Excavation & Trenching (Construction interpretation), full journey incl. pathway-step redemption; all other programs deferred
+- [x] Decisions resolved: keep the no-time rule (difficulty/requirements shown instead); Decision 4 = partner evidence approvals recorded as supporting evidence only, no credential or XP

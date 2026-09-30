@@ -48,13 +48,15 @@ The API rules the review wants protected (Work Order → FGN.GG challenge ID →
 - **Protection against double counting:** each event can earn points only once, even across sites. Refunds and reversals are recorded as new entries, and history is never deleted. Organizations only see and approve uses of points within their own organization.
 - **Stage 1 builds the shared records and a points balance page only.** Stores, prize fulfillment and apprenticeship steps are added later, one program at a time. The FGN.GG and Merits sites keep their own stores and read balances through a versioned feed.
 
-### Stage E: P2 pilot journeys (after A–C)
-- Choose one representative activity per program, with your approval of each pick. Run each journey end to end, including retries and organization isolation, before any P3 expansion.
+### Stage E: P2 pilot journey (scope confirmed)
+- **One pilot only: the Heavy Equipment & Construction program**, reusing the Excavation & Trenching canonical activity (its Construction interpretation), whose two-interpretation model Phase 2D already proved.
+- **Full journey, including redemption:** learner completes the activity → submits evidence → a reviewer decides → the Skill Passport entry appears → points are earned once → a test redemption spends points the way this program spends them (a pathway step toward the apprenticeship path, recorded as its own approved redemption).
+- **Everything else is deferred.** Broadband & Fiber, Trucking, Farming, and the four programs with no Academy Work Orders yet (Sim Racing, Maritime, Railroading, Scout Merits) get no pilot and no starter activities this round; their pilots begin when their content exists.
+- Pilot results are reviewed before any P3 expansion. The pilot promotes or migrates nothing on its own.
 
-## Needs your input before or during build
-- **Time on activities:** the review asks for "duration / expected time", but a standing rule bans time indicators. I recommend keeping the ban and showing difficulty and requirements instead.
-- **Decision 4** (partner evidence approvals) is still open. Stage A step 1 assumes my earlier recommendation: supporting evidence only, with no credential or XP.
-- **Pilot activity for each program** (Stage E).
+## Decisions confirmed by the owner
+- **Time ban stays.** The review's "duration / expected time" request is declined per the standing rule; activities show difficulty and requirements instead.
+- **Decision 4 resolved.** Partner evidence approvals are recorded as supporting evidence only, with no credential and no XP. Stage A step 1 implements exactly this; the interim 501 refusal lifts only when Skill Verification activates under this rule.
 
 ## Technical details
 - Tag each award record with its source flow (enum `award_pathway`). Credential, XP and badge triggers only fire for `legacy_completion`.

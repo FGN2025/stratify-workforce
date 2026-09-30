@@ -21,6 +21,7 @@ export type SourceConfig = {
   skill_tag_pattern: string;
   ingestion_mode: 'push' | 'pull';
   is_active: boolean;
+  shadow_mode: boolean;
 };
 
 // -- Skill-tag sanitization ----------------------------------------------------
@@ -116,7 +117,7 @@ export async function resolveSource(
 ): Promise<SourceConfig | null> {
   const { data, error } = await supabase
     .from('learning_sources')
-    .select('slug, display_name, hmac_secret_env_name, strict_mode, skill_tag_pattern, ingestion_mode, is_active')
+    .select('slug, display_name, hmac_secret_env_name, strict_mode, skill_tag_pattern, ingestion_mode, is_active, shadow_mode')
     .eq('slug', slug)
     .maybeSingle();
   if (error || !data || !data.is_active) return null;
@@ -214,6 +215,11 @@ export async function handleAchievementEarned(
   source: SourceConfig,
   payload: Record<string, unknown>,
 ): Promise<{ status: number; body: unknown }> {
+  // A2 shadow mode: the event was already recorded by the receiver, but a
+  // shadow-mode source must produce no learner outcome (no credential).
+  if (source.shadow_mode) {
+    return { status: 202, body: { credentialed: false, reason: 'shadow_mode', recorded: true } };
+  }
   const data = (payload.data as Record<string, unknown>) ?? payload;
   const user = (data.user as Record<string, unknown>) ?? {};
   const externalUserId =
@@ -292,8 +298,11 @@ export async function handleAchievementEarned(
 
 // -- evidence.approved ---------------------------------------------------------
 
-// Skill Verification is dormant (Phase 2D). Until an owner decision activates
-// it, partner evidence approvals are refused without minting anything.
+// Skill Verification is dormant (Phase 2D). Owner decision (2026-09-30):
+// partner evidence approvals are SUPPORTING EVIDENCE ONLY — when this path
+// activates it must record supporting evidence with no credential and no XP.
+// Until an Academy service enforces that, partner approvals are refused
+// without minting anything.
 export const EVIDENCE_APPROVED_ENABLED = false;
 export const EVIDENCE_NOT_ENABLED_BODY = {
   error: 'not_enabled',
