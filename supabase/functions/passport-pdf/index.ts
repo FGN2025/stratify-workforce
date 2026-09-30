@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
 
 function generatePassportHTML(data: {
   username: string;
-  score: number;
+  score: number | null;
   totalHours: number;
   totalXp: number;
   credentials: SkillCredential[];
@@ -245,7 +245,7 @@ function generatePassportHTML(data: {
     .join("");
 
   const scoreColor =
-    score >= 80 ? "#16a34a" : score >= 60 ? "#f59e0b" : "#ef4444";
+    score == null ? "#64748b" : score >= 80 ? "#16a34a" : score >= 60 ? "#f59e0b" : "#ef4444";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -360,7 +360,7 @@ function generatePassportHTML(data: {
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:1px;">Employability Score</div>
-        <div style="font-size:48px;font-weight:800;color:${scoreColor};line-height:1;">${score.toFixed(1)}</div>
+        <div style="font-size:48px;font-weight:800;color:${scoreColor};line-height:1;">${score == null ? "Not yet scored" : score.toFixed(1)}</div>
       </div>
     </div>
     <div class="stats-grid">
