@@ -54,9 +54,9 @@ The API rules the review wants protected (Work Order → FGN.GG challenge ID →
 - **Everything else is deferred.** Broadband & Fiber, Trucking, Farming, and the four programs with no Academy Work Orders yet (Sim Racing, Maritime, Railroading, Scout Merits) get no pilot and no starter activities this round; their pilots begin when their content exists.
 - Pilot results are reviewed before any P3 expansion. The pilot promotes or migrates nothing on its own.
 
-## Needs your input before or during build
-- **Time on activities:** the review asks for "duration / expected time", but a standing rule bans time indicators. I recommend keeping the ban and showing difficulty and requirements instead.
-- **Decision 4** (partner evidence approvals) is still open. Stage A step 1 assumes my earlier recommendation: supporting evidence only, with no credential or XP.
+## Decisions confirmed by the owner
+- **Time ban stays.** The review's "duration / expected time" request is declined per the standing rule; activities show difficulty and requirements instead.
+- **Decision 4 resolved.** Partner evidence approvals are recorded as supporting evidence only, with no credential and no XP. Stage A step 1 implements exactly this; the interim 501 refusal lifts only when Skill Verification activates under this rule.
 
 ## Technical details
 - Tag each award record with its source flow (enum `award_pathway`). Credential, XP and badge triggers only fire for `legacy_completion`.
