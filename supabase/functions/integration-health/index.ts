@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       admin.from("program_games").select("program_id, game_title"),
       admin.from("work_orders").select("id, game_title, is_active"),
       admin.from("user_work_order_completions").select("id, work_order_id"),
-      admin.from("play_outbound_queue").select("payload, status, created_at, completed_at"),
+      admin.from("play_outbound_queue").select("payload, work_order_id, status, created_at, delivered_at"),
     ]);
     const queryErrors: Record<string, string> = {};
     for (const [k, r] of Object.entries({ attemptsRes, replayRes, gamesRes, woRes, completionsRes, outboundRes })) {
@@ -147,15 +147,15 @@ Deno.serve(async (req) => {
       const programOutbound = outboundRows.filter((o) => {
         const cid = o.payload?.completion_id;
         // Task events carry work_order_id directly (no completion id).
-        const woId = (cid ? completionToWo.get(cid) : undefined) ?? o.payload?.work_order_id;
+        const woId = (cid ? completionToWo.get(cid) : undefined) ?? o.work_order_id ?? o.payload?.work_order_id;
         return woId && gameWoIds.has(woId);
       });
       const backlog = programOutbound.filter(
-        (o) => !["completed", "failed", "duplicate"].includes(o.status ?? ""),
+        (o) => !["completed", "delivered", "failed", "dead", "duplicate"].includes(o.status ?? ""),
       ).length;
       const lastSuccess = programOutbound
-        .filter((o) => o.status === "completed")
-        .map((o) => o.completed_at ?? o.created_at)
+        .filter((o) => ["completed", "delivered"].includes(o.status ?? ""))
+        .map((o) => o.delivered_at ?? o.created_at)
         .sort()
         .at(-1) ?? null;
       return {
