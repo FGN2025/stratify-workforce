@@ -360,7 +360,23 @@ Deno.serve(async (req) => {
         .single();
 
       return new Response(
-        JSON.stringify({ passport: { slug: passport.public_url_slug, user: profile }, credentials: credentials || [] }),
+        JSON.stringify({
+          passport: {
+            slug: passport.public_url_slug,
+            user: profile
+              ? { ...profile, employability_score: profile.employability_score ?? null,
+                  employability_score_status: profile.employability_score == null ? 'not_assessed' : 'scored' }
+              : null,
+          },
+          // record_group: participation | reviewed_demonstration | fgn_merit | organization_issued
+          credentials: (credentials || []).map((c: Record<string, unknown>) => ({
+            ...c,
+            record_group: c.credential_type === 'skill_verification' ? 'reviewed_demonstration'
+              : String(c.credential_type_key ?? '').toLowerCase().includes('merit') ? 'fgn_merit'
+              : c.credential_type === 'certification' ? 'organization_issued'
+              : 'participation',
+          })),
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

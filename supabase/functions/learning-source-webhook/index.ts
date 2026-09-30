@@ -154,76 +154,67 @@ Deno.serve(async (req) => {
   // 2026-09-30 P0). Lenient mismatches and unsigned pushes are record-only.
   const signatureVerified = verify.ok && !verify.reason;
 
-  // Idempotency: a delivery id is a duplicate only if the earlier attempt
-  // reached a terminal non-failed state. Failed attempts are re-processed
-  // in place so transient failures can recover to exactly one outcome.
-  let retryAttemptId: string | null = null;
-  if (deliveryId) {
-    const { data: existing } = await supabase
-      .from('learning_source_pull_attempts')
-      .select('id, status, response')
-      .eq('source_slug', source.slug)
-      .eq('action', `webhook:${eventType}`)
-      .eq('external_attempt_id', deliveryId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (existing && existing.status !== 'failed' && existing.status !== 'queued') {
-      return new Response(
-        JSON.stringify({ duplicate: true, attempt_id: existing.id, status: existing.status }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-    if (existing) retryAttemptId = existing.id;
+  // Atomic claim (review clarification 2): a unique index on
+  // (source, action, delivery id) plus a single DB step. Repeated deliveries:
+  //   completed / supporting_evidence -> acknowledge, no new outcome
+  //   failed      -> re-claimed on the same row, prior error kept in history
+  //   unmapped    -> stays pending for identity recovery
+  //   quarantined / shadow -> acknowledged as recorded, never a completion
+  //   processing  -> 409, a concurrent request cannot process it twice
+  const { data: claimRows, error: claimErr } = await supabase.rpc('claim_learning_source_attempt', {
+    p_source_slug: source.slug,
+    p_action: `webhook:${eventType}`,
+    p_delivery_id: deliveryId,
+    p_request: { sig_mode: verify.mode, payload },
+  });
+  const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+  if (claimErr || !claim) {
+    return new Response(JSON.stringify({ error: 'failed to record attempt' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
+  if (!claim.claimed) {
+    const prior = claim.prior_status as string;
+    const inFlight = prior === 'processing' || prior === 'queued';
+    return new Response(
+      JSON.stringify({
+        duplicate: true,
+        attempt_id: claim.attempt_id,
+        status: prior,
+        learner_outcome: prior === 'completed',
+      }),
+      { status: inFlight ? 409 : 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+  const attempt = { id: claim.attempt_id as string };
 
-  let attempt: { id: string };
-  if (retryAttemptId) {
+  const recordOnly = async (status: string, reason: string, extra: Record<string, unknown> = {}) => {
     await supabase
       .from('learning_source_pull_attempts')
-      .update({ status: 'queued', error: null, request: { sig_mode: verify.mode, payload, retried: true } })
-      .eq('id', retryAttemptId);
-    attempt = { id: retryAttemptId };
-  } else {
-    const { data, error: attemptErr } = await supabase
-      .from('learning_source_pull_attempts')
-      .insert({
-        source_slug: source.slug,
-        direction: 'inbound',
-        action: `webhook:${eventType}`,
-        external_attempt_id: deliveryId,
-        status: 'queued',
-        request: { sig_mode: verify.mode, payload },
-      })
-      .select('id')
-      .single();
-    if (attemptErr || !data) {
-      return new Response(JSON.stringify({ error: 'failed to record attempt' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    attempt = data;
-  }
-
-  const recordOnly = async (reason: string, extra: Record<string, unknown> = {}) => {
-    await supabase
-      .from('learning_source_pull_attempts')
-      .update({ status: 'shadow', response: { reason, event: eventType, ...extra } })
+      .update({ status, response: { reason, event: eventType, ...extra } })
       .eq('id', attempt.id);
     return new Response(
-      JSON.stringify({ ok: true, recorded: true, reason, source: source.slug, event: eventType, attempt_id: attempt.id }),
+      JSON.stringify({ ok: true, recorded: true, status, reason, source: source.slug, event: eventType, attempt_id: attempt.id }),
       { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   };
 
-  if (source.shadow_mode) return await recordOnly('shadow_mode');
-  if (!signatureVerified) return await recordOnly('signature_not_verified', { detail: verify.reason });
+  // Clarification 1: unverified deliveries are quarantined operational logs.
+  // They never create evidence, resolve identities, update progress or replay.
+  if (!signatureVerified) {
+    return await recordOnly('quarantined', 'signature_not_verified', { detail: verify.reason });
+  }
+  if (source.shadow_mode) return await recordOnly('shadow', 'shadow_mode');
 
-  // Decision 4 (2026-09-30): partner evidence approvals are supporting
-  // evidence only — recorded, never credential or XP.
+  // Decision 4: authenticated partner evidence approvals become exactly one
+  // supporting-evidence record — zero credentials, zero XP.
   if (eventType === 'evidence.approved' && !EVIDENCE_APPROVED_ENABLED) {
-    return await recordOnly('supporting_evidence_only', { credentialed: false, xp: 0 });
+    return await recordOnly('supporting_evidence', 'supporting_evidence_only', {
+      credentialed: false,
+      xp: 0,
+      evidence_id: (innerPayload as Record<string, unknown>).evidence_id ?? null,
+    });
   }
 
   let dispatch: { status: number; body: unknown } = { status: 202, body: { dispatched: false } };

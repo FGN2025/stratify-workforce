@@ -212,10 +212,10 @@ async function replayLearningSource(supabase: any, slug: string, email: string |
   if (!source) return { matched: 0, replayed: 0, error: `source ${slug} inactive` };
   const { data: rows, error } = await supabase
     .from('learning_source_pull_attempts')
-    .select('id, action, request')
+    .select('id, action, request, response, error_history')
     .eq('source_slug', slug)
     .eq('direction', 'inbound')
-    .eq('status', 'unmapped')
+    .in('status', ['unmapped', 'failed'])
     .filter('response->>email', 'ilike', email)
     .limit(50);
   if (error) return { matched: 0, replayed: 0, error: error.message };
@@ -244,9 +244,20 @@ async function replayLearningSource(supabase: any, slug: string, email: string |
     } else continue;
     const unmapped = d.status === 202 && (d.body as Record<string, unknown> | null)?.reason === 'unmapped_identity';
     const ok = d.status >= 200 && d.status < 300 && !unmapped;
-    await supabase.from('learning_source_pull_attempts')
-      .update({ status: ok ? 'completed' : unmapped ? 'unmapped' : 'failed', response: d.body })
-      .eq('id', row.id);
+    // Keep the original identity fields (email, external id) on the row so a
+    // later retry can still find it, and append every failure to history.
+    const prev = (row.response as Record<string, unknown> | null) ?? {};
+    const update: Record<string, unknown> = ok
+      ? { status: 'completed', response: { ...prev, ...(d.body as Record<string, unknown> ?? {}), email: prev.email ?? null } }
+      : {
+          status: unmapped ? 'unmapped' : 'failed',
+          response: { ...prev, last_dispatch: d.body },
+          error_history: [
+            ...((row.error_history as unknown[]) ?? []),
+            { at: new Date().toISOString(), status: d.status, body: d.body },
+          ],
+        };
+    await supabase.from('learning_source_pull_attempts').update(update).eq('id', row.id);
     if (ok) replayed++; else firstError = firstError ?? `status=${d.status}`;
   }
   return { matched: rows?.length ?? 0, replayed, error: firstError };

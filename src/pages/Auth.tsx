@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Gauge, Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
+import { safeDestination, DEFAULT_DESTINATION } from '@/lib/safe-redirect';
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }),
@@ -36,17 +38,27 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const rawFrom =
-    (location.state as { from?: string })?.from ||
-    new URLSearchParams(location.search).get('next') ||
-    '/workspace';
-  // Only same-site paths are honoured as return destinations.
-  const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/workspace';
-
-  // Carry the destination through email confirmation, and continue there
-  // once a session exists (sign-in, sign-up confirmation link).
+  // Destination: router state from a protected page, or an expiring
+  // server-held intent (email confirmation). Always checked against the
+  // exact allowlist; unapproved destinations fall back to Workspace.
+  const [from, setFrom] = useState(() =>
+    safeDestination((location.state as { from?: string })?.from),
+  );
   useEffect(() => {
-    sessionStorage.setItem('fgn_post_auth_next', from);
+    const intent = new URLSearchParams(location.search).get('intent');
+    if (!intent || !/^[0-9a-f-]{36}$/i.test(intent)) return;
+    supabase.rpc('resolve_post_auth_intent', { p_id: intent }).then(({ data }) => {
+      if (typeof data === 'string') setFrom(safeDestination(data));
+    });
+  }, [location.search]);
+  useEffect(() => {
+    if (from === DEFAULT_DESTINATION) {
+      sessionStorage.removeItem('fgn_post_auth_intent');
+      return;
+    }
+    supabase.rpc('create_post_auth_intent', { p_path: from }).then(({ data }) => {
+      if (typeof data === 'string') sessionStorage.setItem('fgn_post_auth_intent', data);
+    });
   }, [from]);
   useEffect(() => {
     if (user) navigate(from, { replace: true });

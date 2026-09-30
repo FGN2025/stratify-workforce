@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CONTRACT_VERSION = "2026-10-01.2";
+const CONTRACT_VERSION = "2026-10-01.1";
 
 type HealthState = "not_connected" | "untested" | "healthy" | "degraded" | "failed";
 // A program/source is never "healthy" without at least one real success.
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
 
     const [sourcesRes, attemptsRes, replayRes, programsRes, gamesRes, woRes, completionsRes, outboundRes] = await Promise.all([
-      admin.from("learning_sources").select("slug, display_name, is_active, strict_mode, shadow_mode, ingestion_mode, hmac_secret_env_name"),
+      admin.from("learning_sources").select("slug, display_name, is_active, strict_mode, shadow_mode, ingestion_mode, hmac_secret_env_name").eq("is_active", true),
       admin.from("learning_source_pull_attempts").select("source_slug, status, created_at").gte("created_at", sevenDaysAgo),
       admin.from("play_replay_queue").select("source_slug, status"),
       admin.from("programs").select("id, key, name, availability"),
