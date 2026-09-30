@@ -365,6 +365,8 @@ Deno.serve(async (req) => {
         attempt_number: attemptNumber,
         completed_at: completionTimestamp,
         metadata: metadata || {},
+        origin_site: originSite,
+        causation_event_id: mirrorDeliveryId,
       }, { onConflict: 'user_id,work_order_id' })
       .select()
       .single();

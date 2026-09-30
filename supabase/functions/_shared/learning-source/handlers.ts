@@ -21,6 +21,7 @@ export type SourceConfig = {
   skill_tag_pattern: string;
   ingestion_mode: 'push' | 'pull';
   is_active: boolean;
+  shadow_mode: boolean;
 };
 
 // -- Skill-tag sanitization ----------------------------------------------------
@@ -116,7 +117,7 @@ export async function resolveSource(
 ): Promise<SourceConfig | null> {
   const { data, error } = await supabase
     .from('learning_sources')
-    .select('slug, display_name, hmac_secret_env_name, strict_mode, skill_tag_pattern, ingestion_mode, is_active')
+    .select('slug, display_name, hmac_secret_env_name, strict_mode, skill_tag_pattern, ingestion_mode, is_active, shadow_mode')
     .eq('slug', slug)
     .maybeSingle();
   if (error || !data || !data.is_active) return null;
