@@ -28,7 +28,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               <NavLink to="/auth">Sign in</NavLink>
             </Button>
             <Button asChild>
-              <NavLink to="/auth" className="gap-2">
+              <NavLink to="/auth?mode=signup" className="gap-2">
                 Join
                 <ArrowRight className="h-4 w-4" />
               </NavLink>

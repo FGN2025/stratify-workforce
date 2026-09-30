@@ -102,3 +102,14 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [ ] D2 Points: redemption request flow + balance page; per-program stores later (FGN.GG prizes, Merits badges, apprenticeship steps)
 - [ ] E Pilot journey: Heavy Equipment & Construction only, reusing Excavation & Trenching (Construction interpretation), full journey incl. pathway-step redemption; all other programs deferred
 - [x] Decisions resolved: keep the no-time rule (difficulty/requirements shown instead); Decision 4 = partner evidence approvals recorded as supporting evidence only, no credential or XP
+
+## Third-party review response (2026-10-01)
+- [x] Unverified signatures recorded only (no learner outcome); failed deliveries retry on same attempt
+- [x] Unknown-learner challenge completions queued for retry; account linking triggers retry
+- [x] Integration health: five honest states; outbound query fixed (delivered_at)
+- [x] Passport: no placeholder 50.0 score / fake org average; records grouped by earning type
+- [x] Full return address kept through sign-in and email confirmation; Join opens sign-up
+- [ ] Valid-signature + missing-secret live tests (needs partner test signing)
+- [ ] Retry-to-exactly-one-outcome end-to-end test with a real signup
+- [ ] Contract inventory bump to 2026-10-01.2 after those tests
+- [ ] Stages 3-6: program discovery, admin registry tools, points UX, pilot, Merits review

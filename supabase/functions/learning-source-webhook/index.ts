@@ -150,23 +150,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  if (eventType === 'evidence.approved' && !EVIDENCE_APPROVED_ENABLED) {
-    await supabase.from('learning_source_pull_attempts').insert({
-      source_slug: source.slug,
-      direction: 'inbound',
-      action: 'webhook:evidence.approved',
-      external_attempt_id: deliveryId,
-      status: 'failed',
-      request: payload,
-      error: 'not_enabled',
-    });
-    return new Response(JSON.stringify(EVIDENCE_NOT_ENABLED_BODY), {
-      status: 501,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+  // Signature must be positively verified for any learner outcome (review
+  // 2026-09-30 P0). Lenient mismatches and unsigned pushes are record-only.
+  const signatureVerified = verify.ok && !verify.reason;
 
-  // Idempotency
+  // Idempotency: a delivery id is a duplicate only if the earlier attempt
+  // reached a terminal non-failed state. Failed attempts are re-processed
+  // in place so transient failures can recover to exactly one outcome.
+  let retryAttemptId: string | null = null;
   if (deliveryId) {
     const { data: existing } = await supabase
       .from('learning_source_pull_attempts')
@@ -174,45 +165,65 @@ Deno.serve(async (req) => {
       .eq('source_slug', source.slug)
       .eq('action', `webhook:${eventType}`)
       .eq('external_attempt_id', deliveryId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
-    if (existing) {
+    if (existing && existing.status !== 'failed' && existing.status !== 'queued') {
       return new Response(
         JSON.stringify({ duplicate: true, attempt_id: existing.id, status: existing.status }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    if (existing) retryAttemptId = existing.id;
   }
 
-  const { data: attempt, error: attemptErr } = await supabase
-    .from('learning_source_pull_attempts')
-    .insert({
-      source_slug: source.slug,
-      direction: 'inbound',
-      action: `webhook:${eventType}`,
-      external_attempt_id: deliveryId,
-      status: 'queued',
-      request: { sig_mode: verify.mode, payload },
-    })
-    .select('id')
-    .single();
-  if (attemptErr) {
-    return new Response(JSON.stringify({ error: 'failed to record attempt' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // A2 shadow mode: record the event, produce no learner outcome. No
-  // credential minting and no completion sync for shadow sources.
-  if (source.shadow_mode) {
+  let attempt: { id: string };
+  if (retryAttemptId) {
     await supabase
       .from('learning_source_pull_attempts')
-      .update({ status: 'shadow', response: { reason: 'shadow_mode', event: eventType } })
+      .update({ status: 'queued', error: null, request: { sig_mode: verify.mode, payload, retried: true } })
+      .eq('id', retryAttemptId);
+    attempt = { id: retryAttemptId };
+  } else {
+    const { data, error: attemptErr } = await supabase
+      .from('learning_source_pull_attempts')
+      .insert({
+        source_slug: source.slug,
+        direction: 'inbound',
+        action: `webhook:${eventType}`,
+        external_attempt_id: deliveryId,
+        status: 'queued',
+        request: { sig_mode: verify.mode, payload },
+      })
+      .select('id')
+      .single();
+    if (attemptErr || !data) {
+      return new Response(JSON.stringify({ error: 'failed to record attempt' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    attempt = data;
+  }
+
+  const recordOnly = async (reason: string, extra: Record<string, unknown> = {}) => {
+    await supabase
+      .from('learning_source_pull_attempts')
+      .update({ status: 'shadow', response: { reason, event: eventType, ...extra } })
       .eq('id', attempt.id);
     return new Response(
-      JSON.stringify({ ok: true, recorded: true, reason: 'shadow_mode', source: source.slug, event: eventType }),
+      JSON.stringify({ ok: true, recorded: true, reason, source: source.slug, event: eventType, attempt_id: attempt.id }),
       { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
+  };
+
+  if (source.shadow_mode) return await recordOnly('shadow_mode');
+  if (!signatureVerified) return await recordOnly('signature_not_verified', { detail: verify.reason });
+
+  // Decision 4 (2026-09-30): partner evidence approvals are supporting
+  // evidence only — recorded, never credential or XP.
+  if (eventType === 'evidence.approved' && !EVIDENCE_APPROVED_ENABLED) {
+    return await recordOnly('supporting_evidence_only', { credentialed: false, xp: 0 });
   }
 
   let dispatch: { status: number; body: unknown } = { status: 202, body: { dispatched: false } };
@@ -262,15 +273,21 @@ Deno.serve(async (req) => {
     .update({ status: finalStatus, response: dispatch.body })
     .eq('id', attempt.id);
 
+  // Failed processing returns non-2xx so the partner retries; the same
+  // delivery id will be re-processed (not reported as duplicate).
   return new Response(
     JSON.stringify({
-      ok: true,
+      ok: finalStatus !== 'failed',
       attempt_id: attempt.id,
       source: source.slug,
       event: eventType,
       sig_mode: verify.mode,
+      status: finalStatus,
       dispatch_status: dispatch.status,
     }),
-    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    {
+      status: finalStatus === 'failed' ? 502 : 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
   );
 });

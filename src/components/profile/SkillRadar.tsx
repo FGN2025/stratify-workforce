@@ -27,7 +27,7 @@ export function SkillRadar({ skills, tenantAverage }: SkillRadarProps) {
   const data = Object.entries(skills).map(([key, value]) => ({
     skill: skillLabels[key as keyof SkillSet],
     value,
-    average: tenantAverage ? tenantAverage[key as keyof SkillSet] : 50,
+    average: tenantAverage ? tenantAverage[key as keyof SkillSet] : null,
     fullMark: 100,
   }));
 
@@ -40,10 +40,12 @@ export function SkillRadar({ skills, tenantAverage }: SkillRadarProps) {
             <div className="w-3 h-3 rounded-full bg-primary" />
             <span className="text-muted-foreground">Your Skills</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-muted-foreground/50 border border-dashed border-muted-foreground" />
-            <span className="text-muted-foreground">Tenant Average</span>
-          </div>
+          {tenantAverage && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-muted-foreground/50 border border-dashed border-muted-foreground" />
+              <span className="text-muted-foreground">Organization Average</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -71,16 +73,16 @@ export function SkillRadar({ skills, tenantAverage }: SkillRadarProps) {
               }}
               axisLine={false}
             />
-            {/* Tenant average (behind) */}
-            <Radar
-              name="Tenant Average"
+            {/* Organization average (behind) — only when real data exists */}
+            {tenantAverage && <Radar
+              name="Organization Average"
               dataKey="average"
               stroke="hsl(var(--muted-foreground))"
               fill="hsl(var(--muted-foreground))"
               fillOpacity={0.1}
               strokeWidth={1}
               strokeDasharray="5 5"
-            />
+            />}
             {/* User skills (front) */}
             <Radar
               name="Your Skills"

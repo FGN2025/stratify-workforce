@@ -277,9 +277,15 @@ Deno.serve(async (req) => {
     if (userError) throw userError;
 
     if (!userId) {
+      // Parked for replay on signup / account link (review 2026-09-30 P0).
       return new Response(
-        JSON.stringify({ error: 'User not found. User must be registered on fgn.academy.' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'User not found. User must be registered on fgn.academy.',
+          reason: 'unmapped_identity',
+          email: String(user_email).toLowerCase(),
+          challenge_id,
+        }),
+        { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

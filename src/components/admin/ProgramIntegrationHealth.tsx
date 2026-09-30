@@ -14,7 +14,8 @@ interface SourceHealth {
   last_success_at: string | null;
   failures_7d: number;
   retry_backlog: number;
-  status: string;
+  state: string;
+  signing?: string;
 }
 
 interface ProgramHealth {
@@ -24,7 +25,8 @@ interface ProgramHealth {
   work_orders: number;
   outbound_backlog: number;
   last_outbound_success_at: string | null;
-  status: string;
+  state: string;
+  signing?: string;
 }
 
 interface HealthResponse {
@@ -33,6 +35,7 @@ interface HealthResponse {
   sources: SourceHealth[];
   programs: ProgramHealth[];
   error?: string;
+  query_errors?: Record<string, string>;
 }
 
 const fmtDate = (iso: string | null) =>
@@ -62,10 +65,18 @@ export function ProgramIntegrationHealth() {
 
   useEffect(() => { load(); }, []);
 
-  const StatusIcon = ({ status }: { status: string }) =>
-    status === 'pass'
-      ? <CheckCircle className="h-4 w-4 text-green-500" />
-      : <AlertTriangle className="h-4 w-4 text-amber-500" />;
+  const LABELS: Record<string, string> = {
+    healthy: 'Healthy', degraded: 'Degraded', failed: 'Failed', untested: 'Untested', not_connected: 'Not connected',
+  };
+  const StatusIcon = ({ status }: { status: string }) => (
+    <Badge
+      variant={status === 'failed' ? 'destructive' : status === 'healthy' ? 'default' : 'secondary'}
+      className="text-[10px] h-4 px-1 gap-0.5"
+    >
+      {status === 'healthy' ? <CheckCircle className="h-2.5 w-2.5" /> : <AlertTriangle className="h-2.5 w-2.5" />}
+      {LABELS[status] ?? status}
+    </Badge>
+  );
 
   return (
     <Card className="border-border/50">
@@ -81,12 +92,17 @@ export function ProgramIntegrationHealth() {
           </Button>
         </div>
         <CardDescription className="text-xs">
-          Backlog, recent failures and last successful sync for each learning source and program.
+          A source or program shows Healthy only after a real successful sync. Backlog, failures and signing status for each learning source and program.
           {data?.contract_version && <> Contract {data.contract_version}.</>}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {data?.error && <p className="text-xs text-destructive">{data.error}</p>}
+        {data?.query_errors && Object.keys(data.query_errors).length > 0 && (
+          <p className="text-xs text-destructive">
+            Some checks could not run: {Object.entries(data.query_errors).map(([k, v]) => `${k}: ${v}`).join('; ')}
+          </p>
+        )}
 
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Learning sources</p>
@@ -101,7 +117,7 @@ export function ProgramIntegrationHealth() {
                         <EyeOff className="h-2.5 w-2.5" /> shadow
                       </Badge>
                     )}
-                    <StatusIcon status={s.status} />
+                    <StatusIcon status={s.state} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -109,8 +125,8 @@ export function ProgramIntegrationHealth() {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {!s.is_active && <Badge variant="destructive" className="text-[10px] h-4 px-1">inactive</Badge>}
-                  {!s.strict_mode && (
-                    <Badge variant="secondary" className="text-[10px] h-4 px-1">relaxed signing</Badge>
+                  {s.signing && (
+                    <Badge variant="secondary" className="text-[10px] h-4 px-1">signing: {s.signing.replace(/_/g, ' ')}</Badge>
                   )}
                   {s.failures_7d > 0 && (
                     <Badge variant="destructive" className="text-[10px] h-4 px-1">{s.failures_7d} failures (7d)</Badge>
@@ -131,7 +147,7 @@ export function ProgramIntegrationHealth() {
               <div key={p.key} className="rounded-lg border border-border/50 p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium truncate">{p.name}</span>
-                  <StatusIcon status={p.status} />
+                  <StatusIcon status={p.state} />
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" /> Last outbound {fmtDate(p.last_outbound_success_at)}

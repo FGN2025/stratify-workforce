@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,9 @@ const signupSchema = z.object({
 });
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(
+    () => new URLSearchParams(window.location.search).get('mode') !== 'signup',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -29,12 +31,26 @@ export default function Auth() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, user } = useAuth();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = (location.state as { from?: string })?.from || '/workspace';
+  const rawFrom =
+    (location.state as { from?: string })?.from ||
+    new URLSearchParams(location.search).get('next') ||
+    '/workspace';
+  // Only same-site paths are honoured as return destinations.
+  const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/workspace';
+
+  // Carry the destination through email confirmation, and continue there
+  // once a session exists (sign-in, sign-up confirmation link).
+  useEffect(() => {
+    sessionStorage.setItem('fgn_post_auth_next', from);
+  }, [from]);
+  useEffect(() => {
+    if (user) navigate(from, { replace: true });
+  }, [user, from, navigate]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
