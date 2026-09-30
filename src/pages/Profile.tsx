@@ -38,22 +38,6 @@ import { useState } from 'react';
 import type { SkillSet } from '@/types/tenant';
 import { ATS_RESOURCES } from '@/config/simResources';
 
-const defaultSkills: SkillSet = {
-  safety: 50,
-  efficiency: 50,
-  precision: 50,
-  speed: 50,
-  equipment_care: 50,
-};
-
-const tenantAverage: SkillSet = {
-  safety: 70,
-  efficiency: 65,
-  precision: 60,
-  speed: 68,
-  equipment_care: 62,
-};
-
 function ProfileSkeleton() {
   return (
     <div className="space-y-10">
@@ -157,7 +141,7 @@ const Profile = () => {
     );
   }
 
-  const skills = profile.skills || defaultSkills;
+  const skills = profile.skills ?? null;
 
   return (
     <AppLayout>
@@ -166,7 +150,7 @@ const Profile = () => {
         <PageHero
           title={isOwnProfile ? "Skill Passport" : `${profile.username}'s Profile`}
           subtitle={isOwnProfile 
-            ? "Your verified credentials and competency profile. Track achievements, certifications, and career-ready metrics."
+            ? "Your verified credentials and competency profile. Records are grouped by how they were earned: participation, reviewed demonstrations, FGN educational merits, and organization-issued credentials."
             : `View ${profile.username}'s verified credentials and skill profile.`
           }
           backgroundImage="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=1600&h=600&fit=crop"
@@ -181,9 +165,9 @@ const Profile = () => {
             onClick: handleShare,
           } : undefined}
           stats={[
-            { value: `${profile.employability_score?.toFixed(1) || '50.0'}`, label: 'Employability Score', highlight: true },
+            { value: profile.employability_score != null ? profile.employability_score.toFixed(1) : 'Not yet scored', label: 'Employability Score', highlight: true },
             { value: `${stats.totalXp.toLocaleString()}`, label: 'Total XP' },
-            { value: `${credentials.length}`, label: 'Challenge Completions' },
+            { value: `${credentials.length}`, label: 'Passport Records' },
           ]}
         />
 
@@ -210,51 +194,43 @@ const Profile = () => {
           </HorizontalCarousel>
         )}
 
-        {/* Challenge Completions Grid */}
+        {/* Passport records grouped by how they were earned */}
         {(() => {
-          const challengeCreds = credentials.filter((c: any) => c.credential_type !== 'course_completion');
-          const courseCreds = credentials.filter((c: any) => c.credential_type === 'course_completion');
-          return (
-            <>
-              {challengeCreds.length > 0 && (
-                <section className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                      <Award className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-display font-bold uppercase tracking-wide">Challenge Completions</h2>
-                      <p className="text-sm text-muted-foreground">Verified Play.fgn.gg challenge completions</p>
-                    </div>
+          const groupOf = (c: any): string => {
+            const key = String(c.credential_type_key ?? c.metadata?.credential_type_key ?? '').toLowerCase();
+            if (c.credential_type === 'skill_verification') return 'reviewed';
+            if (key.includes('merit')) return 'merits';
+            if (c.credential_type === 'certification') return 'organization';
+            return 'participation';
+          };
+          const groups = [
+            { id: 'participation', title: 'Participation', desc: 'Course and challenge completions. These record that an activity was completed; they are not reviewed skill demonstrations.' },
+            { id: 'reviewed', title: 'Reviewed Demonstrations', desc: 'Skills a qualified reviewer assessed against Work Order evidence.' },
+            { id: 'merits', title: 'FGN Educational Merits', desc: 'Merits awarded by FGN educational programs. These are not third-party certifications.' },
+            { id: 'organization', title: 'Organization-Issued', desc: 'Credentials issued by an organization. The issuer shown on each card is responsible for the claim.' },
+          ];
+          return groups.map((g) => {
+            const items = credentials.filter((c: any) => groupOf(c) === g.id);
+            if (items.length === 0) return null;
+            return (
+              <section key={g.id} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Award className="h-5 w-5" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {challengeCreds.map((credential) => (
-                      <CertificationCard key={credential.id} credential={credential} />
-                    ))}
+                  <div>
+                    <h2 className="text-xl font-display font-bold uppercase tracking-wide">{g.title}</h2>
+                    <p className="text-sm text-muted-foreground">{g.desc}</p>
                   </div>
-                </section>
-              )}
-
-              {courseCreds.length > 0 && (
-                <section className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                      <Award className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-display font-bold uppercase tracking-wide">Course Completions</h2>
-                      <p className="text-sm text-muted-foreground">Academy and external SCORM course completions</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {courseCreds.map((credential) => (
-                      <CertificationCard key={credential.id} credential={credential} />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </>
-          );
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {items.map((credential) => (
+                    <CertificationCard key={credential.id} credential={credential} />
+                  ))}
+                </div>
+              </section>
+            );
+          });
         })()}
 
         {/* Spatial verifications from Breakroom (owner-only via RLS) */}
@@ -267,7 +243,7 @@ const Profile = () => {
             <h3 className="text-lg font-semibold mb-2">No Achievements Yet</h3>
             <p className="text-muted-foreground">
               {isOwnProfile 
-                ? "Complete work orders and courses to earn achievements and certifications!"
+                ? "Complete Courses and Work Orders to add records to your Skill Passport."
                 : "This user hasn't earned any achievements yet."
               }
             </p>
@@ -281,11 +257,17 @@ const Profile = () => {
             <div>
               <h2 className="text-lg font-bold uppercase tracking-wide">Skill Analysis</h2>
               <p className="text-sm text-muted-foreground">
-                {isOwnProfile ? "Your competency breakdown vs organization average" : "Competency breakdown"}
+                Competency breakdown from assessed activity
               </p>
             </div>
           </div>
-          <SkillRadar skills={skills} tenantAverage={tenantAverage} />
+          {skills ? (
+            <SkillRadar skills={skills} />
+          ) : (
+            <div className="glass-card p-6 text-sm text-muted-foreground">
+              Not yet assessed. Skill scores appear here after assessed activity is recorded; no placeholder values are shown.
+            </div>
+          )}
         </section>
 
         {/* Career Readiness */}

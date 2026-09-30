@@ -86,7 +86,7 @@ export function ProfileHeader({ profile, credentials, stats, tenantName }: Profi
               Employability Score
             </p>
             <p className="font-data text-4xl font-bold text-primary glow-sm">
-              {profile.employability_score?.toFixed(1) || '50.0'}
+              {profile.employability_score != null ? profile.employability_score.toFixed(1) : 'Not yet scored'}
             </p>
           </div>
           <div className="flex items-center gap-1 text-primary text-xs">
