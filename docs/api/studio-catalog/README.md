@@ -140,3 +140,13 @@ value is ever guessed.
 
 Academy owns approval of skills and Work Orders. No Studio-side approval is authoritative, and
 this contract carries no decision channel. Studio approvals remain labelled simulated.
+
+## Skill evidence status (added 2026-09-30)
+
+Each `/skills` item carries `evidenceStatus`, derived from the existing evidence model:
+
+- `evidence_validated` — an active, approved task mapping ties the skill to at least one admin-approved Level 3 Work Order.
+- `mapped_not_validated` — approved mappings exist, but only on Work Orders below Level 3.
+- `catalogued_only` — the skill is in the catalog with no approved mapping.
+
+The response also includes `evidenceCoverage` (catalog count, validated count, Level 3 Work Order count). Catalog membership is never evidence validation; broader migration remains gated. At release: 35 catalog skills, 17 evidence-validated through 4 Level 3 Work Orders.
