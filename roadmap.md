@@ -91,11 +91,11 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 
 ## External review response (2026-09-30) — plan archived in .lovable/plan/
 - [x] Foundation schema: points ledger fields (origin, program, org, award flow, reversal), redemption options + requests, task stages, "needs practice" result, outbound origin/causation, versioned program requirements, balance view
-- [ ] A1 Enforce award flow in credential/XP/badge triggers + tests
-- [ ] A2 Shadow-mode sources produce no learner outcomes (tests)
-- [ ] A3 Outbound enqueue skips events originating at the target site
+- [x] A1 Enforce award flow in credential/XP/badge triggers + tests (guard blocks evidence_model; legacy flow accepted)
+- [x] A2 Shadow-mode sources produce no learner outcomes (live endpoint test: 202 shadow_mode, zero credentials, attempt recorded; positive control)
+- [x] A3 Outbound enqueue skips events originating at the target site (Play-origin skipped, Academy-origin enqueued — tested)
 - [ ] A4 Scripted regression suite (duplicate, out-of-order, unmapped, cross-org, withdrawn, outage)
-- [ ] A5 Per-program integration health
+- [x] A5 Per-program integration health (integration-health function + admin panel; 401 unauthenticated, 200 admin, all programs/sources pass)
 - [ ] B Merits passport-outbox review (read-only)
 - [ ] C Stage tagging UI, needs-practice review action, Merits requirement mapping, 4-section Skill Passport, coach context
 - [ ] D Homepage program cards/entry choices, Workspace order, pre-activity panel, cross-site return path, registry/offering admin screens
