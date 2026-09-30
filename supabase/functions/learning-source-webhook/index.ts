@@ -25,6 +25,8 @@ import {
   SUPPORTED_EVENTS,
   verifySignature,
   sanitizeSkillTags,
+  EVIDENCE_APPROVED_ENABLED,
+  EVIDENCE_NOT_ENABLED_BODY,
 } from '../_shared/learning-source/handlers.ts';
 
 const corsHeaders = {
@@ -64,12 +66,43 @@ Deno.serve(async (req) => {
   }
 
   const rawBody = await req.text();
+
+  // Pull-only sources never accept pushes (contract inventory §1).
+  if (source.ingestion_mode === 'pull') {
+    await supabase.from('learning_source_pull_attempts').insert({
+      source_slug: source.slug,
+      direction: 'inbound',
+      action: 'webhook:rejected',
+      status: 'failed',
+      request: { body_len: rawBody.length },
+      error: 'source_is_pull_only',
+    });
+    return new Response(JSON.stringify({ error: 'source_is_pull_only', slug: source.slug }), {
+      status: 409,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const verify = await verifySignature(
     source,
     rawBody,
     req.headers.get('x-learning-source-signature'),
   );
   if (!verify.ok) {
+    if (verify.reason === 'signing_secret_unconfigured') {
+      await supabase.from('learning_source_pull_attempts').insert({
+        source_slug: source.slug,
+        direction: 'inbound',
+        action: 'webhook:rejected',
+        status: 'failed',
+        request: { body_len: rawBody.length },
+        error: 'signing_secret_unconfigured',
+      });
+      return new Response(JSON.stringify({ error: 'signing_secret_unconfigured' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     return new Response(JSON.stringify({ error: 'invalid signature', detail: verify.reason }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -113,6 +146,22 @@ Deno.serve(async (req) => {
     });
     return new Response(JSON.stringify({ error: 'unsupported event', event: eventType }), {
       status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (eventType === 'evidence.approved' && !EVIDENCE_APPROVED_ENABLED) {
+    await supabase.from('learning_source_pull_attempts').insert({
+      source_slug: source.slug,
+      direction: 'inbound',
+      action: 'webhook:evidence.approved',
+      external_attempt_id: deliveryId,
+      status: 'failed',
+      request: payload,
+      error: 'not_enabled',
+    });
+    return new Response(JSON.stringify(EVIDENCE_NOT_ENABLED_BODY), {
+      status: 501,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -189,8 +238,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  const finalStatus =
-    dispatch.status >= 200 && dispatch.status < 300 ? 'completed' : 'failed';
+  const unmapped =
+    dispatch.status === 202 &&
+    (dispatch.body as Record<string, unknown> | null)?.reason === 'unmapped_identity';
+  const finalStatus = unmapped
+    ? 'unmapped'
+    : dispatch.status >= 200 && dispatch.status < 300 ? 'completed' : 'failed';
   await supabase
     .from('learning_source_pull_attempts')
     .update({ status: finalStatus, response: dispatch.body })

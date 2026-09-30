@@ -276,6 +276,12 @@ export async function handleEvidenceApproved(
   supabase: SupabaseSvc,
   payload: Record<string, unknown>,
 ): Promise<{ status: number; body: unknown }> {
+  // Skill Verification is dormant (Phase 2D; contract inventory §4): refuse without minting.
+  return {
+    status: 501,
+    body: { error: 'not_enabled', detail: 'evidence.approved is disabled while Skill Verification is dormant; nothing was issued.' },
+  };
+  // deno-lint-ignore no-unreachable
   const data = (payload.data as Record<string, unknown>) ?? payload;
   const user = (data.user as Record<string, unknown>) ?? {};
   const externalUserId =

@@ -1,6 +1,6 @@
 # FGN Academy Integration Contract Inventory
 
-**Inventory version:** `2026-09-30.1`
+**Inventory version:** `2026-10-01.1` (previous: `2026-09-30.1`)
 **Source of truth:** deployed edge-function handlers and the live `learning_sources` registry, read 2026-09-30.
 **Precedence:** where any other document disagrees with this file, this file wins. Guides must be updated to match — not the other way round.
 
@@ -15,7 +15,7 @@ Bump the version (`YYYY-MM-DD.N`) whenever a handler, header, envelope, credenti
 | `play-webhook-receiver` | Play → Academy | push | `X-Play-Signature` HMAC (secret chosen by `X-Ecosystem-App`, default `PLAY_WEBHOOK_SECRET`) | **Live — current Play path** |
 | `learning-source-webhook` | any partner → Academy | push | `X-Learning-Source` + `X-Learning-Source-Signature` HMAC, per registry row | Live; no production partner cut over yet |
 | `learning-source-pull-bbw` | Academy polls BBW | pull (scheduled, ~5 min) | Academy-held BBW service credentials | Live |
-| `sync-challenge-completion` | Play / internal forward → Academy | push | `X-Ecosystem-Key` **or** `X-App-Key` | Live |
+| `sync-challenge-completion` | Play / internal forward → Academy | push | `X-Ecosystem-Key` only | Live |
 | `push-play-progress` | Academy → Play | push (outbound) | `X-Ecosystem-Key` + signature | Live |
 | `webhook-dispatch` | Academy → subscribers | push (outbound) | `X-Webhook-Signature` HMAC per subscription | Internal trigger only (service role) |
 | `credential-api` | partners ↔ Academy | request/response | none / Bearer JWT / `X-App-Key` | Live |
@@ -30,9 +30,9 @@ Bump the version (`YYYY-MM-DD.N`) whenever a handler, header, envelope, credenti
 | `bbw` | pull | false | `BBW_WEBHOOK_SECRET` | yes |
 
 Important behaviors confirmed in code:
-- `ingestion_mode` is **descriptive only**. `learning-source-webhook` does not reject pushes for a `pull` source; a signed or (while lenient) unsigned push for `bbw` would be processed.
+- `ingestion_mode` is **enforced**: pushes to a `pull` source get `409 { error: "source_is_pull_only", slug }` and are logged as failed.
 - The registry `strict_mode` governs only `learning-source-webhook`. Play traffic on `play-webhook-receiver` is governed by the `PLAY_WEBHOOK_STRICT` env var, which **defaults to strict** when unset. The `play` registry row's `strict_mode=false` does not loosen that receiver.
-- If a source's secret env var is missing, `learning-source-webhook` accepts the request as `sig_mode: "unsigned"` even for strict sources. `play-webhook-receiver` rejects in that case when strict.
+- If a **strict** source's secret env var is missing, `learning-source-webhook` returns `503 { error: "signing_secret_unconfigured" }` (fail closed, matching `play-webhook-receiver`). Non-strict sources stay lenient and are labelled `unsigned`.
 
 ## 3. Response envelopes (as deployed)
 
@@ -54,7 +54,7 @@ Note: inbound webhooks return HTTP **200** even when the inner dispatch returned
 | Event | `credential_type` | `credential_type_key` | Idempotency key |
 |---|---|---|---|
 | `achievement.earned` / `enrollment.completed` | `badge` | `<slug>_achievement` | `(passport_id, external_reference_id=achievement_id, credential_type_key)` |
-| `evidence.approved` | `skill_verification` | `<slug>_evidence` | `(passport_id, external_reference_id=evidence_id, credential_type_key)` |
+| `evidence.approved` | **disabled** — `501 { error: "not_enabled" }` on both receivers; nothing issued | — | — |
 | `challenge.completed` | — (forwarded to `sync-challenge-completion`) | set by that function | per-challenge completion logic |
 
 Rules applied in code:
@@ -63,19 +63,22 @@ Rules applied in code:
 - `xp_earned` = payload `xp_reward` if numeric, else 0. `source='external_api'`, `issuer=display_name`, `verification_hash = sha256(slug|…|ref|passport)`.
 - Forwarded `challenge.completed` authenticates with `X-Ecosystem-Key`, which `sync-challenge-completion` always attributes to app slug `fgn-play`, regardless of the originating source.
 
-**Doctrine conflict (flagged, not changed):** the `evidence.approved` handler still mints `skill_verification` credentials, while Phase 2D declares Skill Verification dormant. No partner currently sends this event through the generic receiver. A decision is needed before any partner does.
+**Interim (decision 4 pending):** `evidence.approved` is refused with 501 while Skill Verification is dormant. Recommended long-term option: record approvals as partner evidence (Task Demonstration input) with no credential or XP until activation.
 
-## 5. Replay and retry
+## 5. Replay and retry (consistent across sources)
 
-- Play unmapped identities: re-fired by `process-play-replay-queue` after sign-up.
-- **Non-Play sources (incl. BBW): no automatic replay exists.** A BBW enrollment that resolves as unmapped is recorded as `completed` (2xx) and the cursor advances past it; it will not be retried without manual action.
-- BBW cursor (`learning_source_pull_cursor.last_completed_at`) advances after each batch; per-enrollment idempotency on `bbw:enrollment:<id>`.
+- Unmatched learners are parked as `unmapped` (general receiver, BBW pull) or `unmapped_identity` (Play receiver).
+- On sign-up, `enqueue_play_replay_on_signup` queues one retry intent per source (`play_replay_queue.source_slug`).
+- `process-play-replay-queue` (every 2 min) re-fires Play attempts through the Play receiver and runs other sources through the shared credential handler. The unique credential index prevents duplicate credentials or XP.
+- BBW cursor advances past `unmapped` rows without losing them; per-enrollment idempotency on `bbw:enrollment:<id>`.
+- Not yet covered: `challenge.completed` forwarded through the general receiver for an unregistered learner (404 from `sync-challenge-completion`) is logged as failed, not queued.
+- Retry is triggered by sign-up only. Linking a partner identity later does not trigger a retry.
 
 ## 6. Header status
 
 | Header | Accepted by | Note |
 |---|---|---|
-| `X-App-Key` | `sync-challenge-completion`, `credential-api` | Still accepted. The Play ping doc's "dropped at T0+14d" did not ship. |
+| `X-App-Key` | `credential-api`, `studio-catalog` token exchange, `media-upload`, `scorm-publish` | Per-partner app key; required on these. **Retired on `sync-challenge-completion`** (401 names `X-Ecosystem-Key`). |
 | `X-Ecosystem-Key` | `sync-challenge-completion`, outbound to Play | Shared `ECOSYSTEM_API_KEY` |
 | `X-Delivery-Id` / `X-Play-Delivery-Id` / body `delivery_id` | both receivers | Idempotency |
 | `X-FGN-Event` / `X-Play-Event` | `play-webhook-receiver` | Body `event_type` takes precedence |
@@ -91,10 +94,16 @@ Rules applied in code:
 | `integration-guides/outbound-progress-to-play.md` | Current |
 | `studio-catalog/README.md` + OpenAPI | Current; own contract version |
 
-## 8. Open decisions
+## 8. Decisions log
 
-1. Reject pushes for `pull`-mode sources, or keep accepting them?
-2. Fail closed when a strict source's secret env var is missing (match Play receiver)?
-3. Keep or retire `X-App-Key` on `sync-challenge-completion`?
-4. `evidence.approved` vs dormant Skill Verification (§4).
-5. Generalize the replay queue to non-Play sources.
+| # | Decision | Status |
+|---|---|---|
+| 1 | Reject pushes for pull-only sources (409) | Shipped 2026-10-01.1 |
+| 2 | Fail closed when a strict source's secret is missing (503) | Shipped |
+| 3 | Retire `X-App-Key` where not critical (challenge-completion only) | Shipped |
+| 4 | `evidence.approved` vs dormant Skill Verification | Interim 501; owner choice pending |
+| 5 | Consistent source-aware retry | Shipped (gaps listed in §5) |
+
+## 9. Host aliases
+
+Canonical base today: `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/<surface>`. Future `*.fgn.academy` hosts (e.g. `api.fgn.academy`) will be listed here only once DNS and routing resolve. Contract rules are host-independent.

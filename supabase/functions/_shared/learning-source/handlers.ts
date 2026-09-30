@@ -77,6 +77,10 @@ export async function verifySignature(
   const secret = Deno.env.get(envName);
   if (!secret) {
     console.warn('[learning-source] secret not configured', { envName, slug: source.slug });
+    // Fail closed for strict sources (contract inventory 2026-10-01.1 §2).
+    if (source.strict_mode) {
+      return { ok: false, mode: 'strict', reason: 'signing_secret_unconfigured' };
+    }
     return { ok: true, mode: 'unsigned', reason: `${envName} not configured` };
   }
 
@@ -288,11 +292,20 @@ export async function handleAchievementEarned(
 
 // -- evidence.approved ---------------------------------------------------------
 
+// Skill Verification is dormant (Phase 2D). Until an owner decision activates
+// it, partner evidence approvals are refused without minting anything.
+export const EVIDENCE_APPROVED_ENABLED = false;
+export const EVIDENCE_NOT_ENABLED_BODY = {
+  error: 'not_enabled',
+  detail: 'evidence.approved is disabled while Skill Verification is dormant; nothing was issued.',
+};
+
 export async function handleEvidenceApproved(
   supabase: SupabaseSvc,
   source: SourceConfig,
   payload: Record<string, unknown>,
 ): Promise<{ status: number; body: unknown }> {
+  if (!EVIDENCE_APPROVED_ENABLED) return { status: 501, body: EVIDENCE_NOT_ENABLED_BODY };
   const data = (payload.data as Record<string, unknown>) ?? payload;
   const user = (data.user as Record<string, unknown>) ?? {};
   const externalUserId =

@@ -134,7 +134,7 @@ To register a new namespace, UPDATE the registry row — no code change.
 > Authoritative per-surface details: [`../contract-inventory.md`](../contract-inventory.md).
 
 - `achievement.earned` issues `credential_type='badge'`, key `<slug>_achievement`.
-  `evidence.approved` issues `credential_type='skill_verification'`, key `<slug>_evidence`.
+  `evidence.approved` is currently refused with `501 not_enabled` (Skill Verification dormant).
 - **Per delivery**: pass `X-Delivery-Id` (or `delivery_id` in body). Duplicates
   return HTTP 200 with `{ "duplicate": true }`.
 - **Per credential**: same `achievement_id` / `evidence_id` is detected via
@@ -144,9 +144,8 @@ To register a new namespace, UPDATE the registry row — no code change.
 - **Response**: the receiver returns HTTP 200 `{ ok, attempt_id, source, event,
   sig_mode, dispatch_status }` once the attempt is recorded. The handler outcome
   (e.g. `202` unmapped identity) is in `dispatch_status`, not the HTTP status.
-- **Unmapped identity**: no credential is issued. Automatic replay after sign-up
-  exists **only for Play**. Other sources (including BBW) are not replayed
-  automatically today.
+- **Unmapped identity**: no credential is issued; the attempt is parked as
+  `unmapped` and replayed automatically for every source when the learner signs up.
 
 ---
 
@@ -159,10 +158,9 @@ the event still processes. After a clean week:
 UPDATE learning_sources SET strict_mode = true WHERE slug = '<slug>';
 ```
 
-From then on, signature mismatches return `HTTP 401`. Caveat: if the source's
-secret env var is not configured, requests are still accepted as
-`sig_mode: "unsigned"`. `ingestion_mode` is not enforced — a `pull` source can
-still receive pushes.
+From then on, signature mismatches return `HTTP 401`, and a missing secret env
+var returns `503 signing_secret_unconfigured`. Pull-mode sources reject all
+pushes with `409 source_is_pull_only`.
 
 ---
 

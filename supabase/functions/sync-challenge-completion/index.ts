@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     const ecosystemKeyExpected = Deno.env.get('ECOSYSTEM_API_KEY');
 
     let app: { app_slug: string; can_read: boolean; can_issue: boolean; types_allowed: string[] } | null = null;
-    let authHeaderUsed: 'x-ecosystem-key' | 'x-app-key' | null = null;
+    let authHeaderUsed: 'x-ecosystem-key' | null = null;
 
     if (ecosystemKey && ecosystemKeyExpected && ecosystemKey === ecosystemKeyExpected) {
       authHeaderUsed = 'x-ecosystem-key';
@@ -204,15 +204,8 @@ Deno.serve(async (req) => {
         can_issue: true,
         types_allowed: ['skill_verification', 'course_completion'],
       };
-    } else if (appKey) {
-      const { data: appData, error: appError } = await supabase.rpc('verify_app_api_key', {
-        p_api_key: appKey,
-      });
-      if (!appError && appData && appData.length > 0) {
-        authHeaderUsed = 'x-app-key';
-        app = appData[0];
-      }
     }
+    // X-App-Key retired on this endpoint (contract inventory 2026-10-01.1 §3).
 
     if (!app) {
       console.warn('[sync-challenge-completion] auth failed', {
@@ -223,7 +216,9 @@ Deno.serve(async (req) => {
       await writeMirror('failed', { http_status: 401 }, 'auth_failed');
       return new Response(
         JSON.stringify({
-          error: 'Authentication failed: provide a valid X-App-Key or X-Ecosystem-Key header',
+          error: appKey && !ecosystemKey
+            ? 'X-App-Key is retired on this endpoint; send X-Ecosystem-Key'
+            : 'Authentication failed: provide a valid X-Ecosystem-Key header',
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
