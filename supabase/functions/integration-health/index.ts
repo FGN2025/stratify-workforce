@@ -119,9 +119,10 @@ Deno.serve(async (req) => {
       const games = (gamesRes.data ?? []).filter((g) => g.program_id === p.id).map((g) => g.game_title);
       const woCount = games.reduce((n, g) => n + (activeWoByGame.get(g) ?? 0), 0);
       const gameWoIds = new Set(games.flatMap((g) => woIdByGame.get(g) ?? []));
-      const programOutbound = completionRows.filter((o) => {
+      const programOutbound = outboundRows.filter((o) => {
         const cid = o.payload?.completion_id;
-        return cid && gameWoIds.has(cid);
+        const woId = cid ? completionToWo.get(cid) : undefined;
+        return woId && gameWoIds.has(woId);
       });
       const backlog = programOutbound.filter(
         (o) => !["completed", "failed", "duplicate"].includes(o.status ?? ""),
