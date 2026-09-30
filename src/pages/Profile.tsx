@@ -35,7 +35,6 @@ import { useCareerReadiness } from '@/hooks/useCareerReadiness';
 import { useCareerPaths } from '@/hooks/useCareerPaths';
 import { Progress } from '@/components/ui/progress';
 import { useState } from 'react';
-import type { SkillSet } from '@/types/tenant';
 import { ATS_RESOURCES } from '@/config/simResources';
 
 function ProfileSkeleton() {
