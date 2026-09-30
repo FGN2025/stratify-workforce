@@ -100,7 +100,7 @@ export default function Workspace() {
             <div className="space-y-2">
               {workOrdersLoading ? [1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full" />) : workOrders.length > 0 ? workOrders.slice(0, 3).map((order) => (
                 <Link key={order.id} to={`/work-orders/${order.id}`} className="flex items-center justify-between gap-4 border-b border-border py-4 transition-colors hover:text-primary">
-                  <div className="min-w-0"><p className="truncate font-medium">{getWorkOrderDisplayName(order)}</p><p className="mt-1 text-xs text-muted-foreground">{order.game_title.replace(/_/g, ' ')} · {order.xp_reward} XP</p></div>
+                  <div className="min-w-0"><p className="whitespace-normal break-words font-medium">{getWorkOrderDisplayName(order)}</p><p className="mt-1 text-xs text-muted-foreground">{order.game_title.replace(/_/g, ' ')} · {order.xp_reward} XP</p></div>
                   <ArrowRight className="h-4 w-4 shrink-0" />
                 </Link>
               )) : <p className="border-b border-border py-6 text-sm text-muted-foreground">No Work Orders are available for your current organization.</p>}

@@ -468,7 +468,7 @@ export default function WorkOrderDetail() {
                             {completed && <CheckCircle2 className="h-3 w-3" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${completed ? 'line-through text-muted-foreground' : ''}`}>
+                            <p className={`break-words text-sm font-medium ${completed ? 'line-through text-muted-foreground' : ''}`}>
                               {task.title}
                             </p>
                             {task.description && (

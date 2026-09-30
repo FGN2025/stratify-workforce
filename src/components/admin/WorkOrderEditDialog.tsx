@@ -227,8 +227,28 @@ export function WorkOrderEditDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Title is now optional — leaving it blank persists NULL and lets the
-    // display resolver fall back to generated_name then play_source.name.
+    const sourceName = typeof pendingPlaySource?.name === 'string' ? pendingPlaySource.name.trim() : '';
+    const sourceImage = typeof pendingPlaySource?.cover_image_url === 'string' ? pendingPlaySource.cover_image_url.trim() : '';
+    const publicationIssues = [
+      !(title.trim() || generatedName.trim() || sourceName) ? 'a meaningful title' : null,
+      description.trim().length < 40 ? 'a summary of at least 40 characters' : null,
+      !(coverImageUrl.trim() || sourceImage) ? 'a cover image' : null,
+      !workOrder?.id && pendingTasks.length === 0 ? 'at least one task' : null,
+      !workOrder?.id && pendingTasks.some((task) =>
+        task.title.trim().length < 3
+        || ['untitled', 'untitled task', 'task', 'step'].includes(task.title.trim().toLowerCase())
+        || (task.description ?? '').trim().length < 20
+      ) ? 'a meaningful title and brief for every task' : null,
+    ].filter((issue): issue is string => Boolean(issue));
+
+    if (isActive && publicationIssues.length > 0) {
+      toast({
+        title: 'Work Order is not ready to publish',
+        description: `Add ${publicationIssues.join(', ')}. You can switch it to Hidden to save it as a draft.`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsSaving(true);
 
@@ -369,9 +389,10 @@ export function WorkOrderEditDialog({
       onSave();
     } catch (error) {
       console.error('Error saving work order:', error);
+      const message = error instanceof Error ? error.message : 'Failed to save work order.';
       toast({
-        title: 'Error',
-        description: 'Failed to save work order.',
+        title: 'Could not save Work Order',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -538,7 +559,7 @@ export function WorkOrderEditDialog({
                     <span className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium shrink-0">
                       {i + 1}
                     </span>
-                    {t.title}
+                    <span className="min-w-0 break-words">{t.title}</span>
                   </li>
                 ))}
               </ul>
@@ -614,7 +635,7 @@ export function WorkOrderEditDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Summary {isActive && '*'}</Label>
             <Textarea
               id="description"
               value={description}
@@ -626,7 +647,7 @@ export function WorkOrderEditDialog({
 
           {/* Cover Image */}
           <div className="space-y-3">
-            <Label>Cover Image (Optional)</Label>
+            <Label>Cover Image {isActive && '*'}</Label>
             <div className="p-4 rounded-lg border border-border/50 bg-muted/30">
               {coverImageUrl ? (
                 <div className="space-y-3">

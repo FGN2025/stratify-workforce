@@ -31,7 +31,7 @@ export function WorkOrderCard({ workOrder, tenantColor }: WorkOrderCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+              <h3 className="whitespace-normal break-words font-semibold text-foreground group-hover:text-primary transition-colors">
                 {getWorkOrderDisplayName(workOrder)}
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
