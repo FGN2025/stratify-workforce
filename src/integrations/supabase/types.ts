@@ -2209,6 +2209,165 @@ export type Database = {
           },
         ]
       }
+      program_games: {
+        Row: {
+          created_at: string
+          game_title: Database["public"]["Enums"]["game_title"]
+          program_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_title: Database["public"]["Enums"]["game_title"]
+          program_id: string
+        }
+        Update: {
+          created_at?: string
+          game_title?: Database["public"]["Enums"]["game_title"]
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_games_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_pathways: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          id: string
+          label: string | null
+          program_id: string
+          sort_order: number
+          work_order_id: string | null
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          program_id: string
+          sort_order?: number
+          work_order_id?: string | null
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          program_id?: string
+          sort_order?: number
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_pathways_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_pathways_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_pathways_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_pathways_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "program_pathways_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "program_pathways_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      programs: {
+        Row: {
+          accent_color: string | null
+          availability: string
+          canonical_url: string | null
+          capabilities: Json
+          created_at: string
+          id: string
+          is_academy_program: boolean
+          key: string
+          kind: string
+          legacy_urls: string[]
+          logo_url: string | null
+          name: string
+          owner_contact: string | null
+          short_name: string | null
+          sort_order: number
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          availability?: string
+          canonical_url?: string | null
+          capabilities?: Json
+          created_at?: string
+          id?: string
+          is_academy_program?: boolean
+          key: string
+          kind?: string
+          legacy_urls?: string[]
+          logo_url?: string | null
+          name: string
+          owner_contact?: string | null
+          short_name?: string | null
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          availability?: string
+          canonical_url?: string | null
+          capabilities?: Json
+          created_at?: string
+          id?: string
+          is_academy_program?: boolean
+          key?: string
+          kind?: string
+          legacy_urls?: string[]
+          logo_url?: string | null
+          name?: string
+          owner_contact?: string | null
+          short_name?: string | null
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       registration_codes: {
         Row: {
           code: string
@@ -4092,6 +4251,55 @@ export type Database = {
           },
           {
             foreignKeyName: "tenant_event_curation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_program_offerings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          program_id: string
+          schedule_notes: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          program_id: string
+          schedule_notes?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          program_id?: string
+          schedule_notes?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_program_offerings_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_program_offerings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_program_offerings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
