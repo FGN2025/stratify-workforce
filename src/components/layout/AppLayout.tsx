@@ -25,7 +25,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1">
+        <SidebarInset className="min-w-0 flex-1 flex-col">
           <TopNav />
           <main className="flex-1 overflow-auto scrollbar-dark px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
             <div className="mx-auto w-full max-w-7xl 2xl:max-w-[1400px]">
