@@ -44,9 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth?next=${encodeURIComponent(
-          sessionStorage.getItem('fgn_post_auth_next') || '/workspace',
-        )}`,
+        emailRedirectTo: (() => {
+          const intent = sessionStorage.getItem('fgn_post_auth_intent');
+          return intent ? `${window.location.origin}/auth?intent=${intent}` : `${window.location.origin}/auth`;
+        })(),
         data: {
           username: username || email.split('@')[0],
         },
