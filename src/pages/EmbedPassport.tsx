@@ -49,7 +49,7 @@ export default function EmbedPassport() {
       return {
         profile,
         credentials: credentials || [],
-        employabilityScore: fullProfile?.employability_score ?? 0,
+        employabilityScore: fullProfile?.employability_score ?? null,
         hash: passport.passport_hash,
       };
     },
@@ -119,7 +119,7 @@ export default function EmbedPassport() {
           <div style={{ fontWeight: 700, fontSize: '15px' }}>{profile.username || 'Operator'}</div>
           <div style={{ fontSize: '12px', color: muted, display: 'flex', gap: '12px', marginTop: '2px' }}>
             <span>{credentials.length} credential{credentials.length !== 1 ? 's' : ''}</span>
-            <span>Score: <strong style={{ color: accent }}>{employabilityScore?.toFixed(1)}</strong></span>
+            <span>Score: <strong style={{ color: accent }}>{employabilityScore != null ? employabilityScore.toFixed(1) : 'Not yet scored'}</strong></span>
           </div>
         </div>
         <div style={{
@@ -128,7 +128,7 @@ export default function EmbedPassport() {
           padding: '6px 12px',
           textAlign: 'center',
         }}>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: accent }}>{employabilityScore?.toFixed(0)}</div>
+          <div style={{ fontSize: '20px', fontWeight: 800, color: accent }}>{employabilityScore != null ? employabilityScore.toFixed(0) : '—'}</div>
           <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em', color: muted }}>Score</div>
         </div>
       </div>

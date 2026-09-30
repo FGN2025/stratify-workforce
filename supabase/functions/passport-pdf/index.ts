@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
     const totalXp = xpData || 0;
     const skills = (profile.skills as Record<string, number>) || {};
-    const score = profile.employability_score || 50;
+    const score = profile.employability_score ?? null;
 
     // Fetch tenant name
     let tenantName = "FGN Academy";

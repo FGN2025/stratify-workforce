@@ -47,7 +47,7 @@ export default function PublicPassport() {
         profile,
         credentials: credentials || [],
         passportHash: passport.passport_hash,
-        employabilityScore: fullProfile?.employability_score ?? 0,
+        employabilityScore: fullProfile?.employability_score ?? null,
       };
     },
     enabled: !!slug,
@@ -104,7 +104,7 @@ export default function PublicPassport() {
                   <Award className="h-3.5 w-3.5" />
                   {credentials.length} credential{credentials.length !== 1 ? 's' : ''}
                 </span>
-                <span>Employability Score: <strong className="text-foreground">{employabilityScore?.toFixed(1)}</strong></span>
+                <span>Employability Score: <strong className="text-foreground">{employabilityScore != null ? employabilityScore.toFixed(1) : 'Not yet scored'}</strong></span>
               </div>
             </div>
           </div>
