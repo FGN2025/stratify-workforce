@@ -78,8 +78,13 @@ Deno.serve(async (req) => {
     // Non-Play sources: replay parked 'unmapped' attempts through the shared
     // credential path (contract inventory §5). Duplicate protection lives in
     // the skill_credentials unique index.
+    // Every source (including Play arriving via the general receiver) first
+    // replays parked general-receiver attempts.
+    const general = intent.email
+      ? await replayLearningSource(supabase, intent.source_slug ?? 'play', intent.email, supabaseUrl)
+      : { matched: 0, replayed: 0, error: null as string | null };
     if (intent.source_slug && intent.source_slug !== 'play') {
-      const r = await replayLearningSource(supabase, intent.source_slug, intent.email);
+      const r = general;
       await supabase.from('play_replay_queue').update({
         status: r.matched === 0 ? 'skipped' : r.error ? 'failed' : 'done',
         attempts_matched: r.matched,
