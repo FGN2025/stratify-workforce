@@ -38,6 +38,16 @@ The API rules the review wants protected (Work Order → FGN.GG challenge ID →
 - **Accessibility requirements:** evidence submission works on mobile, keyboard navigation, readable contrast, and reduced motion is respected.
 - **Admin screens:** finish the registry editor (platform admin) and the offering switch (community admin).
 
+### Stage D2: One points system, many ways to use points (new requirement)
+- **One set of points** is earned everywhere on the platform. Each program decides what points can be used for:
+  - FGN.GG challenges: prizes such as gift cards and peripherals.
+  - Scout Merits: digital and physical badges.
+  - Industry simulations: moving up a path toward an apprenticeship.
+- **Earning and spending are kept separate.** Every point earned records where it came from: the program, activity, event and organization. Every use of points is its own record showing what it bought and who approved it. Points never turn a result into a qualification on their own. Apprenticeship steps still need reviewed evidence, and points are one requirement among others.
+- **Points are separate from XP.** XP stays the learning progress measure. Points are the currency that can be spent. The review plan in Stage A keeps both apart from evidence-model outcomes.
+- **Protection against double counting:** each event can earn points only once, even across sites. Refunds and reversals are recorded as new entries, and history is never deleted. Organizations only see and approve uses of points within their own organization.
+- **Stage 1 builds the shared records and a points balance page only.** Stores, prize fulfillment and apprenticeship steps are added later, one program at a time. The FGN.GG and Merits sites keep their own stores and read balances through a versioned feed.
+
 ### Stage E: P2 pilot journeys (after A–C)
 - Choose one representative activity per program, with your approval of each pick. Run each journey end to end, including retries and organization isolation, before any P3 expansion.
 
@@ -53,4 +63,5 @@ The API rules the review wants protected (Work Order → FGN.GG challenge ID →
 - New `program_requirements` table (program_id, requirement_key, version, sim_supported, external_required, text), with every past evidence link tied to the version the learner actually attempted.
 - Build the Skill Passport sections from existing tables. No history is rewritten.
 - Every table change includes access grants and access rules. The Studio and program-registry contracts only gain optional fields, and the contract inventory version goes up.
+- Points: a `points_ledger` table where records are only ever added (user, amount, event_id unique, origin_site, program_id, tenant_id, reason, reverses_entry_id). Each program's rules for using points are stored in `program_redemption_options` (program_id, kind prize|badge|pathway_step, cost, approval_required). A `points_redemptions` table records each use as a ledger debit with a status. The existing `user_points` table becomes a balance view built from the ledger, and current balances are copied over once without changing past records.
 - Not in scope: FGN.GG, Merits, Maritime, Railroading and Sim Racing codebases; Phase 4 writes; non-simulated Studio approvals.
