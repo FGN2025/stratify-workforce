@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
 });
 
 // deno-lint-ignore no-explicit-any
-async function replayLearningSource(supabase: any, slug: string, email: string | null) {
+async function replayLearningSource(supabase: any, slug: string, email: string | null, supabaseUrl: string) {
   if (!email) return { matched: 0, replayed: 0, error: 'no email on intent' };
   const source = await resolveSource(supabase, slug);
   if (!source) return { matched: 0, replayed: 0, error: `source ${slug} inactive` };
@@ -226,11 +226,26 @@ async function replayLearningSource(supabase: any, slug: string, email: string |
     const envelope = (req.payload as Record<string, unknown> | undefined) ?? req;
     const inner = (envelope.payload as Record<string, unknown> | undefined) ?? envelope;
     const action = String(row.action);
-    if (!action.endsWith('achievement.earned') && !action.endsWith('enrollment.completed')) continue;
-    const d = await handleAchievementEarned(supabase, source, inner);
-    const ok = d.status >= 200 && d.status < 300 && d.status !== 202;
+    let d: { status: number; body: unknown };
+    if (action.endsWith('achievement.earned') || action.endsWith('enrollment.completed')) {
+      d = await handleAchievementEarned(supabase, source, inner);
+    } else if (action.endsWith('challenge.completed')) {
+      // Completion uniqueness (user_id + work_order_id) prevents duplicates.
+      const resp = await fetch(`${supabaseUrl}/functions/v1/sync-challenge-completion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Ecosystem-Key': Deno.env.get('ECOSYSTEM_API_KEY') ?? '',
+          'X-Ecosystem-App': source.slug,
+        },
+        body: JSON.stringify(inner),
+      });
+      d = { status: resp.status, body: await resp.json().catch(() => null) };
+    } else continue;
+    const unmapped = d.status === 202 && (d.body as Record<string, unknown> | null)?.reason === 'unmapped_identity';
+    const ok = d.status >= 200 && d.status < 300 && !unmapped;
     await supabase.from('learning_source_pull_attempts')
-      .update({ status: ok ? 'completed' : d.status === 202 ? 'unmapped' : 'failed', response: d.body })
+      .update({ status: ok ? 'completed' : unmapped ? 'unmapped' : 'failed', response: d.body })
       .eq('id', row.id);
     if (ok) replayed++; else firstError = firstError ?? `status=${d.status}`;
   }
