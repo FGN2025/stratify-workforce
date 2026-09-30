@@ -14,7 +14,7 @@ Bump the version (`YYYY-MM-DD.N`) whenever a handler, header, envelope, credenti
 |---|---|---|---|---|
 | `play-webhook-receiver` | Play → Academy | push | `X-Play-Signature` HMAC (secret chosen by `X-Ecosystem-App`, default `PLAY_WEBHOOK_SECRET`) | **Live — current Play path** |
 | `learning-source-webhook` | any partner → Academy | push | `X-Learning-Source` + `X-Learning-Source-Signature` HMAC, per registry row | Live; no production partner cut over yet |
-| `learning-source-pull-bbw` | Academy polls BBW | pull (scheduled, ~5 min) | Academy-held BBW service credentials | Live |
+| `learning-source-pull-bbw` | Academy polls BBW | pull (scheduled, ~5 min) | Academy-held BBW service credentials | Retired 2026-09-30 (unscheduled; source inactive) |
 | `sync-challenge-completion` | Play / internal forward → Academy | push | `X-Ecosystem-Key` only | Live |
 | `push-play-progress` | Academy → Play | push (outbound) | `X-Ecosystem-Key` + signature | Live |
 | `webhook-dispatch` | Academy → subscribers | push (outbound) | `X-Webhook-Signature` HMAC per subscription | Internal trigger only (service role) |
@@ -27,7 +27,7 @@ Bump the version (`YYYY-MM-DD.N`) whenever a handler, header, envelope, credenti
 | slug | ingestion_mode | strict_mode | secret env | active |
 |---|---|---|---|---|
 | `play` | push | false | `PLAY_WEBHOOK_SECRET` | yes |
-| `bbw` | pull | false | `BBW_WEBHOOK_SECRET` | yes |
+| `bbw` | pull | false | `BBW_WEBHOOK_SECRET` | no (inactive) |
 
 Important behaviors confirmed in code:
 - `ingestion_mode` is **enforced**: pushes to a `pull` source get `409 { error: "source_is_pull_only", slug }` and are logged as failed.
@@ -111,3 +111,8 @@ Canonical base today: `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/<su
 ## Program registry (contract 2026-09-30.1)
 - `GET /functions/v1/program-registry` (optional `?key=`) — public, no credential, read-only. Returns `{contract_version, registry_version, programs[]}`; `registry_version` is the latest program `updated_at`. Only live, preview and coming-soon programs are returned. Unknown key returns 404. Cached 60s.
 - Writes: platform admins only, in Academy. Organizations turn programs on through `tenant_program_offerings`; browsing a program never changes tenant or access.
+
+
+## Decision 2026-09-30: Broadband Workforce is a program sub-site
+
+broadbandworkforce.com is treated like maritime, simracing, railway and merits: a program in the registry (`broadband-fiber`, canonical https://broadbandworkforce.com) with its own downstream connections (e.g. SCORM authoring) managed inside that site. Academy has no current data dependency on it. The BBW pull job is unscheduled and the `bbw` learning source is inactive (it never processed an enrollment). Re-enabling requires a new decision.
