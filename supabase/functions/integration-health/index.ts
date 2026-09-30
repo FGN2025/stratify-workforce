@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CONTRACT_VERSION = "2026-10-01.1";
+const CONTRACT_VERSION = "2026-10-01.2";
 
 type HealthState = "not_connected" | "untested" | "healthy" | "degraded" | "failed";
 // A program/source is never "healthy" without at least one real success.

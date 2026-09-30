@@ -109,7 +109,12 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Integration health: five honest states; outbound query fixed (delivered_at)
 - [x] Passport: no placeholder 50.0 score / fake org average; records grouped by earning type
 - [x] Full return address kept through sign-in and email confirmation; Join opens sign-up
-- [ ] Valid-signature + missing-secret live tests (needs partner test signing)
-- [ ] Retry-to-exactly-one-outcome end-to-end test with a real signup
-- [ ] Contract inventory bump to 2026-10-01.2 after those tests
+- [x] Valid-signature + missing-secret live tests
+- [x] Retry-to-exactly-one-outcome via verified account link
+- [x] Contract inventory 2026-10-01.2
+- [x] Atomic delivery claim, quarantine, supporting-evidence record, generic credential uniqueness
+- [x] Pilot reward rule + atomic redemption/refund functions (redemption concurrency test pending signed-in learner)
+- [x] Exact return-destination allowlist + expiring sign-in intent
+- [x] Passport corrections on share page, embed, PDF, credential API
+- [ ] Merits read-only compatibility review before org-achievement intake contract
 - [ ] Stages 3-6: program discovery, admin registry tools, points UX, pilot, Merits review

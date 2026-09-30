@@ -1,6 +1,6 @@
 # FGN Academy Integration Contract Inventory
 
-**Inventory version:** `2026-10-01.1` (previous: `2026-09-30.1`)
+**Inventory version:** `2026-10-01.2` (previous: `2026-10-01.1`)
 **Source of truth:** deployed edge-function handlers and the live `learning_sources` registry, read 2026-09-30.
 **Precedence:** where any other document disagrees with this file, this file wins. Guides must be updated to match — not the other way round.
 
@@ -116,3 +116,22 @@ Canonical base today: `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/<su
 ## Decision 2026-09-30: Broadband Workforce is a program sub-site
 
 broadbandworkforce.com is treated like maritime, simracing, railway and merits: a program in the registry (`broadband-fiber`, canonical https://broadbandworkforce.com) with its own downstream connections (e.g. SCORM authoring) managed inside that site. Academy has no current data dependency on it. The BBW pull job is unscheduled and the `bbw` learning source is inactive (it never processed an enrollment). Re-enabling requires a new decision.
+
+## 2026-10-01.2 — delivery states, quarantine, supporting evidence
+
+Repeated delivery (same source + event + delivery id; enforced by a unique index and an atomic claim):
+
+| Previous state | Response to repeat |
+|---|---|
+| `completed` | 200 `{duplicate:true, learner_outcome:true}` — no new outcome |
+| `supporting_evidence` | 200 duplicate — one record only, zero credentials, zero XP |
+| `failed` | Re-processed on the same row; prior error appended to `error_history` |
+| `unmapped` | 200 duplicate; resolved only by identity recovery |
+| `quarantined` / `shadow` | 200 duplicate, `learner_outcome:false` |
+| `processing` | 409 — concurrent copy refused |
+
+- Missing/invalid signature (non-strict source): `quarantined`. Never creates evidence, links identity, updates progress or replays. Strict sources: 401; strict + missing secret: 503.
+- `evidence.approved` (Decision 4): signed deliveries only → one `supporting_evidence` record, no credential, no XP.
+- Identity-link replay requires partner-verified (`external_id`) or admin (`manual`) linkage; email-only matches do not replay.
+- Credential idempotency now applies to every source: unique `(passport_id, external_reference_id, credential_type_key)`.
+- Inactive sources (e.g. `bbw`) receive 404 and are excluded from integration health; historical rows retained.
