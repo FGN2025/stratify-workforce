@@ -129,31 +129,40 @@ To register a new namespace, UPDATE the registry row — no code change.
 
 ---
 
-## 8. Idempotency & replay semantics
+## 8. Credentials, idempotency & replay semantics
 
+> Authoritative per-surface details: [`../contract-inventory.md`](../contract-inventory.md).
+
+- `achievement.earned` issues `credential_type='badge'`, key `<slug>_achievement`.
+  `evidence.approved` issues `credential_type='skill_verification'`, key `<slug>_evidence`.
 - **Per delivery**: pass `X-Delivery-Id` (or `delivery_id` in body). Duplicates
   return HTTP 200 with `{ "duplicate": true }`.
 - **Per credential**: same `achievement_id` / `evidence_id` is detected via
   the `skill_credentials` unique partial index on
   `(passport_id, external_reference_id, credential_type_key)` and returns
   `{ "duplicate": true }`.
-- **Unmapped identity** (`HTTP 202`): when the learner has not yet linked
-  their Academy account, the attempt is recorded but no credential is issued.
-  When the user later signs up with the same email, the Play replay queue
-  (also generalized to all sources in a follow-up phase) re-fires the event.
+- **Response**: the receiver returns HTTP 200 `{ ok, attempt_id, source, event,
+  sig_mode, dispatch_status }` once the attempt is recorded. The handler outcome
+  (e.g. `202` unmapped identity) is in `dispatch_status`, not the HTTP status.
+- **Unmapped identity**: no credential is issued. Automatic replay after sign-up
+  exists **only for Play**. Other sources (including BBW) are not replayed
+  automatically today.
 
 ---
 
 ## 9. Strict mode flip
 
-Sources begin in `strict_mode=false` (shadow): bad signatures are logged but
+Sources begin in `strict_mode=false` (lenient): bad signatures are logged but
 the event still processes. After a clean week:
 
 ```sql
 UPDATE learning_sources SET strict_mode = true WHERE slug = '<slug>';
 ```
 
-From then on, signature mismatches return `HTTP 401`.
+From then on, signature mismatches return `HTTP 401`. Caveat: if the source's
+secret env var is not configured, requests are still accepted as
+`sig_mode: "unsigned"`. `ingestion_mode` is not enforced — a `pull` source can
+still receive pushes.
 
 ---
 
