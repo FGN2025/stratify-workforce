@@ -1,8 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { Search, Menu, LogOut, User, Building2 } from 'lucide-react';
+import { Menu, LogOut, User, Building2 } from 'lucide-react';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { TenantSwitcher } from '@/components/TenantSwitcher';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -35,17 +34,6 @@ export function TopNav() {
           </SidebarTrigger>
           
           <NavLink to="/workspace" className="font-display font-semibold text-foreground">FGN Academy</NavLink>
-        </div>
-
-        {/* Center - Search */}
-        <div className="flex-1 max-w-md hidden md:block">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search work orders, students..." 
-              className="pl-10 bg-muted/50 border-border focus:border-primary"
-            />
-          </div>
         </div>
 
         {/* Right section */}
