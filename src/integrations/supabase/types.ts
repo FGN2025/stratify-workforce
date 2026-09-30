@@ -2026,11 +2026,13 @@ export type Database = {
       play_outbound_queue: {
         Row: {
           attempts: number
+          causation_event_id: string | null
           created_at: string
           delivered_at: string | null
           event_type: string
           id: string
           last_error: string | null
+          origin_site: string
           payload: Json
           status: string
           updated_at: string
@@ -2039,11 +2041,13 @@ export type Database = {
         }
         Insert: {
           attempts?: number
+          causation_event_id?: string | null
           created_at?: string
           delivered_at?: string | null
           event_type: string
           id?: string
           last_error?: string | null
+          origin_site?: string
           payload?: Json
           status?: string
           updated_at?: string
@@ -2052,11 +2056,13 @@ export type Database = {
         }
         Update: {
           attempts?: number
+          causation_event_id?: string | null
           created_at?: string
           delivered_at?: string | null
           event_type?: string
           id?: string
           last_error?: string | null
+          origin_site?: string
           payload?: Json
           status?: string
           updated_at?: string
@@ -2160,6 +2166,80 @@ export type Database = {
           status?: Database["public"]["Enums"]["play_sync_status"]
         }
         Relationships: []
+      }
+      points_redemptions: {
+        Row: {
+          cost: number
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          ledger_entry_id: string | null
+          note: string | null
+          option_id: string
+          status: string
+          tenant_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          ledger_entry_id?: string | null
+          note?: string | null
+          option_id: string
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          ledger_entry_id?: string | null
+          note?: string | null
+          option_id?: string
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_redemptions_ledger_entry_id_fkey"
+            columns: ["ledger_entry_id"]
+            isOneToOne: false
+            referencedRelation: "user_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_redemptions_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "program_redemption_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_redemptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_redemptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -2304,6 +2384,103 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_redemption_options: {
+        Row: {
+          approval_required: boolean
+          cost: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          program_id: string
+          requires_reviewed_evidence: boolean
+          updated_at: string
+        }
+        Insert: {
+          approval_required?: boolean
+          cost: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          name: string
+          program_id: string
+          requires_reviewed_evidence?: boolean
+          updated_at?: string
+        }
+        Update: {
+          approval_required?: boolean
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          program_id?: string
+          requires_reviewed_evidence?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_redemption_options_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_requirements: {
+        Row: {
+          created_at: string
+          external_required: string | null
+          id: string
+          is_current: boolean
+          program_id: string
+          requirement_key: string
+          requirement_text: string
+          sim_supported: string | null
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          external_required?: string | null
+          id?: string
+          is_current?: boolean
+          program_id: string
+          requirement_key: string
+          requirement_text: string
+          sim_supported?: string | null
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          external_required?: string | null
+          id?: string
+          is_current?: boolean
+          program_id?: string
+          requirement_key?: string
+          requirement_text?: string
+          sim_supported?: string | null
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_requirements_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
             referencedColumns: ["id"]
           },
         ]
@@ -5136,38 +5313,82 @@ export type Database = {
       user_points: {
         Row: {
           amount: number
+          award_pathway: string
           created_at: string
           description: string | null
           event_key: string | null
           id: string
+          origin_site: string
           points_type: Database["public"]["Enums"]["points_type"]
+          program_id: string | null
+          reverses_entry_id: string | null
           source_id: string | null
           source_type: Database["public"]["Enums"]["source_type"]
+          tenant_id: string | null
           user_id: string
         }
         Insert: {
           amount: number
+          award_pathway?: string
           created_at?: string
           description?: string | null
           event_key?: string | null
           id?: string
+          origin_site?: string
           points_type?: Database["public"]["Enums"]["points_type"]
+          program_id?: string | null
+          reverses_entry_id?: string | null
           source_id?: string | null
           source_type: Database["public"]["Enums"]["source_type"]
+          tenant_id?: string | null
           user_id: string
         }
         Update: {
           amount?: number
+          award_pathway?: string
           created_at?: string
           description?: string | null
           event_key?: string | null
           id?: string
+          origin_site?: string
           points_type?: Database["public"]["Enums"]["points_type"]
+          program_id?: string | null
+          reverses_entry_id?: string | null
           source_id?: string | null
           source_type?: Database["public"]["Enums"]["source_type"]
+          tenant_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_points_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_points_reverses_entry_id_fkey"
+            columns: ["reverses_entry_id"]
+            isOneToOne: false
+            referencedRelation: "user_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_points_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_points_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -5764,6 +5985,7 @@ export type Database = {
           id: string
           order_index: number
           source_task_id: string | null
+          stage: string | null
           title: string
           work_order_id: string
         }
@@ -5773,6 +5995,7 @@ export type Database = {
           id?: string
           order_index?: number
           source_task_id?: string | null
+          stage?: string | null
           title: string
           work_order_id: string
         }
@@ -5782,6 +6005,7 @@ export type Database = {
           id?: string
           order_index?: number
           source_task_id?: string | null
+          stage?: string | null
           title?: string
           work_order_id?: string
         }
@@ -6154,6 +6378,14 @@ export type Database = {
           },
         ]
       }
+      user_points_balance: {
+        Row: {
+          balance: number | null
+          points_type: Database["public"]["Enums"]["points_type"] | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       work_order_migration_readiness: {
         Row: {
           academy_native: boolean | null
@@ -6509,6 +6741,7 @@ export type Database = {
         | "accepted"
         | "rejected"
         | "needs_revision"
+        | "needs_practice"
       community_approval_status:
         | "pending"
         | "approved"
@@ -6776,6 +7009,7 @@ export const Constants = {
         "accepted",
         "rejected",
         "needs_revision",
+        "needs_practice",
       ],
       community_approval_status: [
         "pending",
