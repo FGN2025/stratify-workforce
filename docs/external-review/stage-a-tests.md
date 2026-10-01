@@ -76,3 +76,10 @@ Planned, not yet run: concurrent `redeem_points` overspend test and refund rever
 - Reviewer `qa-reviewer@fgn.academy` (44809e2b-6588-405f-9eee-ea966fbc8cb9): FGN Global organization admin only (no platform admin role) — may review FGN Global evidence.
 - Inactive redemption options on Heavy Equipment: "QA Test Option A" (300) and "QA Test Option B" (350); combined 650 > 500.
 - Cleanup after testing: delete QA options, QA ledger/redemption rows, memberships, then the two accounts.
+
+## Points redemption acceptance — live (2026-10-01, signed-in QA learner via REST, options activated only during the test)
+- Two simultaneous redemptions (300 + 350 against 500): exactly one succeeded (B, 350); the other refused `insufficient points`.
+- Same request key sent 3× in parallel: all returned the original redemption id; one debit only (balance 150, 1 redemption row).
+- Learner calling refund: refused `platform admin required`.
+- Two simultaneous admin refunds: one reversal entry created, the other refused `not reversible`; a third attempt also refused. Balance back to 500, redemption status `reversed`, exactly 1 reversal ledger entry.
+- QA options deactivated again afterwards. Remaining: pilot journey, browser sign-in return.
