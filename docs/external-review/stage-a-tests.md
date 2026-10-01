@@ -70,3 +70,9 @@ Planned, not yet run: concurrent `redeem_points` overspend test and refund rever
 - Signed-in Passport audited: score shows "Not yet scored" when absent; organization average renders only when real data is passed (none is today); records grouped Participation / Reviewed Demonstrations / FGN Educational Merits / Organization-Issued with non-certification language.
 - redeem_points(option, request_key): repeated request with the same key returns the original redemption (one debit). Per-learner lock prevents overspend; refunds refuse a second reversal.
 - Pending: live concurrent redemption, pilot journey, browser sign-in return tests (need a signed-in test learner and reviewer), Merits review, scanner triage.
+
+## QA test accounts (2026-10-01) — keep until open tests finish
+- Learner `qa-learner@fgn.academy` (05507d7c-4be0-4216-91f6-fac4f9210164): FGN Global member; one ledger entry `qa-grant-2026-10-01` = 500 credits, no XP.
+- Reviewer `qa-reviewer@fgn.academy` (44809e2b-6588-405f-9eee-ea966fbc8cb9): FGN Global organization admin only (no platform admin role) — may review FGN Global evidence.
+- Inactive redemption options on Heavy Equipment: "QA Test Option A" (300) and "QA Test Option B" (350); combined 650 > 500.
+- Cleanup after testing: delete QA options, QA ledger/redemption rows, memberships, then the two accounts.
