@@ -276,7 +276,7 @@ function ReviewRow({ item, onDone }: { item: Pending; onDone: () => void }) {
           if (aErr) throw aErr;
           const rows = assocRows ?? [];
           const openWork = rows.some((a) =>
-            ['needs_revision', 'under_review', 'submitted', 'pending'].includes(a.association_status as string),
+            ['claimed', 'under_review', 'needs_revision'].includes(a.association_status as string),
           );
           const allRequiredDecided = (reqRows ?? [])
             .filter((r) => r.is_required)

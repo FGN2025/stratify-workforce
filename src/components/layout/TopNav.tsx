@@ -68,8 +68,8 @@ export function TopNav() {
                     <span className="block truncate text-sm font-medium text-foreground">
                       {tenant?.name || 'Organization unavailable'}
                     </span>
-                    <TenantSwitcher />
                   </DropdownMenuLabel>
+                  <TenantSwitcher variant="menu" />
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <NavLink to="/profile" className="flex items-center gap-2 cursor-pointer">

@@ -7,9 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2 } from 'lucide-react';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Building2, Check } from 'lucide-react';
 
-export function TenantSwitcher() {
+export function TenantSwitcher({ variant = 'select' }: { variant?: 'select' | 'menu' } = {}) {
   const { tenant, tenants, setTenantBySlug } = useTenant();
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,6 +27,32 @@ export function TenantSwitcher() {
       navigate(`/t/${value}${m[1] || ''}${location.search}${location.hash}`, { replace: true });
     }
   };
+
+  if (variant === 'menu') {
+    // Plain menu items: safe inside a dropdown menu (a nested Select portal
+    // would dismiss the menu before the choice registers).
+    if (tenants.length < 2) return null;
+    return (
+      <>
+        {tenants.map((t) => {
+          const slug = (t.slug || '').trim();
+          if (!slug) return null;
+          const active = slug === tenant?.slug;
+          return (
+            <DropdownMenuItem
+              key={t.id}
+              onSelect={() => { if (!active) handleValueChange(slug); }}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: t.brand_color }} />
+              <span className="flex-1 truncate">{t.name}</span>
+              {active && <Check className="h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
+          );
+        })}
+      </>
+    );
+  }
 
   return (
     <Select value={tenant?.slug || ''} onValueChange={handleValueChange}>
