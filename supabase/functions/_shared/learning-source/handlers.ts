@@ -289,6 +289,12 @@ export async function handleAchievementEarned(
         body: { credentialed: true, duplicate: true, credential_id: existing?.id ?? null },
       };
     }
+    if ((error as { code?: string }).code === '23503') {
+      // Source not provisioned (missing authorized app / credential type). Config
+      // error, not a server crash: partner may retry the same delivery once fixed.
+      console.error('[learning-source] credential insert blocked: source not provisioned', source.slug, error.message);
+      return { status: 503, body: { error: 'source_not_provisioned', retryable: true, source: source.slug } };
+    }
     console.error('[learning-source] credential insert failed', error);
     return { status: 500, body: { error: 'credential insert failed', detail: error.message } };
   }
@@ -389,6 +395,12 @@ export async function handleEvidenceApproved(
         status: 200,
         body: { credentialed: true, duplicate: true, credential_id: existing?.id ?? null },
       };
+    }
+    if ((error as { code?: string }).code === '23503') {
+      // Source not provisioned (missing authorized app / credential type). Config
+      // error, not a server crash: partner may retry the same delivery once fixed.
+      console.error('[learning-source] evidence credential insert blocked: source not provisioned', source.slug, error.message);
+      return { status: 503, body: { error: 'source_not_provisioned', retryable: true, source: source.slug } };
     }
     console.error('[learning-source] evidence credential insert failed', error);
     return { status: 500, body: { error: 'credential insert failed', detail: error.message } };
