@@ -7,6 +7,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { AchievementCard } from '@/components/profile/AchievementCard';
 import { CertificationCard } from '@/components/profile/CertificationCard';
 import { SpatialVerifications } from '@/components/profile/SpatialVerifications';
+import { ReviewedDemonstrations } from '@/components/profile/ReviewedDemonstrations';
 import { ExternalResourceCard } from '@/components/marketplace/ExternalResourceCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -231,6 +232,8 @@ const Profile = () => {
             );
           });
         })()}
+
+        <ReviewedDemonstrations userId={profile.id} />
 
         {/* Spatial verifications from Breakroom (owner-only via RLS) */}
         <SpatialVerifications userId={profile.id} />

@@ -48,17 +48,46 @@ export function useUserTaskProgress(workOrderId?: string) {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('user_task_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('work_order_id', workOrderId!);
+      const [{ data, error }, demosRes] = await Promise.all([
+        supabase
+          .from('user_task_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('work_order_id', workOrderId!),
+        // Steps a reviewer accepted count as completed too.
+        supabase
+          .from('task_demonstrations')
+          .select('id, task_id, review_completed_at')
+          .eq('user_id', user.id)
+          .eq('work_order_id', workOrderId!)
+          .eq('status', 'demonstrated'),
+      ]);
 
       if (error) throw error;
-      return (data || []).map(d => ({
+      const rows = (data || []).map(d => ({
         ...d,
         metadata: (d.metadata as Record<string, unknown>) || {},
       })) as UserTaskProgress[];
+      for (const demo of demosRes.data ?? []) {
+        const existing = rows.find(r => r.work_order_task_id === demo.task_id);
+        if (existing) {
+          if (!existing.is_completed) {
+            existing.is_completed = true;
+            existing.completed_at = demo.review_completed_at;
+          }
+        } else {
+          rows.push({
+            id: demo.id,
+            user_id: user.id,
+            work_order_task_id: demo.task_id,
+            work_order_id: workOrderId!,
+            is_completed: true,
+            completed_at: demo.review_completed_at,
+            metadata: { source: 'reviewed_demonstration' },
+          });
+        }
+      }
+      return rows;
     },
   });
 }

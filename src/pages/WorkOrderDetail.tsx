@@ -297,12 +297,6 @@ export default function WorkOrderDetail() {
 
                 <div className="flex flex-wrap items-center gap-4 mt-4">
                   <XPRewardBadge xp={workOrder.xp_reward} size="lg" />
-                  {workOrder.estimated_time_minutes && (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      ~{workOrder.estimated_time_minutes} min
-                    </div>
-                  )}
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
                     <span className="font-data">{completionCount ?? '—'}</span> completed
