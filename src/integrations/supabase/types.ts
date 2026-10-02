@@ -1784,6 +1784,24 @@ export type Database = {
         }
         Relationships: []
       }
+      lesson_quiz_keys: {
+        Row: {
+          answers: Json
+          lesson_id: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          lesson_id: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          lesson_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lessons: {
         Row: {
           content: Json | null
@@ -6742,6 +6760,10 @@ export type Database = {
         Returns: number
       }
       studio_vocabulary: { Args: never; Returns: Json }
+      submit_lesson_quiz: {
+        Args: { p_answers: Json; p_lesson_id: string }
+        Returns: Json
+      }
       task_work_order_id: { Args: { p_task: string }; Returns: string }
       tenant_curation_enforced: { Args: never; Returns: boolean }
       upsert_scorm_course_bundle: {
