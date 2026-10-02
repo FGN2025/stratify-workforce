@@ -108,3 +108,10 @@ Open defects (not fixed this round):
 ### Follow-up fixes (2026-10-02) — verified in the browser as qa-learner
 - Passport: starter 50.0 score / all-50 skill values removed (no column defaults; 7 untouched accounts cleared) → shows "Not yet scored" and "Not yet assessed". "Verified" badge removed. Accepted steps now listed under Reviewed Demonstrations (supporting records, not certifications).
 - Work Order detail: time estimate removed; reviewer-accepted steps count toward task progress (now 1 of 5).
+
+## XP self-award and quiz marking (2026-10-02)
+Run live as qa-learner@fgn.academy on lesson a1b2c3d4-0003-4000-8000-000000000001 (25 XP):
+- Lesson content sent to the browser contains no answers (0 `correct_index`); answer keys table returns [] to learners.
+- Direct XP insert → refused (row-level security). Direct "completed" progress insert on a quiz → refused ("Quiz results are recorded by the server").
+- Failed submit → 0%, no XP, no answers or explanations returned.
+- Passed submit (×3) → 100%, exactly one 25 XP ledger entry.
