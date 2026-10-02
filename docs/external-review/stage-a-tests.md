@@ -115,3 +115,12 @@ Run live as qa-learner@fgn.academy on lesson a1b2c3d4-0003-4000-8000-00000000000
 - Direct XP insert → refused (row-level security). Direct "completed" progress insert on a quiz → refused ("Quiz results are recorded by the server").
 - Failed submit → 0%, no XP, no answers or explanations returned.
 - Passed submit (×3) → 100%, exactly one 25 XP ledger entry.
+
+## Sign-in and return journey (2026-10-02, browser, preview)
+Throwaway account qa-signin-1790956467@fgn.academy (add to cleanup list).
+- Signed-out /profile → /auth; sign-up → lands on /profile (sign-up currently signs in immediately; email confirmation is off).
+- Sign-in from /work-orders → /work-orders. From /admin (not allowlisted) → /workspace.
+- Hostile return values (//evil.example.com, https://evil.example.com/workspace, /learn/../admin) → /workspace.
+- Valid server-held intent (/programs) → /programs. Unknown id and malformed id → /workspace (a truly expired id was not tested).
+- Server refuses to store /admin or //evil.com intents (HTTP 400).
+- Note: /settings?x=1#t landed on /workspace (safe; cause not investigated).
