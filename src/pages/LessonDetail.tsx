@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { setCurrentGameTitle } from '@/hooks/useTutorContext';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useLessonDetail, useSubmitQuiz, useNextLesson } from '@/hooks/useLessonProgress';
+import { useLessonDetail, useSubmitQuiz, useNextLesson, type QuizResult } from '@/hooks/useLessonProgress';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -20,7 +20,7 @@ export default function LessonDetail() {
   const { data, isLoading, error } = useLessonDetail(lessonId);
   const submitQuiz = useSubmitQuiz();
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [result, setResult] = useState<{ correct: number; total: number; pct: number; passed: boolean; xpEarned: number } | null>(null);
+  const [result, setResult] = useState<QuizResult | null>(null);
 
   const lesson = data?.lesson;
   const progress = data?.progress;
@@ -98,15 +98,10 @@ export default function LessonDetail() {
 
   const handleSubmit = async () => {
     if (questions.length === 0) return;
-    const res = await submitQuiz.mutateAsync({
-      lessonId: lesson.id,
-      answers,
-      questions,
-      passingScore,
-      xpReward: lesson.xp_reward,
-    });
+    const res = await submitQuiz.mutateAsync({ lessonId: lesson.id, answers });
     setResult(res);
   };
+  const resultFor = (id: string) => result?.results?.find((r) => r.id === id);
 
   const handleRetry = () => {
     setAnswers({});
@@ -222,7 +217,9 @@ export default function LessonDetail() {
           <div className="space-y-4">
             {questions.map((q, qIdx) => {
               const selected = answers[q.id];
-              const isCorrect = submitted ? selected === q.correct_index : undefined;
+              const r = resultFor(q.id);
+              const isCorrect = submitted ? !!r?.correct : undefined;
+              const knownCorrectIndex = r?.correct_index ?? (r?.correct ? selected : undefined);
 
               return (
                 <Card key={q.id} className={cn(
@@ -244,7 +241,7 @@ export default function LessonDetail() {
                       disabled={submitted}
                     >
                       {q.options.map((opt: string, oIdx: number) => {
-                        const isThisCorrect = oIdx === q.correct_index;
+                        const isThisCorrect = oIdx === knownCorrectIndex;
                         const isThisSelected = selected === oIdx;
 
                         return (
@@ -269,9 +266,9 @@ export default function LessonDetail() {
                       })}
                     </RadioGroup>
 
-                    {submitted && (
+                    {submitted && r?.explanation && (
                       <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                        <span className="font-medium">Explanation:</span> {q.explanation}
+                        <span className="font-medium">Explanation:</span> {String(r.explanation)}
                       </p>
                     )}
                   </CardContent>
