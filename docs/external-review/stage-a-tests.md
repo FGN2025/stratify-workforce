@@ -121,6 +121,6 @@ Throwaway account qa-signin-1790956467@fgn.academy (add to cleanup list).
 - Signed-out /profile → /auth; sign-up → lands on /profile (sign-up currently signs in immediately; email confirmation is off).
 - Sign-in from /work-orders → /work-orders. From /admin (not allowlisted) → /workspace.
 - Hostile return values (//evil.example.com, https://evil.example.com/workspace, /learn/../admin) → /workspace.
-- Valid server-held intent (/programs) → /programs. Unknown/expired id and malformed id → /workspace.
+- Valid server-held intent (/programs) → /programs. Unknown id and malformed id → /workspace (a truly expired id was not tested).
 - Server refuses to store /admin or //evil.com intents (HTTP 400).
-- Note: /settings?x=1#t landed on /workspace (safe; query stripped then settings redirected).
+- Note: /settings?x=1#t landed on /workspace (safe; cause not investigated).
