@@ -104,3 +104,7 @@ Open defects (not fixed this round):
 - Work Order detail shows "~120 min" (time ban) and task progress 0/5 despite a demonstrated step.
 - Learners can still self-record XP from the browser (lesson/Work Order completion); moving XP awards server-side is a separate change.
 - Resubmitting the same file for a requirement returns a conflict; a new upload is required.
+
+### Follow-up fixes (2026-10-02) — verified in the browser as qa-learner
+- Passport: starter 50.0 score / all-50 skill values removed (no column defaults; 7 untouched accounts cleared) → shows "Not yet scored" and "Not yet assessed". "Verified" badge removed. Accepted steps now listed under Reviewed Demonstrations (supporting records, not certifications).
+- Work Order detail: time estimate removed; reviewer-accepted steps count toward task progress (now 1 of 5).
