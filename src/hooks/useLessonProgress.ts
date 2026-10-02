@@ -6,8 +6,15 @@ interface QuizQuestion {
   id: string;
   question: string;
   options: string[];
-  correct_index: number;
-  explanation: string;
+}
+
+export interface QuizResult {
+  correct: number;
+  total: number;
+  pct: number;
+  passed: boolean;
+  xpEarned: number;
+  results: { id: string; correct: boolean; explanation?: string; correct_index?: number }[];
 }
 
 interface LessonRow {
@@ -75,60 +82,18 @@ export function useSubmitQuiz() {
     mutationFn: async ({
       lessonId,
       answers,
-      questions,
-      passingScore,
-      xpReward,
     }: {
       lessonId: string;
       answers: Record<string, number>;
-      questions: QuizQuestion[];
-      passingScore: number;
-      xpReward: number;
     }) => {
-      const userId = session!.user.id;
-      const correct = questions.filter((q) => answers[q.id] === q.correct_index).length;
-      const pct = Math.round((correct / questions.length) * 100);
-      const passed = pct >= passingScore;
-      const status = passed ? 'completed' : 'failed';
-      const xpEarned = passed ? xpReward : 0;
-
-      // Check existing progress
-      const { data: existing } = await supabase
-        .from('user_lesson_progress')
-        .select('id, attempts')
-        .eq('lesson_id', lessonId)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('user_lesson_progress')
-          .update({
-            status: status as any,
-            score: pct,
-            attempts: existing.attempts + 1,
-            xp_earned: xpEarned,
-            completed_at: passed ? new Date().toISOString() : null,
-          })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('user_lesson_progress')
-          .insert({
-            user_id: userId,
-            lesson_id: lessonId,
-            status: status as any,
-            score: pct,
-            attempts: 1,
-            xp_earned: xpEarned,
-            started_at: new Date().toISOString(),
-            completed_at: passed ? new Date().toISOString() : null,
-          });
-        if (error) throw error;
-      }
-
-      return { correct, total: questions.length, pct, passed, xpEarned };
+      if (!session) throw new Error('Must be logged in');
+      // Graded server-side; answers are never sent to the browser before submission.
+      const { data, error } = await supabase.rpc('submit_lesson_quiz' as any, {
+        p_lesson_id: lessonId,
+        p_answers: answers,
+      });
+      if (error) throw error;
+      return data as unknown as QuizResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lesson-detail'] });
