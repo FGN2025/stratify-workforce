@@ -52,10 +52,6 @@ export function ProfileHeader({ profile, credentials, stats, tenantName }: Profi
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-bold">{profile.username || 'Anonymous'}</h2>
-            <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary">
-              <Shield className="h-3 w-3 mr-1" />
-              Verified
-            </Badge>
             {connection && connection.isActive && (
               <Badge 
                 variant="outline" 
