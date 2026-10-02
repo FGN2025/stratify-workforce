@@ -189,7 +189,8 @@ export function useSubmitTaskEvidence() {
         let storagePath: string | null = null;
         if (args.file) {
           const ext = args.file.name.split('.').pop() || 'bin';
-          storagePath = `${user.id}/${args.workOrderId}/${crypto.randomUUID()}.${ext}`;
+          // folder[2] must be the uploader's id (enforced by storage policy)
+          storagePath = `tasks/${user.id}/${args.workOrderId}/${crypto.randomUUID()}.${ext}`;
           const { error: upErr } = await supabase.storage
             .from('evidence')
             .upload(storagePath, args.file, { contentType: args.file.type, upsert: false });
