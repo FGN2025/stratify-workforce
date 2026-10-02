@@ -83,3 +83,24 @@ Planned, not yet run: concurrent `redeem_points` overspend test and refund rever
 - Learner calling refund: refused `platform admin required`.
 - Two simultaneous admin refunds: one reversal entry created, the other refused `not reversible`; a third attempt also refused. Balance back to 500, redemption status `reversed`, exactly 1 reversal ledger entry.
 - QA options deactivated again afterwards. Remaining: pilot journey, browser sign-in return.
+
+## Construction pilot journey — live (2026-10-02, qa-learner + qa-reviewer, Excavation Hazard Walk-Through step)
+Driven through the same calls the Work Order and review screens make, signed in as each account.
+- Baseline: 0 XP, 500 credits, 0 credentials, 0 badges, 0 skill signals.
+- Learner submitted a written walk-through and a site screenshot. Reviewer accepted one and asked for a revision on the other: the step stayed open (`needs_revision`), nothing was awarded, and the learner could see the request.
+- Learner resubmitted, reviewer accepted: step `demonstrated`, 2 v2 skill signals, 1 pilot reward (+50 credits). XP, credentials, badges unchanged.
+- Reopen + re-accept: 0 new signals, no new reward. Learner calling the reward directly: refused (no permission). Learner inserting a pilot reward: refused by the once-only rule / pilot guard.
+- Reviewer from another organization (temporary move to Oil and Gas, restored): saw 0 items, could not decide, closing refused `not permitted`.
+- Pathway step (temporary "QA Pathway Step", 100, switched off afterwards): refused for an account with no reviewed evidence; learner redeemed once; repeat with the same key returned the same redemption. Balance 450.
+
+Defects found and fixed:
+1. Learner file uploads for task evidence were refused by storage rules (wrong folder layout) — every screenshot/video submission failed. Fixed path layout.
+2. Organization reviewers (non-platform admins) could not open evidence files. Added read access for evidence they are allowed to review.
+3. Pilot reward was never issued in the real flow (nothing called it). Now issued automatically when a pilot step closes as demonstrated; once only.
+4. Any signed-in learner could add credits (or negative/reversal entries) to their own ledger and spend them. Learner inserts now limited to positive XP only; credits are server-issued.
+
+Open defects (not fixed this round):
+- Skill Passport shows placeholder employability 50.0, all-50 skill radar and a "Verified" badge for a brand-new learner (profile defaults), and does not list the reviewed demonstration. Passport record was never created for the learner.
+- Work Order detail shows "~120 min" (time ban) and task progress 0/5 despite a demonstrated step.
+- Learners can still self-record XP from the browser (lesson/Work Order completion); moving XP awards server-side is a separate change.
+- Resubmitting the same file for a requirement returns a conflict; a new upload is required.
