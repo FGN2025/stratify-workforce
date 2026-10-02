@@ -66,49 +66,8 @@ export function usePointsHistory(limit = 20) {
   });
 }
 
-// Award points to current user
-export function useAwardPoints() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+// Points are never written from the browser; awards happen server-side.
 
-  return useMutation({
-    mutationFn: async ({
-      amount,
-      sourceType,
-      sourceId,
-      description,
-      pointsType = 'xp',
-    }: {
-      amount: number;
-      sourceType: SourceType;
-      sourceId?: string;
-      description?: string;
-      pointsType?: PointsType;
-    }) => {
-      if (!user) throw new Error('Must be logged in');
-
-      const { data, error } = await supabase
-        .from('user_points')
-        .insert({
-          user_id: user.id,
-          points_type: pointsType,
-          amount,
-          source_type: sourceType,
-          source_id: sourceId || null,
-          description: description || null,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-xp', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['user-points', user?.id] });
-    },
-  });
-}
 
 // Calculate XP with multipliers
 export function calculateXP({
