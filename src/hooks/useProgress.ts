@@ -183,16 +183,9 @@ export function useCompleteLesson() {
         result = data;
       }
 
-      // Award XP points
+      // XP is awarded server-side (amount from the lesson record, once per lesson)
       if (xpEarned > 0) {
-        await supabase.from('user_points').insert({
-          user_id: user.id,
-          points_type: 'xp',
-          amount: xpEarned,
-          source_type: 'lesson',
-          source_id: lessonId,
-          description: `Completed lesson`,
-        });
+        await supabase.rpc('award_lesson_xp' as any, { p_lesson_id: lessonId });
       }
 
       return result;
