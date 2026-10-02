@@ -166,23 +166,17 @@ export function useCompleteWorkOrder() {
 
       if (completionError) throw completionError;
 
-      // Award XP if completed successfully
-      if (status === 'completed' && xpAwarded > 0) {
-        const { error: pointsError } = await supabase
-          .from('user_points')
-          .insert({
-            user_id: user.id,
-            points_type: 'xp',
-            amount: xpAwarded,
-            source_type: 'work_order',
-            source_id: completion.work_order_id,
-            description: `Completed work order`,
-          });
-
+      // XP is calculated and awarded server-side, once per work order
+      let awarded = 0;
+      if (status === 'completed') {
+        const { data: amt, error: pointsError } = await supabase.rpc('award_work_order_xp' as any, {
+          p_completion_id: completionId,
+        });
         if (pointsError) throw pointsError;
+        awarded = (amt as number) ?? 0;
       }
 
-      return { completion, xpAwarded };
+      return { completion, xpAwarded: awarded };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-order-completions'] });
