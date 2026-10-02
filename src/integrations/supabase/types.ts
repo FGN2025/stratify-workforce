@@ -6474,9 +6474,14 @@ export type Database = {
       }
     }
     Functions: {
+      award_lesson_xp: { Args: { p_lesson_id: string }; Returns: number }
       award_pilot_review_reward: {
         Args: { p_amount?: number; p_demonstration_id: string }
         Returns: string
+      }
+      award_work_order_xp: {
+        Args: { p_completion_id: string }
+        Returns: number
       }
       backfill_credentials_for_course: {
         Args: { p_course_id: string }
