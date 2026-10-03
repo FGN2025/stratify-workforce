@@ -1,0 +1,39 @@
+{
+  "contractVersion": "2026-09-23.1",
+  "items": [
+    {
+      "sourceId": "canonical-skills",
+      "label": "Canonical skill catalog",
+      "sourceVersion": 2,
+      "lastChangedAt": "2026-09-23T05:27:29.165435+00:00",
+      "lastSyncedAt": null,
+      "owner": "FGN Academy"
+    },
+    {
+      "sourceId": "work-order-catalog",
+      "label": "Work Order catalog",
+      "sourceVersion": 5,
+      "lastChangedAt": "2026-10-03T18:19:11.353118+00:00",
+      "lastSyncedAt": null,
+      "owner": "FGN Academy"
+    },
+    {
+      "sourceId": "evidence-vocabulary",
+      "label": "Evidence and assessment vocabulary",
+      "sourceVersion": 1,
+      "lastChangedAt": "2026-09-23T05:20:40.492898+00:00",
+      "lastSyncedAt": null,
+      "owner": "FGN Academy"
+    },
+    {
+      "sourceId": "gg-activity-cache",
+      "label": "FGN.GG simulation activity cache",
+      "sourceVersion": 1,
+      "lastChangedAt": "2026-09-23T05:20:40.492898+00:00",
+      "lastSyncedAt": "2026-09-22T22:42:04.386+00:00",
+      "owner": "FGN.GG",
+      "recordCount": 5
+    }
+  ],
+  "nextCursor": null
+}

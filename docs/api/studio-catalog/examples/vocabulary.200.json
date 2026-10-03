@@ -1,0 +1,187 @@
+{
+  "contractVersion": "2026-09-23.1",
+  "vocabularyVersion": "2a79445b6f2dfd16d063999b04e442aa",
+  "derivedFrom": "live database enum and check-constraint catalog",
+  "partial": false,
+  "unsupported": [],
+  "artifactKinds": [
+    {
+      "label": "File",
+      "value": "file"
+    },
+    {
+      "label": "Text",
+      "value": "text"
+    }
+  ],
+  "evidenceBases": [
+    {
+      "label": "Outcome Capture",
+      "value": "outcome_capture"
+    },
+    {
+      "label": "Process Capture",
+      "value": "process_capture"
+    },
+    {
+      "label": "Written Reasoning",
+      "value": "written_reasoning"
+    },
+    {
+      "label": "Structured Result",
+      "value": "structured_result"
+    },
+    {
+      "label": "Human Observation",
+      "value": "human_observation"
+    },
+    {
+      "label": "Telemetry",
+      "value": "telemetry"
+    }
+  ],
+  "evidenceTypes": [
+    {
+      "label": "Screenshot",
+      "value": "screenshot"
+    },
+    {
+      "label": "Video Clip",
+      "value": "video_clip"
+    },
+    {
+      "label": "Video Timecode Reference",
+      "value": "video_timecode_reference"
+    },
+    {
+      "label": "Before After Pair",
+      "value": "before_after_pair"
+    },
+    {
+      "label": "Written Annotation",
+      "value": "written_annotation"
+    },
+    {
+      "label": "Structured Form",
+      "value": "structured_form"
+    },
+    {
+      "label": "Document",
+      "value": "document"
+    }
+  ],
+  "curationStates": [
+    {
+      "label": "Active",
+      "value": "active"
+    },
+    {
+      "label": "Needs review",
+      "value": "needs_review"
+    },
+    {
+      "label": "Retired",
+      "value": "retired"
+    }
+  ],
+  "maturityStates": [
+    {
+      "label": "Unclassified",
+      "value": "unclassified"
+    },
+    {
+      "label": "Level 1 — canonically connected",
+      "value": "level_1"
+    },
+    {
+      "label": "Level 2 — skills mapped",
+      "value": "level_2"
+    },
+    {
+      "label": "Level 3 — evidence validated",
+      "value": "level_3"
+    }
+  ],
+  "evidenceQuality": [
+    {
+      "label": "Insufficient",
+      "value": "insufficient"
+    },
+    {
+      "label": "Adequate",
+      "value": "adequate"
+    },
+    {
+      "label": "Strong",
+      "value": "strong"
+    }
+  ],
+  "signalStrengths": [
+    {
+      "label": "Moderate",
+      "value": "moderate"
+    },
+    {
+      "label": "Strong",
+      "value": "strong"
+    },
+    {
+      "label": "Weak",
+      "value": "weak"
+    }
+  ],
+  "assessmentOutcomes": [
+    {
+      "label": "Met",
+      "value": "met"
+    },
+    {
+      "label": "Partially Met",
+      "value": "partially_met"
+    },
+    {
+      "label": "Not Met",
+      "value": "not_met"
+    },
+    {
+      "label": "Not Observed",
+      "value": "not_observed"
+    }
+  ],
+  "demonstrationStatuses": [
+    {
+      "label": "Not Started",
+      "value": "not_started"
+    },
+    {
+      "label": "Evidence Submitted",
+      "value": "evidence_submitted"
+    },
+    {
+      "label": "Under Review",
+      "value": "under_review"
+    },
+    {
+      "label": "Needs Revision",
+      "value": "needs_revision"
+    },
+    {
+      "label": "Demonstrated",
+      "value": "demonstrated"
+    },
+    {
+      "label": "Not Demonstrated",
+      "value": "not_demonstrated"
+    }
+  ],
+  "signalStrengthSchemes": [
+    {
+      "label": "v1 three band",
+      "value": "v1_three_band"
+    },
+    {
+      "label": "v2 fit weighted",
+      "value": "v2_fit_weighted"
+    }
+  ]
+}

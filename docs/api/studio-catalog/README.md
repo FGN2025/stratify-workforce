@@ -150,3 +150,8 @@ Each `/skills` item carries `evidenceStatus`, derived from the existing evidence
 - `catalogued_only` — the skill is in the catalog with no approved mapping.
 
 The response also includes `evidenceCoverage` (catalog count, validated count, Level 3 Work Order count). Catalog membership is never evidence validation; broader migration remains gated. At release: 35 catalog skills, 17 evidence-validated through 4 Level 3 Work Orders.
+
+
+## Versioning and schemas
+
+See `/schemas` on the API and [A1–A4 answers](../../phase-3-studio-answers-a1-a4.md). Additive changes keep the contract version; breaking changes (including any change to a list marked `x-enum-closed: true`) mint a new one, with the old version supported for at least 90 days. Examples: `examples/*.200.json`.

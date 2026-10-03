@@ -194,3 +194,8 @@ and it must not be counted as a passed acceptance check. Proving it needs a fixt
 production data, which we have deliberately not created.
 
 Phase 4 and content submissions remain blocked. Studio approvals remain simulated.
+
+
+## Studio A1–A4 answers (2026-10-03)
+
+See [phase-3-studio-answers-a1-a4.md](phase-3-studio-answers-a1-a4.md).
