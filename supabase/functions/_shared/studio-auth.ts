@@ -22,7 +22,7 @@ export const BASE_CORS_HEADERS: Record<string, string> = {
  * restricted to origins registered against the operator key, and returns no
  * allow-origin header for an unapproved browser origin.
  */
-export const DISCOVERY_ROUTES = new Set(['capabilities', 'openapi.json', 'openapi.yaml', '']);
+export const DISCOVERY_ROUTES = new Set(['capabilities', 'openapi.json', 'openapi.yaml', 'schemas', '']);
 
 export function corsFor(
   origin: string | null,

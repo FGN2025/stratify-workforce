@@ -2,6 +2,7 @@
 // No write path, no submission path. Phase 4 remains blocked.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import spec from './openapi.json' with { type: 'json' };
+import { SCHEMAS, VERSIONING_POLICY } from './schemas.ts';
 import {
   CONTRACT_VERSION,
   SUPPORTED_CONTRACT_VERSIONS,
@@ -81,6 +82,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(spec, null, 2), {
         headers: { ...discoveryCors, 'Content-Type': 'application/json' },
       });
+    }
+
+    if (head === 'schemas') {
+      const name = (route[1] ?? '').replace(/\.json$/, '');
+      if (!name) {
+        return jsonResponse({ contractVersion: CONTRACT_VERSION, schemas: Object.keys(SCHEMAS).map((n) => `schemas/${n}.json`), versioningPolicy: VERSIONING_POLICY }, 200, discoveryCors);
+      }
+      const schema = SCHEMAS[name];
+      if (!schema) return jsonResponse({ error: 'not_found', message: `Unknown schema: ${name}` }, 404, discoveryCors);
+      return jsonResponse(schema, 200, discoveryCors);
     }
 
     if (head === 'capabilities') {
@@ -450,10 +461,21 @@ Deno.serve(async (req) => {
       }
 
       const scopeList = `(${scopeIds.join(',')})`;
+      // Owner-or-curation: also return Work Orders owned elsewhere that a tenant in
+      // scope has explicitly curated in (included === true). included false or a
+      // missing row never adds a record.
+      const { data: curatedIn } = await admin
+        .from('tenant_work_order_curation')
+        .select('work_order_id')
+        .in('tenant_id', scopeIds)
+        .eq('included', true);
+      const curatedIds = Array.from(new Set((curatedIn ?? []).map((c: Record<string, unknown>) => c.work_order_id as string)));
+      const orParts = [`owner_tenant_id.in.${scopeList}`, `tenant_id.in.${scopeList}`];
+      if (curatedIds.length) orParts.push(`id.in.(${curatedIds.join(',')})`);
       let q = admin
         .from('work_orders')
         .select('id, title, description, game_title, simulation_activity_id, source_challenge_id, fgn_origin_challenge_id, visibility, owner_tenant_id, tenant_id, is_active, record_version, created_at', { count: 'exact' })
-        .or(`owner_tenant_id.in.${scopeList},tenant_id.in.${scopeList}`)
+        .or(orParts.join(','))
         .order('created_at', { ascending: true })
         .order('id', { ascending: true })
         .range(offset, offset + limit - 1);
@@ -475,12 +497,14 @@ Deno.serve(async (req) => {
             .in('work_order_id', woIds)
             .in('tenant_id', scopeIds)
         : { data: [] };
-      const { data: tenantRows } = await admin.from('tenants').select('id, name').in('id', scopeIds);
+      const ownerIds = (rows ?? []).map((r: Record<string, unknown>) => (r.owner_tenant_id ?? r.tenant_id) as string).filter(Boolean);
+      const { data: tenantRows } = await admin.from('tenants').select('id, name').in('id', Array.from(new Set([...scopeIds, ...ownerIds])));
       const tenantName = new Map((tenantRows ?? []).map((t: Record<string, unknown>) => [t.id, t.name]));
 
       let items = (rows ?? []).map((r: Record<string, unknown>) => {
         const m = maturityOf((maturityRows ?? []).find((x: Record<string, unknown>) => x.work_order_id === r.id));
         const owner = (r.owner_tenant_id ?? r.tenant_id) as string | null;
+        const owned = scopeIds.includes(r.owner_tenant_id as string) || scopeIds.includes(r.tenant_id as string);
         return {
           workOrderId: r.id,
           title: r.title,
@@ -491,13 +515,14 @@ Deno.serve(async (req) => {
           sourceChallengeId: r.source_challenge_id ?? null,
           originChallengeId: r.fgn_origin_challenge_id ?? null,
           ...m,
+          scopeReason: owned ? 'owned' : 'curated_in',
           maturityReviewNote: (maturityRows ?? []).find((x: Record<string, unknown>) => x.work_order_id === r.id)?.review_note ?? null,
           visibility: {
             ownerTenantId: owner,
             ownerTenantLabel: owner ? tenantName.get(owner) ?? null : null,
             visibilityMode: r.visibility ?? null,
             isActive: r.is_active,
-            curationSupported: true,
+            curationSupported: r.visibility === 'public',
             curationScopeNote: 'Curation rows are filtered to this credential\'s tenant scope only.',
             curatedForTenants: (curationRows ?? [])
               .filter((c: Record<string, unknown>) => c.work_order_id === r.id)
