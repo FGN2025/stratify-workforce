@@ -1,0 +1,50 @@
+{
+  "contractVersion": "2026-09-23.1",
+  "catalogVersion": 2,
+  "catalogChangedAt": "2026-09-23T05:27:29.165435+00:00",
+  "scope": {
+    "tenantId": "efd28c29-43ea-4a7c-9cf4-32f5c9ac97ca",
+    "includesDescendants": false,
+    "note": "The canonical skill catalog is platform-global and is not tenant-filtered."
+  },
+  "totalCount": 35,
+  "items": [
+    {
+      "skillId": "585f190c-982d-434e-b613-d6cec386569d",
+      "skillKey": "backing_maneuvers",
+      "label": "Backing Maneuvers",
+      "description": "Skill in reverse driving, straight-line and offset backing",
+      "domain": "transport_logistics",
+      "classification": "domain_specific",
+      "curationState": "active",
+      "evidenceStatus": "evidence_validated",
+      "level3WorkOrderCount": 1,
+      "mappedWorkOrderCount": 1,
+      "skillVersion": 1,
+      "recordVersion": 2,
+      "updatedAt": "2026-09-23T05:27:29.165435+00:00",
+      "aliases": [
+        {
+          "aliasKey": "backing_maneuvers",
+          "gameScope": "ATS",
+          "source": "skills_taxonomy",
+          "ambiguous": false
+        },
+        {
+          "aliasKey": "backing_maneuvers",
+          "gameScope": null,
+          "source": "canonical",
+          "ambiguous": false
+        }
+      ]
+    }
+  ],
+  "ambiguousAliases": [],
+  "evidenceCoverage": {
+    "catalogSkillCount": 35,
+    "evidenceValidatedSkillCount": 17,
+    "level3WorkOrderCount": 4,
+    "note": "Catalog membership is not evidence validation. Only skills mapped to admin-approved Level 3 Work Orders carry evidenceStatus \"evidence_validated\"; broader migration remains gated."
+  },
+  "nextCursor": null
+}
