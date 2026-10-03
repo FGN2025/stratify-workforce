@@ -135,3 +135,6 @@ Repeated delivery (same source + event + delivery id; enforced by a unique index
 - Identity-link replay requires partner-verified (`external_id`) or admin (`manual`) linkage; email-only matches do not replay.
 - Credential idempotency now applies to every source: unique `(passport_id, external_reference_id, credential_type_key)`.
 - Inactive sources (e.g. `bbw`) receive 404 and are excluded from integration health; historical rows retained.
+
+
+- Studio catalog: response schemas at `/schemas`, versioning rule and A1–A4 answers in `docs/phase-3-studio-answers-a1-a4.md`.
