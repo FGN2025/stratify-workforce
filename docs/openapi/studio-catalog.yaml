@@ -9,7 +9,7 @@ info:
     authoritative.
 
 
-    Authentication: short-lived, tenant-scoped bearer tokens (15 min TTL). The
+    Authentication: short-lived, tenant-scoped bearer tokens (2 h TTL, 7200 s). The
     durable operator app key never leaves the operator proxy and is not accepted
     on catalog routes.
 
