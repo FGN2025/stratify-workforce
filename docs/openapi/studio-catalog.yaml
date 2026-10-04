@@ -9,7 +9,7 @@ info:
     authoritative.
 
 
-    Authentication: short-lived, tenant-scoped bearer tokens (15 min TTL). The
+    Authentication: short-lived, tenant-scoped bearer tokens (2 h TTL, 7200 s). The
     durable operator app key never leaves the operator proxy and is not accepted
     on catalog routes.
 
@@ -110,7 +110,7 @@ paths:
         token.
       description: >-
         Server-to-server only. Rejected with 403 forbidden_origin if called from
-        a browser origin. Returns token, expiresAt, expiresInSeconds (900),
+        a browser origin. Returns token, expiresAt, expiresInSeconds (7200),
         scopes, tenantId, includesDescendants. Revocation is performed by an
         Academy administrator and takes effect on the next request.
       security:

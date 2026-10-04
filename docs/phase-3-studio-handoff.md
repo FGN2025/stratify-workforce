@@ -49,7 +49,7 @@ catalog_changed` (the walk is incomplete, never silently stitched).
 **Authenticated proxy token delivery.** The durable operator key is refused on every catalog route
 (`401` with an explicit hint) and `POST /studio-token` refuses any request that carries an
 `Origin` header, so the durable key cannot reach a browser. The proxy exchanges it for a
-15-minute, single-tenant, read-only bearer token. Expiry and revocation are documented in the
+2-hour, single-tenant, read-only bearer token. Expiry and revocation are documented in the
 README; revocation is effective on the next request.
 
 ## 4. Implementation and deployment status
@@ -76,7 +76,7 @@ Gas Community, deleted after the run; all test tokens are revoked.
 | 2 | `/openapi.json` with no credential | 200, all 8 paths present |
 | 3 | Catalog route with no token | 401 |
 | 4 | Durable operator key as Bearer on a catalog route | 401 `credential_invalid` (refused by design) |
-| 5 | Token mint, server-to-server | 201, TTL 900 s, tenant-bound |
+| 5 | Token mint, server-to-server | 201, TTL 7200 s (was 900 s at handoff), tenant-bound |
 | 6 | Token mint with a browser `Origin` | 403 `forbidden_origin` |
 | 7 | Revoked token | 401 `credential_revoked` |
 | 8 | Expired token | 401 `credential_expired` |
@@ -119,7 +119,7 @@ live credential.
    from; we register them against the app.
 2. We issue the durable operator key out-of-band (never in chat or a repo). It goes into the
    proxy only.
-3. Proxy exchanges it at `POST /studio-token` and hands the 15-minute token to the browser
+3. Proxy exchanges it at `POST /studio-token` and hands the 2-hour token to the browser
    session.
 4. Run your acceptance suite: 401/200 credential behaviour, tenant isolation, complete pagination
    with interrupted-walk reporting, alias ambiguity, schema validation, vocabulary conformance,
@@ -170,8 +170,8 @@ Academy database. Each level takes effect on the very next request — nothing i
 | Withdraw catalog access, keep the app | set `can_read_catalog = false` on `authorized_apps` | `403 scope_denied`, even for unexpired tokens |
 | Full shutdown | set `is_active = false` on `authorized_apps` | `401 credential_revoked` on every route |
 
-Every token expires on its own after 15 minutes regardless, so the worst-case exposure window
-without any action is 15 minutes. The admin UI (scope toggle, tenant/descendants selector, token
+Every token expires on its own after 2 hours regardless, so the worst-case exposure window
+without any action is 2 hours. The admin UI (scope toggle, tenant/descendants selector, token
 list with a revoke button) is still to be built; it will replace this procedure, not change its
 semantics.
 

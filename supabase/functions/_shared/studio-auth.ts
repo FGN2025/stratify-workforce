@@ -4,7 +4,7 @@
 export const CONTRACT_VERSION = '2026-09-23.1';
 export const SUPPORTED_CONTRACT_VERSIONS = ['2026-09-23.1'];
 
-export const TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes
+export const TOKEN_TTL_SECONDS = 2 * 60 * 60; // 2 hours (7200 s), owner-approved
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 export const RATE_LIMIT_MAX_REQUESTS = 120;
 
