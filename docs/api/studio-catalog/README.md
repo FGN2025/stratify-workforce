@@ -20,18 +20,18 @@ Two credentials, deliberately different:
 1. **Durable operator key** (`X-App-Key`). Lives only in the operator-owned proxy. It is
    **never** accepted on a catalog route, and `POST /studio-token` refuses it outright when the
    request carries an `Origin` header — so it cannot be used from a browser.
-2. **Short-lived Studio token** (`Authorization: Bearer …`). Minted by the proxy, 15-minute TTL
-   (900 s), bound to exactly one tenant, one `descendants` flag and the scope `catalog:read`.
+2. **Short-lived Studio token** (`Authorization: Bearer …`). Minted by the proxy, 2-hour TTL
+   (7200 s), bound to exactly one tenant, one `descendants` flag and the scope `catalog:read`.
    Intended to live in Studio's memory-only browser session.
 
 ```
 POST /studio-token            (server-to-server only, no Origin header)
 X-App-Key: <durable operator key>
-→ 201 { token, tokenType: "Bearer", expiresAt, expiresInSeconds: 900,
+→ 201 { token, tokenType: "Bearer", expiresAt, expiresInSeconds: 7200,
         scopes: ["catalog:read"], tenantId, includesDescendants }
 ```
 
-**Expiry.** Hard 15 minutes from issue; there is no refresh. The proxy mints a new token.
+**Expiry.** Hard 2 hours (7200 s) from issue; there is no refresh. The proxy mints a new token.
 **Revocation.** An Academy administrator revokes a token (or deactivates the issuing app, or
 removes its catalog-read scope). Revocation takes effect on the very next request — tokens are
 checked against the database each time, never cached. Revoked → `401 credential_revoked`.
