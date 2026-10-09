@@ -43,6 +43,14 @@ Organization catalogs (an ISP, school or employer picks its portfolio of applica
 ## Stage 4 — Commercial expansion (only when justified)
 Paid access and approved outside publishers. Not in scope now: no checkout, revenue sharing or public app submissions.
 
+## FGN.GG connections stay exactly as they are
+The rebuild only changes how apps are listed and found. Nothing in the FGN.GG connection is redesigned.
+- **Kept untouched:** importing challenges, syncing completions, polling achievements, the retry queue, links from challenges to lessons, and the signed delivery address with its duplicate protection (200 for already done, 409 with retry for in-progress).
+- **Links:** challenge links keep the plural `/challenges/:id` form and the FGN origin challenge ID. play.fgn.gg and the legacy fgn.gg link stay recorded.
+- **Marketplace placement:** FGN.GG appears as a "Competition" source on the application and discipline pages its challenges feed (for example, Trucking challenges show on Rail & Transportation or Construction where they're mapped). It never becomes a discipline or program, so it can't be curated away or hidden by organization settings.
+- **Records:** challenge-earned progress, skill signals and points keep their IDs and history, and still show in the Passport and My Academy.
+- **Release check:** every stage ends with the existing FGN.GG checks before publishing: a signed challenge completion, a repeat delivery, a challenge link opening correctly, and achievement sync. A stage doesn't ship if any of these fail.
+
 ## Rules carried through every stage
 - **Signing in doesn't grant access.** A shared account never opens private programs on its own; access comes from program or organization membership.
 - **Taking part doesn't prove competence.** Completed, evidence submitted and assessed stay separate states, and the Passport keeps them apart.
