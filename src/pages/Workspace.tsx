@@ -14,6 +14,9 @@ import { useUpcomingEvents } from '@/hooks/useEvents';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserXP } from '@/hooks/usePoints';
 import { useWorkOrders } from '@/hooks/useWorkOrders';
+import { AppCard } from '@/pages/Marketplace';
+import { useMarketplace } from '@/hooks/useMarketplace';
+import { LayoutGrid } from 'lucide-react';
 import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 
 export default function Workspace() {
@@ -29,6 +32,8 @@ export default function Workspace() {
   const activeCourses = courses.filter((course) => enrolledIds.has(course.id) && !enrollments.find((item) => item.course_id === course.id)?.completed_at);
   const completedCount = enrollments.filter((enrollment) => enrollment.completed_at).length;
   const firstName = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Learner';
+  const { data: reg } = useMarketplace();
+  const myApps = (reg?.applications ?? []).filter((a) => a.status !== 'coming_soon' && a.access_terms !== 'organization_invite');
   const isLoading = coursesLoading || enrollmentsLoading;
 
   return (
@@ -66,6 +71,14 @@ export default function Workspace() {
             </Button>
           </div>
         </section>
+
+        {reg && myApps.length > 0 && (
+          <HorizontalCarousel title="My Academy apps" subtitle="One account across every app. Your progress and evidence stay in your Skill Passport." icon={<LayoutGrid className="h-5 w-5" />} viewAllLink="/apps">
+            {myApps.map((a) => (
+              <div key={a.key} className="w-[85vw] shrink-0 snap-start sm:w-72 lg:w-80"><AppCard app={a} disciplines={reg.disciplines} /></div>
+            ))}
+          </HorizontalCarousel>
+        )}
 
         {isLoading ? (
           <div className="flex gap-4 overflow-hidden">
