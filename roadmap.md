@@ -128,3 +128,10 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] FGN.GG listed as Competition; challenge connection untouched
 - [ ] Stage 2: shared sign-in per subdomain (needs each site owner)
 - [ ] Confirm Merits scope label with its owner
+
+## Marketplace rebuild — Stage 2 (shared sign-in)
+
+- [x] Site owner named: darcy@fgn.gg owns every app site (Merits, Maritime, Sim Racing, Railway, etc.) — handshake no longer blocked
+- [ ] Academy as single sign-in for each subdomain (OAuth consent + return-to-app), coordinated with darcy@fgn.gg
+- [ ] Capability file per app (what it reads/writes against the Academy record)
+- [x] "My Academy apps" row in the Workspace (no site owner needed)
