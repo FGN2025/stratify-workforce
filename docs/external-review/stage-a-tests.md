@@ -124,3 +124,13 @@ Throwaway account qa-signin-1790956467@fgn.academy (add to cleanup list).
 - Valid server-held intent (/programs) → /programs. Unknown id and malformed id → /workspace (a truly expired id was not tested).
 - Server refuses to store /admin or //evil.com intents (HTTP 400).
 - Note: /settings?x=1#t landed on /workspace (safe; cause not investigated).
+
+## Production release checks (2026-10-09, https://fgn.academy)
+- Publish requested after the 2-hour Studio token lifetime change (backend TTL was already live; this shipped the matching frontend).
+- Home and /work-orders: HTTP 200, no page errors.
+- Signed in as qa-learner@fgn.academy (minted session): /workspace loads as the signed-in home.
+- Work Order detail (pilot f98c218c-2c64-4fde-a1c4-cdfada0658b6): loads; no time estimate shown (time ban holds).
+- Skill Passport (signed-in): "Not yet scored" shown, no stray "Verified" badge, Reviewed Demonstrations section present.
+- Public Passport page for the same learner: loads.
+- /challenges is not a learner route (404 by design); the challenge registry is admin-only at /admin/challenge-registry. Signed FGN.GG challenge completions were already exercised through the webhook path in earlier rounds; no new live delivery was sent this round.
+- Security scan at publish time: no unresolved critical findings blocking; two known triaged RLS warnings (tenant_program_offerings, simulation_activity_cache read-all for signed-in users) remain on the triage list.
