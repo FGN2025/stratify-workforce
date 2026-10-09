@@ -42,14 +42,15 @@ Deno.serve(async (req) => {
     program_pathways: undefined,
   }));
   // Marketplace registry (additive). Hidden rows never leave the server.
-  const [{ data: discRows }, { data: appRows }] = await Promise.all([
+  const [{ data: discRows }, { data: appRows, error: appErr }] = await Promise.all([
     supabase.from("disciplines").select("key,name,tagline,description,accent_color,status,featured,sort_order,updated_at")
       .neq("status", "hidden").order("sort_order"),
     supabase.from("applications")
-      .select("key,name,short_name,tagline,description,launch_type,launch_url,in_academy_path,legacy_urls,status,access_terms,shared_services,accent_color,hero_image_url,featured,sort_order,updated_at,program:programs(key,program_games(game_title)),application_disciplines(is_primary,discipline:disciplines(key,status))")
+      .select("key,name,short_name,tagline,description,launch_type,launch_url,in_academy_path,legacy_urls,status,access_terms,shared_services,accent_color,hero_image_url,featured,sort_order,updated_at,program:programs!applications_program_id_fkey(key,program_games(game_title)),application_disciplines(is_primary,discipline:disciplines(key,status))")
       .neq("status", "hidden").order("sort_order"),
   ]);
   const disciplines = discRows ?? [];
+  if (appErr) console.error("applications query failed", appErr.message);
   const applications = (appRows ?? []).map((a: any) => ({
     ...a,
     program_key: a.program?.key ?? null,
