@@ -122,26 +122,34 @@ export default function OAuthConsent() {
           </div>
           <CardTitle>Connect {clientName} to FGN Academy</CardTitle>
           <CardDescription>
-            {clientName} will be able to call this app's enabled tools while you are signed in.
+            {clientName} wants to sign you in with your FGN Academy account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="rounded-md border border-border p-3 space-y-2">
-            <div className="font-medium">This connection lets {clientName}:</div>
+            <div className="font-medium">{clientName} will receive:</div>
             <ul className="list-disc pl-5 text-muted-foreground space-y-1">
-              <li>Read your profile</li>
-              <li>Read your work orders</li>
-              <li>Read your community memberships</li>
+              {String(details.scope ?? "openid email profile").split(/\s+/).filter(Boolean).map((s: string) => (
+                <li key={s}>
+                  {s === "openid" ? "Confirmation of who you are"
+                    : s === "email" ? "Your email address"
+                    : s === "profile" ? "Your basic profile (name)"
+                    : `Additional permission requested: ${s}`}
+                </li>
+              ))}
             </ul>
+            {details.redirect_uri && (
+              <div className="text-xs text-muted-foreground break-all">Returns to: {details.redirect_uri}</div>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
-            This does not bypass FGN Academy's permissions or backend policies. All calls run as
-            you, restricted by row-level security.
+            Signing in does not by itself open private programs, and it does not bypass FGN Academy's
+            permissions.
           </p>
         </CardContent>
         <CardFooter className="flex gap-3">
           <Button variant="outline" className="flex-1" disabled={busy} onClick={() => decide(false)}>
-            Cancel
+            Cancel connection
           </Button>
           <Button className="flex-1" disabled={busy} onClick={() => decide(true)}>
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
