@@ -78,7 +78,7 @@ const navGroups = [
   {
     label: 'Explore programs',
     items: [
-      { title: 'Programs', url: '/programs', icon: Target },
+      { title: 'Apps', url: '/apps', icon: Target },
       { title: 'Course Catalog', url: '/learn', icon: GraduationCap },
       { title: 'Careers', url: '/careers', icon: Target },
     ],
