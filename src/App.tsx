@@ -54,7 +54,7 @@ import Privacy from "./pages/Privacy";
 import Eula from "./pages/Eula";
 import SimIndustry from "./pages/SimIndustry";
 import Workspace from "./pages/Workspace";
-import { ProgramsDirectory, ProgramDetail } from "./pages/Programs";
+import { AppsDirectory, AppDetail, DisciplinePage, ProgramsRedirect } from "./pages/Marketplace";
 import NotFound from "./pages/NotFound";
 import { TenantRouteRedirect } from "@/components/TenantRouteRedirect";
 import { HelpRedirect } from "@/components/HelpRedirect";
@@ -104,8 +104,11 @@ const App = () => (
               } />
               
               {/* Learning routes */}
-              <Route path="/programs" element={<ProgramsDirectory />} />
-              <Route path="/programs/:key" element={<ProgramDetail />} />
+              <Route path="/apps" element={<AppsDirectory />} />
+              <Route path="/apps/:key" element={<AppDetail />} />
+              <Route path="/disciplines/:key" element={<DisciplinePage />} />
+              <Route path="/programs" element={<ProgramsRedirect />} />
+              <Route path="/programs/:key" element={<ProgramsRedirect />} />
               <Route path="/learn" element={<Learn />} />
               <Route path="/learn/:id" element={<CourseDetail />} />
               <Route path="/learn/:courseId/lesson/:lessonId" element={<LessonDetail />} />

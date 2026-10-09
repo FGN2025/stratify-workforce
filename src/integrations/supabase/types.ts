@@ -155,6 +155,116 @@ export type Database = {
         }
         Relationships: []
       }
+      application_disciplines: {
+        Row: {
+          application_id: string
+          discipline_id: string
+          is_primary: boolean
+        }
+        Insert: {
+          application_id: string
+          discipline_id: string
+          is_primary?: boolean
+        }
+        Update: {
+          application_id?: string
+          discipline_id?: string
+          is_primary?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_disciplines_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_disciplines_discipline_id_fkey"
+            columns: ["discipline_id"]
+            isOneToOne: false
+            referencedRelation: "disciplines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          accent_color: string | null
+          access_terms: string
+          created_at: string
+          description: string | null
+          featured: boolean
+          hero_image_url: string | null
+          id: string
+          in_academy_path: string | null
+          key: string
+          launch_type: string
+          launch_url: string | null
+          legacy_urls: string[]
+          name: string
+          program_id: string | null
+          shared_services: Json
+          short_name: string | null
+          sort_order: number
+          status: string
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          access_terms?: string
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          hero_image_url?: string | null
+          id?: string
+          in_academy_path?: string | null
+          key: string
+          launch_type?: string
+          launch_url?: string | null
+          legacy_urls?: string[]
+          name: string
+          program_id?: string | null
+          shared_services?: Json
+          short_name?: string | null
+          sort_order?: number
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          access_terms?: string
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          hero_image_url?: string | null
+          id?: string
+          in_academy_path?: string | null
+          key?: string
+          launch_type?: string
+          launch_url?: string | null
+          legacy_urls?: string[]
+          name?: string
+          program_id?: string | null
+          shared_services?: Json
+          short_name?: string | null
+          sort_order?: number
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_criteria: {
         Row: {
           created_at: string
@@ -992,6 +1102,48 @@ export type Database = {
             referencedColumns: ["app_slug"]
           },
         ]
+      }
+      disciplines: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          description: string | null
+          featured: boolean
+          id: string
+          key: string
+          name: string
+          sort_order: number
+          status: string
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          key: string
+          name: string
+          sort_order?: number
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          key?: string
+          name?: string
+          sort_order?: number
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       event_matches: {
         Row: {
@@ -2333,6 +2485,36 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_applications: {
+        Row: {
+          application_id: string
+          program_id: string
+        }
+        Insert: {
+          application_id: string
+          program_id: string
+        }
+        Update: {
+          application_id?: string
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_applications_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_applications_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
             referencedColumns: ["id"]
           },
         ]

@@ -78,7 +78,7 @@ const navGroups = [
   {
     label: 'Explore programs',
     items: [
-      { title: 'Programs', url: '/programs', icon: Target },
+      { title: 'Apps', url: '/apps', icon: Target },
       { title: 'Course Catalog', url: '/learn', icon: GraduationCap },
       { title: 'Careers', url: '/careers', icon: Target },
     ],
@@ -142,6 +142,7 @@ const adminSubItems: AdminEntry[] = [
 
   // Platform-only.
   { title: 'Users', url: '/admin/users', icon: Users, tier: 'platform' },
+  { title: 'Marketplace Catalog', url: '/admin/marketplace', icon: Target, tier: 'platform' },
   { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
   {
     groupKey: 'sim',

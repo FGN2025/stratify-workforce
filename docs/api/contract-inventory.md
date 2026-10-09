@@ -109,7 +109,7 @@ Rules applied in code:
 Canonical base today: `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/<surface>`. Future `*.fgn.academy` hosts (e.g. `api.fgn.academy`) will be listed here only once DNS and routing resolve. Contract rules are host-independent.
 
 ## Program registry (contract 2026-09-30.1)
-- `GET /functions/v1/program-registry` (optional `?key=`) — public, no credential, read-only. Returns `{contract_version, registry_version, programs[]}`; `registry_version` is the latest program `updated_at`. Only live, preview and coming-soon programs are returned. Unknown key returns 404. Cached 60s.
+- `GET /functions/v1/program-registry` (optional `?key=`) — public, no credential, read-only. Returns `{contract_version, registry_version, programs[], disciplines[], applications[]}` (contract `2026-10-09.1`; `disciplines[]`/`applications[]` are additive, `programs[]` unchanged). Hidden disciplines/apps are never returned. `registry_version` is the latest `updated_at` across all three. Only live, preview and coming-soon programs are returned. Unknown key returns 404. Cached 60s.
 - Writes: platform admins only, in Academy. Organizations turn programs on through `tenant_program_offerings`; browsing a program never changes tenant or access.
 
 
