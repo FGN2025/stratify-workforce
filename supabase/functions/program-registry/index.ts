@@ -3,7 +3,8 @@
 // projection only; base tables are authenticated-only.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const CONTRACT_VERSION = "2026-09-30.1";
+// 2026-10-09.1: additive disciplines[] and applications[] (marketplace). programs[] unchanged.
+const CONTRACT_VERSION = "2026-10-09.1";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -40,13 +41,33 @@ Deno.serve(async (req) => {
     program_games: undefined,
     program_pathways: undefined,
   }));
-  const version = programs.reduce((m: string, p: any) => (p.updated_at > m ? p.updated_at : m), "");
+  // Marketplace registry (additive). Hidden rows never leave the server.
+  const [{ data: discRows }, { data: appRows }] = await Promise.all([
+    supabase.from("disciplines").select("key,name,tagline,description,accent_color,status,featured,sort_order,updated_at")
+      .neq("status", "hidden").order("sort_order"),
+    supabase.from("applications")
+      .select("key,name,short_name,tagline,description,launch_type,launch_url,in_academy_path,legacy_urls,status,access_terms,shared_services,accent_color,hero_image_url,featured,sort_order,updated_at,program:programs(key,program_games(game_title)),application_disciplines(is_primary,discipline:disciplines(key,status))")
+      .neq("status", "hidden").order("sort_order"),
+  ]);
+  const disciplines = discRows ?? [];
+  const applications = (appRows ?? []).map((a: any) => ({
+    ...a,
+    program_key: a.program?.key ?? null,
+    games: (a.program?.program_games ?? []).map((g: any) => g.game_title),
+    disciplines: (a.application_disciplines ?? [])
+      .filter((x: any) => x.discipline && x.discipline.status !== "hidden")
+      .sort((x: any, y: any) => Number(y.is_primary) - Number(x.is_primary))
+      .map((x: any) => x.discipline.key),
+    program: undefined,
+    application_disciplines: undefined,
+  }));
+  const version = [...programs, ...disciplines, ...applications].reduce((m: string, p: any) => (p.updated_at > m ? p.updated_at : m), "");
   if (key && programs.length === 0) {
     return new Response(JSON.stringify({ error: "not_found", contract_version: CONTRACT_VERSION }), {
       status: 404, headers: { ...cors, "Content-Type": "application/json" },
     });
   }
-  return new Response(JSON.stringify({ contract_version: CONTRACT_VERSION, registry_version: version, programs }), {
+  return new Response(JSON.stringify({ contract_version: CONTRACT_VERSION, registry_version: version, programs, disciplines, applications }), {
     headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=60" },
   });
 });
