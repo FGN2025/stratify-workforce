@@ -118,3 +118,13 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Passport corrections on share page, embed, PDF, credential API
 - [ ] Merits read-only compatibility review before org-achievement intake contract
 - [ ] Stages 3-6: program discovery, admin registry tools, points UX, pilot, Merits review
+
+## Marketplace rebuild — Stage 1 (2026-10-09)
+
+- [x] Discipline / application / link registry, backfilled from programs (same IDs)
+- [x] Public feed adds disciplines[] and applications[] (contract 2026-10-09.1, additive)
+- [x] Marketplace home rows, /apps with filters, /disciplines/:key, /apps/:key, /programs redirects
+- [x] Platform-admin Marketplace Catalog editor
+- [x] FGN.GG listed as Competition; challenge connection untouched
+- [ ] Stage 2: shared sign-in per subdomain (needs each site owner)
+- [ ] Confirm Merits scope label with its owner
