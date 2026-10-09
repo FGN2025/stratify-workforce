@@ -33,6 +33,7 @@ import { BreakroomMapperManager } from '@/components/admin/BreakroomMapperManage
 import { PlayWebhookRetryManager } from '@/components/admin/PlayWebhookRetryManager';
 import { ParityMonitorDashboard } from '@/components/admin/ParityMonitorDashboard';
 import { PlayGamesSyncPanel } from '@/components/admin/PlayGamesSyncPanel';
+import { MarketplaceCatalogManager } from '@/components/admin/MarketplaceCatalogManager';
 import { CurationManager } from '@/components/admin/CurationManager';
 import { CommunitiesAdminTable } from '@/components/admin/CommunitiesAdminTable';
 import { supabase } from '@/integrations/supabase/client';
@@ -199,6 +200,7 @@ export default function Admin() {
   // Sections only platform admins (admin / super_admin) can see.
   // Community owners/admins are limited to the community-scoped sections below.
   const PLATFORM_SECTIONS = new Set([
+    'marketplace',
     'users',
     'communities',
     'games',
@@ -250,6 +252,8 @@ export default function Admin() {
         return <EventsManager />;
       case 'work-orders':
         return <WorkOrdersManager />;
+      case 'marketplace':
+        return <MarketplaceCatalogManager />;
       case 'curation':
         return <CurationManager />;
       case 'evidence':

@@ -142,6 +142,7 @@ const adminSubItems: AdminEntry[] = [
 
   // Platform-only.
   { title: 'Users', url: '/admin/users', icon: Users, tier: 'platform' },
+  { title: 'Marketplace Catalog', url: '/admin/marketplace', icon: Target, tier: 'platform' },
   { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
   {
     groupKey: 'sim',
