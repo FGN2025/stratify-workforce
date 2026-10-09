@@ -1,47 +1,62 @@
-# Rebuild fgn.academy as a marketplace of discipline apps
+# Rebuild fgn.academy as a curated marketplace of applications
 
-## What already exists
-- A programs registry with 9 entries: Scout Merits, Maritime, Sim Racing, Railroading (preview), Broadband & Fiber, Heavy Equipment, Trucking, Farming, plus FGN.GG (competition source, not a program).
-- Public pages `/programs` and `/programs/:key`, a public `program-registry` feed, and per-program redemption options on the shared points system.
-- Shared services each app relies on: one sign-in, Skill Passport, points ledger, canonical skills, credentials and verification, Work Orders.
-- Gaps: shared sign-in across subdomains is marked "unverified" for every sub-site; the home page still reads as a single learning site, not a library of apps; sub-sites run on their own and don't report what they can do.
-
-## Target shape
+## Hierarchy to approve first
 
 ```text
-fgn.academy  (marketplace + shared services)
- ├─ Marketplace: browse disciplines, app cards, search/filter by kind
- ├─ Shared: sign-in, Skill Passport, points wallet, credentials, Workspace
- └─ Disciplines (each deployed on its own)
-     ├─ Subdomain apps: merits / maritime / simracing / railway / ...
-     ├─ External partner apps: broadbandworkforce.com
-     └─ In-Academy disciplines: Heavy Equipment, Trucking, Farming
-FGN.GG = competition source feeding progress in (listed, not a discipline)
+FGN Academy marketplace (fgn.academy)  discover, compare, launch, My Academy
+ └─ Discipline        Maritime & Marine Ops, Rail & Transportation, Motorsports &
+                      Vehicle Dynamics, Agriculture, Construction, Broadband ...
+     └─ Application   maritime / railway / simracing / merits .fgn.academy,
+                      broadbandworkforce.com, in-Academy experiences
+         └─ Activity  Work Order, simulation challenge, assessment
+Program / community   Scouts, an ISP community, an employer cohort.
+                      Spans applications; controls access and participants.
 ```
 
-## Stages
+- Disciplines, applications and programs are three separate things that link many-to-many. One application (for example, drone operations) can appear under several disciplines without copying its content or learner records.
+- Subdomains are where applications live. They are not the full category list.
+- Merits is listed as a cross-discipline program application. Its exact scope gets confirmed with its owner before the final label.
+- FGN.GG stays a competition source that feeds progress in. It is not a discipline or a program.
 
-1. **Marketplace home.** Signed-out home becomes the app library: a featured row, then carousels grouped by kind (Verticals, Trades, Industries, Games). Each card shows name, tagline, status (Live / Preview), what it connects to (Passport, points, sign-in), and opens the subdomain or the in-Academy page. Signed-in Workspace adds "My disciplines" (apps the learner has activity in) and the points wallet.
-2. **Discipline detail pages.** Extend `/programs/:key` into an app listing page: what you learn, linked games and trades, skills earned, ways to redeem, and a "Launch app" button. In-Academy disciplines keep their current course/Work Order content.
-3. **Registry upgrades (platform admin only).** Add listing fields: hero image, category, featured flag, screenshots, launch mode (subdomain / external / in-Academy). Admin screen to add a discipline without code. A new subdomain then shows up in the marketplace on its own.
-4. **App handshake contract.** Each sub-site publishes a small capability file (for example `/.well-known/fgn-app.json`) giving its name, version, health, and which shared services it uses. Academy reads it into the registry's capability fields, so "unverified" turns into a checked status. This goes in the versioned contract inventory.
-5. **Shared sign-in across subdomains.** Use Academy as the single sign-in provider (Academy's OAuth consent route already exists) so a learner signed in on fgn.academy is recognised on each subdomain, with return-to-app after sign-in. Checked per sub-site, then the badge changes to "Verified".
-6. **Shared wallet and Passport across apps.** Sub-sites send progress to Academy through the existing learning-source path (signed, deduplicated, retried), and read the learner's balance and Passport through scoped read tokens like the Studio ones. Each discipline keeps its own reward types (badges, prizes, pathway steps) on the one points ledger.
+## What exists today
+- A single programs registry (9 rows) mixes verticals, trades, games, an industry and a competition source. That is exactly the blending this rebuild separates.
+- Public `/programs` pages, a public registry feed, a shared points ledger, canonical skills, Skill Passport, Work Orders and organization membership.
+- Shared sign-in is marked "unverified" for every sub-site.
 
-## Boundaries (standing rules kept)
-- FGN Academy stays the public brand; organizations stay account context only.
-- Sub-sites stay independently deployable; Academy doesn't depend on their internals (for example, Broadband SCORM stays on its own site).
-- This plan doesn't change any code on Merits, Maritime, Sim Racing, Railroading or FGN.GG. Stages 4 to 6 need each site owner to opt in, and we coordinate with them.
-- No time indicators. XP and credits are written only on the server. Decision 4 still applies.
+## Stage 1 — Marketplace foundation (this build)
+Completion test: a visitor can find and launch every available application.
+1. **Registry, split into three lists.** Disciplines, applications, and links between applications and disciplines. Each application has a launch type (subdomain, external, or in-Academy), status (Live / Preview / Coming soon), access terms (open, sign-in required, organization invite) and the shared services it uses. Existing program rows keep their IDs and move across, so points, redemption options, game links and offerings stay intact.
+2. **Marketplace home.** The signed-out home becomes the discovery page: a featured row, carousels by discipline, and filters by discipline and access type. Adding an application means adding a catalog entry, with no homepage redesign.
+3. **Listing pages.** `/disciplines/:key` lists the applications, skills and activities in a discipline. `/apps/:key` shows what the app is, which disciplines it belongs to, its access terms, the skills it records evidence for, its redemption options, and a Launch button.
+4. **Redirects.** `/programs` and `/programs/:key` keep working and forward to the matching new page. Old URLs such as railway.fgn.gg stay recorded as legacy links.
+5. **Admin catalog editor (platform admin only).** Create and edit disciplines and applications, link them, set featured and status. Community admins keep managing only their own organization's offerings.
 
-## Decisions needed from you
-- Should a learner choosing a discipline change the look of the site (accent color), or only the content shown?
-- Who owns each subdomain's handshake work (named people per site)?
-- Do you want a single marketplace search across all apps, or browsing only at first?
+## Stage 2 — Connected experience (next)
+Completion test: a participant moves between applications with one account and no lost history.
+- Academy becomes the single sign-in for every subdomain (its OAuth consent page already exists), and returns the user to the app they came from. Each subdomain is checked one at a time, then marked Verified.
+- "My Academy" in the signed-in Workspace shows the applications the learner uses and their combined progress and evidence.
+- Each application publishes a small capability file. Academy checks it, so listings show what each app actually supports.
+
+## Stage 3 — Partner distribution (later)
+Organization catalogs (an ISP, school or employer picks its portfolio of applications), sponsored access, cohorts and reporting, all built on the current organization curation model.
+
+## Stage 4 — Commercial expansion (only when justified)
+Paid access and approved outside publishers. Not in scope now: no checkout, revenue sharing or public app submissions.
+
+## Rules carried through every stage
+- **Signing in doesn't grant access.** A shared account never opens private programs on its own; access comes from program or organization membership.
+- **Taking part doesn't prove competence.** Completed, evidence submitted and assessed stay separate states, and the Passport keeps them apart.
+- **Shared systems don't mean shared visibility.** Partners see only the participants and evidence they're authorized for (current organization-scoped rules).
+- Existing IDs, completion records, partner mappings and evidence links are kept. No separate learner record per application.
+- FGN Academy stays the public brand. Sub-sites stay independently deployable, and this plan doesn't change code on Merits, Maritime, Sim Racing, Railroading or FGN.GG. No time indicators. XP and credits are written only on the server. Decision 4 still applies.
+
+## Decisions needed
+- Approve the hierarchy and the starting discipline list above.
+- Confirm Merits' scope label, and name an owner for each subdomain's Stage 2 handshake.
 
 ## Technical details
-- New `programs` columns: `category`, `featured`, `hero_image_url`, `launch_mode`, `screenshots jsonb`, `capabilities_checked_at`. Public reads go only through the `program-registry` feed and a public projection view.
-- A scheduled edge function fetches each `canonical_url/.well-known/fgn-app.json` and validates it against a JSON Schema published next to the Studio schemas.
-- Shared sign-in is done with Academy as the OAuth server (configure_oauth_server), plus a client registration for each subdomain that only allows that subdomain's redirect addresses.
-- Sub-site reads use scoped tokens (reusing the studio-auth pattern), with each scope tied to one program.
-- UI reuses HorizontalCarousel inside `container mx-auto px-4`, and keeps pillar colors locked.
+- New tables `disciplines`, `applications` and `application_disciplines`, plus `program_applications` linking programs and communities to applications. Each gets GRANTs and RLS: platform admins write, signed-in users read. Anonymous reads go only through `public_*` projection views or the registry feed, per the anonymous-surface rule.
+- Backfill: each current `programs` row with kind vertical, industry or game becomes an application that reuses the same UUID, linked to a discipline. Program-level rows (Scout Merits) also stay in `programs`. `programs` stays readable and its retired fields are marked deprecated, never dropped.
+- `program-registry` feed: the current response is kept, with additive `disciplines[]` and `applications[]` fields, versioned in the contract inventory.
+- UI: HorizontalCarousel inside `container mx-auto px-4`. Pillar colors stay locked, and application accent colors are used only on cards.
+- `AGENTS.md` gets a rule that disciplines, applications and programs are separate registries linked many-to-many.
