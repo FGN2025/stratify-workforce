@@ -38,6 +38,7 @@ import {
   Activity,
   Building2,
   PackageOpen,
+  Sparkles,
 } from 'lucide-react';
 import {
   Sidebar,
