@@ -15,6 +15,20 @@
       "when": 1791521538960,
       "tag": "0001_post_auth_intent_allow_app_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791644388747,
+      "tag": "0002_studio_submissions_phase4",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791644408944,
+      "tag": "0003_studio_submissions_storage_policies",
+      "breakpoints": true
     }
   ]
 }

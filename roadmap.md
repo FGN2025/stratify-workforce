@@ -144,3 +144,4 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Platform-admin cover, accent, tagline and description editor with preview
 - [x] Remove the duplicate learner-facing SIM Categories sidebar group while preserving SIM admin and Work Order category behavior
 - [x] Link supported simulations from app and discipline pages to their existing industry hubs
+- [x] Phase 4: Studio → Academy course submissions (studio-submit function, studio_submissions table, admin review inbox, status route, contract docs, external Work Order generation)

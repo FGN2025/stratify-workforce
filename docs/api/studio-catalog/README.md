@@ -8,8 +8,38 @@ Public endpoint documentation. **No credential is required to read this page or 
 | API base URL | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-catalog` |
 | OpenAPI (fetchable, no credential) | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-catalog/openapi.json` |
 | Capabilities probe (no credential) | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-catalog/capabilities` |
-| Contract version | `2026-09-23.1` (header `X-Studio-Contract`, required on all catalog routes) |
-| Scope of this contract | **Read-only.** No write route, no submission route. Phase 4 blocked. |
+| Contract version | `2026-10-10.1` (header `X-Studio-Contract`, required on all catalog and submission routes; `2026-09-23.1` still accepted) |
+| Scope of this contract | Catalog routes are **read-only**. Package submissions live on a separate function, `studio-submit` (Phase 4), and require the `submissions:create` scope. |
+
+## Package submissions (Phase 4) — `studio-submit`
+
+| Item | Value |
+|---|---|
+| API base URL | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-submit` |
+| Auth | Same token model as the catalog. Tokens minted for an app provisioned with `can_submit_packages` carry the additional scope `submissions:create`. |
+| Approval | **Human, always.** An Academy platform admin approves, rejects or requests revision in the Studio Submissions inbox. Approval creates an **inactive** course (and, when requested, an inactive draft Work Order) — nothing is visible to learners until an admin publishes it through the existing publish flow. |
+
+```
+POST /studio-submit/submissions
+Authorization: Bearer <studio token with submissions:create>
+X-Studio-Contract: 2026-10-10.1
+{ "idempotencyKey": "...", "title": "...", "description": "...",
+  "scormVersion": "1.2" | "2004", "packageBase64": "<ZIP, base64>",
+  "sourceWorkOrderIds": ["<uuid>", ...],        // optional
+  "requestWorkOrderCreation": true,              // optional; requires gameTitle
+  "gameTitle": "Construction_Sim" }              // from the Studio vocabulary
+→ 201 { submissionId, validationStatus, reviewStatus: "pending", statusUrl }
+→ 200 { duplicate: true, ... }                   // repeated idempotencyKey
+
+GET /studio-submit/status/:submissionId
+→ 200 { submission: { validationStatus, validationErrors, reviewStatus, reviewNote, ... } }
+```
+
+Rules: packages are ZIP archives with `imsmanifest.xml` at the root, max 25 MB decoded;
+invalid packages are marked `validation_failed` and never reach reviewers. An app only ever
+sees its own submissions. Error codes: `401 credential_absent|invalid|expired|revoked`,
+`403 scope_denied|forbidden_origin`, `400 contract_version_mismatch|invalid_request`,
+`413 package_too_large`. Studio polls `status/:id` — Academy does not push status outbound.
 
 `academy.fgn.gg` and `api.fgn.gg` are not ours and never were.
 
