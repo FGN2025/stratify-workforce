@@ -36,6 +36,13 @@
       "when": 1791659797399,
       "tag": "0004_studio_submissions_app_and_destinations",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791671578197,
+      "tag": "0005_studio_course_submission_permission",
+      "breakpoints": true
     }
   ]
 }
