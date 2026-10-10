@@ -395,6 +395,7 @@ export type Database = {
           can_issue_credentials: boolean
           can_read_catalog: boolean
           can_read_credentials: boolean
+          can_submit_packages: boolean
           catalog_include_descendants: boolean
           catalog_tenant_id: string | null
           created_at: string
@@ -413,6 +414,7 @@ export type Database = {
           can_issue_credentials?: boolean
           can_read_catalog?: boolean
           can_read_credentials?: boolean
+          can_submit_packages?: boolean
           catalog_include_descendants?: boolean
           catalog_tenant_id?: string | null
           created_at?: string
@@ -431,6 +433,7 @@ export type Database = {
           can_issue_credentials?: boolean
           can_read_catalog?: boolean
           can_read_credentials?: boolean
+          can_submit_packages?: boolean
           catalog_include_descendants?: boolean
           catalog_tenant_id?: string | null
           created_at?: string
@@ -4209,6 +4212,138 @@ export type Database = {
           window_start?: string
         }
         Relationships: []
+      }
+      studio_submissions: {
+        Row: {
+          app_id: string
+          created_at: string
+          description: string | null
+          generated_work_order_id: string | null
+          id: string
+          idempotency_key: string
+          manifest_summary: Json | null
+          package_path: string
+          package_size_bytes: number | null
+          request_work_order_creation: boolean
+          review_note: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scorm_course_id: string | null
+          scorm_version: string
+          source_work_order_ids: string[]
+          tenant_id: string
+          title: string
+          updated_at: string
+          validation_errors: Json | null
+          validation_status: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          description?: string | null
+          generated_work_order_id?: string | null
+          id?: string
+          idempotency_key: string
+          manifest_summary?: Json | null
+          package_path: string
+          package_size_bytes?: number | null
+          request_work_order_creation?: boolean
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scorm_course_id?: string | null
+          scorm_version?: string
+          source_work_order_ids?: string[]
+          tenant_id: string
+          title: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          description?: string | null
+          generated_work_order_id?: string | null
+          id?: string
+          idempotency_key?: string
+          manifest_summary?: Json | null
+          package_path?: string
+          package_size_bytes?: number | null
+          request_work_order_creation?: boolean
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scorm_course_id?: string | null
+          scorm_version?: string
+          source_work_order_ids?: string[]
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_submissions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_submissions_generated_work_order_id_fkey"
+            columns: ["generated_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "public_work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_submissions_generated_work_order_id_fkey"
+            columns: ["generated_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "skill_signals_canonical"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "studio_submissions_generated_work_order_id_fkey"
+            columns: ["generated_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_migration_readiness"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "studio_submissions_generated_work_order_id_fkey"
+            columns: ["generated_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_submissions_scorm_course_id_fkey"
+            columns: ["scorm_course_id"]
+            isOneToOne: false
+            referencedRelation: "scorm_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       studio_tokens: {
         Row: {
