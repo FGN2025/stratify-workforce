@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
       const keyHash = await sha256Hex(appKey);
       const { data: app } = await admin
         .from('authorized_apps')
-        .select('id, app_slug, is_active, can_read_catalog, can_submit_packages, catalog_tenant_id, catalog_include_descendants')
+        .select('id, app_slug, is_active, can_read_catalog, can_submit_packages, can_submit_courses, catalog_tenant_id, catalog_include_descendants')
         .eq('api_key_hash', keyHash)
         .maybeSingle();
 
