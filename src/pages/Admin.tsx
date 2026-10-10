@@ -208,6 +208,7 @@ export default function Admin() {
     'marketplace',
     'overview',
     'users',
+    'learner-progress',
     'communities',
     'games',
     'sim-categories',
@@ -225,6 +226,8 @@ export default function Admin() {
     'play-webhook-retry',
     'parity-monitor',
     'super-admin',
+    'challenge-mappings',
+    'challenge-tracks',
   ]);
 
   const AccessDenied = () => (

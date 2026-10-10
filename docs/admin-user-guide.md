@@ -1,55 +1,109 @@
-# Admin User Guide - FGN Academy Platform
+# FGN Academy administration guide
 
-## Overview
+## Operating model
 
-This guide provides comprehensive documentation for administrators managing the FGN Academy platform. The Admin Dashboard is accessible at `/admin` and requires either the `admin` or `super_admin` role.
+Studio is the authoring authority for challenges, Work Orders and Courses. Academy receives, reviews, publishes, curates, assigns, verifies and governs that content.
 
----
+```text
+Pick an Academy app → Create in Studio → Review Inbox → Publish and operate in Academy
+```
 
-## Accessing the Admin Dashboard
+Existing FGN.GG challenge imports and legacy mappings remain available as governed fallbacks. They are not new authoring paths.
 
-Navigate to `/admin` after logging in. The system will verify your permissions before granting access. If you don't have the required role, you'll be redirected to the home page with an "Access Denied" notification.
+## Access
 
-### Role Hierarchy
+The administration menu is role-aware:
 
-| Role | Access Level |
-|------|--------------|
-| **Super Admin** | Full platform access including tenant management, community review, Discord connections, and dangerous operations |
-| **Admin** | Standard admin access to user management, work orders, events, media, and evidence review |
-| **Moderator** | Content moderation capabilities (not admin panel access) |
-| **Developer** | API credential management access |
-| **User** | Standard user access only |
+| Role | Academy access |
+|---|---|
+| Community admin | Operations for their active community |
+| Admin | Academy-wide operations, people, communities, marketplace and integrations |
+| Super admin | Admin access plus platform settings and elevated controls |
+| Developer | Developer portal access |
 
----
+## Community Admin
 
-## Dashboard Overview
+- **Overview:** community identity, setup status and operational shortcuts.
+- **Assignments:** assign, publish and make quick edits to existing Work Orders. New content opens Studio.
+- **Evidence Review:** decide learner evidence; the badge shows pending work.
+- **Events:** manage community events.
+- **Catalog:** choose Academy apps and content visible to the community.
+- **Access:** manage registration codes and member access.
 
-Upon entering, you'll see:
+Community identity and media are managed from Overview and Catalog rather than separate sidebar destinations. Pathways remain available as a tab within Marketplace.
 
-- **Hero Section**: Displays key platform metrics (Total Users, Work Orders, Active Sessions)
-- **Stats Grid**: Additional metrics including Average Score, Sessions This Week, Top Game, and New Users This Week
-- **Tabbed Navigation**: Access to all admin modules
+## Academy Operations
 
-### Admin Tabs (All Admins)
+- **Overview:** priority queues and platform summary. The large metrics appear only here.
+- **Create in Studio:** select an industry app and open Studio with its discipline and simulations selected.
+- **Review Inbox:** approve, reject or request revision for Studio submissions. Filter the queue by Academy app.
+- **Content Operations:** review, publish, assign and make quick Work Order edits. Filter by Academy app, game or difficulty. Use **Edit in Studio** for authored content changes.
+- **Evidence Review:** decide step evidence and other evidence queues.
+- **People:** Accounts and Learner Progress.
+- **Communities:** Registry and, for super admins, the Approval Queue.
+- **Marketplace:** Apps & Disciplines, Curation and Pathways.
+- **Integrations:** FGN.GG health, game sync, retries, parity, telemetry and legacy mappings.
 
-1. User Management
-2. Events
-3. Work Orders
-4. Evidence Review
-5. SIM Games
-6. SIM Resources
-7. Media Library
-8. Registration Codes
+## Platform Settings and Super Admin
 
-### Super Admin-Only Tabs
+Super admins see two restricted destinations:
 
-9. Community Review (highlighted in primary color)
-10. Authorized Apps (highlighted in primary color)
-11. Credential Types (highlighted in primary color)
-12. Discord (highlighted in Discord purple #5865F2)
-13. Super Admin (highlighted in amber/gold)
+- **Platform Settings:** authorized apps, webhooks, credential types, Discord and AI configuration.
+- **Super Admin:** tenants, roles, audit logs and dangerous operations.
 
----
+## Content lifecycle
+
+1. Open **Create in Studio** and choose the originating Academy app.
+2. Author once in Studio and choose FGN.GG, Academy or both as destinations.
+3. Review the package in **Review Inbox**.
+4. Approval creates inactive Academy content.
+5. Complete publication-readiness checks in **Content Operations**.
+6. Publish, curate and assign in Academy.
+
+Nothing becomes learner-visible merely because Studio submitted it or an Academy reviewer approved it.
+
+## Work Orders
+
+- Use Academy quick edit for title, criteria, category, publication state and governed legacy fields.
+- Use **Edit in Studio** for authored content changes.
+- Publication checks apply to every activation path.
+- The FGN.GG import fallback remains available until Studio distribution to FGN.GG is live.
+- Do not use time estimates; difficulty, criteria and evidence requirements describe the work.
+
+## Evidence Review
+
+Evidence remains open while any piece is pending or claimed. A reviewer can approve, reject, request revision or mark supported outcomes according to the configured evidence model. Partner supporting evidence does not independently issue XP or credentials.
+
+## Advanced registries and legacy tools
+
+- SIM Games, Categories and Resources remain internal registries; they are not learner navigation.
+- Challenge Registry, Mappings, Tracks and Activity Mapping support existing FGN.GG links and manual overrides.
+- Automatic Breakroom sync remains active. Breakroom Mapper is retired.
+- Course Builder remains direct-link only until the first real Studio package passes joint acceptance, then its old address will redirect.
+- Old admin bookmarks continue to resolve to the matching hub or tab.
+
+## Common actions
+
+| Action | Location |
+|---|---|
+| Create a challenge, Work Order or Course | Create in Studio |
+| Review Studio content | Review Inbox |
+| Publish or assign a Work Order | Content Operations |
+| Review learner evidence | Evidence Review |
+| Invite or manage an account | People → Accounts |
+| Inspect learner progress | People → Learner Progress |
+| Approve a community | Communities → Approval Queue |
+| Edit an app identity | Marketplace → Apps & Disciplines |
+| Diagnose FGN.GG delivery | Integrations |
+| Manage trusted external apps | Platform Settings → Authorized Apps |
+| Manage roles or audit logs | Super Admin |
+
+## Troubleshooting
+
+- **A destination is missing:** confirm the active community and your role; the menu hides destinations you cannot use.
+- **A Work Order will not publish:** resolve the publication-readiness message in Content Operations.
+- **A Studio package cannot be approved:** wait for package validation or review its validation errors.
+- **An old bookmark opened a different page:** legacy addresses redirect into the consolidated hub that now owns that function.
 
 ## User Management Tab
 
