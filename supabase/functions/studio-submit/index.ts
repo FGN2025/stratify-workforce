@@ -397,6 +397,25 @@ Deno.serve(async (req) => {
         ? (body.sourceWorkOrderIds as unknown[]).filter((v): v is string => typeof v === 'string')
         : [];
       const requestWoCreation = body.requestWorkOrderCreation === true;
+      const submissionType = typeof body.submissionType === 'string' ? body.submissionType.trim() : 'work_order';
+      if (!['work_order', 'course'].includes(submissionType)) {
+        return jsonResponse({ error: 'invalid_request', message: 'submissionType must be "work_order" or "course".' }, 400, cors);
+      }
+      if (submissionType === 'course') {
+        if (!session.canSubmitCourses || !session.scopes.includes('submissions:create:courses')) {
+          return jsonResponse(
+            { error: 'scope_denied', message: 'This application is not permitted to submit courses. Course sending requires the submissions:create:courses scope.' },
+            403,
+            cors,
+          );
+        }
+        if (requestWoCreation) {
+          return jsonResponse({ error: 'invalid_request', message: 'Course submissions stand alone; requestWorkOrderCreation is not allowed.' }, 400, cors);
+        }
+        if (sourceWorkOrderIds.length) {
+          return jsonResponse({ error: 'invalid_request', message: 'Course submissions stand alone; sourceWorkOrderIds is not allowed.' }, 400, cors);
+        }
+      }
       const gameTitle = typeof body.gameTitle === 'string' ? body.gameTitle : null;
       const applicationSlug = typeof body.applicationSlug === 'string' ? body.applicationSlug.trim() : null;
       const ALLOWED_DESTINATIONS = new Set(['fgn-academy', 'fgn-gg']);
@@ -481,6 +500,7 @@ Deno.serve(async (req) => {
         manifest_summary: { ...summary, gameTitle },
         source_work_order_ids: sourceWorkOrderIds,
         request_work_order_creation: requestWoCreation,
+        submission_type: submissionType,
         application_key: applicationSlug,
         destinations,
         validation_status: validationStatus,
