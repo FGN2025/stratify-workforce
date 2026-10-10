@@ -5,7 +5,9 @@ import { HorizontalCarousel } from '@/components/marketplace/HorizontalCarousel'
 import { CommunityCard } from '@/components/marketplace/CommunityCard';
 import { CommunityFormDialog } from '@/components/admin/CommunityFormDialog';
 import { MyCommunities } from '@/components/communities/MyCommunities';
-import { useCommunities } from '@/hooks/useCommunities';
+import { useCommunities, useIsCommunityManager } from '@/hooks/useCommunities';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,18 +18,34 @@ import { Search, Filter, Users, Plus } from 'lucide-react';
 import type { Tenant } from '@/types/tenant';
 
 const Communities = () => {
-  const { communities, isLoading, refetch } = useCommunities();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isLoading: roleLoading } = useUserRole() as ReturnType<typeof useUserRole> & { isLoading?: boolean };
+  const { isManager, isLoading: managerLoading } = useIsCommunityManager();
+  const scope = isAdmin ? 'all' : isManager ? 'managed' : 'directory';
+  const { communities, isLoading: listLoading, refetch } = useCommunities(scope, !roleLoading && !managerLoading);
+  const isLoading = listLoading || !!roleLoading || managerLoading;
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [verifiedFilter, setVerifiedFilter] = useState<'any' | 'verified' | 'unverified'>('any');
+  const [parentFilter, setParentFilter] = useState<'any' | 'top' | 'child'>('any');
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Tenant | null>(null);
   const heroImageUrl = useSiteMediaUrl('communities_hero');
 
-  const filteredCommunities = communities.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.slug.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const typeOptions = [...new Set(communities.map(c => c.category_type).filter(Boolean))] as string[];
+  const activeFilterCount = typeFilter.length + (verifiedFilter !== 'any' ? 1 : 0) + (parentFilter !== 'any' ? 1 : 0);
+  const filteredCommunities = communities.filter(c => {
+    const q = searchQuery.toLowerCase();
+    if (q && !c.name.toLowerCase().includes(q) && !c.slug.toLowerCase().includes(q)) return false;
+    if (!isAdmin) return true;
+    if (typeFilter.length && !typeFilter.includes(c.category_type ?? '')) return false;
+    if (verifiedFilter === 'verified' && !c.is_verified) return false;
+    if (verifiedFilter === 'unverified' && c.is_verified) return false;
+    if (parentFilter === 'top' && c.parent_tenant_id) return false;
+    if (parentFilter === 'child' && !c.parent_tenant_id) return false;
+    return true;
+  });
+  const label = (t: string) => t.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
 
   const handleCreateClick = () => {
     setEditingCommunity(null);
@@ -63,8 +81,8 @@ const Communities = () => {
       <div className="space-y-6">
         {/* Hero Section */}
         <PageHero
-          title="Skills Communities"
-          subtitle="Discover communities and request to join their simulation programs to level up your skills"
+          title="Communities"
+          subtitle={isManager && !isAdmin ? "The communities you manage and the organizations under them." : "Join your school, employer or training program to unlock its courses and Work Orders."}
           backgroundImage={heroImageUrl}
           primaryAction={isAdmin ? {
             label: 'Create Community',
@@ -93,16 +111,59 @@ const Communities = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
+          {isAdmin && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filter{activeFilterCount ? ` (${activeFilterCount})` : ''}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 space-y-4" align="start">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">Organization type</p>
+                  {typeOptions.map(t => (
+                    <label key={t} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={typeFilter.includes(t)}
+                        onCheckedChange={(v) => setTypeFilter(prev => v ? [...prev, t] : prev.filter(x => x !== t))}
+                      />
+                      {label(t)}
+                    </label>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">Verification</p>
+                  {(['any', 'verified', 'unverified'] as const).map(v => (
+                    <label key={v} className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={verifiedFilter === v} onCheckedChange={() => setVerifiedFilter(v)} />
+                      {label(v)}
+                    </label>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">Hierarchy</p>
+                  {([['any', 'Any'], ['top', 'Top-level only'], ['child', 'Child organizations']] as const).map(([v, l]) => (
+                    <label key={v} className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={parentFilter === v} onCheckedChange={() => setParentFilter(v)} />
+                      {l}
+                    </label>
+                  ))}
+                </div>
+                {activeFilterCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => { setTypeFilter([]); setVerifiedFilter('any'); setParentFilter('any'); }}>
+                    Clear filters
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
 
         {/* Communities Carousel */}
         <HorizontalCarousel
-          title="All Communities"
-          subtitle={`${filteredCommunities.length} skills communities`}
+          title={isManager && !isAdmin ? "Your Communities" : "All Communities"}
+          subtitle={`${filteredCommunities.length} communities`}
           icon={<Users className="h-5 w-5" />}
         >
           {filteredCommunities.map((community, idx) => (
