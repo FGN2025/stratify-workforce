@@ -101,12 +101,19 @@ Deno.serve(async (req) => {
         contractVersion: CONTRACT_VERSION,
         supportedContractVersions: SUPPORTED_CONTRACT_VERSIONS,
         readOnly: true,
-        writeEndpoints: [],
+        writeEndpoints: [
+          {
+            capability: 'submissions.create',
+            endpoint: '/functions/v1/studio-submit/submissions',
+            scope: 'submissions:create',
+            note: 'Package submissions are a separate function (studio-submit) and require the issuing app to be provisioned with can_submit_packages. Approval is human; nothing goes live automatically.',
+          },
+        ],
         note:
           'An absent credential is accepted on /capabilities only. Every other catalog route returns 401 without a valid short-lived Studio token.',
         catalogVersions: versions,
         unsupported: [
-          { capability: 'work-order.write', reason: 'Read-only contract. Submissions are a separate gate (Phase 4, blocked).' },
+          { capability: 'work-order.write', reason: 'Work Orders are never written directly. Studio packages may request draft Work Order creation on approval via studio-submit; activation stays human-gated.' },
           { capability: 'skill.proposal', reason: 'Academy owns approval. Studio approvals are simulated and never authoritative.' },
         ],
       };
