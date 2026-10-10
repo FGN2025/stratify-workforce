@@ -31,6 +31,8 @@ type SubmitSession = {
   appId: string;
   tenantId: string;
   approvedOrigins: string[];
+  scopes: string[];
+  canSubmitCourses: boolean;
 };
 
 type AuthFailure = { status: number; code: string; message: string };
@@ -70,7 +72,7 @@ async function resolveSubmitSession(req: Request): Promise<SubmitSession | AuthF
 
   const { data: app } = await admin
     .from('authorized_apps')
-    .select('id, is_active, can_submit_packages, allowed_origins')
+    .select('id, is_active, can_submit_packages, can_submit_courses, allowed_origins')
     .eq('id', token.app_id)
     .maybeSingle();
 
@@ -86,6 +88,8 @@ async function resolveSubmitSession(req: Request): Promise<SubmitSession | AuthF
     appId: token.app_id,
     tenantId: token.tenant_id,
     approvedOrigins: (app.allowed_origins as string[]) ?? [],
+    scopes: token.scopes as string[],
+    canSubmitCourses: !!app.can_submit_courses,
   };
 }
 
