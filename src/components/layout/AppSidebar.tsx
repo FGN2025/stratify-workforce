@@ -157,6 +157,7 @@ const adminSubItems: AdminEntry[] = [
     ],
   },
   { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench, tier: 'platform' },
+  { title: 'Studio Submissions', url: '/admin/studio-submissions', icon: PackageOpen, tier: 'platform' },
   { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2, tier: 'platform' },
 ];
 
