@@ -149,3 +149,12 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 ## Work Order authoring direction (2026-10-10, owner-stated)
 
 - [ ] Desired flow: pick an industry (My Academy App) first, then generate the Work Order in studio.fgn.gg; import from fgn.gg/challenges remains a second path. Configurator's direct Create dialog is independent of Studio today — assess whether to route authoring through Studio submissions.
+
+## Studio-first authoring (approved 2026-10-10)
+- [x] Create in Studio picker (industry app first), Review Inbox rename, Work Orders "Create" goes to Studio
+- [x] Submissions carry app + destinations (contract 2026-10-10.2)
+- [x] Admin menu merged: Simulations, Challenges, Integrations; Breakroom Mapper retired
+- [ ] Course Builder retirement — blocked on first real Studio package passing joint test (Darcy)
+- [ ] Studio side: destination selection, app launch values, Edit in Studio, Breakroom link editing — Darcy (FGN Creative Hub)
+- [ ] Remove FGN.GG import button once Studio distribution to FGN.GG is live
+- [ ] Hierarchy optimizations: curation by app, app-scoped admin filters, community landing per app, reporting by app
