@@ -90,7 +90,7 @@ export function MarketplaceRows({ reg }: { reg: MarketplaceRegistry }) {
   return (
     <div className="space-y-12">
       {featured.length > 0 && (
-        <HorizontalCarousel title="Featured apps" subtitle="Hand-picked places to start" icon={<LayoutGrid className="h-5 w-5" />} viewAllLink="/apps">
+        <HorizontalCarousel title="Featured industries" subtitle="Hand-picked places to start" icon={<LayoutGrid className="h-5 w-5" />} viewAllLink="/apps">
           {featured.map((a) => (
             <div key={a.key} className={`${DEFAULT_CARD_WIDTH} shrink-0 snap-start`}><AppCard app={a} disciplines={reg.disciplines} /></div>
           ))}
@@ -137,9 +137,9 @@ export function AppsDirectory() {
   return (
     <AcademyLayout>
       <section className="container mx-auto px-4 py-10">
-        <h1 className="font-display text-4xl font-bold">FGN Academy apps</h1>
+        <h1 className="font-display text-4xl font-bold">FGN Academy industries</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Find the app for the discipline you want to grow in. One account and one Skill Passport go with you across all of them.
+          Find the industry you want to grow in. One account and one Skill Passport go with you across all of them.
           Browsing never changes your organization or access.
         </p>
 
@@ -163,8 +163,8 @@ export function AppsDirectory() {
           {error && <p className="text-destructive">The app list is unavailable right now.</p>}
           {data && !filtering && <MarketplaceRows reg={data} />}
           {data && filtering && (
-            filtered.length === 0 ? <p className="text-muted-foreground">No apps match these filters yet.</p> : (
-              <HorizontalCarousel title={`${filtered.length} app${filtered.length === 1 ? '' : 's'}`}>
+            filtered.length === 0 ? <p className="text-muted-foreground">No industries match these filters yet.</p> : (
+              <HorizontalCarousel title={`${filtered.length} industr${filtered.length === 1 ? 'y' : 'ies'}${filtering ? '' : ''}`}>
                 {filtered.map((a) => (
                   <div key={a.key} className={`${DEFAULT_CARD_WIDTH} shrink-0 snap-start`}><AppCard app={a} disciplines={data.disciplines} /></div>
                 ))}
@@ -187,7 +187,7 @@ export function DisciplinePage() {
   return (
     <AcademyLayout>
       <section className="container mx-auto px-4 py-10">
-        <Button variant="ghost" asChild className="mb-4 gap-2"><Link to="/apps"><ArrowLeft className="h-4 w-4" /> All apps</Link></Button>
+        <Button variant="ghost" asChild className="mb-4 gap-2"><Link to="/apps"><ArrowLeft className="h-4 w-4" /> All industries</Link></Button>
         {isLoading && <Skeleton className="h-48 rounded-xl" />}
         {!isLoading && !d && <p className="text-muted-foreground">This discipline isn't available.</p>}
         {d && data && (
@@ -198,7 +198,7 @@ export function DisciplinePage() {
               {d.tagline && <p className="mt-2 max-w-2xl text-lg text-muted-foreground">{d.tagline}</p>}
               {d.description && <p className="mt-2 max-w-2xl text-muted-foreground">{d.description}</p>}
             </div>
-            <HorizontalCarousel title="Apps in this discipline">
+            <HorizontalCarousel title="Industries in this discipline">
               {apps.map((a) => (
                 <div key={a.key} className={`${DEFAULT_CARD_WIDTH} shrink-0 snap-start`}><AppCard app={a} disciplines={data.disciplines} /></div>
               ))}
@@ -244,7 +244,7 @@ export function AppDetail() {
   return (
     <AcademyLayout>
       <section className="container mx-auto px-4 py-10">
-        <Button variant="ghost" asChild className="mb-4 gap-2"><Link to="/apps"><ArrowLeft className="h-4 w-4" /> All apps</Link></Button>
+        <Button variant="ghost" asChild className="mb-4 gap-2"><Link to="/apps"><ArrowLeft className="h-4 w-4" /> All industries</Link></Button>
         {isLoading && <Skeleton className="h-48 rounded-xl" />}
         {!isLoading && !app && <p className="text-muted-foreground">This app isn't available.</p>}
         {app && target && (
