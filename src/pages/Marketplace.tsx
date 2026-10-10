@@ -164,7 +164,7 @@ export function AppsDirectory() {
           {data && !filtering && <MarketplaceRows reg={data} />}
           {data && filtering && (
             filtered.length === 0 ? <p className="text-muted-foreground">No industries match these filters yet.</p> : (
-              <HorizontalCarousel title={`${filtered.length} industr${filtered.length === 1 ? 'y' : 'ies'}${filtering ? '' : ''}`}>
+              <HorizontalCarousel title={`${filtered.length} industr${filtered.length === 1 ? 'y' : 'ies'}`}>
                 {filtered.map((a) => (
                   <div key={a.key} className={`${DEFAULT_CARD_WIDTH} shrink-0 snap-start`}><AppCard app={a} disciplines={data.disciplines} /></div>
                 ))}
