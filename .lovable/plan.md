@@ -47,8 +47,19 @@ Platform tier: Create, Review Inbox, Users, Communities, Marketplace Catalog, Ch
 - Own Breakroom link editing and SCORM generation.
 - Handoff doc updated with the new fields; joint test closes the phase.
 
+## 5. Optimizations from the industry-subdomain and community hierarchy
+- One place per fact: apps (subdomains) own launch and branding; disciplines own industry grouping; communities own who sees what. Admin screens edit each fact in one place only.
+- Community catalogs by app: Curation becomes "choose apps, then fine-tune" — a community turns on whole industry apps, with per-item exceptions, instead of picking hundreds of single items.
+- App-scoped admin view: platform admins can filter Work Orders, courses, submissions and evidence by app, so each industry is managed like its own small site.
+- Shared app identity: subdomain sites read their cover, name, tagline and accent from the Academy catalog feed, so branding is changed once.
+- Shared sign-in and progress: subdomains use Academy sign-in (already built) and send results back through the one learning-source queue; no per-site learner records.
+- Community landing per app: each community gets an app-filtered page (e.g. a school's Construction offerings) using existing data.
+- Cleaner learner menu: Apps replaces scattered browsing entries; Course Catalog filters by app.
+- Fewer duplicate lists: industries list in constants, SIM categories and disciplines are mapped so admins never retype industry names.
+- Reporting by app and community from the existing points ledger and evidence records.
+
 ## Unchanged
-FGN.GG import, completion sync, points, Skill Passport, Breakroom sync, Work Order categories/filters/MCP tools, server-only XP/credits, Decision 4, time ban, no changes to FGN.GG, Merits, Maritime, Sim Racing, Railroading.
+FGN.GG import, completion sync, points, Skill Passport, Breakroom sync, Work Order categories/filters/MCP tools, server-only XP/credits, Decision 4, time ban, no changes to FGN.GG, Merits, Maritime, Sim Racing, Railroading. Sub-sites stay independently deployed; Academy only provides the shared feed, sign-in and records.
 
 ## Technical details
 - Submission contract: add optional `applicationSlug` (validated against `applications`) in a new contract version; older versions still accepted. Store on `studio_submissions`.
