@@ -47,7 +47,7 @@ export default function Learn() {
               )}
             </TabsList>
 
-            {/* Course Catalog */}
+            {/* Skills Catalog */}
             <TabsContent value="catalog" className="space-y-6">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkles className="h-5 w-5 text-primary" />
