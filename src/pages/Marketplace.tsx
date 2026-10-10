@@ -52,9 +52,10 @@ export function AppCard({ app, disciplines }: { app: MarketplaceApp; disciplines
         <h3 className="font-display text-xl font-semibold">{app.name}</h3>
         {app.tagline && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{app.tagline}</p>}
         <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-          <p className="text-xs text-muted-foreground">
-            {primary?.name}{app.disciplines.length > 1 && ` + ${app.disciplines.length - 1} more`}
-          </p>
+          <div className="min-w-0 text-xs text-muted-foreground">
+            <p>{primary?.name}{app.disciplines.length > 1 && ` + ${app.disciplines.length - 1} more`}</p>
+            <p className="mt-1 text-foreground/70">{ACCESS_LABEL[app.access_terms]}</p>
+          </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
         </div>
       </div>
