@@ -1,10 +1,12 @@
 // Shared auth + scope helpers for the FGN Studio read-only catalog API.
 // Read-only. No write path. Contract: X-Studio-Contract.
 
-export const CONTRACT_VERSION = '2026-10-10.2';
+export const CONTRACT_VERSION = '2026-10-10.3';
 // 2026-09-23.1: read-only catalog. 2026-10-10.1: adds the studio-submit write path
-// (submissions:create scope). Catalog reads are unchanged, so both are accepted.
-export const SUPPORTED_CONTRACT_VERSIONS = ['2026-10-10.2', '2026-10-10.1', '2026-09-23.1'];
+// (submissions:create scope). 2026-10-10.3: adds course submissions
+// (submissionType: "course", gated by the submissions:create:courses scope and the
+// issuing app's can_submit_courses flag). Catalog reads are unchanged, so all are accepted.
+export const SUPPORTED_CONTRACT_VERSIONS = ['2026-10-10.3', '2026-10-10.2', '2026-10-10.1', '2026-09-23.1'];
 
 export const TOKEN_TTL_SECONDS = 2 * 60 * 60; // 2 hours (7200 s), owner-approved
 export const RATE_LIMIT_WINDOW_SECONDS = 60;

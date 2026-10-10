@@ -199,8 +199,13 @@ Deno.serve(async (req) => {
       const raw = randomToken();
       const tokenHash = await sha256Hex(raw);
       const expiresAt = new Date(Date.now() + TOKEN_TTL_SECONDS * 1000).toISOString();
-      // Apps provisioned for Phase 4 submissions also receive the write scope.
-      const scopes = ['catalog:read', ...(app.can_submit_packages ? ['submissions:create'] : [])];
+      // Apps provisioned for Phase 4 submissions also receive the write scope;
+      // apps additionally permitted to send courses receive the course scope.
+      const scopes = [
+        'catalog:read',
+        ...(app.can_submit_packages ? ['submissions:create'] : []),
+        ...(app.can_submit_courses ? ['submissions:create:courses'] : []),
+      ];
       const { error } = await admin.from('studio_tokens').insert({
         app_id: app.id,
         token_hash: tokenHash,
