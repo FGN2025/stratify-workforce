@@ -13,6 +13,10 @@ Public endpoint documentation. **No credential is required to read this page or 
 
 ## Package submissions (Phase 4) — `studio-submit`
 
+Studio-side build brief: `docs/phase-4-studio-submissions-handoff.md` — the standalone
+handoff covering token minting, the submission schema, status polling, the review
+lifecycle, and the joint acceptance checklist.
+
 | Item | Value |
 |---|---|
 | API base URL | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-submit` |

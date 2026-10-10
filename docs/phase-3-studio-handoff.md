@@ -9,7 +9,8 @@ app is provisioned with `can_submit_packages`, so newly minted tokens carry the
 `submissions:create` scope alongside `catalog:read`. Full request/response contract:
 `docs/api/studio-catalog/README.md` → "Package submissions (Phase 4)". Approval is human and
 creates inactive content only. Studio polls `GET /studio-submit/status/:id` for the outcome —
-Academy does not push status outbound.
+Academy does not push status outbound. **Studio-side build brief:**
+`docs/phase-4-studio-submissions-handoff.md`.
 
 ## 1. Confirmed scope
 
