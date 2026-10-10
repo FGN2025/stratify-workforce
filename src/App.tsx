@@ -48,6 +48,7 @@ import ActivityMapping from "./pages/admin/ActivityMapping";
 import ScormPlayerLaunch from "./pages/ScormPlayerLaunch";
 import CourseBuilder from "./pages/admin/CourseBuilder";
 import StudioSubmissions from "./pages/admin/StudioSubmissions";
+import CreateInStudio from "./pages/admin/CreateInStudio";
 import CommunitySetup from "./pages/admin/CommunitySetup";
 import CommunityDashboard from "./pages/admin/CommunityDashboard";
 import Configurator from "./pages/admin/Configurator";
@@ -165,6 +166,9 @@ const App = () => (
 
               <Route path="/admin/course-builder" element={
                 <AdminRoute><CourseBuilder /></AdminRoute>
+              } />
+              <Route path="/admin/create" element={
+                <AdminRoute><CreateInStudio /></AdminRoute>
               } />
               <Route path="/admin/studio-submissions" element={
                 <AdminRoute><StudioSubmissions /></AdminRoute>

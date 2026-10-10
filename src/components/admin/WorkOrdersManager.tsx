@@ -256,9 +256,12 @@ export function WorkOrdersManager() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Work Order
+          {/* New Work Orders are authored in Studio; this screen is for review and quick edits. */}
+          <Button asChild>
+            <a href="/admin/create">
+              <Plus className="h-4 w-4 mr-2" />
+              Create in Studio
+            </a>
           </Button>
         </div>
       </div>

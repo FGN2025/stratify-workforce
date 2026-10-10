@@ -394,6 +394,20 @@ Deno.serve(async (req) => {
         : [];
       const requestWoCreation = body.requestWorkOrderCreation === true;
       const gameTitle = typeof body.gameTitle === 'string' ? body.gameTitle : null;
+      const applicationSlug = typeof body.applicationSlug === 'string' ? body.applicationSlug.trim() : null;
+      const ALLOWED_DESTINATIONS = new Set(['fgn-academy', 'fgn-gg']);
+      const destinations = Array.isArray(body.destinations)
+        ? Array.from(new Set((body.destinations as unknown[]).filter((v): v is string => typeof v === 'string')))
+        : ['fgn-academy'];
+      if (!destinations.length || destinations.some((d) => !ALLOWED_DESTINATIONS.has(d))) {
+        return jsonResponse({ error: 'invalid_request', message: 'destinations must contain only "fgn-academy" and/or "fgn-gg".' }, 400, cors);
+      }
+      if (applicationSlug) {
+        const { data: appRow } = await admin.from('applications').select('key').eq('key', applicationSlug).neq('status', 'hidden').maybeSingle();
+        if (!appRow) {
+          return jsonResponse({ error: 'invalid_request', message: 'applicationSlug is not a known Academy app.' }, 400, cors);
+        }
+      }
 
       if (!idempotencyKey || idempotencyKey.length > 200) {
         return jsonResponse({ error: 'invalid_request', message: 'idempotencyKey is required (max 200 chars).' }, 400, cors);
@@ -463,6 +477,8 @@ Deno.serve(async (req) => {
         manifest_summary: { ...summary, gameTitle },
         source_work_order_ids: sourceWorkOrderIds,
         request_work_order_creation: requestWoCreation,
+        application_key: applicationSlug,
+        destinations,
         validation_status: validationStatus,
         validation_errors: errors.length ? errors : null,
       });

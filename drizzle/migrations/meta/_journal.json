@@ -29,6 +29,13 @@
       "when": 1791644408944,
       "tag": "0003_studio_submissions_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791659797399,
+      "tag": "0004_studio_submissions_app_and_destinations",
+      "breakpoints": true
     }
   ]
 }

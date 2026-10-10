@@ -4216,8 +4216,10 @@ export type Database = {
       studio_submissions: {
         Row: {
           app_id: string
+          application_key: string | null
           created_at: string
           description: string | null
+          destinations: string[]
           generated_work_order_id: string | null
           id: string
           idempotency_key: string
@@ -4240,8 +4242,10 @@ export type Database = {
         }
         Insert: {
           app_id: string
+          application_key?: string | null
           created_at?: string
           description?: string | null
+          destinations?: string[]
           generated_work_order_id?: string | null
           id?: string
           idempotency_key: string
@@ -4264,8 +4268,10 @@ export type Database = {
         }
         Update: {
           app_id?: string
+          application_key?: string | null
           created_at?: string
           description?: string | null
+          destinations?: string[]
           generated_work_order_id?: string | null
           id?: string
           idempotency_key?: string

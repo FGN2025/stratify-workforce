@@ -29,7 +29,8 @@ import { ProgramIntegrationHealth } from '@/components/admin/ProgramIntegrationH
 import { PlayOutboundPanel } from '@/components/admin/PlayOutboundPanel';
 import { ChallengeLessonMappingsManager } from '@/components/admin/ChallengeLessonMappingsManager';
 import { ChallengeTrackMembershipManager } from '@/components/admin/ChallengeTrackMembershipManager';
-import { BreakroomMapperManager } from '@/components/admin/BreakroomMapperManager';
+import { AdminHubTabs, type HubTab } from '@/components/admin/AdminHubTabs';
+import { Navigate } from 'react-router-dom';
 import { PlayWebhookRetryManager } from '@/components/admin/PlayWebhookRetryManager';
 import { ParityMonitorDashboard } from '@/components/admin/ParityMonitorDashboard';
 import { PlayGamesSyncPanel } from '@/components/admin/PlayGamesSyncPanel';
@@ -265,11 +266,20 @@ export default function Admin() {
         );
 
       case 'games':
-        return <SimGamesManager />;
       case 'sim-categories':
-        return <SimCategoriesManager />;
       case 'sim-resources':
-        return <SimResourcesManager />;
+        return (
+          <AdminHubTabs
+            title="Simulations"
+            description="Supported simulations, the internal category taxonomy, and deep-dive resources."
+            active={section}
+            tabs={[
+              { section: 'games', label: 'Games', render: () => <SimGamesManager /> },
+              { section: 'sim-categories', label: 'Categories', render: () => <SimCategoriesManager /> },
+              { section: 'sim-resources', label: 'Resources', render: () => <SimResourcesManager /> },
+            ]}
+          />
+        );
       case 'media':
         return <MediaLibrary />;
       case 'codes':
@@ -291,26 +301,43 @@ export default function Admin() {
       case 'notebook-telemetry':
         return isSuperAdmin ? <NotebookTelemetryDashboard /> : <AccessDenied />;
       case 'sync-tester':
-        return isSuperAdmin ? (
-          <div className="space-y-6">
-            <IntegrationHealthCheck />
-            <ProgramIntegrationHealth />
-            <PlayOutboundPanel />
-            <ChallengeSyncTester />
-          </div>
-        ) : <AccessDenied />;
-      case 'challenge-mappings':
-        return <ChallengeLessonMappingsManager />;
-      case 'challenge-tracks':
-        return <ChallengeTrackMembershipManager />;
-      case 'breakroom-mapper':
-        return <BreakroomMapperManager />;
       case 'play-webhook-retry':
-        return isSuperAdmin ? <PlayWebhookRetryManager /> : <AccessDenied />;
       case 'parity-monitor':
-        return isSuperAdmin ? <ParityMonitorDashboard /> : <AccessDenied />;
-      case 'play-sync':
-        return <PlayGamesSyncPanel />;
+      case 'play-sync': {
+        if (!isSuperAdmin && section !== 'play-sync') return <AccessDenied />;
+        const tabs: HubTab[] = [
+          ...(isSuperAdmin ? [{ section: 'sync-tester', label: 'Health', render: () => (
+            <div className="space-y-6">
+              <IntegrationHealthCheck />
+              <ProgramIntegrationHealth />
+              <PlayOutboundPanel />
+              <ChallengeSyncTester />
+            </div>
+          ) }] : []),
+          { section: 'play-sync', label: 'Games sync', render: () => <PlayGamesSyncPanel /> },
+          ...(isSuperAdmin ? [
+            { section: 'play-webhook-retry', label: 'Webhook retry', render: () => <PlayWebhookRetryManager /> },
+            { section: 'parity-monitor', label: 'Parity monitor', render: () => <ParityMonitorDashboard /> },
+          ] : []),
+        ];
+        return <AdminHubTabs title="Integrations" description="FGN Play connection health, retries and parity." active={section} tabs={tabs} />;
+      }
+      case 'challenge-mappings':
+      case 'challenge-tracks':
+        return (
+          <AdminHubTabs
+            title="Challenges"
+            description="Links between FGN.GG challenges and Academy content. New links arrive from Studio; use these for legacy items and overrides."
+            active={section}
+            tabs={[
+              { section: 'challenge-mappings', label: 'Lesson mappings', render: () => <ChallengeLessonMappingsManager /> },
+              { section: 'challenge-tracks', label: 'Tracks', render: () => <ChallengeTrackMembershipManager /> },
+            ]}
+          />
+        );
+      case 'breakroom-mapper':
+        // Retired: Breakroom links are set on the Work Order (in Studio, or Configurator quick edit).
+        return <Navigate to="/admin/work-orders" replace />;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : <AccessDenied />;
       default:

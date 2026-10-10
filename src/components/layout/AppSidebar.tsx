@@ -38,6 +38,7 @@ import {
   Activity,
   Building2,
   PackageOpen,
+  Sparkles,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -130,36 +131,25 @@ const adminSubItems: AdminEntry[] = [
   { title: 'Skills Paths', url: '/admin/career-paths', icon: Route, tier: 'community' },
   { title: 'Configurator', url: '/admin/configurator', icon: Wrench, tier: 'community' },
 
-  // Platform-only.
+  // Platform-only. Authoring happens in Studio; Academy reviews, publishes and curates.
+  { title: 'Create in Studio', url: '/admin/create', icon: Sparkles, tier: 'platform' },
+  { title: 'Review Inbox', url: '/admin/studio-submissions', icon: PackageOpen, tier: 'platform' },
   { title: 'Users', url: '/admin/users', icon: Users, tier: 'platform' },
-  { title: 'Marketplace Catalog', url: '/admin/marketplace', icon: Target, tier: 'platform' },
   { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
-  {
-    groupKey: 'sim',
-    title: 'SIM',
-    icon: Gamepad2,
-    tier: 'platform',
-    children: [
-      { title: 'SIM Games', url: '/admin/games', icon: Gamepad2, tier: 'platform' },
-      { title: 'SIM Categories', url: '/admin/sim-categories', icon: Box, tier: 'platform' },
-      { title: 'SIM Resources', url: '/admin/sim-resources', icon: Box, tier: 'platform' },
-    ],
-  },
+  { title: 'Marketplace Catalog', url: '/admin/marketplace', icon: Target, tier: 'platform' },
   {
     groupKey: 'challenges',
     title: 'Challenges',
     icon: FileCheck,
     tier: 'platform',
     children: [
-      { title: 'Challenge Registry', url: '/admin/challenge-registry', icon: FileCheck, tier: 'platform' },
-      { title: 'Challenge Mappings', url: '/admin/challenge-mappings', icon: LinkIcon, tier: 'platform' },
-      { title: 'Challenge Tracks', url: '/admin/challenge-tracks', icon: Route, tier: 'platform' },
+      { title: 'Registry', url: '/admin/challenge-registry', icon: FileCheck, tier: 'platform' },
+      { title: 'Mappings & Tracks', url: '/admin/challenge-mappings', icon: LinkIcon, tier: 'platform' },
       { title: 'Activity Mapping', url: '/admin/activity-mapping', icon: LinkIcon, tier: 'platform' },
     ],
   },
-  { title: 'Course Builder', url: '/admin/course-builder', icon: Wrench, tier: 'platform' },
-  { title: 'Studio Submissions', url: '/admin/studio-submissions', icon: PackageOpen, tier: 'platform' },
-  { title: 'Breakroom Mapper', url: '/admin/breakroom-mapper', icon: Link2, tier: 'platform' },
+  { title: 'Simulations', url: '/admin/games', icon: Gamepad2, tier: 'platform' },
+  { title: 'Integrations', url: '/admin/play-sync', icon: Zap, tier: 'platform' },
 ];
 
 const superAdminSubItems = [
@@ -170,10 +160,6 @@ const superAdminSubItems = [
   { title: 'Discord', url: '/admin/discord', icon: MessageCircle },
   { title: 'AI Config', url: '/admin/ai-config', icon: Bot },
   { title: 'Notebook Telemetry', url: '/admin/notebook-telemetry', icon: Bot },
-  { title: 'FGN Play', url: '/admin/sync-tester', icon: Zap },
-  { title: 'Play Webhook Retry', url: '/admin/play-webhook-retry', icon: RotateCcw },
-  { title: 'Parity Monitor', url: '/admin/parity-monitor', icon: Activity },
-  { title: 'Play Games Sync', url: '/admin/play-sync', icon: Gamepad2 },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
 
