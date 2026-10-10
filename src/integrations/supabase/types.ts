@@ -395,6 +395,7 @@ export type Database = {
           can_issue_credentials: boolean
           can_read_catalog: boolean
           can_read_credentials: boolean
+          can_submit_courses: boolean
           can_submit_packages: boolean
           catalog_include_descendants: boolean
           catalog_tenant_id: string | null
@@ -414,6 +415,7 @@ export type Database = {
           can_issue_credentials?: boolean
           can_read_catalog?: boolean
           can_read_credentials?: boolean
+          can_submit_courses?: boolean
           can_submit_packages?: boolean
           catalog_include_descendants?: boolean
           catalog_tenant_id?: string | null
@@ -433,6 +435,7 @@ export type Database = {
           can_issue_credentials?: boolean
           can_read_catalog?: boolean
           can_read_credentials?: boolean
+          can_submit_courses?: boolean
           can_submit_packages?: boolean
           catalog_include_descendants?: boolean
           catalog_tenant_id?: string | null
@@ -4234,6 +4237,7 @@ export type Database = {
           scorm_course_id: string | null
           scorm_version: string
           source_work_order_ids: string[]
+          submission_type: string
           tenant_id: string
           title: string
           updated_at: string
@@ -4260,6 +4264,7 @@ export type Database = {
           scorm_course_id?: string | null
           scorm_version?: string
           source_work_order_ids?: string[]
+          submission_type?: string
           tenant_id: string
           title: string
           updated_at?: string
@@ -4286,6 +4291,7 @@ export type Database = {
           scorm_course_id?: string | null
           scorm_version?: string
           source_work_order_ids?: string[]
+          submission_type?: string
           tenant_id?: string
           title?: string
           updated_at?: string
