@@ -1,3 +1,4 @@
+import { TENANT_COLUMNS } from '@/lib/tenantColumns';
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -53,7 +54,7 @@ const CommunityProfile = () => {
       if (user) {
         const { data: fullRow } = await supabase
           .from('tenants')
-          .select('*')
+          .select(TENANT_COLUMNS)
           .eq('slug', slug)
           .maybeSingle();
         tenantData = fullRow;

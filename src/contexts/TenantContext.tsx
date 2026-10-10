@@ -1,3 +1,4 @@
+import { TENANT_COLUMNS } from '@/lib/tenantColumns';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -124,7 +125,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = user
         ? await supabase
             .from('tenants')
-            .select('*')
+            .select(TENANT_COLUMNS)
             .order('hierarchy_level', { ascending: true })
             .order('name')
         : await supabase
