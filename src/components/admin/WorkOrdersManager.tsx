@@ -195,11 +195,6 @@ export function WorkOrdersManager() {
     setIsDialogOpen(true);
   };
 
-  const handleCreate = () => {
-    setEditingWorkOrder(null);
-    setIsDialogOpen(true);
-  };
-
   const filteredWorkOrders = useMemo(() => {
     return workOrders.filter((wo) => {
       const matchesGame = gameFilter === 'all' || wo.game_title === gameFilter;
@@ -234,7 +229,7 @@ export function WorkOrdersManager() {
         <div>
           <h3 className="text-lg font-semibold">Work Orders Management</h3>
           <p className="text-sm text-muted-foreground">
-            Configure training scenarios for simulation games
+             Review, publish, assign and make quick edits. New Work Orders are authored in Studio.
           </p>
         </div>
         <div className="flex items-center gap-2">

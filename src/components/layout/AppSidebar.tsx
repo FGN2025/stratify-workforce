@@ -5,7 +5,6 @@ import {
   ClipboardList, 
   User, 
   Users, 
-  Settings,
   Trophy,
   ShieldCheck,
   GraduationCap,
@@ -13,29 +12,14 @@ import {
   ChevronDown,
   Link as LinkIcon,
   Briefcase,
-  BookOpen,
   Target,
   Code,
   HelpCircle,
   FileCheck,
-  Gamepad2,
-  Box,
-  Image,
   KeyRound,
-  Route,
-  MessageSquare,
-  AppWindow,
-  Webhook,
-  Award,
-  MessageCircle,
-  Bot,
   Zap,
   Shield,
   Calendar,
-  Wrench,
-  Link2,
-  RotateCcw,
-  Activity,
   Building2,
   PackageOpen,
   Sparkles,
@@ -89,7 +73,6 @@ const navGroups = [
       { title: 'Membership', url: '/communities', icon: Users },
       { title: 'Cohort Events', url: '/events', icon: CalendarDays },
       { title: 'Help', url: '/help', icon: HelpCircle },
-      { title: 'Platform Guide', url: '/help/guide', icon: BookOpen },
     ],
   },
 ];
@@ -110,63 +93,33 @@ type AdminLeaf = {
   badgeKey?: 'evidence' | 'community';
   tier: AdminTier;
 };
-type AdminGroup = {
-  groupKey: 'sim' | 'challenges';
-  title: string;
-  icon: LucideIcon;
-  tier: AdminTier;
-  children: AdminLeaf[];
-};
-type AdminEntry = AdminLeaf | AdminGroup;
-
-const adminSubItems: AdminEntry[] = [
-  // Community-scoped — tenant owners/admins can use these for their own community.
-  { title: 'Community Setup', url: '/admin/community-setup', icon: Shield, tier: 'community' },
-  { title: 'Events', url: '/admin/events', icon: Calendar, tier: 'community' },
-  { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList, tier: 'community' },
+const adminSubItems: AdminLeaf[] = [
+  // Community operations. Authoring remains in Studio.
+  { title: 'Overview', url: '/admin/community-setup', icon: LayoutDashboard, tier: 'community' },
+  { title: 'Assignments', url: '/admin/work-orders', icon: ClipboardList, tier: 'community' },
   { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const, tier: 'community' },
-  { title: 'Curation', url: '/admin/curation', icon: FileCheck, tier: 'community' },
-  { title: 'Media Library', url: '/admin/media', icon: Image, tier: 'community' },
-  { title: 'Registration Codes', url: '/admin/codes', icon: KeyRound, tier: 'community' },
-  { title: 'Skills Paths', url: '/admin/career-paths', icon: Route, tier: 'community' },
-  { title: 'Configurator', url: '/admin/configurator', icon: Wrench, tier: 'community' },
+  { title: 'Events', url: '/admin/events', icon: Calendar, tier: 'community' },
+  { title: 'Catalog', url: '/admin/curation', icon: Target, tier: 'community' },
+  { title: 'Access', url: '/admin/codes', icon: KeyRound, tier: 'community' },
 
-  // Platform-only. Authoring happens in Studio; Academy reviews, publishes and curates.
+  // Platform operations. Creation starts in Studio; Academy reviews and governs.
+  { title: 'Overview', url: '/admin/overview', icon: LayoutDashboard, tier: 'platform' },
   { title: 'Create in Studio', url: '/admin/create', icon: Sparkles, tier: 'platform' },
   { title: 'Review Inbox', url: '/admin/studio-submissions', icon: PackageOpen, tier: 'platform' },
-  { title: 'Users', url: '/admin/users', icon: Users, tier: 'platform' },
+  { title: 'Content Operations', url: '/admin/work-orders', icon: ClipboardList, tier: 'platform' },
+  { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const, tier: 'platform' },
+  { title: 'People', url: '/admin/users', icon: Users, tier: 'platform' },
   { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
-  { title: 'Marketplace Catalog', url: '/admin/marketplace', icon: Target, tier: 'platform' },
-  {
-    groupKey: 'challenges',
-    title: 'Challenges',
-    icon: FileCheck,
-    tier: 'platform',
-    children: [
-      { title: 'Registry', url: '/admin/challenge-registry', icon: FileCheck, tier: 'platform' },
-      { title: 'Mappings & Tracks', url: '/admin/challenge-mappings', icon: LinkIcon, tier: 'platform' },
-      { title: 'Activity Mapping', url: '/admin/activity-mapping', icon: LinkIcon, tier: 'platform' },
-    ],
-  },
-  { title: 'Simulations', url: '/admin/games', icon: Gamepad2, tier: 'platform' },
+  { title: 'Marketplace', url: '/admin/marketplace', icon: Target, tier: 'platform' },
   { title: 'Integrations', url: '/admin/play-sync', icon: Zap, tier: 'platform' },
+  { title: 'Platform Settings', url: '/admin/authorized-apps', icon: Shield, tier: 'platform' },
 ];
 
 const superAdminSubItems = [
-  { title: 'Community Review', url: '/admin/community-review', icon: MessageSquare, badgeKey: 'community' as const },
-  { title: 'Authorized Apps', url: '/admin/authorized-apps', icon: AppWindow },
-  { title: 'Webhooks', url: '/admin/webhooks', icon: Webhook },
-  { title: 'Credential Types', url: '/admin/credential-types', icon: Award },
-  { title: 'Discord', url: '/admin/discord', icon: MessageCircle },
-  { title: 'AI Config', url: '/admin/ai-config', icon: Bot },
-  { title: 'Notebook Telemetry', url: '/admin/notebook-telemetry', icon: Bot },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
 
-
 const standaloneAdminItems = [
-  { title: 'Students', url: '/students', icon: Users, adminOnly: true },
-  { title: 'Settings', url: '/settings', icon: Settings, adminOnly: true },
   { title: 'Developers', url: '/developers', icon: Code, developerOnly: true },
 ];
 
@@ -189,12 +142,6 @@ export function AppSidebar() {
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
   const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
-
-  const simChildPaths = ['/admin/games', '/admin/sim-categories', '/admin/sim-resources'];
-  const challengeChildPaths = ['/admin/challenge-registry', '/admin/challenge-mappings', '/admin/challenge-tracks', '/admin/activity-mapping'];
-  const [simOpen, setSimOpen] = useState(simChildPaths.includes(location.pathname));
-  const [challengesOpen, setChallengesOpen] = useState(challengeChildPaths.includes(location.pathname));
-
 
   const isActive = (path: string) => location.pathname === path;
   
@@ -274,7 +221,7 @@ export function AppSidebar() {
         {showAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-              {showPlatformAdmin ? 'Admin' : 'Community Admin'}
+               {showPlatformAdmin ? 'Academy Operations' : 'Community Admin'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -303,70 +250,7 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pl-4">
                       <SidebarMenu>
-                        {visibleAdminSubItems.map((item) => {
-                          if ('children' in item) {
-                            const groupOpen = item.groupKey === 'sim' ? simOpen : challengesOpen;
-                            const setGroupOpen = item.groupKey === 'sim' ? setSimOpen : setChallengesOpen;
-                            const anyChildActive = item.children.some((c) => isActive(c.url));
-                            return (
-                              <Collapsible
-                                key={item.groupKey}
-                                open={groupOpen}
-                                onOpenChange={setGroupOpen}
-                              >
-                                <SidebarMenuItem>
-                                  <CollapsibleTrigger asChild>
-                                    <SidebarMenuButton
-                                      tooltip={item.title}
-                                      className={cn(
-                                        "w-full justify-between",
-                                        anyChildActive
-                                          ? "text-primary"
-                                          : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <item.icon className="h-4 w-4" />
-                                        {!collapsed && <span>{item.title}</span>}
-                                      </div>
-                                      {!collapsed && (
-                                        <ChevronDown className={cn(
-                                          "h-4 w-4 transition-transform",
-                                          groupOpen && "rotate-180"
-                                        )} />
-                                      )}
-                                    </SidebarMenuButton>
-                                  </CollapsibleTrigger>
-                                  <CollapsibleContent className="pl-4">
-                                    <SidebarMenu>
-                                      {item.children.map((child) => (
-                                        <SidebarMenuItem key={child.url}>
-                                          <SidebarMenuButton
-                                            asChild
-                                            isActive={isActive(child.url)}
-                                            tooltip={child.title}
-                                          >
-                                            <NavLink
-                                              to={child.url}
-                                              className={cn(
-                                                "flex items-center gap-3 transition-colors",
-                                                isActive(child.url)
-                                                  ? "text-primary bg-primary/10"
-                                                  : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                                              )}
-                                            >
-                                              <child.icon className="h-4 w-4" />
-                                              {!collapsed && <span>{child.title}</span>}
-                                            </NavLink>
-                                          </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                      ))}
-                                    </SidebarMenu>
-                                  </CollapsibleContent>
-                                </SidebarMenuItem>
-                              </Collapsible>
-                            );
-                          }
+                         {visibleAdminSubItems.map((item) => {
                           const count = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
                           return (
                             <SidebarMenuItem key={item.url}>
@@ -401,7 +285,7 @@ export function AppSidebar() {
                           );
                         })}
 
-                        {/* Super Admin sub-items */}
+                         {/* One restricted destination contains all elevated controls. */}
                         {showSuperAdmin && (
                           <>
                             {!collapsed && (
@@ -450,7 +334,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 </Collapsible>
 
-                {/* Standalone admin items (Students, Settings, Developers) */}
+                 {/* Developer portal remains separate from Academy operations. */}
                 {visibleStandaloneItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
