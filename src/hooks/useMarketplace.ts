@@ -53,7 +53,7 @@ export const ACCESS_LABEL: Record<MarketplaceApp['access_terms'], string> = {
   organization_invite: 'By organization invitation',
 };
 export const LAUNCH_LABEL: Record<MarketplaceApp['launch_type'], string> = {
-  subdomain: 'FGN Academy app',
+  subdomain: 'FGN Academy industry',
   external: 'Partner site',
   in_academy: 'Inside FGN Academy',
 };

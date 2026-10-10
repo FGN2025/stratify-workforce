@@ -23,7 +23,7 @@ import {
 
 const QUICK_LINKS = [
   { title: 'Catalog', description: 'Choose the Academy apps and content this community offers.', url: '/admin/curation', icon: FileCheck },
-  { title: 'Assignments', description: 'Assign and manage existing Work Orders.', url: '/admin/work-orders', icon: ClipboardList },
+  { title: 'Work Orders', description: 'Assign and manage existing Work Orders.', url: '/admin/work-orders', icon: ClipboardList },
   { title: 'Events', description: 'Schedule community-only events.', url: '/admin/events', icon: Calendar },
   { title: 'Evidence Review', description: 'Approve member evidence submissions.', url: '/admin/evidence', icon: Shield },
   { title: 'Access', description: 'Generate registration codes for this community.', url: '/admin/codes', icon: KeyRound },
