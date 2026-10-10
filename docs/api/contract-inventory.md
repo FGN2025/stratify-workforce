@@ -1,6 +1,6 @@
 # FGN Academy Integration Contract Inventory
 
-**Inventory version:** `2026-10-01.2` (previous: `2026-10-01.1`)
+**Inventory version:** `2026-10-10.1` (previous: `2026-10-01.2`)
 **Source of truth:** deployed edge-function handlers and the live `learning_sources` registry, read 2026-09-30.
 **Precedence:** where any other document disagrees with this file, this file wins. Guides must be updated to match — not the other way round.
 
@@ -21,6 +21,7 @@ Bump the version (`YYYY-MM-DD.N`) whenever a handler, header, envelope, credenti
 | `credential-api` | partners ↔ Academy | request/response | none / Bearer JWT / `X-App-Key` | Live |
 | `public-catalog` | anyone → Academy | read | none | Live |
 | `studio-catalog` | FGN Studio → Academy | read | short-lived scoped Bearer token; `X-Studio-Contract` | Live, versioned separately (see `studio-catalog/README.md`) |
+| `studio-submit` | FGN Studio → Academy | write (package submissions) | short-lived Bearer token with `submissions:create` scope; `X-Studio-Contract`; admin review route uses an Academy admin JWT | Live (Phase 4). Human approval gate; nothing goes live automatically. Contract `2026-10-10.1` (see `studio-catalog/README.md`) |
 
 ## 2. Registry state (live)
 
