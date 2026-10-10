@@ -9,6 +9,9 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { ImageField } from './ImageField';
+import { Textarea } from '@/components/ui/textarea';
+import { Edit3, Save, X } from 'lucide-react';
 
 const STATUSES = ['live', 'preview', 'coming_soon', 'hidden'] as const;
 const LAUNCH = ['subdomain', 'external', 'in_academy'] as const;
@@ -44,6 +47,28 @@ export function MarketplaceCatalogManager() {
 
   const [newDisc, setNewDisc] = useState('');
   const [newApp, setNewApp] = useState({ name: '', launch_type: 'subdomain', launch_url: '' });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ hero_image_url: '', tagline: '', description: '', accent_color: '' });
+
+  const beginEdit = (app: typeof data.applications[number]) => {
+    setEditingId(app.id);
+    setDraft({
+      hero_image_url: app.hero_image_url ?? '',
+      tagline: app.tagline ?? '',
+      description: app.description ?? '',
+      accent_color: app.accent_color ?? '',
+    });
+  };
+
+  const saveIdentity = (appId: string) => {
+    void run(supabase.from('applications').update({
+      hero_image_url: draft.hero_image_url || null,
+      tagline: draft.tagline || null,
+      description: draft.description || null,
+      accent_color: draft.accent_color || null,
+    }).eq('id', appId), 'App identity saved');
+    setEditingId(null);
+  };
 
   if (isLoading || !data) return <p className="text-muted-foreground">Loading catalog…</p>;
   const linked = (appId: string, discId: string) => data.links.some((x) => x.application_id === appId && x.discipline_id === discId);
@@ -89,7 +114,32 @@ export function MarketplaceCatalogManager() {
                 <span className="min-w-48 font-medium">{a.name}</span>
                 <Badge variant="outline">{a.launch_type.replace('_', ' ')}</Badge>
                 {a.launch_url && <span className="font-data text-xs text-muted-foreground">{a.launch_url}</span>}
+                <Button type="button" size="sm" variant="ghost" className="ml-auto" onClick={() => editingId === a.id ? setEditingId(null) : beginEdit(a)}>
+                  {editingId === a.id ? <X className="mr-2 h-4 w-4" /> : <Edit3 className="mr-2 h-4 w-4" />}
+                  {editingId === a.id ? 'Close identity' : 'Edit identity'}
+                </Button>
               </div>
+              {editingId === a.id && (
+                <div className="grid gap-5 rounded-lg border border-border bg-muted/20 p-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                  <div className="space-y-4">
+                    <ImageField value={draft.hero_image_url} onChange={(hero_image_url) => setDraft((current) => ({ ...current, hero_image_url }))} label="App cover" variant="cover" folder="marketplace" />
+                    <div><label className="mb-2 block text-sm font-medium">Tagline</label><Input value={draft.tagline} onChange={(e) => setDraft((current) => ({ ...current, tagline: e.target.value }))} /></div>
+                    <div><label className="mb-2 block text-sm font-medium">Description</label><Textarea value={draft.description} onChange={(e) => setDraft((current) => ({ ...current, description: e.target.value }))} rows={4} /></div>
+                    <div><label className="mb-2 block text-sm font-medium">Accent color</label><Input value={draft.accent_color} onChange={(e) => setDraft((current) => ({ ...current, accent_color: e.target.value }))} placeholder="#F59E0B" /></div>
+                    <Button type="button" onClick={() => saveIdentity(a.id)}><Save className="mr-2 h-4 w-4" /> Save identity</Button>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs uppercase text-muted-foreground">Card preview</p>
+                    <div className="overflow-hidden rounded-lg border border-border bg-card">
+                      <div className="aspect-video bg-muted">{draft.hero_image_url && <img src={draft.hero_image_url} alt="" className="h-full w-full object-cover" />}</div>
+                      <div className="p-4" style={{ borderTop: draft.accent_color ? `3px solid ${draft.accent_color}` : undefined }}>
+                        <p className="font-display text-xl font-semibold">{a.name}</p>
+                        <p className="mt-2 text-sm text-muted-foreground">{draft.tagline || 'Add a concise purpose for this app.'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-3">
                 <Select value={a.status} onValueChange={(v) => run(supabase.from('applications').update({ status: v }).eq('id', a.id), 'Status saved')}>
                   <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight, LayoutGrid, Trophy } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, ImageOff, LayoutGrid, Trophy } from 'lucide-react';
 import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { HorizontalCarousel, DEFAULT_CARD_WIDTH } from '@/components/marketplace/HorizontalCarousel';
 import { Badge } from '@/components/ui/badge';
@@ -15,25 +15,49 @@ import { SIM_RESOURCES } from '@/config/simResources';
 import type { GameTitle } from '@/types/tenant';
 
 const gameName = (g: string) => SIM_RESOURCES[g as GameTitle]?.title ?? g.replace(/_/g, ' ');
+const SIM_HUB_GAMES = new Set<string>(['ATS', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'Fiber_Tech', 'Roadcraft']);
+
+function SimulationLinks({ games }: { games: string[] }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {games.map((game) => SIM_HUB_GAMES.has(game) ? (
+        <Button key={game} asChild variant="outline" size="sm" className="h-8">
+          <Link to={`/sim/${game}`}>{gameName(game)} <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
+        </Button>
+      ) : <Badge key={game} variant="secondary">{gameName(game)}</Badge>)}
+    </div>
+  );
+}
 
 export function AppCard({ app, disciplines }: { app: MarketplaceApp; disciplines: Discipline[] }) {
   const primary = disciplines.find((d) => d.key === app.disciplines[0]);
   return (
     <Link
       to={`/apps/${app.key}`}
-      className="glass-card group flex h-full flex-col gap-3 rounded-xl border border-border p-5 transition-colors hover:border-primary/60"
+      className="group flex h-full min-h-[21rem] flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/60"
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: app.accent_color ?? undefined }} />
-        <Badge variant="outline">{LAUNCH_LABEL[app.launch_type]}</Badge>
-        <Badge variant={app.status === 'live' ? 'default' : 'secondary'}>{STATUS_LABEL[app.status]}</Badge>
+      <div className="relative aspect-[16/9] overflow-hidden border-b border-border bg-muted">
+        {app.hero_image_url ? (
+          <img src={app.hero_image_url} alt="" loading="lazy" width={1536} height={896} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-muted-foreground"><ImageOff className="h-7 w-7" /></div>
+        )}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/80 to-transparent" />
+        <div className="absolute bottom-3 left-3 flex flex-wrap gap-2">
+          <Badge variant="secondary">{LAUNCH_LABEL[app.launch_type]}</Badge>
+          <Badge variant={app.status === 'live' ? 'default' : 'secondary'}>{STATUS_LABEL[app.status]}</Badge>
+        </div>
       </div>
-      <h3 className="font-display text-xl font-semibold">{app.name}</h3>
-      {app.tagline && <p className="text-sm text-muted-foreground">{app.tagline}</p>}
-      <p className="mt-auto text-xs text-muted-foreground">
-        {primary?.name}
-        {app.disciplines.length > 1 && ` + ${app.disciplines.length - 1} more`}
-      </p>
+      <div className="flex flex-1 flex-col p-5" style={{ borderTop: app.accent_color ? `3px solid ${app.accent_color}` : undefined }}>
+        <h3 className="font-display text-xl font-semibold">{app.name}</h3>
+        {app.tagline && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{app.tagline}</p>}
+        <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+          <p className="text-xs text-muted-foreground">
+            {primary?.name}{app.disciplines.length > 1 && ` + ${app.disciplines.length - 1} more`}
+          </p>
+          <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
+        </div>
+      </div>
     </Link>
   );
 }
@@ -94,7 +118,7 @@ export function MarketplaceRows({ reg }: { reg: MarketplaceRegistry }) {
 }
 
 function LoadingRows() {
-  return <div className="flex gap-4 overflow-hidden">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 w-80 shrink-0 rounded-xl" />)}</div>;
+  return <div className="flex gap-4 overflow-hidden">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-[21rem] w-80 shrink-0 rounded-lg" />)}</div>;
 }
 
 export function AppsDirectory() {
@@ -181,7 +205,7 @@ export function DisciplinePage() {
             {games.length > 0 && (
               <div>
                 <h2 className="font-display text-xl font-semibold">Simulations used</h2>
-                <div className="mt-2 flex flex-wrap gap-2">{games.map((g) => <Badge key={g} variant="secondary">{gameName(g)}</Badge>)}</div>
+                <SimulationLinks games={games} />
               </div>
             )}
             {games.length > 0 && data.competitionSources.length > 0 && (
@@ -224,14 +248,18 @@ export function AppDetail() {
         {!isLoading && !app && <p className="text-muted-foreground">This app isn't available.</p>}
         {app && target && (
           <div className="space-y-8">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">{LAUNCH_LABEL[app.launch_type]}</Badge>
-              <Badge variant={app.status === 'live' ? 'default' : 'secondary'}>{STATUS_LABEL[app.status]}</Badge>
-            </div>
-            <div>
-              <h1 className="font-display text-4xl font-bold">{app.name}</h1>
-              {app.tagline && <p className="mt-2 max-w-2xl text-lg text-muted-foreground">{app.tagline}</p>}
-              {app.description && <p className="mt-2 max-w-2xl text-muted-foreground">{app.description}</p>}
+            <div className="relative min-h-[22rem] overflow-hidden rounded-lg border border-border bg-card">
+              {app.hero_image_url ? <img src={app.hero_image_url} alt="" width={1536} height={896} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-muted" />}
+              <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20" />
+              <div className="relative flex min-h-[22rem] max-w-3xl flex-col justify-end p-6 sm:p-10" style={{ borderTop: app.accent_color ? `3px solid ${app.accent_color}` : undefined }}>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">{LAUNCH_LABEL[app.launch_type]}</Badge>
+                  <Badge variant={app.status === 'live' ? 'default' : 'secondary'}>{STATUS_LABEL[app.status]}</Badge>
+                </div>
+                <h1 className="font-display text-4xl font-bold sm:text-5xl">{app.name}</h1>
+                {app.tagline && <p className="mt-3 max-w-2xl text-lg text-foreground/90">{app.tagline}</p>}
+                {app.description && <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{app.description}</p>}
+              </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
@@ -261,7 +289,7 @@ export function AppDetail() {
             {app.games.length > 0 && (
               <div>
                 <h2 className="font-display text-xl font-semibold">Simulations used</h2>
-                <div className="mt-2 flex flex-wrap gap-2">{app.games.map((g) => <Badge key={g} variant="secondary">{gameName(g)}</Badge>)}</div>
+                <SimulationLinks games={app.games} />
               </div>
             )}
 
