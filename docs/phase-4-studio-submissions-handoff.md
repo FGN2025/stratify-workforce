@@ -107,6 +107,18 @@ checks — the same rule as every other publishing path. Approval without this
 flag links the submission to `sourceWorkOrderIds` Work Orders instead (if
 given).
 
+## 5a. Course submissions (contract 2026-10-10.3)
+
+Set `submissionType: "course"` to submit a standalone course. Course
+submissions require the `submissions:create:courses` scope (the app must be
+provisioned with `can_submit_courses`); without it the route returns
+`403 scope_denied`. Courses stand alone: `requestWorkOrderCreation` and
+`sourceWorkOrderIds` are rejected with `400 invalid_request`. On approval a
+standalone, **inactive/unpublished** SCORM course is created with no Work
+Order link — an Academy admin publishes it through the existing publish flow.
+Everything else (idempotency, validation, status polling, review lifecycle) is
+identical to Work Order submissions.
+
 ## 6. Poll status
 
 ```
