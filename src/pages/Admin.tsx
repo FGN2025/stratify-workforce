@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AdminHero } from '@/components/admin/AdminHero';
-import { AdminStatsGrid } from '@/components/admin/AdminStatsGrid';
 import { UserManagementTable } from '@/components/admin/UserManagementTable';
 import { MediaLibrary } from '@/components/admin/MediaLibrary';
 import { WorkOrdersManager } from '@/components/admin/WorkOrdersManager';
@@ -415,8 +414,7 @@ export default function Admin() {
       <div className="container py-8 space-y-8">
         {section === 'overview' && (
           <>
-            <AdminHero stats={{ totalUsers: stats.totalUsers, totalWorkOrders: stats.totalWorkOrders, activeSessions: stats.activeSessions }} isLoading={isLoading} />
-            <AdminStatsGrid averageScore={stats.averageScore} sessionsThisWeek={stats.sessionsThisWeek} topGame={stats.topGame} newUsersThisWeek={stats.newUsersThisWeek} isLoading={isLoading} />
+            <AdminHero stats={{ totalUsers: stats.totalUsers, totalWorkOrders: stats.totalWorkOrders }} isLoading={isLoading} />
           </>
         )}
 

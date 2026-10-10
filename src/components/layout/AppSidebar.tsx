@@ -237,7 +237,7 @@ export function AppSidebar() {
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
-                        tooltip="Admin Dashboard"
+                        tooltip={showPlatformAdmin ? 'Academy Operations' : 'Community Admin'}
                         className={cn(
                           "w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent",
                           isOnAdminPage && "text-primary bg-primary/10"
@@ -245,7 +245,7 @@ export function AppSidebar() {
                       >
                         <div className="flex items-center gap-3">
                           <ShieldCheck className="h-4 w-4" />
-                          {!collapsed && <span>Admin Dashboard</span>}
+                          {!collapsed && <span>{showPlatformAdmin ? 'Operations' : 'Community Admin'}</span>}
                         </div>
                         {!collapsed && (
                           <ChevronDown className={cn(

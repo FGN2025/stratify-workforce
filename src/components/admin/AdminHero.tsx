@@ -1,10 +1,9 @@
-import { ShieldCheck, Users, ClipboardList, Activity } from 'lucide-react';
+import { ShieldCheck, Users, ClipboardList } from 'lucide-react';
 import { useSiteMediaUrl } from '@/hooks/useSiteMedia';
 
 interface AdminStats {
   totalUsers: number;
   totalWorkOrders: number;
-  activeSessions: number;
 }
 
 interface AdminHeroProps {
@@ -38,19 +37,19 @@ export function AdminHero({ stats, isLoading }: AdminHeroProps) {
             <ShieldCheck className="h-6 w-6 text-primary" />
           </div>
           <span className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
-            System Administration
+            Academy Operations
           </span>
         </div>
         
         <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-2 tracking-tight">
-          Admin Dashboard
+          Academy Operations
         </h1>
         <p className="text-muted-foreground text-lg max-w-xl mb-8">
-          Manage users, work orders, media assets, and communities across the entire platform.
+          Review Studio submissions, publish content, support communities and govern the Academy.
         </p>
         
         {/* Stats grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
           <StatCard
             icon={Users}
             label="Total Users"
@@ -62,12 +61,6 @@ export function AdminHero({ stats, isLoading }: AdminHeroProps) {
             label="Work Orders"
             value={isLoading ? '—' : stats.totalWorkOrders.toString()}
             color="text-brand-path"
-          />
-          <StatCard
-            icon={Activity}
-            label="Active Sessions"
-            value={isLoading ? '—' : stats.activeSessions.toString()}
-            color="text-success"
           />
         </div>
       </div>
