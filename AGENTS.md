@@ -12,3 +12,4 @@
 - Marketplace Disciplines are the learner-facing app taxonomy; SIM Categories remain an internal Work Order, deep-dive, challenge-mapping and admin taxonomy and are not rendered as a second global sidebar menu. This avoids duplicate navigation without breaking simulation contracts.
 
 - studio.fgn.gg is the single authoring front door for challenges, Work Orders and Courses (industry app first, then destinations FGN.GG and/or Academy); Academy receives, reviews, publishes, curates and verifies. This removes duplicate creation tools and keeps one source of content.
+- Academy navigation is organized by operational hubs, while advanced registries and legacy mappings remain nested behind Marketplace, Integrations and Platform Settings. This keeps the sidebar task-oriented without removing governed fallback tools.

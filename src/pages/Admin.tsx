@@ -360,7 +360,6 @@ export default function Admin() {
           { section: 'ai-config', label: 'AI', render: () => <AIConfigManager /> },
         ]} />;
       case 'notebook-telemetry':
-        return isSuperAdmin ? <NotebookTelemetryDashboard /> : <AccessDenied />;
       case 'sync-tester':
       case 'play-webhook-retry':
       case 'parity-monitor':
@@ -388,8 +387,8 @@ export default function Admin() {
       case 'challenge-tracks':
         return (
           <AdminHubTabs
-            title="Challenges"
-            description="Links between FGN.GG challenges and Academy content. New links arrive from Studio; use these for legacy items and overrides."
+            title="FGN.GG & Legacy Mappings"
+            description="Review links created before Studio distribution and apply manual overrides when required."
             active={section}
             tabs={[
               { section: 'challenge-mappings', label: 'Lesson mappings', render: () => <ChallengeLessonMappingsManager /> },

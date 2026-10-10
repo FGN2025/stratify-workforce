@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { PackageOpen, CheckCircle2, XCircle, MessageSquareWarning, Clock, FileWarning } from 'lucide-react';
@@ -28,6 +29,8 @@ type Submission = {
   generated_work_order_id: string | null;
   created_at: string;
   app_id: string;
+  application_key: string | null;
+  destinations: string[];
 };
 
 const VALIDATION_BADGE: Record<Submission['validation_status'], { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -46,6 +49,7 @@ const REVIEW_BADGE: Record<Submission['review_status'], { label: string; variant
 export default function StudioSubmissions() {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [appFilter, setAppFilter] = useState('all');
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['studio-submissions'],
@@ -103,7 +107,22 @@ export default function StudioSubmissions() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {submissions.map((sub) => {
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={appFilter} onValueChange={setAppFilter}>
+              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filter by Academy app" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Academy apps</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {[...new Set(submissions.map((sub) => sub.application_key).filter((key): key is string => Boolean(key)))].sort().map((key) => (
+                  <SelectItem key={key} value={key}>{key.replace(/-/g, ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">
+              {submissions.filter((sub) => appFilter === 'all' || (appFilter === 'unassigned' ? !sub.application_key : sub.application_key === appFilter)).length} submissions
+            </span>
+          </div>
+          {submissions.filter((sub) => appFilter === 'all' || (appFilter === 'unassigned' ? !sub.application_key : sub.application_key === appFilter)).map((sub) => {
             const validation = VALIDATION_BADGE[sub.validation_status];
             const reviewBadge = REVIEW_BADGE[sub.review_status];
             const summary = (sub.manifest_summary ?? {}) as Record<string, unknown>;
@@ -135,6 +154,8 @@ export default function StudioSubmissions() {
                     {typeof summary.organizationCount === 'number' && <span>{summary.organizationCount} organizations</span>}
                     {sub.request_work_order_creation && <span>Requested Work Order creation</span>}
                     {sub.source_work_order_ids.length > 0 && <span>{sub.source_work_order_ids.length} linked Work Order(s)</span>}
+                    <span>App: {sub.application_key?.replace(/-/g, ' ') ?? 'Unassigned'}</span>
+                    <span>Destinations: {sub.destinations.join(', ')}</span>
                   </div>
 
                   {sub.validation_errors?.length ? (

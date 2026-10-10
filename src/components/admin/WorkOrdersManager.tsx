@@ -38,13 +38,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Plus, Edit, Trash2, Clock, Trophy, FileUp, Eye, List, LayoutGrid } from 'lucide-react';
+import { Plus, Edit, Trash2, Trophy, FileUp, Eye, List, LayoutGrid, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DifficultyIndicator } from '@/components/work-orders/DifficultyIndicator';
 import { XPRewardBadge } from '@/components/work-orders/XPRewardBadge';
 import { NavLink } from 'react-router-dom';
 import { WorkOrderEditDialog, type EvidenceRequirements } from './WorkOrderEditDialog';
 import type { Database } from '@/integrations/supabase/types';
+import { useMarketplace } from '@/hooks/useMarketplace';
+import { STUDIO_ORIGIN } from '@/pages/admin/CreateInStudio';
 
 type GameTitle = Database['public']['Enums']['game_title'];
 type WorkOrderDifficulty = Database['public']['Enums']['work_order_difficulty'];
@@ -91,6 +93,7 @@ const DIFFICULTY_COLORS: Record<WorkOrderDifficulty, string> = {
 
 export function WorkOrdersManager() {
   const { gameCoverImages } = useGameCoverImages();
+  const { data: marketplace } = useMarketplace();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
@@ -98,6 +101,7 @@ export function WorkOrdersManager() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gameFilter, setGameFilter] = useState<GameTitle | 'all'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<WorkOrderDifficulty | 'all'>('all');
+  const [appFilter, setAppFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
@@ -199,9 +203,18 @@ export function WorkOrdersManager() {
     return workOrders.filter((wo) => {
       const matchesGame = gameFilter === 'all' || wo.game_title === gameFilter;
       const matchesDifficulty = difficultyFilter === 'all' || wo.difficulty === difficultyFilter;
-      return matchesGame && matchesDifficulty;
+      const matchesApp = appFilter === 'all' || marketplace?.applications.find((app) => app.key === appFilter)?.games.includes(wo.game_title);
+      return matchesGame && matchesDifficulty && matchesApp;
     });
-  }, [workOrders, gameFilter, difficultyFilter]);
+  }, [workOrders, gameFilter, difficultyFilter, appFilter, marketplace]);
+
+  const studioEditUrl = (wo: WorkOrder) => {
+    const metadataApp = typeof wo.metadata?.applicationSlug === 'string' ? wo.metadata.applicationSlug : null;
+    const appKey = metadataApp ?? marketplace?.applications.find((app) => app.games.includes(wo.game_title))?.key;
+    const params = new URLSearchParams({ workOrder: wo.id, source: 'fgn-academy' });
+    if (appKey) params.set('app', appKey);
+    return `${STUDIO_ORIGIN}/edit?${params.toString()}`;
+  };
 
   if (isLoading) {
     return (
@@ -263,6 +276,13 @@ export function WorkOrdersManager() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
+        <Select value={appFilter} onValueChange={setAppFilter}>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filter by Academy app" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Academy apps</SelectItem>
+            {(marketplace?.applications ?? []).map((app) => <SelectItem key={app.key} value={app.key}>{app.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select
           value={gameFilter}
           onValueChange={(v) => setGameFilter(v as GameTitle | 'all')}
@@ -295,13 +315,14 @@ export function WorkOrdersManager() {
           </SelectContent>
         </Select>
 
-        {(gameFilter !== 'all' || difficultyFilter !== 'all') && (
+        {(appFilter !== 'all' || gameFilter !== 'all' || difficultyFilter !== 'all') && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               setGameFilter('all');
               setDifficultyFilter('all');
+              setAppFilter('all');
             }}
           >
             Clear filters
@@ -324,7 +345,6 @@ export function WorkOrdersManager() {
                 <TableHead>Game</TableHead>
                 <TableHead>Difficulty</TableHead>
                 <TableHead className="text-center">XP</TableHead>
-                <TableHead className="text-center">Time</TableHead>
                 <TableHead className="text-center">Evidence</TableHead>
                 <TableHead className="text-center">Active</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -333,7 +353,7 @@ export function WorkOrdersManager() {
             <TableBody>
               {filteredWorkOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No work orders found
                   </TableCell>
                 </TableRow>
@@ -365,16 +385,6 @@ export function WorkOrdersManager() {
                         <Trophy className="h-3 w-3 text-primary" />
                         <span>{wo.xp_reward}</span>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {wo.estimated_time_minutes ? (
-                        <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>{wo.estimated_time_minutes}m</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       {wo.evidence_requirements?.required ? (
@@ -417,6 +427,11 @@ export function WorkOrdersManager() {
                           onClick={() => handleEdit(wo)}
                         >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button asChild variant="ghost" size="icon">
+                          <a href={studioEditUrl(wo)} target="_blank" rel="noopener noreferrer" aria-label="Edit in Studio">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
                         </Button>
                         <Button
                           variant="ghost"
@@ -500,14 +515,6 @@ export function WorkOrdersManager() {
                     <XPRewardBadge xp={wo.xp_reward} size="sm" />
                   </div>
 
-                  {/* Time */}
-                  {wo.estimated_time_minutes && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{wo.estimated_time_minutes} min</span>
-                    </div>
-                  )}
-
                   {/* Actions footer */}
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <Switch
@@ -522,6 +529,9 @@ export function WorkOrdersManager() {
                       </NavLink>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(wo)}>
                         <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                        <a href={studioEditUrl(wo)} target="_blank" rel="noopener noreferrer" aria-label="Edit in Studio"><ExternalLink className="h-3.5 w-3.5" /></a>
                       </Button>
                       <Button
                         variant="ghost"
