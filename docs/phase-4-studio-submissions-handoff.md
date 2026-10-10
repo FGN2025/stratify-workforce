@@ -193,6 +193,8 @@ Run with a real Studio package against the live endpoint:
 | 2 | Submission without a token | `401` |
 | 3 | Submission from an unapproved origin | `403 forbidden_origin` |
 | 4 | Token without `submissions:create` | `403 scope_denied` |
+| 4a | Token without `submissions:create:courses` submitting `submissionType: "course"` | `403 scope_denied` |
+| 4b | Course submission approved | Standalone, inactive/unpublished course; no Work Order link |
 | 5 | Invalid manifest (no root `imsmanifest.xml`) | `validation_failed` with reason; not visible to reviewers |
 | 6 | Package over 25 MB | `413 package_too_large` |
 | 7 | Duplicate submission (same idempotency key) | `200 duplicate: true`, no second record |
