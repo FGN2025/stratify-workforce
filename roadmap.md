@@ -145,3 +145,7 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Remove the duplicate learner-facing SIM Categories sidebar group while preserving SIM admin and Work Order category behavior
 - [x] Link supported simulations from app and discipline pages to their existing industry hubs
 - [x] Phase 4: Studio → Academy course submissions (studio-submit function, studio_submissions table, admin review inbox, status route, contract docs, external Work Order generation)
+
+## Work Order authoring direction (2026-10-10, owner-stated)
+
+- [ ] Desired flow: pick an industry (My Academy App) first, then generate the Work Order in studio.fgn.gg; import from fgn.gg/challenges remains a second path. Configurator's direct Create dialog is independent of Studio today — assess whether to route authoring through Studio submissions.
