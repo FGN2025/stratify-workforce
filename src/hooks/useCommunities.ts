@@ -17,7 +17,7 @@ const MANAGER_ROLES = ['owner', 'admin', 'moderator'] as const;
  */
 export function useCommunities(scope: CommunityScope = 'directory', enabled = true) {
   const queryClient = useQueryClient();
-  const { user, session, loading } = useAuth() as ReturnType<typeof useAuth> & { loading?: boolean };
+  const { user, session, isLoading: loading } = useAuth();
   const token = session?.access_token ?? null;
 
   const { data: communities = [], isLoading, error } = useQuery({
