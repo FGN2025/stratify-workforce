@@ -51,7 +51,7 @@ const navGroups = [
   {
     label: 'Explore programs',
     items: [
-      { title: 'Apps', url: '/apps', icon: Target },
+      { title: 'Industries', url: '/apps', icon: Target },
       { title: 'Course Catalog', url: '/learn', icon: GraduationCap },
       { title: 'Careers', url: '/careers', icon: Target },
     ],
@@ -60,7 +60,7 @@ const navGroups = [
     label: 'My learning',
     items: [
       { title: 'Workspace', url: '/workspace', icon: LayoutDashboard },
-      { title: 'Assignments', url: '/work-orders', icon: ClipboardList },
+      { title: 'Work Orders', url: '/work-orders', icon: ClipboardList },
       { title: 'Skill Passport', url: '/profile', icon: User },
       { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
     ],
@@ -95,7 +95,7 @@ const adminSubItems: AdminLeaf[] = [
   // Community operations. Authoring remains in Studio.
   { title: 'Overview', url: '/admin/community-setup', icon: LayoutDashboard, tier: 'community' },
   { title: 'People', url: '/students', icon: Users, tier: 'community' },
-  { title: 'Assignments', url: '/admin/work-orders', icon: ClipboardList, tier: 'community' },
+  { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList, tier: 'community' },
   { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const, tier: 'community' },
   { title: 'Events', url: '/admin/events', icon: Calendar, tier: 'community' },
   { title: 'Catalog', url: '/admin/curation', icon: Target, tier: 'community' },
