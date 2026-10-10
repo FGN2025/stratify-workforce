@@ -189,3 +189,10 @@ The response also includes `evidenceCoverage` (catalog count, validated count, L
 ## Versioning and schemas
 
 See `/schemas` on the API and [A1–A4 answers](../../phase-3-studio-answers-a1-a4.md). Additive changes keep the contract version; breaking changes (including any change to a list marked `x-enum-closed: true`) mint a new one, with the old version supported for at least 90 days. Examples: `examples/*.200.json`.
+
+### Contract 2026-10-10.2 — app and destinations (additive)
+`POST /submissions` accepts two optional fields:
+- `applicationSlug` — the Academy app (marketplace key) the item belongs to; unknown or hidden apps return 400.
+- `destinations` — `["fgn-academy"]` (default), `["fgn-gg"]`, or both. Academy stores the list; only `fgn-academy` items enter the Review Inbox for publication.
+Academy launches Studio with `https://studio.fgn.gg/new?app=<key>&discipline=<key>&games=<list>&source=fgn-academy`.
+Versions 2026-10-10.1 and 2026-09-23.1 remain accepted.
