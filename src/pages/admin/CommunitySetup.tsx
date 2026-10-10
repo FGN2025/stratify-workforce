@@ -17,20 +17,16 @@ import {
   Calendar,
   ClipboardList,
   FileCheck,
-  Image,
   KeyRound,
-  Route as RouteIcon,
   Shield,
 } from 'lucide-react';
 
 const QUICK_LINKS = [
-  { title: 'Curation', description: 'Pick which catalog content this community surfaces.', url: '/admin/curation', icon: FileCheck },
-  { title: 'Work Orders', description: 'Author and assign tenant work orders.', url: '/admin/work-orders', icon: ClipboardList },
+  { title: 'Catalog', description: 'Choose the Academy apps and content this community offers.', url: '/admin/curation', icon: FileCheck },
+  { title: 'Assignments', description: 'Assign and manage existing Work Orders.', url: '/admin/work-orders', icon: ClipboardList },
   { title: 'Events', description: 'Schedule community-only events.', url: '/admin/events', icon: Calendar },
   { title: 'Evidence Review', description: 'Approve member evidence submissions.', url: '/admin/evidence', icon: Shield },
-  { title: 'Registration Codes', description: 'Generate invite codes for this community.', url: '/admin/codes', icon: KeyRound },
-  { title: 'Media Library', description: 'Manage community-uploaded media.', url: '/admin/media', icon: Image },
-  { title: 'Skills Paths', description: 'Configure career paths surfaced to members.', url: '/admin/career-paths', icon: RouteIcon },
+  { title: 'Access', description: 'Generate registration codes for this community.', url: '/admin/codes', icon: KeyRound },
 ];
 
 export default function CommunitySetup() {

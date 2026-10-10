@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AdminHero } from '@/components/admin/AdminHero';
-import { AdminStatsGrid } from '@/components/admin/AdminStatsGrid';
 import { UserManagementTable } from '@/components/admin/UserManagementTable';
 import { MediaLibrary } from '@/components/admin/MediaLibrary';
 import { WorkOrdersManager } from '@/components/admin/WorkOrdersManager';
@@ -31,6 +30,10 @@ import { ChallengeLessonMappingsManager } from '@/components/admin/ChallengeLess
 import { ChallengeTrackMembershipManager } from '@/components/admin/ChallengeTrackMembershipManager';
 import { AdminHubTabs, type HubTab } from '@/components/admin/AdminHubTabs';
 import { Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowRight, ClipboardList, FileCheck, PackageOpen, Users } from 'lucide-react';
 import { PlayWebhookRetryManager } from '@/components/admin/PlayWebhookRetryManager';
 import { ParityMonitorDashboard } from '@/components/admin/ParityMonitorDashboard';
 import { PlayGamesSyncPanel } from '@/components/admin/PlayGamesSyncPanel';
@@ -76,7 +79,7 @@ export default function Admin() {
   // Redirect /admin to a sensible landing for the viewer's tier.
   useEffect(() => {
     if (!section) {
-      navigate(isPlatformAdmin ? '/admin/users' : '/admin/community-setup', { replace: true });
+      navigate(isPlatformAdmin ? '/admin/overview' : '/admin/community-setup', { replace: true });
     }
   }, [section, navigate, isPlatformAdmin]);
 
@@ -202,7 +205,9 @@ export default function Admin() {
   // Community owners/admins are limited to the community-scoped sections below.
   const PLATFORM_SECTIONS = new Set([
     'marketplace',
+    'overview',
     'users',
+    'learner-progress',
     'communities',
     'games',
     'sim-categories',
@@ -220,6 +225,8 @@ export default function Admin() {
     'play-webhook-retry',
     'parity-monitor',
     'super-admin',
+    'challenge-mappings',
+    'challenge-tracks',
   ]);
 
   const AccessDenied = () => (
@@ -238,25 +245,82 @@ export default function Admin() {
     }
 
     switch (section) {
+      case 'overview':
+        return (
+          <div className="space-y-4">
+            <div>
+              <h2 className="font-display text-xl font-semibold">Priority work</h2>
+              <p className="text-sm text-muted-foreground">Create in Studio, then review, publish and operate content in Academy.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { title: 'Create in Studio', description: 'Choose an Academy app and open the shared authoring workspace.', to: '/admin/create', icon: ArrowRight },
+                { title: 'Review Inbox', description: 'Review packages and drafts received from Studio.', to: '/admin/studio-submissions', icon: PackageOpen },
+                { title: 'Content Operations', description: 'Publish, assign and make quick Work Order edits.', to: '/admin/work-orders', icon: ClipboardList },
+                { title: 'Evidence Review', description: 'Decide learner evidence waiting for review.', to: '/admin/evidence', icon: FileCheck },
+              ].map((item) => (
+                <Card key={item.to}>
+                  <CardHeader>
+                    <item.icon className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-base">{item.title}</CardTitle>
+                    <CardDescription>{item.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button asChild variant="outline" size="sm"><Link to={item.to}>Open <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
       case 'users':
         return (
-          <UserManagementTable
-            users={users}
-            isLoading={isLoading}
-            onRoleChange={handleRoleChange}
-            tenants={tenants}
+          <AdminHubTabs
+            title="People"
+            description="Manage Academy accounts and inspect learner progress."
+            active={section}
+            tabs={[
+              { section: 'users', label: 'Accounts', render: () => (
+                <UserManagementTable users={users} isLoading={isLoading} onRoleChange={handleRoleChange} tenants={tenants} />
+              ) },
+              { section: 'learner-progress', label: 'Learner progress', render: () => (
+                <Card>
+                  <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" />Learner progress</CardTitle><CardDescription>Open the learner roster and Skill Passports.</CardDescription></CardHeader>
+                  <CardContent><Button asChild><Link to="/students">Open learner progress</Link></Button></CardContent>
+                </Card>
+              ) },
+            ]}
           />
         );
+      case 'learner-progress':
+        return (
+          <AdminHubTabs title="People" description="Manage Academy accounts and inspect learner progress." active={section} tabs={[
+            { section: 'users', label: 'Accounts', render: () => <UserManagementTable users={users} isLoading={isLoading} onRoleChange={handleRoleChange} tenants={tenants} /> },
+            { section: 'learner-progress', label: 'Learner progress', render: () => <Card><CardHeader><CardTitle>Learner progress</CardTitle><CardDescription>Open the learner roster and Skill Passports.</CardDescription></CardHeader><CardContent><Button asChild><Link to="/students">Open learner progress</Link></Button></CardContent></Card> },
+          ]} />
+        );
       case 'communities':
-        return <CommunitiesAdminTable />;
+      case 'community-review':
+        return (
+          <AdminHubTabs title="Communities" description="Manage the community registry and approval queue." active={section} tabs={[
+            { section: 'communities', label: 'Registry', render: () => <CommunitiesAdminTable /> },
+            ...(isSuperAdmin ? [{ section: 'community-review', label: 'Approval queue', render: () => <CommunityReviewQueue /> }] : []),
+          ]} />
+        );
       case 'events':
         return <EventsManager />;
       case 'work-orders':
         return <WorkOrdersManager />;
       case 'marketplace':
-        return <MarketplaceCatalogManager />;
       case 'curation':
-        return <CurationManager />;
+      case 'career-paths':
+        return (
+          <AdminHubTabs title="Marketplace" description="Manage app identity, catalog visibility and pathways." active={section} tabs={[
+            { section: 'marketplace', label: 'Apps & disciplines', render: () => <MarketplaceCatalogManager /> },
+            { section: 'curation', label: 'Curation', render: () => <CurationManager /> },
+            { section: 'career-paths', label: 'Pathways', render: () => <CareerPathsManager /> },
+          ]} />
+        );
       case 'evidence':
         return (
           <div className="space-y-6">
@@ -284,22 +348,20 @@ export default function Admin() {
         return <MediaLibrary />;
       case 'codes':
         return <RegistrationCodeManager />;
-      case 'career-paths':
-        return <CareerPathsManager />;
-      case 'community-review':
-        return isSuperAdmin ? <CommunityReviewQueue /> : <AccessDenied />;
       case 'authorized-apps':
-        return isSuperAdmin ? <AuthorizedAppsManager /> : <AccessDenied />;
       case 'webhooks':
-        return isSuperAdmin ? <WebhookManager /> : <AccessDenied />;
       case 'credential-types':
-        return isSuperAdmin ? <CredentialTypesManager /> : <AccessDenied />;
       case 'discord':
-        return isSuperAdmin ? <DiscordConnectionsManager /> : <AccessDenied />;
       case 'ai-config':
-        return isSuperAdmin ? <AIConfigManager /> : <AccessDenied />;
+        if (!isSuperAdmin) return <AccessDenied />;
+        return <AdminHubTabs title="Platform Settings" description="Manage trusted applications, credentials and platform services." active={section} tabs={[
+          { section: 'authorized-apps', label: 'Authorized apps', render: () => <AuthorizedAppsManager /> },
+          { section: 'webhooks', label: 'Webhooks', render: () => <WebhookManager /> },
+          { section: 'credential-types', label: 'Credentials', render: () => <CredentialTypesManager /> },
+          { section: 'discord', label: 'Discord', render: () => <DiscordConnectionsManager /> },
+          { section: 'ai-config', label: 'AI', render: () => <AIConfigManager /> },
+        ]} />;
       case 'notebook-telemetry':
-        return isSuperAdmin ? <NotebookTelemetryDashboard /> : <AccessDenied />;
       case 'sync-tester':
       case 'play-webhook-retry':
       case 'parity-monitor':
@@ -318,6 +380,7 @@ export default function Admin() {
           ...(isSuperAdmin ? [
             { section: 'play-webhook-retry', label: 'Webhook retry', render: () => <PlayWebhookRetryManager /> },
             { section: 'parity-monitor', label: 'Parity monitor', render: () => <ParityMonitorDashboard /> },
+            { section: 'notebook-telemetry', label: 'Notebook telemetry', render: () => <NotebookTelemetryDashboard /> },
           ] : []),
         ];
         return <AdminHubTabs title="Integrations" description="FGN Play connection health, retries and parity." active={section} tabs={tabs} />;
@@ -326,8 +389,8 @@ export default function Admin() {
       case 'challenge-tracks':
         return (
           <AdminHubTabs
-            title="Challenges"
-            description="Links between FGN.GG challenges and Academy content. New links arrive from Studio; use these for legacy items and overrides."
+            title="FGN.GG & Legacy Mappings"
+            description="Review links created before Studio distribution and apply manual overrides when required."
             active={section}
             tabs={[
               { section: 'challenge-mappings', label: 'Lesson mappings', render: () => <ChallengeLessonMappingsManager /> },
@@ -341,16 +404,7 @@ export default function Admin() {
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : <AccessDenied />;
       default:
-        return isPlatformAdmin ? (
-          <UserManagementTable
-            users={users}
-            isLoading={isLoading}
-            onRoleChange={handleRoleChange}
-            tenants={tenants}
-          />
-        ) : (
-          <AccessDenied />
-        );
+        return <AccessDenied />;
     }
   };
 
@@ -358,22 +412,11 @@ export default function Admin() {
   return (
     <AppLayout>
       <div className="container py-8 space-y-8">
-        <AdminHero
-          stats={{
-            totalUsers: stats.totalUsers,
-            totalWorkOrders: stats.totalWorkOrders,
-            activeSessions: stats.activeSessions,
-          }}
-          isLoading={isLoading}
-        />
-
-        <AdminStatsGrid
-          averageScore={stats.averageScore}
-          sessionsThisWeek={stats.sessionsThisWeek}
-          topGame={stats.topGame}
-          newUsersThisWeek={stats.newUsersThisWeek}
-          isLoading={isLoading}
-        />
+        {section === 'overview' && (
+          <>
+            <AdminHero stats={{ totalUsers: stats.totalUsers, totalWorkOrders: stats.totalWorkOrders }} isLoading={isLoading} />
+          </>
+        )}
 
         {renderSection()}
       </div>

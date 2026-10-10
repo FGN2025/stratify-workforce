@@ -158,3 +158,6 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [ ] Studio side: destination selection, app launch values, Edit in Studio, Breakroom link editing — Darcy (FGN Creative Hub)
 - [ ] Remove FGN.GG import button once Studio distribution to FGN.GG is live
 - [ ] Hierarchy optimizations: curation by app, app-scoped admin filters, community landing per app, reporting by app
+- [x] Simplified role-aware sidebar: Academy Operations hubs, community operations, legacy mappings nested, duplicate Configurator/Students/Guide links retired
+- [x] Admin Overview is task-oriented; large metrics appear only on Overview
+- [x] Review Inbox and Content Operations filters by Academy app; Work Orders expose Edit in Studio links

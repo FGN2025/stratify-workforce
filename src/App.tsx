@@ -143,7 +143,7 @@ const App = () => (
                 <ProtectedRoute><Leaderboard /></ProtectedRoute>
               } />
               <Route path="/students" element={
-                <AdminRoute><Students /></AdminRoute>
+                <CommunityAdminRoute><Students /></CommunityAdminRoute>
               } />
               <Route path="/settings" element={
                 <AdminRoute><Settings /></AdminRoute>
