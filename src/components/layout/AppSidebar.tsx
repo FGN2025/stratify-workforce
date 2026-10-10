@@ -10,8 +10,6 @@ import {
   GraduationCap,
   CalendarDays,
   ChevronDown,
-  Link as LinkIcon,
-  Briefcase,
   Target,
   Code,
   HelpCircle,
@@ -96,6 +94,7 @@ type AdminLeaf = {
 const adminSubItems: AdminLeaf[] = [
   // Community operations. Authoring remains in Studio.
   { title: 'Overview', url: '/admin/community-setup', icon: LayoutDashboard, tier: 'community' },
+  { title: 'People', url: '/students', icon: Users, tier: 'community' },
   { title: 'Assignments', url: '/admin/work-orders', icon: ClipboardList, tier: 'community' },
   { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const, tier: 'community' },
   { title: 'Events', url: '/admin/events', icon: Calendar, tier: 'community' },
@@ -109,7 +108,7 @@ const adminSubItems: AdminLeaf[] = [
   { title: 'Content Operations', url: '/admin/work-orders', icon: ClipboardList, tier: 'platform' },
   { title: 'Evidence Review', url: '/admin/evidence', icon: FileCheck, badgeKey: 'evidence' as const, tier: 'platform' },
   { title: 'People', url: '/admin/users', icon: Users, tier: 'platform' },
-  { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
+  { title: 'Communities', url: '/admin/communities', icon: Building2, badgeKey: 'community', tier: 'platform' },
   { title: 'Marketplace', url: '/admin/marketplace', icon: Target, tier: 'platform' },
   { title: 'Integrations', url: '/admin/play-sync', icon: Zap, tier: 'platform' },
 ];
@@ -137,13 +136,21 @@ export function AppSidebar() {
 
   const badgeCounts: Record<string, number> = {
     evidence: pendingEvidenceCount,
-    community: pendingCommunityCount,
+    community: isSuperAdmin ? pendingCommunityCount : 0,
   };
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
   const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (location.pathname === path) return true;
+    if (path === '/admin/users') return location.pathname === '/admin/learner-progress' || location.pathname === '/students';
+    if (path === '/admin/communities') return location.pathname === '/admin/community-review';
+    if (path === '/admin/marketplace') return ['/admin/curation', '/admin/career-paths', '/admin/games', '/admin/sim-categories', '/admin/sim-resources'].includes(location.pathname);
+    if (path === '/admin/play-sync') return ['/admin/sync-tester', '/admin/play-webhook-retry', '/admin/parity-monitor', '/admin/notebook-telemetry', '/admin/challenge-mappings', '/admin/challenge-tracks', '/admin/challenge-registry', '/admin/activity-mapping'].includes(location.pathname);
+    if (path === '/admin/authorized-apps') return ['/admin/webhooks', '/admin/credential-types', '/admin/discord', '/admin/ai-config'].includes(location.pathname);
+    return false;
+  };
   
   const isAuthenticated = Boolean(user);
   const navigationItems = isAuthenticated ? mainNavItems : publicNavItems;

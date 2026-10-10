@@ -31,7 +31,6 @@ import {
   Filter, 
   UserPlus, 
   MoreVertical,
-  Clock,
   TrendingUp,
   TrendingDown,
   Star,
@@ -93,8 +92,8 @@ function StudentCard({ student, onClick }: { student: Student; onClick: () => vo
             <p className="text-[10px] text-muted-foreground">Score</p>
           </div>
           <div className="text-right">
-            <p className="font-data text-lg">{student.total_hours}h</p>
-            <p className="text-[10px] text-muted-foreground">Hours</p>
+            <p className="font-data text-lg">{student.status === 'active' ? 'Online' : '—'}</p>
+            <p className="text-[10px] text-muted-foreground">Availability</p>
           </div>
           {student.trend > 0 ? (
             <TrendingUp className="h-4 w-4 text-emerald-500" />
@@ -141,7 +140,6 @@ function TableRowSkeleton() {
       </TableCell>
       <TableCell><Skeleton className="h-5 w-16" /></TableCell>
       <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-      <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
       <TableCell><Skeleton className="h-8 w-8" /></TableCell>
@@ -200,7 +198,7 @@ const Students = () => {
         {isLoading ? (
           <HorizontalCarousel
             title="Active Now"
-            subtitle="Students currently in training sessions"
+                  subtitle="Students currently active"
             icon={<Zap className="h-5 w-5" />}
           >
             {[1, 2, 3].map((i) => (
@@ -212,7 +210,7 @@ const Students = () => {
         ) : activeStudents.length > 0 ? (
           <HorizontalCarousel
             title="Active Now"
-            subtitle="Students currently in training sessions"
+             subtitle="Students currently active"
             icon={<Zap className="h-5 w-5" />}
           >
             {activeStudents.map((student) => (
@@ -285,7 +283,6 @@ const Students = () => {
                   <TableHead className="text-muted-foreground">Student</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground text-right">Score</TableHead>
-                  <TableHead className="text-muted-foreground text-right">Hours</TableHead>
                   <TableHead className="text-muted-foreground">Current Activity</TableHead>
                   <TableHead className="text-muted-foreground">Last Active</TableHead>
                   <TableHead className="text-muted-foreground w-10"></TableHead>
@@ -344,10 +341,6 @@ const Students = () => {
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-right">
-                        <span className="font-data text-muted-foreground">{student.total_hours}h</span>
-                      </TableCell>
-
                       <TableCell>
                         {student.current_game ? (
                           <div className="flex items-center gap-2">
@@ -359,12 +352,7 @@ const Students = () => {
                         )}
                       </TableCell>
 
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {student.last_active || 'Never'}
-                        </div>
-                      </TableCell>
+                       <TableCell><span className="text-xs text-muted-foreground">{student.last_active || 'Never'}</span></TableCell>
 
                       <TableCell>
                         <DropdownMenu>
