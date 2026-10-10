@@ -1,3 +1,4 @@
+import { TENANT_COLUMNS } from '@/lib/tenantColumns';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +25,7 @@ export function useCommunityReview({ statusFilter }: UseCommunityReviewOptions) 
     queryFn: async () => {
       let query = supabase
         .from('tenants')
-        .select('*')
+        .select(TENANT_COLUMNS)
         .order('submitted_at', { ascending: false });
 
       if (statusFilter !== 'all') {
@@ -65,7 +66,7 @@ export function useCommunityReview({ statusFilter }: UseCommunityReviewOptions) 
     queryFn: async () => {
       const { count, error } = await supabase
         .from('tenants')
-        .select('*', { count: 'exact', head: true })
+        .select(TENANT_COLUMNS, { count: 'exact', head: true })
         .eq('approval_status', 'pending');
 
       if (error) throw error;

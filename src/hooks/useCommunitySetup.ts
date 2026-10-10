@@ -1,3 +1,4 @@
+import { TENANT_COLUMNS } from '@/lib/tenantColumns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -38,7 +39,7 @@ export function useCommunitySetup(tenantId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tenants')
-        .select('*')
+        .select(TENANT_COLUMNS)
         .eq('id', tenantId!)
         .maybeSingle();
       if (error) throw new Error(error.message);

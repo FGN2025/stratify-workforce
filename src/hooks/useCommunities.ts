@@ -1,3 +1,4 @@
+import { TENANT_COLUMNS } from '@/lib/tenantColumns';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,7 @@ export function useCommunities() {
     queryFn: async () => {
       // Signed-out visitors read the safe public projection (no owner/review/integration fields).
       const query = user
-        ? supabase.from('tenants').select('*').eq('approval_status', 'approved')
+        ? supabase.from('tenants').select(TENANT_COLUMNS).eq('approval_status', 'approved')
         : supabase.from('public_communities').select('*');
 
       const { data, error } = await query.order('name', { ascending: true });

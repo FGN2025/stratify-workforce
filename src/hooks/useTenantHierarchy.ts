@@ -1,3 +1,4 @@
+import { TENANT_COLUMNS } from '@/lib/tenantColumns';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tenant } from '@/types/tenant';
@@ -27,7 +28,7 @@ export function useTenantHierarchy(): TenantHierarchyResult {
     
     const { data, error: fetchError } = await supabase
       .from('tenants')
-      .select('*')
+      .select(TENANT_COLUMNS)
       .order('hierarchy_level', { ascending: true })
       .order('name', { ascending: true });
 

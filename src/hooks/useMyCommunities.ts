@@ -1,3 +1,4 @@
+import { TENANT_COLUMNS } from '@/lib/tenantColumns';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +18,7 @@ export function useMyCommunities() {
       // Fetch owned communities
       const { data: owned, error: ownedErr } = await supabase
         .from('tenants')
-        .select('*')
+        .select(TENANT_COLUMNS)
         .eq('owner_id', user.id)
         .order('submitted_at', { ascending: false });
 
@@ -45,7 +46,7 @@ export function useMyCommunities() {
       if (memberTenantIds.length > 0) {
         const { data: tenants, error: tenantErr } = await supabase
           .from('tenants')
-          .select('*')
+          .select(TENANT_COLUMNS)
           .in('id', memberTenantIds)
           .order('name', { ascending: true });
 
