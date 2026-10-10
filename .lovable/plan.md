@@ -33,6 +33,9 @@ Today Course Builder and studio.fgn.gg are parallel systems: Course Builder gene
 - New contract version (e.g. `2026-10-10.1`) documented in `docs/api/contract-inventory.md`, the studio-catalog README/OpenAPI, and the Phase 3 handoff doc (marked Phase 4 opened).
 - Signing-secret requirement, token lifetime (2h), revocation, and error codes documented identically in all three places.
 
+## Coordination with the Studio developer
+Yes — this build has two halves. We build everything on the Academy side (endpoint, validation, review inbox, status route, docs). The studio.fgn.gg developer — Darcy (darcy@fgn.gg), who owns every app site — builds the Studio side: minting tokens via the operator key, calling the submit endpoint, and polling status. We deliver a handoff package for them: the versioned contract, OpenAPI spec, example requests, and the signing-secret exchange (via the secure secret form, never in chat or docs). A joint end-to-end test with a real Studio package closes the phase.
+
 ## Standing constraints (unchanged)
 - Decision 4: Studio submissions are content only — no credential, XP, or points are awarded by submission or approval.
 - No changes to FGN.GG, Merits, Maritime, Sim Racing, or Railroading sites.
