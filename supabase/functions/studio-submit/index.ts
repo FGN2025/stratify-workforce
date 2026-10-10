@@ -248,10 +248,12 @@ Deno.serve(async (req) => {
       let generatedWorkOrderId: string | null = null;
 
       if (action === 'approved') {
+        const isCourseSubmission = submission.submission_type === 'course';
         // Determine the lead Work Order: an existing referenced one, or a draft
         // generated from the manifest when the submission requested it.
+        // Course submissions stand alone — no Work Order is linked or created.
         const sourceWoIds = (submission.source_work_order_ids as string[]) ?? [];
-        let leadWoId = sourceWoIds[0] ?? null;
+        let leadWoId = isCourseSubmission ? null : (sourceWoIds[0] ?? null);
 
         if (!leadWoId && submission.request_work_order_creation) {
           const summary = (submission.manifest_summary ?? {}) as Record<string, unknown>;
