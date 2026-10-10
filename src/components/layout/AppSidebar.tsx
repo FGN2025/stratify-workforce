@@ -52,7 +52,7 @@ const navGroups = [
     label: 'Explore programs',
     items: [
       { title: 'Industries', url: '/apps', icon: Target },
-      { title: 'Course Catalog', url: '/learn', icon: GraduationCap },
+      { title: 'Skills Catalog', url: '/learn', icon: GraduationCap },
       { title: 'Careers', url: '/careers', icon: Target },
     ],
   },

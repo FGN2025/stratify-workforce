@@ -26,7 +26,7 @@ export function EnrolledCourses({ courses, enrollments, isLoading }: EnrolledCou
         <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Enrolled Courses</h3>
         <p className="text-muted-foreground">
-          Browse the course catalog to find courses to enroll in.
+          Browse the Skills Catalog to find courses to enroll in.
         </p>
       </div>
     );

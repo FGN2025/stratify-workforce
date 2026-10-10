@@ -37,7 +37,7 @@ export default function Learn() {
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="catalog" className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4" />
-                Course Catalog
+                Skills Catalog
               </TabsTrigger>
               {user && (
                 <TabsTrigger value="my-courses" className="flex items-center gap-2">

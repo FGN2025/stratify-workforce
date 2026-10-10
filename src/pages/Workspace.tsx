@@ -96,7 +96,7 @@ export default function Workspace() {
           <section className="border-y border-border py-8">
             <BookOpen className="mb-3 h-7 w-7 text-primary" />
             <h2 className="font-display text-2xl font-semibold">Choose your first Course</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Browse the catalog and enroll when you find the right next step.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Browse the Skills Catalog and enroll when you find the right next step.</p>
             <Button asChild className="mt-5"><Link to="/learn">Browse Courses</Link></Button>
           </section>
         )}
