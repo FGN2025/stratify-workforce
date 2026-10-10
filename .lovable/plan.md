@@ -24,7 +24,12 @@ Today Course Builder and studio.fgn.gg are parallel systems: Course Builder gene
 ### 5. Status route for Studio
 - `GET /studio-submit/status/:id` (token-scoped) returns validation + review state so Studio can poll — consistent with our pull-model contract; no outbound push to Studio in this phase.
 
-### 6. Contract & docs
+### 6. Work Order generation from external systems
+- Preserve and generalize the existing external-to-Work-Order path (today: `import-challenge-as-workorder` for play.fgn.gg and the learning-source webhook/pull pipelines).
+- A submission can optionally request Work Order creation: on approval, the package's manifest metadata (title, objectives, activities) is used to generate draft Work Orders — inactive until an admin completes publication-readiness checks, same as every other publishing path.
+- The mapping is source-agnostic (SCORM manifest today; other LMS package formats can register their own parser later), so future LMS integrations reuse the same inbox, validation, and review flow rather than new one-off pipelines.
+
+### 7. Contract & docs
 - New contract version (e.g. `2026-10-10.1`) documented in `docs/api/contract-inventory.md`, the studio-catalog README/OpenAPI, and the Phase 3 handoff doc (marked Phase 4 opened).
 - Signing-secret requirement, token lifetime (2h), revocation, and error codes documented identically in all three places.
 
