@@ -282,7 +282,28 @@ Deno.serve(async (req) => {
           generatedWorkOrderId = wo.id;
         }
 
-        if (leadWoId) {
+        if (isCourseSubmission) {
+          // Standalone course: no Work Order link. Created inactive/unpublished —
+          // a person publishes it later via the existing publish flow.
+          const { data: course, error: cErr } = await admin
+            .from('scorm_courses')
+            .insert({
+              work_order_id: null,
+              destination: 'fgn-academy',
+              title: submission.title,
+              description: submission.description,
+              scorm_version: submission.scorm_version === '2004' ? '1.2' : submission.scorm_version,
+              manifest_url: submission.package_path,
+              bundle_id: `studio-${submission.id}`,
+              is_published: false,
+              published_at: null,
+              generated_by: reviewer.userId,
+            })
+            .select('id')
+            .single();
+          if (cErr) throw cErr;
+          scormCourseId = course.id;
+        } else if (leadWoId) {
           // Create the SCORM course inactive — a person publishes it later via the
           // existing publish flow. unique(work_order_id, destination) conflicts
           // link the existing course instead of failing.
