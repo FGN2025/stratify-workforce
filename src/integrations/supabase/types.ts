@@ -2969,7 +2969,7 @@ export type Database = {
           source_challenge_id: string | null
           title: string
           updated_at: string
-          work_order_id: string
+          work_order_id: string | null
           zip_url: string | null
         }
         Insert: {
@@ -2988,7 +2988,7 @@ export type Database = {
           source_challenge_id?: string | null
           title: string
           updated_at?: string
-          work_order_id: string
+          work_order_id?: string | null
           zip_url?: string | null
         }
         Update: {
@@ -3007,7 +3007,7 @@ export type Database = {
           source_challenge_id?: string | null
           title?: string
           updated_at?: string
-          work_order_id?: string
+          work_order_id?: string | null
           zip_url?: string | null
         }
         Relationships: [

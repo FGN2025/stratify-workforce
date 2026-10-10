@@ -31,6 +31,8 @@ type SubmitSession = {
   appId: string;
   tenantId: string;
   approvedOrigins: string[];
+  scopes: string[];
+  canSubmitCourses: boolean;
 };
 
 type AuthFailure = { status: number; code: string; message: string };
@@ -70,7 +72,7 @@ async function resolveSubmitSession(req: Request): Promise<SubmitSession | AuthF
 
   const { data: app } = await admin
     .from('authorized_apps')
-    .select('id, is_active, can_submit_packages, allowed_origins')
+    .select('id, is_active, can_submit_packages, can_submit_courses, allowed_origins')
     .eq('id', token.app_id)
     .maybeSingle();
 
@@ -86,6 +88,8 @@ async function resolveSubmitSession(req: Request): Promise<SubmitSession | AuthF
     appId: token.app_id,
     tenantId: token.tenant_id,
     approvedOrigins: (app.allowed_origins as string[]) ?? [],
+    scopes: token.scopes as string[],
+    canSubmitCourses: !!app.can_submit_courses,
   };
 }
 
@@ -244,10 +248,12 @@ Deno.serve(async (req) => {
       let generatedWorkOrderId: string | null = null;
 
       if (action === 'approved') {
+        const isCourseSubmission = submission.submission_type === 'course';
         // Determine the lead Work Order: an existing referenced one, or a draft
         // generated from the manifest when the submission requested it.
+        // Course submissions stand alone — no Work Order is linked or created.
         const sourceWoIds = (submission.source_work_order_ids as string[]) ?? [];
-        let leadWoId = sourceWoIds[0] ?? null;
+        let leadWoId = isCourseSubmission ? null : (sourceWoIds[0] ?? null);
 
         if (!leadWoId && submission.request_work_order_creation) {
           const summary = (submission.manifest_summary ?? {}) as Record<string, unknown>;
@@ -276,7 +282,28 @@ Deno.serve(async (req) => {
           generatedWorkOrderId = wo.id;
         }
 
-        if (leadWoId) {
+        if (isCourseSubmission) {
+          // Standalone course: no Work Order link. Created inactive/unpublished —
+          // a person publishes it later via the existing publish flow.
+          const { data: course, error: cErr } = await admin
+            .from('scorm_courses')
+            .insert({
+              work_order_id: null,
+              destination: 'fgn-academy',
+              title: submission.title,
+              description: submission.description,
+              scorm_version: submission.scorm_version === '2004' ? '1.2' : submission.scorm_version,
+              manifest_url: submission.package_path,
+              bundle_id: `studio-${submission.id}`,
+              is_published: false,
+              published_at: null,
+              generated_by: reviewer.userId,
+            })
+            .select('id')
+            .single();
+          if (cErr) throw cErr;
+          scormCourseId = course.id;
+        } else if (leadWoId) {
           // Create the SCORM course inactive — a person publishes it later via the
           // existing publish flow. unique(work_order_id, destination) conflicts
           // link the existing course instead of failing.
@@ -393,6 +420,25 @@ Deno.serve(async (req) => {
         ? (body.sourceWorkOrderIds as unknown[]).filter((v): v is string => typeof v === 'string')
         : [];
       const requestWoCreation = body.requestWorkOrderCreation === true;
+      const submissionType = typeof body.submissionType === 'string' ? body.submissionType.trim() : 'work_order';
+      if (!['work_order', 'course'].includes(submissionType)) {
+        return jsonResponse({ error: 'invalid_request', message: 'submissionType must be "work_order" or "course".' }, 400, cors);
+      }
+      if (submissionType === 'course') {
+        if (!session.canSubmitCourses || !session.scopes.includes('submissions:create:courses')) {
+          return jsonResponse(
+            { error: 'scope_denied', message: 'This application is not permitted to submit courses. Course sending requires the submissions:create:courses scope.' },
+            403,
+            cors,
+          );
+        }
+        if (requestWoCreation) {
+          return jsonResponse({ error: 'invalid_request', message: 'Course submissions stand alone; requestWorkOrderCreation is not allowed.' }, 400, cors);
+        }
+        if (sourceWorkOrderIds.length) {
+          return jsonResponse({ error: 'invalid_request', message: 'Course submissions stand alone; sourceWorkOrderIds is not allowed.' }, 400, cors);
+        }
+      }
       const gameTitle = typeof body.gameTitle === 'string' ? body.gameTitle : null;
       const applicationSlug = typeof body.applicationSlug === 'string' ? body.applicationSlug.trim() : null;
       const ALLOWED_DESTINATIONS = new Set(['fgn-academy', 'fgn-gg']);
@@ -477,6 +523,7 @@ Deno.serve(async (req) => {
         manifest_summary: { ...summary, gameTitle },
         source_work_order_ids: sourceWorkOrderIds,
         request_work_order_creation: requestWoCreation,
+        submission_type: submissionType,
         application_key: applicationSlug,
         destinations,
         validation_status: validationStatus,

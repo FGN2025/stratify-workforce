@@ -31,6 +31,7 @@ type Submission = {
   app_id: string;
   application_key: string | null;
   destinations: string[];
+  submission_type: 'work_order' | 'course';
 };
 
 const VALIDATION_BADGE: Record<Submission['validation_status'], { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -140,6 +141,7 @@ export default function StudioSubmissions() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
+                      <Badge variant="outline">{sub.submission_type === 'course' ? 'Course' : 'Work Order'}</Badge>
                       <Badge variant={validation.variant}>{validation.label}</Badge>
                       <Badge variant={reviewBadge.variant}>{reviewBadge.label}</Badge>
                     </div>

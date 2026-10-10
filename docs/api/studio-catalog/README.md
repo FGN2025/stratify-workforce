@@ -8,8 +8,8 @@ Public endpoint documentation. **No credential is required to read this page or 
 | API base URL | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-catalog` |
 | OpenAPI (fetchable, no credential) | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-catalog/openapi.json` |
 | Capabilities probe (no credential) | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-catalog/capabilities` |
-| Contract version | `2026-10-10.1` (header `X-Studio-Contract`, required on all catalog and submission routes; `2026-09-23.1` still accepted) |
-| Scope of this contract | Catalog routes are **read-only**. Package submissions live on a separate function, `studio-submit` (Phase 4), and require the `submissions:create` scope. |
+| Contract version | `2026-10-10.3` (header `X-Studio-Contract`, required on all catalog and submission routes; `2026-10-10.2`, `2026-10-10.1` and `2026-09-23.1` still accepted) |
+| Scope of this contract | Catalog routes are **read-only**. Package submissions live on a separate function, `studio-submit` (Phase 4), and require the `submissions:create` scope; course submissions additionally require `submissions:create:courses`. |
 
 ## Package submissions (Phase 4) — `studio-submit`
 
@@ -20,17 +20,18 @@ lifecycle, and the joint acceptance checklist.
 | Item | Value |
 |---|---|
 | API base URL | `https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/studio-submit` |
-| Auth | Same token model as the catalog. Tokens minted for an app provisioned with `can_submit_packages` carry the additional scope `submissions:create`. |
+| Auth | Same token model as the catalog. Tokens minted for an app provisioned with `can_submit_packages` carry the additional scope `submissions:create`; apps provisioned with `can_submit_courses` also carry `submissions:create:courses`. |
 | Approval | **Human, always.** An Academy platform admin approves, rejects or requests revision in the Studio Submissions inbox. Approval creates an **inactive** course (and, when requested, an inactive draft Work Order) — nothing is visible to learners until an admin publishes it through the existing publish flow. |
 
 ```
 POST /studio-submit/submissions
 Authorization: Bearer <studio token with submissions:create>
-X-Studio-Contract: 2026-10-10.1
+X-Studio-Contract: 2026-10-10.3
 { "idempotencyKey": "...", "title": "...", "description": "...",
   "scormVersion": "1.2" | "2004", "packageBase64": "<ZIP, base64>",
-  "sourceWorkOrderIds": ["<uuid>", ...],        // optional
-  "requestWorkOrderCreation": true,              // optional; requires gameTitle
+  "submissionType": "work_order" | "course",     // optional; default "work_order"
+  "sourceWorkOrderIds": ["<uuid>", ...],        // optional; work_order only
+  "requestWorkOrderCreation": true,              // optional; work_order only; requires gameTitle
   "gameTitle": "Construction_Sim" }              // from the Studio vocabulary
 → 201 { submissionId, validationStatus, reviewStatus: "pending", statusUrl }
 → 200 { duplicate: true, ... }                   // repeated idempotencyKey
@@ -189,6 +190,15 @@ The response also includes `evidenceCoverage` (catalog count, validated count, L
 ## Versioning and schemas
 
 See `/schemas` on the API and [A1–A4 answers](../../phase-3-studio-answers-a1-a4.md). Additive changes keep the contract version; breaking changes (including any change to a list marked `x-enum-closed: true`) mint a new one, with the old version supported for at least 90 days. Examples: `examples/*.200.json`.
+
+### Contract 2026-10-10.3 — course submissions (additive)
+`POST /submissions` accepts an optional `submissionType`: `"work_order"` (default) or `"course"`.
+Course submissions require the `submissions:create:courses` scope (apps provisioned with
+`can_submit_courses`); without it the route returns `403 scope_denied`. Course submissions stand
+alone: `requestWorkOrderCreation` and `sourceWorkOrderIds` are rejected with `400 invalid_request`.
+On approval a course submission creates a standalone, **inactive/unpublished** SCORM course with no
+Work Order link. Tokens minted before this version simply lack the new scope and keep their prior
+behaviour. Versions 2026-10-10.2, 2026-10-10.1 and 2026-09-23.1 remain accepted.
 
 ### Contract 2026-10-10.2 — app and destinations (additive)
 `POST /submissions` accepts two optional fields:

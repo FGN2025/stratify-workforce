@@ -33,35 +33,38 @@ XP or points are awarded by submission or approval.
    only (no `Origin` header), 2-hour TTL (7200 s), no refresh, revocation takes
    effect on the very next request.
 
-Because the Studio app is provisioned with `can_submit_packages`, newly minted
-tokens now carry both scopes:
+Because the Studio app is provisioned with `can_submit_packages` and
+`can_submit_courses`, newly minted tokens now carry three scopes:
 
 ```
 POST /studio-catalog/studio-token
 X-App-Key: <durable operator key>
 → 201 { token, tokenType: "Bearer", expiresAt, expiresInSeconds: 7200,
-        scopes: ["catalog:read", "submissions:create"], tenantId,
-        includesDescendants }
+        scopes: ["catalog:read", "submissions:create", "submissions:create:courses"],
+        tenantId, includesDescendants }
 ```
 
 A token without `submissions:create` gets `403 scope_denied` on submission
-routes. Expiry, revocation and the withdrawal of the `can_submit_packages`
-flag behave exactly as documented for the catalog (README §Authentication).
+routes; a token without `submissions:create:courses` gets `403 scope_denied`
+on course submissions (`submissionType: "course"`). Expiry, revocation and the
+withdrawal of the `can_submit_packages` / `can_submit_courses` flags behave
+exactly as documented for the catalog (README §Authentication).
 
 ## 3. Submit a package
 
 ```
 POST /studio-submit/submissions
 Authorization: Bearer <studio token with submissions:create>
-X-Studio-Contract: 2026-10-10.1
+X-Studio-Contract: 2026-10-10.3
 {
   "idempotencyKey": "<your unique key, max 200 chars>",
   "title": "Package title (required, max 200 chars)",
   "description": "Optional description",
   "scormVersion": "1.2",                       // "1.2" | "2004"
   "packageBase64": "<the SCORM ZIP, base64-encoded>",
-  "sourceWorkOrderIds": ["<uuid>", ...],       // optional
-  "requestWorkOrderCreation": false,           // optional; requires gameTitle
+  "submissionType": "work_order",              // "work_order" (default) | "course"
+  "sourceWorkOrderIds": ["<uuid>", ...],       // optional; work_order only
+  "requestWorkOrderCreation": false,           // optional; work_order only; requires gameTitle
   "gameTitle": "Construction_Sim"              // from the Studio vocabulary
 }
 ```
@@ -103,6 +106,18 @@ stays **inactive** until an Academy admin completes the publication-readiness
 checks — the same rule as every other publishing path. Approval without this
 flag links the submission to `sourceWorkOrderIds` Work Orders instead (if
 given).
+
+## 5a. Course submissions (contract 2026-10-10.3)
+
+Set `submissionType: "course"` to submit a standalone course. Course
+submissions require the `submissions:create:courses` scope (the app must be
+provisioned with `can_submit_courses`); without it the route returns
+`403 scope_denied`. Courses stand alone: `requestWorkOrderCreation` and
+`sourceWorkOrderIds` are rejected with `400 invalid_request`. On approval a
+standalone, **inactive/unpublished** SCORM course is created with no Work
+Order link — an Academy admin publishes it through the existing publish flow.
+Everything else (idempotency, validation, status polling, review lifecycle) is
+identical to Work Order submissions.
 
 ## 6. Poll status
 
@@ -178,6 +193,8 @@ Run with a real Studio package against the live endpoint:
 | 2 | Submission without a token | `401` |
 | 3 | Submission from an unapproved origin | `403 forbidden_origin` |
 | 4 | Token without `submissions:create` | `403 scope_denied` |
+| 4a | Token without `submissions:create:courses` submitting `submissionType: "course"` | `403 scope_denied` |
+| 4b | Course submission approved | Standalone, inactive/unpublished course; no Work Order link |
 | 5 | Invalid manifest (no root `imsmanifest.xml`) | `validation_failed` with reason; not visible to reviewers |
 | 6 | Package over 25 MB | `413 package_too_large` |
 | 7 | Duplicate submission (same idempotency key) | `200 duplicate: true`, no second record |
