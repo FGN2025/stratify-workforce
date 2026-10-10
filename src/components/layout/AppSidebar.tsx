@@ -112,10 +112,10 @@ const adminSubItems: AdminLeaf[] = [
   { title: 'Communities', url: '/admin/communities', icon: Building2, tier: 'platform' },
   { title: 'Marketplace', url: '/admin/marketplace', icon: Target, tier: 'platform' },
   { title: 'Integrations', url: '/admin/play-sync', icon: Zap, tier: 'platform' },
-  { title: 'Platform Settings', url: '/admin/authorized-apps', icon: Shield, tier: 'platform' },
 ];
 
 const superAdminSubItems = [
+  { title: 'Platform Settings', url: '/admin/authorized-apps', icon: Shield },
   { title: 'Super Admin', url: '/admin/super-admin', icon: Shield },
 ];
 
@@ -154,8 +154,8 @@ export function AppSidebar() {
   const showDeveloper = isAuthenticated && !authLoading && !roleLoading && (isDeveloper || isAdmin);
 
   const visibleAdminSubItems = adminSubItems.filter((item) => {
-    if (item.tier === 'platform') return showPlatformAdmin;
-    return showCommunityAdmin;
+    if (showPlatformAdmin) return item.tier === 'platform';
+    return item.tier === 'community' && showCommunityAdmin;
   });
 
   const visibleStandaloneItems = standaloneAdminItems.filter((item) => {
