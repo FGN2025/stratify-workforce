@@ -22,7 +22,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               <NavLink to="/learn">Courses</NavLink>
             </Button>
             <Button variant="ghost" asChild>
-              <NavLink to="/apps">Apps</NavLink>
+              <NavLink to="/apps">Industries</NavLink>
             </Button>
             <Button variant="ghost" asChild className="hidden sm:inline-flex">
               <NavLink to="/auth">Sign in</NavLink>

@@ -29,9 +29,9 @@ const Index = () => {
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-14 pt-32 sm:px-6 sm:pb-20 lg:px-8">
           <p className="mb-4 font-data text-xs uppercase text-primary">One account. Every discipline.</p>
           <h1 className="max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl lg:text-7xl">FGN Academy</h1>
-          <p className="mt-5 max-w-2xl text-lg text-muted-foreground sm:text-xl">Discover simulation-powered apps across maritime, rail, motorsports, construction and more, with one Skill Passport that follows you through all of them.</p>
+          <p className="mt-5 max-w-2xl text-lg text-muted-foreground sm:text-xl">Discover simulation-powered industries across maritime, rail, motorsports, construction and more, with one Skill Passport that follows you through all of them.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" asChild><Link to="/apps" className="gap-2">Explore apps <ArrowRight className="h-4 w-4" /></Link></Button>
+            <Button size="lg" asChild><Link to="/apps" className="gap-2">Explore industries <ArrowRight className="h-4 w-4" /></Link></Button>
             <Button size="lg" variant="outline" asChild><Link to="/auth">Sign in to learn</Link></Button>
           </div>
         </div>

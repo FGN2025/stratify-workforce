@@ -73,7 +73,7 @@ export default function Workspace() {
         </section>
 
         {reg && myApps.length > 0 && (
-          <HorizontalCarousel title="My Academy apps" subtitle="One account across every app. Your progress and evidence stay in your Skill Passport." icon={<LayoutGrid className="h-5 w-5" />} viewAllLink="/apps">
+          <HorizontalCarousel title="My Academy industries" subtitle="One account across every industry. Your progress and evidence stay in your Skill Passport." icon={<LayoutGrid className="h-5 w-5" />} viewAllLink="/apps">
             {myApps.map((a) => (
               <div key={a.key} className="w-[85vw] shrink-0 snap-start sm:w-72 lg:w-80"><AppCard app={a} disciplines={reg.disciplines} /></div>
             ))}
