@@ -1,22 +1,26 @@
 # Studio-first authoring and a simpler Admin dashboard
 
 ## Goal
-Building challenges, Work Orders and courses starts in one place: pick an industry app, then author in studio.fgn.gg. Academy becomes the place to review, publish, curate, assign and verify. FGN.GG challenge import stays as the second way in.
+studio.fgn.gg (FGN Creative Hub) becomes the one shared configurator for everything authored: FGN.GG challenges, Academy Work Orders and courses. Authors pick an industry app, build once, and choose destinations (FGN.GG, Academy, or both). Academy stops creating content and becomes the place to receive, review, publish, curate, assign and verify.
 
 ```text
-Pick app (industry) --> Author in Studio --> Submit --> Academy review --> Publish
-FGN.GG challenge ----> Import (Configurator) ------> Academy review --> Publish
+                         +--> FGN.GG (challenge)
+Pick app --> Studio -----+
+                         +--> Academy Review Inbox --> Publish (Work Order / course)
 ```
 
-## 1. Industry-first "New Work Order" flow (Academy side)
-- New "Create" entry in the admin menu opens a picker of My Academy Apps grouped by discipline (same cover cards as /apps).
-- Choosing an app opens studio.fgn.gg with the app, its disciplines and allowed simulations pre-selected (read from the existing catalog API, no new data).
-- Second choice on the same screen: "Import from FGN.GG challenges" (existing import, now filtered to the chosen app's simulations).
-- Studio submissions carry the chosen app; the review inbox shows it and approval files the draft Work Order under that app.
+Existing FGN.GG challenges already linked to Academy keep working unchanged; new ones arrive through Studio.
 
-## 2. Configurator becomes edit-only
-- Remove "Create Work Order" from the Configurator; keep quick edits (title, description, criteria, category, active toggle), publication-readiness checks, and FGN.GG challenge import.
-- Work Order rows from Studio show a "Edit in Studio" link for deep content changes.
+## 1. Industry-first create flow (Academy side)
+- A "Create in Studio" entry opens a picker of My Academy Apps grouped by discipline (same cover cards as /apps).
+- Choosing an app opens studio.fgn.gg with the app, disciplines and allowed simulations pre-selected (from the existing catalog API).
+- Studio submissions carry the app and their destinations; the Review Inbox shows both. Approval files the draft Work Order under that app and links it to the matching FGN.GG challenge when Studio sent it to both.
+
+## 2. Configurator becomes review-and-edit only
+- Remove "Create Work Order" and, once Studio distribution is live, the "Import from FGN Challenges" button (kept until then as a fallback).
+- Keep quick edits (title, criteria, category, active toggle) and publication-readiness checks.
+- Studio-authored rows show "Edit in Studio" for content changes.
+- Challenge Registry, Mappings, Tracks and Activity Mapping shrink to read-only views of what Studio linked, plus manual override for legacy items.
 
 ## 3. Admin dashboard review — keep, merge, move, remove
 
