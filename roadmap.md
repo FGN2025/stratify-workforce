@@ -135,3 +135,12 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [ ] Academy as single sign-in for each subdomain (OAuth consent + return-to-app), coordinated with darcy@fgn.gg
 - [ ] Capability file per app (what it reads/writes against the Academy record)
 - [x] "My Academy apps" row in the Workspace (no site owner needed)
+
+## Marketplace app identities (2026-10-10)
+
+- [x] Image-led cards grouped by Academy Discipline
+- [x] Industry cover assigned to every current app listing
+- [x] App cover reused as the app detail identity banner
+- [x] Platform-admin cover, accent, tagline and description editor with preview
+- [x] Remove the duplicate learner-facing SIM Categories sidebar group while preserving SIM admin and Work Order category behavior
+- [x] Link supported simulations from app and discipline pages to their existing industry hubs

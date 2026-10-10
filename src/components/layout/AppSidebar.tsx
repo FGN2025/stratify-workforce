@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -11,14 +11,9 @@ import {
   GraduationCap,
   CalendarDays,
   ChevronDown,
-  ExternalLink,
-  Clock,
   Link as LinkIcon,
   Briefcase,
   BookOpen,
-  Video,
-  FileText,
-  Map as MapIcon,
   Target,
   Code,
   HelpCircle,
@@ -61,15 +56,9 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTenantAdminGuard } from '@/hooks/useTenantAdminGuard';
-import { useSimResources } from '@/hooks/useSimResources';
-import { useGameChannels } from '@/hooks/useGameChannels';
 import { usePendingEvidenceCount } from '@/hooks/usePendingEvidenceCount';
 import { usePendingCommunityCount } from '@/hooks/usePendingCommunityCount';
 import { cn } from '@/lib/utils';
-import { SIM_RESOURCES, hasResources } from '@/config/simResources';
-import { getIconByKey as getSimCategoryIcon } from '@/lib/sim-icons';
-import { useSimCategories } from '@/hooks/useSimCategories';
-import type { GameTitle } from '@/types/tenant';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -193,24 +182,6 @@ const standaloneAdminItems = [
   { title: 'Developers', url: '/developers', icon: Code, developerOnly: true },
 ];
 
-// Static preferred ordering for the original sims. Any additional game_channels
-// rows (e.g. House Flipper, future imports) are appended automatically.
-const BASE_GAME_ORDER: GameTitle[] = ['ATS', 'Fiber_Tech', 'Roadcraft', 'Farming_Sim', 'Construction_Sim', 'Mechanic_Sim', 'MSFS_2024'];
-
-// Icon mapping for database resources
-const ICON_MAP: Record<string, LucideIcon> = {
-  'graduation-cap': GraduationCap,
-  'briefcase': Briefcase,
-  'link': LinkIcon,
-  'book-open': BookOpen,
-  'video': Video,
-  'file-text': FileText,
-  'map': MapIcon,
-  'target': Target,
-  'users': Users,
-  'trophy': Trophy,
-};
-
 export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
@@ -219,67 +190,6 @@ export function AppSidebar() {
   const { isAdmin, isDeveloper, isSuperAdmin, isLoading: roleLoading } = useUserRole();
   const { isTenantAdmin } = useTenantAdminGuard();
   
-  // Fetch database resources
-  const { data: dbResources } = useSimResources();
-  const { data: gameChannels = [] } = useGameChannels();
-  const { data: simCategories = [] } = useSimCategories();
-
-  // Sidebar SIM CATEGORIES order: static base first, then any extra game_channels
-  // (e.g. House Flipper, future imports) appended so new games auto-appear.
-  const GAME_ORDER = useMemo<GameTitle[]>(() => {
-    const order = [...BASE_GAME_ORDER];
-    const seen = new Set<GameTitle>(order);
-    for (const ch of gameChannels) {
-      if (!seen.has(ch.game_title)) {
-        order.push(ch.game_title);
-        seen.add(ch.game_title);
-      }
-    }
-    return order;
-  }, [gameChannels]);
-
-  // Build sidebar sections from sim_categories (admin-controlled mapping),
-  // then append any games not covered by a visible category as a fallback so
-  // newly added games still surface in the sidebar.
-  type SidebarSection = {
-    id: string;
-    label: string;
-    iconKey: string | null;
-    color: string;
-    games: GameTitle[];
-  };
-  const sidebarSections = useMemo<SidebarSection[]>(() => {
-    const sections: SidebarSection[] = [];
-    const coveredGames = new Set<GameTitle>();
-    for (const cat of simCategories) {
-      if (!cat.show_in_sidebar) {
-        cat.default_game_titles.forEach((g) => coveredGames.add(g));
-        continue;
-      }
-      sections.push({
-        id: `cat:${cat.key}`,
-        label: cat.sidebar_label || cat.title,
-        iconKey: cat.icon_key,
-        color: cat.accent_color,
-        games: cat.default_game_titles.filter((g) => GAME_ORDER.includes(g)),
-      });
-      cat.default_game_titles.forEach((g) => coveredGames.add(g));
-    }
-    for (const game of GAME_ORDER) {
-      if (coveredGames.has(game)) continue;
-      const res = SIM_RESOURCES[game];
-      if (!res) continue;
-      sections.push({
-        id: `game:${game}`,
-        label: res.title,
-        iconKey: null,
-        color: res.accentColor,
-        games: [game],
-      });
-    }
-    return sections;
-  }, [simCategories, GAME_ORDER]);
-
   // Pending counts for badges
   const { data: pendingEvidenceCount = 0 } = usePendingEvidenceCount();
   const { data: pendingCommunityCount = 0 } = usePendingCommunityCount();
@@ -288,12 +198,6 @@ export function AppSidebar() {
     evidence: pendingEvidenceCount,
     community: pendingCommunityCount,
   };
-
-  // Track open state for each sidebar section (keyed by section id).
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-  const toggleSection = (id: string) =>
-    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
-
 
   const isOnAdminPage = location.pathname.startsWith('/admin');
   const [adminOpen, setAdminOpen] = useState(isOnAdminPage);
@@ -324,35 +228,6 @@ export function AppSidebar() {
     if ('developerOnly' in item && (item as any).developerOnly) return showDeveloper;
     return true;
   });
-
-  // Group database resources by game, fall back to static config
-  const resourcesByGame = useMemo(() => {
-    if (dbResources && dbResources.length > 0) {
-      const grouped: Record<GameTitle, typeof dbResources> = {
-        ATS: [],
-        Farming_Sim: [],
-        Construction_Sim: [],
-        Mechanic_Sim: [],
-        Fiber_Tech: [],
-        Roadcraft: [],
-        MSFS_2024: [],
-        House_Flipper: [],
-        House_Flipper_2: [],
-        Electrician_Sim: [],
-      };
-      dbResources.forEach((r) => {
-        if (grouped[r.game_title]) {
-          grouped[r.game_title].push(r);
-        }
-      });
-      return grouped;
-    }
-    return null;
-  }, [dbResources]);
-
-  const getResourceIcon = (iconName: string): LucideIcon => {
-    return ICON_MAP[iconName] || LinkIcon;
-  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -405,164 +280,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         ))}
-
-
-        {/* Sim Categories */}
-        {isAuthenticated && <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground/70 uppercase text-[10px] tracking-wider">
-            Sim Categories
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {sidebarSections.map((section) => {
-                const SectionIcon = section.iconKey ? getSimCategoryIcon(section.iconKey) : Target;
-                const sectionOpen = !!openSections[section.id];
-                const sectionHasContent = section.games.length > 0;
-                const sectionActive = section.games.some((g) => location.pathname === `/sim/${g}`);
-
-                return (
-                  <Collapsible
-                    key={section.id}
-                    open={sectionOpen}
-                    onOpenChange={() => toggleSection(section.id)}
-                  >
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          tooltip={section.label}
-                          className={cn(
-                            'w-full justify-between text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent',
-                            !sectionHasContent && 'opacity-60',
-                            sectionActive && 'text-primary bg-primary/10'
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <SectionIcon className="h-4 w-4" style={{ color: section.color }} />
-                            {!collapsed && <span>{section.label}</span>}
-                          </div>
-                          {!collapsed && (
-                            <ChevronDown
-                              className={cn('h-4 w-4 transition-transform', sectionOpen && 'rotate-180')}
-                            />
-                          )}
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="pl-4">
-                        <SidebarMenu>
-                          {!sectionHasContent && (
-                            <SidebarMenuItem>
-                              <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                {!collapsed && <span>No games mapped</span>}
-                              </div>
-                            </SidebarMenuItem>
-                          )}
-                          {section.games.map((gameKey) => {
-                            const game = SIM_RESOURCES[gameKey];
-                            const gameResources = resourcesByGame?.[gameKey] || null;
-                            const hasDbResources = !!gameResources && gameResources.length > 0;
-                            const hasStaticResources = hasResources(gameKey);
-                            const multiGame = section.games.length > 1;
-                            const hubLabel = multiGame
-                              ? (game?.shortTitle || game?.title || gameKey)
-                              : 'Industry Hub';
-                            const hubIconColor = game?.accentColor || section.color;
-
-                            return (
-                              <div key={gameKey}>
-                                <SidebarMenuItem key={`${gameKey}-industry`}>
-                                  <SidebarMenuButton
-                                    asChild
-                                    isActive={location.pathname === `/sim/${gameKey}`}
-                                    tooltip={`${game?.title || gameKey} Industry Hub`}
-                                    className={cn(
-                                      'transition-colors',
-                                      location.pathname === `/sim/${gameKey}`
-                                        ? 'text-primary bg-primary/10'
-                                        : 'text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent'
-                                    )}
-                                  >
-                                    <NavLink to={`/sim/${gameKey}`} className="flex items-center gap-3">
-                                      <Target className="h-4 w-4" style={{ color: hubIconColor }} />
-                                      {!collapsed && <span>{hubLabel}</span>}
-                                    </NavLink>
-                                  </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                {hasDbResources
-                                  ? gameResources!.map((resource) => {
-                                      const ResourceIcon = getResourceIcon(resource.icon_name);
-                                      return (
-                                        <SidebarMenuItem key={resource.id}>
-                                          <SidebarMenuButton
-                                            asChild
-                                            tooltip={resource.title}
-                                            className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                                          >
-                                            <a
-                                              href={resource.href}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="flex items-center gap-3"
-                                            >
-                                              <ResourceIcon
-                                                className="h-4 w-4"
-                                                style={{ color: resource.accent_color }}
-                                              />
-                                              {!collapsed && (
-                                                <>
-                                                  <span>{resource.title}</span>
-                                                  <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                                                </>
-                                              )}
-                                            </a>
-                                          </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                      );
-                                    })
-                                  : hasStaticResources && game
-                                    ? game.resources.map((resource) => {
-                                        const ResourceIcon = resource.icon;
-                                        return (
-                                          <SidebarMenuItem key={resource.key}>
-                                            <SidebarMenuButton
-                                              asChild
-                                              tooltip={resource.title}
-                                              className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-                                            >
-                                              <a
-                                                href={resource.href}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-3"
-                                              >
-                                                <ResourceIcon
-                                                  className="h-4 w-4"
-                                                  style={{ color: resource.accentColor }}
-                                                />
-                                                {!collapsed && (
-                                                  <>
-                                                    <span>{resource.title}</span>
-                                                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                                                  </>
-                                                )}
-                                              </a>
-                                            </SidebarMenuButton>
-                                          </SidebarMenuItem>
-                                        );
-                                      })
-                                    : null}
-                              </div>
-                            );
-                          })}
-                        </SidebarMenu>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>}
 
 
         {/* Admin Section */}
