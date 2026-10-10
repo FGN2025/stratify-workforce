@@ -1,7 +1,15 @@
 # FGN Academy → FGN Studio — handoff (Phase 3 prep)
 
-Recorded 2026-09-23. Read-only contract. No credential appears in this document, in chat, or in
-any repository file. Phase 4 and content submissions remain blocked.
+Recorded 2026-09-23. No credential appears in this document, in chat, or in
+any repository file.
+
+**Update 2026-10-10 — Phase 4 opened.** Package submissions are live on the separate
+`studio-submit` function (contract `2026-10-10.1`; `2026-09-23.1` still accepted). The Studio
+app is provisioned with `can_submit_packages`, so newly minted tokens carry the
+`submissions:create` scope alongside `catalog:read`. Full request/response contract:
+`docs/api/studio-catalog/README.md` → "Package submissions (Phase 4)". Approval is human and
+creates inactive content only. Studio polls `GET /studio-submit/status/:id` for the outcome —
+Academy does not push status outbound.
 
 ## 1. Confirmed scope
 
