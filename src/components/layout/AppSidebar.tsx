@@ -37,6 +37,7 @@ import {
   RotateCcw,
   Activity,
   Building2,
+  PackageOpen,
 } from 'lucide-react';
 import {
   Sidebar,
