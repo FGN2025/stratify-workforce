@@ -43,6 +43,13 @@
       "when": 1791671578197,
       "tag": "0005_studio_course_submission_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791671884388,
+      "tag": "0006_scorm_courses_work_order_optional",
+      "breakpoints": true
     }
   ]
 }

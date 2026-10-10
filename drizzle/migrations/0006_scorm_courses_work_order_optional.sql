@@ -1,0 +1,2 @@
+ALTER TABLE public.scorm_courses ALTER COLUMN work_order_id DROP NOT NULL;
+COMMENT ON COLUMN public.scorm_courses.work_order_id IS 'Nullable: standalone courses submitted via Studio have no Work Order link.';
