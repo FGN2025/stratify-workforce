@@ -301,7 +301,6 @@ export function AppSidebar() {
                               </div>
                             )}
                             {superAdminSubItems.map((item) => {
-                              const count = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
                               return (
                                 <SidebarMenuItem key={item.url}>
                                   <SidebarMenuButton
@@ -319,16 +318,7 @@ export function AppSidebar() {
                                       )}
                                     >
                                       <item.icon className="h-4 w-4" />
-                                      {!collapsed && (
-                                        <>
-                                          <span>{item.title}</span>
-                                          {count > 0 && (
-                                            <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs ml-auto">
-                                              {count > 99 ? '99+' : count}
-                                            </Badge>
-                                          )}
-                                        </>
-                                      )}
+                                      {!collapsed && <span>{item.title}</span>}
                                     </NavLink>
                                   </SidebarMenuButton>
                                 </SidebarMenuItem>
