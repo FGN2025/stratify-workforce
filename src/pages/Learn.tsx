@@ -37,7 +37,7 @@ export default function Learn() {
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="catalog" className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4" />
-                Course Catalog
+                Skills Catalog
               </TabsTrigger>
               {user && (
                 <TabsTrigger value="my-courses" className="flex items-center gap-2">
@@ -47,7 +47,7 @@ export default function Learn() {
               )}
             </TabsList>
 
-            {/* Course Catalog */}
+            {/* Skills Catalog */}
             <TabsContent value="catalog" className="space-y-6">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkles className="h-5 w-5 text-primary" />
