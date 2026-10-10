@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
       const keyHash = await sha256Hex(appKey);
       const { data: app } = await admin
         .from('authorized_apps')
-        .select('id, app_slug, is_active, can_read_catalog, catalog_tenant_id, catalog_include_descendants')
+        .select('id, app_slug, is_active, can_read_catalog, can_submit_packages, catalog_tenant_id, catalog_include_descendants')
         .eq('api_key_hash', keyHash)
         .maybeSingle();
 
@@ -192,19 +192,21 @@ Deno.serve(async (req) => {
       const raw = randomToken();
       const tokenHash = await sha256Hex(raw);
       const expiresAt = new Date(Date.now() + TOKEN_TTL_SECONDS * 1000).toISOString();
+      // Apps provisioned for Phase 4 submissions also receive the write scope.
+      const scopes = ['catalog:read', ...(app.can_submit_packages ? ['submissions:create'] : [])];
       const { error } = await admin.from('studio_tokens').insert({
         app_id: app.id,
         token_hash: tokenHash,
         tenant_id: app.catalog_tenant_id,
         include_descendants: app.catalog_include_descendants,
-        scopes: ['catalog:read'],
+        scopes,
         issued_to: app.app_slug,
         expires_at: expiresAt,
       });
       if (error) throw error;
 
       return jsonResponse(
-        { token: raw, tokenType: 'Bearer', expiresAt, expiresInSeconds: TOKEN_TTL_SECONDS, scopes: ['catalog:read'], tenantId: app.catalog_tenant_id, includesDescendants: app.catalog_include_descendants },
+        { token: raw, tokenType: 'Bearer', expiresAt, expiresInSeconds: TOKEN_TTL_SECONDS, scopes, tenantId: app.catalog_tenant_id, includesDescendants: app.catalog_include_descendants },
         201,
         discoveryCors,
       );
