@@ -36,7 +36,7 @@ export function useCommunities(scope: CommunityScope = 'directory', enabled = tr
           .from('community_memberships')
           .select('tenant_id, role')
           .eq('user_id', user.id)
-          .in('role', MANAGER_ROLES as unknown as string[]);
+          .in('role', [...MANAGER_ROLES]);
         if (mErr) throw mErr;
         const roots = [...new Set((memberships ?? []).map((m: any) => m.tenant_id as string))];
         if (roots.length === 0) return [] as Tenant[];
@@ -80,7 +80,7 @@ export function useIsCommunityManager() {
         .from('community_memberships')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user!.id)
-        .in('role', MANAGER_ROLES as unknown as string[]);
+        .in('role', [...MANAGER_ROLES]);
       if (error) throw error;
       return (count ?? 0) > 0;
     },
