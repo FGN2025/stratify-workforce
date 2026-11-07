@@ -4,9 +4,12 @@
 // play-webhook-receiver with a valid HMAC signature so credentials are
 // minted now that the blocking condition has cleared.
 //
-// Callers:
-//   - pg_cron job (verify_jwt=false) — fires every 2 min
-//   - Admin "Process replay queue" button (admin JWT)
+// Callers (wake-on-enqueue, no polling):
+//   - trg_wake_play_replay_queue — AFTER INSERT statement trigger on
+//     play_replay_queue posts here via pg_net (target in internal_dispatch_targets)
+//   - daily cleanup-job-history cron — backstop only when pending rows exist
+// Each call drains in batches until the queue is empty or the time budget is
+// spent; if work remains it re-invokes itself once, so nothing keeps polling.
 //
 // Idempotency: receiver dedupes on (action, delivery_id); we delete the prior
 // attempt row before re-firing so the receiver actually processes the body.
@@ -33,6 +36,7 @@ async function hmacHex(secret: string, body: string): Promise<string> {
 }
 
 const MAX_PER_RUN = 25;
+const TIME_BUDGET_MS = 45_000;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -46,7 +50,12 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const secret = Deno.env.get('PLAY_WEBHOOK_SECRET');
   const supabase = createClient(supabaseUrl, serviceKey);
+  const startedAt = Date.now();
+  const results: Array<Record<string, unknown>> = [];
+  let drained = 0;
+  let moreRemaining = false;
 
+  while (true) {
   const { data: intents, error: intentsErr } = await supabase
     .from('play_replay_queue')
     .select('id, reason, email, challenge_id, source_slug')
@@ -61,13 +70,8 @@ Deno.serve(async (req) => {
     });
   }
 
-  if (!intents || intents.length === 0) {
-    return new Response(JSON.stringify({ ok: true, drained: 0 }), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const results: Array<Record<string, unknown>> = [];
+  if (!intents || intents.length === 0) break;
+  drained += intents.length;
 
   for (const intent of intents) {
     await supabase
@@ -200,7 +204,23 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ ok: true, drained: intents.length, results }), {
+  if (intents.length < MAX_PER_RUN) break;
+  if (Date.now() - startedAt > TIME_BUDGET_MS) { moreRemaining = true; break; }
+  }
+
+  if (moreRemaining) {
+    // Hand the rest to a fresh invocation instead of waiting for a poll.
+    const next = fetch(`${supabaseUrl}/functions/v1/process-play-replay-queue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: Deno.env.get('SUPABASE_ANON_KEY') ?? '' },
+      body: JSON.stringify({ trigger: 'continuation' }),
+    }).catch((err) => console.error('[process-play-replay-queue] continuation failed', err));
+    // deno-lint-ignore no-explicit-any
+    const rt = (globalThis as any).EdgeRuntime;
+    if (rt?.waitUntil) rt.waitUntil(next); else await next;
+  }
+
+  return new Response(JSON.stringify({ ok: true, drained, more_remaining: moreRemaining, results }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 });

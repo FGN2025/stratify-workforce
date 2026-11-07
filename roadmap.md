@@ -162,3 +162,11 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Admin Overview is task-oriented; large metrics appear only on Overview
 - [x] Review Inbox and Content Operations filters by Academy app; Work Orders expose Edit in Studio links
 - [x] Studio course-sending permission: can_submit_courses flag + submissions:create:courses scope, submissionType on studio-submit, standalone inactive course on approval, contract 2026-10-10.3, live-tested (403 without scope, 201 with, WO regression on 2026-10-10.1, admin approval → unpublished course)
+
+## Database load reduction (2026-11-07)
+
+- [x] Daily cleanup keeps 7 days of job history; old history removed and compacted
+- [x] Retry list starts on add instead of every-2-minute checks (daily safety net only)
+- [x] Breakroom check logs only on activity or a changed/daily repeated error
+- [x] AI tutor settings kept for 5 minutes; admin badges refresh every 5 minutes
+- [ ] Breakroom sign-in token expired (401 since 2026-10-21) — needs a new Breakroom session token from the owner

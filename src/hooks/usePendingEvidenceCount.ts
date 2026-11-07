@@ -13,6 +13,6 @@ export function usePendingEvidenceCount() {
       if (error) throw error;
       return count || 0;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 5 * 60 * 1000, // Badge refresh; also refetches on window focus
   });
 }

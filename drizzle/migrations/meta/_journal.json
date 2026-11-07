@@ -50,6 +50,13 @@
       "when": 1791671884388,
       "tag": "0006_scorm_courses_work_order_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794077272778,
+      "tag": "0007_wake_replay_queue_on_enqueue",
+      "breakpoints": true
     }
   ]
 }
