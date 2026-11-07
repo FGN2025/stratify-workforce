@@ -1686,6 +1686,27 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_dispatch_targets: {
+        Row: {
+          headers: Json
+          name: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          headers?: Json
+          name: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          headers?: Json
+          name?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       leaderboard_embed_configs: {
         Row: {
           created_at: string
