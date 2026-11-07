@@ -20,14 +20,13 @@ const sections = [
       <div className="space-y-4 text-sm text-muted-foreground">
         <p>
           <strong className="text-foreground">FGN Academy</strong> is the central training and credentialing hub for the Fiber Gaming Network ecosystem.
-          It connects four platforms to deliver a unified workforce-readiness experience:
+          It connects these platforms to deliver a unified workforce-readiness experience:
         </p>
         <div className="grid sm:grid-cols-2 gap-3">
           {[
             { name: 'FGN Academy', desc: 'Core training platform — work orders, credentials, Skill Passport, leaderboards, and LMS courses', url: 'fgn.academy' },
             { name: 'FGN Play', desc: 'Competitive simulation challenges — scores and completions sync back to Academy automatically', url: 'play.fgn.gg' },
             { name: 'Broadband Workforce', desc: 'Industry job board and training tracker — receives quiz results, enrollments, and achievement data', url: 'broadbandworkforce.com' },
-            { name: 'Breakroom', desc: 'Virtual world training environment — quiz completions are polled and synced to Academy every 15 minutes', url: 'curator.sine.space' },
           ].map(p => (
             <div key={p.name} className="p-3 rounded-lg bg-muted/30 space-y-1">
               <div className="font-medium text-foreground">{p.name}</div>
@@ -185,46 +184,6 @@ Body:
     ),
   },
   {
-    id: 'breakroom',
-    icon: Gamepad2,
-    title: 'Breakroom Integration',
-    content: (
-      <div className="space-y-3 text-sm text-muted-foreground">
-        <p>
-          <strong className="text-foreground">Breakroom</strong> is a virtual world training environment hosted on <code className="bg-muted px-1.5 py-0.5 rounded text-xs">curator.sine.space</code>.
-          Quiz completions in Breakroom are automatically synced to Academy.
-        </p>
-        <pre className="bg-muted/50 p-4 rounded-lg text-xs overflow-x-auto font-mono leading-relaxed">
-{`┌─────────────┐  pg_cron (every 15 min)  ┌─────────────────────┐
-│  PostgreSQL  │ ───────────────────────▶ │ breakroom-lms-poll  │
-│  (pg_net)    │                          │  (Edge Function)    │
-└─────────────┘                          └────────┬────────────┘
-                                                  │ For each new quiz
-                                                  ▼
-                                         ┌─────────────────────┐
-                                         │ breakroom-lms-sync  │
-                                         │  (Edge Function)    │
-                                         └────────┬────────────┘
-                                                  │
-                                   ┌──────────────┼──────────────┐
-                                   ▼              ▼              ▼
-                              fgn.academy    bbw.com       Audit Logs`}
-        </pre>
-        <p><strong className="text-foreground">How it works:</strong></p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>A <strong className="text-foreground">pg_cron</strong> job fires every 15 minutes, calling the <code className="bg-muted px-1.5 py-0.5 rounded text-xs">breakroom-lms-poll</code> edge function</li>
-          <li>The poll function queries the Breakroom API for all students and their completed quizzes</li>
-          <li>New quiz completions are deduplicated against existing records (via <code className="bg-muted px-1.5 py-0.5 rounded text-xs">breakroom_quiz_id</code> in metadata)</li>
-          <li>Each new completion is forwarded to <code className="bg-muted px-1.5 py-0.5 rounded text-xs">breakroom-lms-sync</code> for processing</li>
-          <li>The sync function resolves identities, writes work order completions, and cross-posts to broadbandworkforce.com</li>
-        </ul>
-        <div className="p-3 rounded-lg bg-muted/30">
-          <p className="text-xs"><strong className="text-foreground">Course Mapping:</strong> Breakroom quizzes are matched to Academy Work Orders via the <code className="bg-muted px-1 rounded">metadata-&gt;&gt;'breakroom_course_name'</code> field on the Work Order. Set this in the <strong className="text-foreground">Challenge Registry</strong>.</p>
-        </div>
-      </div>
-    ),
-  },
-  {
     id: 'identity',
     icon: Users,
     title: 'Cross-Platform Identity',
@@ -234,7 +193,6 @@ Body:
         <div className="space-y-2">
           {[
             { from: 'play.fgn.gg', to: 'FGN Academy', method: 'Shared user UUID — the same user_id exists on both Supabase projects', icon: '🔗' },
-            { from: 'Breakroom', to: 'FGN Academy', method: 'breakroom_identity table — maps breakroom_username and breakroom_user_id to FGN user_id', icon: '🎮' },
             { from: 'FGN Academy', to: 'broadbandworkforce.com', method: 'Email address match — the user\'s auth email is used to find the corresponding BBW account', icon: '📧' },
           ].map(link => (
             <div key={link.from + link.to} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
@@ -246,33 +204,6 @@ Body:
             </div>
           ))}
         </div>
-        <p className="text-xs">
-          <strong className="text-foreground">Breakroom identity management:</strong> Use the <strong className="text-foreground">Breakroom Users</strong> tab in the Challenge Registry to add, edit, or remove identity mappings.
-        </p>
-      </div>
-    ),
-  },
-  {
-    id: 'bbw-sync',
-    icon: Radio,
-    title: 'Broadband Workforce Sync',
-    content: (
-      <div className="space-y-3 text-sm text-muted-foreground">
-        <p>
-          When a completion is processed (from either FGN Play or Breakroom), the <code className="bg-muted px-1.5 py-0.5 rounded text-xs">breakroom-lms-sync</code> function cross-posts data to
-          <strong className="text-foreground"> broadbandworkforce.com</strong> using the user's email address for identity matching.
-        </p>
-        <p><strong className="text-foreground">Data sent to BBW:</strong></p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Quiz attempt records (title, score, pass/fail, timestamp)</li>
-          <li>Lesson progress updates</li>
-          <li>Course enrollment status</li>
-          <li>User statistics (total XP, completions count)</li>
-          <li>Achievement and badge awards</li>
-        </ul>
-        <p className="text-xs text-muted-foreground/70">
-          BBW sync requires the <code className="bg-muted px-1 rounded">BBW_SUPABASE_URL</code> and <code className="bg-muted px-1 rounded">BBW_SUPABASE_SERVICE_ROLE_KEY</code> secrets to be configured.
-        </p>
       </div>
     ),
   },
@@ -290,17 +221,7 @@ Body:
         <ul className="list-disc pl-5 space-y-1">
           <li>View all Work Orders with their <code className="bg-muted px-1 rounded">source_challenge_id</code> mappings</li>
           <li>Copy UUIDs to clipboard for use in game integration scripts</li>
-          <li>Edit the <strong className="text-foreground">Breakroom Course Name</strong> inline to link Breakroom quizzes to Work Orders</li>
-          <li><strong className="text-foreground">Export tools:</strong> Generate Lua tables or PowerShell/CSV exports of challenge IDs for use in game server scripts</li>
-        </ul>
-        <p><strong className="text-foreground">Breakroom Users Tab:</strong></p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>View all Breakroom identity mappings with linked FGN user info</li>
-          <li>Add new mappings by searching for users by email</li>
-          <li>Edit Breakroom username and numeric user ID</li>
-          <li>Delete orphaned or incorrect mappings</li>
-        </ul>
-      </div>
+          <li><strong className="text-foreground">Export tools:</strong> CSV export of challenge IDs</li>
     ),
   },
   {
