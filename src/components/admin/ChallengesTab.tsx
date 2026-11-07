@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useGameChannelColors } from '@/hooks/useGameChannelColors';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Copy, Terminal, Code, Search, Download, FileText, Minus } from 'lucide-react';
+import { Copy, Search, Download, Minus } from 'lucide-react';
 import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -43,13 +43,10 @@ interface WorkOrderRow {
 }
 
 export function ChallengesTab() {
-  const queryClient = useQueryClient();
   const colorMap = useGameChannelColors();
   const [search, setSearch] = useState('');
   const [gameFilter, setGameFilter] = useState<string>('all');
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
 
   const { data: workOrders, isLoading } = useQuery({
     queryKey: ['challenge-registry-work-orders'],
@@ -78,75 +75,15 @@ export function ChallengesTab() {
     });
   }, [workOrders, gameFilter, activeFilter, search]);
 
-  const getBreakroomCourseName = (wo: WorkOrderRow) =>
-    (wo.metadata?.breakroom_course_name as string) || '';
-
-  const handleStartEdit = (wo: WorkOrderRow) => {
-    setEditingId(wo.id);
-    setEditValue(getBreakroomCourseName(wo));
-  };
-
-  const handleSaveCourseName = useCallback(async (wo: WorkOrderRow) => {
-    setEditingId(null);
-    const oldValue = getBreakroomCourseName(wo);
-    if (editValue === oldValue) return;
-
-    const newMetadata = { ...wo.metadata, breakroom_course_name: editValue || undefined };
-    if (!editValue) delete newMetadata.breakroom_course_name;
-
-    // Optimistic update
-    queryClient.setQueryData(['challenge-registry-work-orders'], (old: WorkOrderRow[] | undefined) =>
-      old?.map(w => w.id === wo.id ? { ...w, metadata: newMetadata } : w)
-    );
-
-    const { error } = await supabase
-      .from('work_orders')
-      .update({ metadata: newMetadata as any })
-      .eq('id', wo.id);
-
-    if (error) {
-      queryClient.invalidateQueries({ queryKey: ['challenge-registry-work-orders'] });
-      toast.error('Failed to save course name');
-    } else {
-      toast.success('Breakroom course name saved');
-    }
-  }, [editValue, queryClient]);
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
-  };
-
-  const getPowerShell = (wo: WorkOrderRow) => {
-    const sid = wo.source_challenge_id || wo.id;
-    return `$body = '{"breakroom_username":"STUDENT_USERNAME","event_type":"quiz_complete","course_id_external":"${sid}","score":0,"passed":true,"xp_reward":${wo.xp_reward},"completion_time_minutes":0}'; $headers = @{"x-api-key"="fgn_br_sync_2026_NineStar_HCTC_Huxley_ForkedDeer_Adams";"Content-Type"="application/json"}; Invoke-RestMethod -Uri "https://vfzjfkcwromssjnlrhoo.supabase.co/functions/v1/breakroom-lms-sync" -Method POST -Headers $headers -Body $body`;
-  };
-
-  const getLuaEntry = (wo: WorkOrderRow) => {
-    const name = getBreakroomCourseName(wo) || getWorkOrderDisplayName(wo);
-    const sid = wo.source_challenge_id || wo.id;
-    return `["${name}"] = "${sid}",`;
-  };
-
-  const exportLua = () => {
-    const entries = (workOrders || [])
-      .filter(wo => wo.is_active && getBreakroomCourseName(wo))
-      .map(wo => `  ${getLuaEntry(wo)}`)
-      .join('\n');
-    const content = `local COURSE_MAP = {\n${entries}\n}`;
-    downloadFile(content, 'course_map.txt', 'text/plain');
-    toast.success('Lua COURSE_MAP exported');
-  };
 
   const exportCSV = () => {
-    const headers = ['Title', 'Game Title', 'Source Challenge ID', 'Is Active', 'XP Reward', 'Breakroom Course Name'];
+    const headers = ['Title', 'Game Title', 'Source Challenge ID', 'Is Active', 'XP Reward'];
     const rows = filtered.map(wo => [
       getWorkOrderDisplayName(wo),
       wo.game_title,
       wo.source_challenge_id || '',
       wo.is_active ? 'Yes' : 'No',
       wo.xp_reward.toString(),
-      getBreakroomCourseName(wo),
     ]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
     downloadFile(csv, 'challenge_registry.csv', 'text/csv');
@@ -208,10 +145,6 @@ export function ChallengesTab() {
           </SelectContent>
         </Select>
         <div className="flex gap-2 ml-auto">
-          <Button variant="outline" size="sm" onClick={exportLua}>
-            <FileText className="h-4 w-4 mr-1" />
-            Export Lua
-          </Button>
           <Button variant="outline" size="sm" onClick={exportCSV}>
             <Download className="h-4 w-4 mr-1" />
             Export CSV
@@ -233,7 +166,6 @@ export function ChallengesTab() {
                 <TableHead>Game</TableHead>
                 <TableHead>Source Challenge ID</TableHead>
                 <TableHead className="text-center">Active</TableHead>
-                <TableHead>Breakroom Course Name</TableHead>
                 <TableHead className="text-center">BBW</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -280,27 +212,6 @@ export function ChallengesTab() {
                       style={{ backgroundColor: wo.is_active ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
                     />
                   </TableCell>
-                  <TableCell>
-                    {editingId === wo.id ? (
-                      <Input
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onBlur={() => handleSaveCourseName(wo)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleSaveCourseName(wo); }}
-                        className="h-7 text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      <button
-                        onClick={() => handleStartEdit(wo)}
-                        className="text-xs text-left w-full px-2 py-1 rounded hover:bg-muted transition-colors min-h-[28px]"
-                      >
-                        {getBreakroomCourseName(wo) || (
-                          <span className="text-muted-foreground italic">Click to set...</span>
-                        )}
-                      </button>
-                    )}
-                  </TableCell>
                   <TableCell className="text-center">
                     <Minus className="h-4 w-4 mx-auto text-muted-foreground/50" />
                   </TableCell>
@@ -318,32 +229,6 @@ export function ChallengesTab() {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Copy UUID</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => copyToClipboard(getPowerShell(wo), 'PowerShell command')}
-                          >
-                            <Terminal className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copy PowerShell</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => copyToClipboard(getLuaEntry(wo), 'Lua entry')}
-                          >
-                            <Code className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copy Lua Entry</TooltipContent>
                       </Tooltip>
                     </div>
                   </TableCell>
