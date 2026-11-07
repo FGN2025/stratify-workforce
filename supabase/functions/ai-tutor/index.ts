@@ -53,7 +53,37 @@ interface ModelConfig {
   api_key_encrypted: string | null;
 }
 
-async function getPersonaFromDB(
+// Settings change rarely; keep them in the warm function instance for 5 minutes
+// instead of re-reading them on every tutor message.
+const SETTINGS_TTL_MS = 5 * 60 * 1000;
+const settingsCache = new Map<string, { at: number; value: unknown }>();
+async function cachedSetting<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const hit = settingsCache.get(key);
+  if (hit && Date.now() - hit.at < SETTINGS_TTL_MS) return hit.value as T;
+  const value = await load();
+  settingsCache.set(key, { at: Date.now(), value });
+  return value;
+}
+
+function getPersonaFromDB(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  contextType: string,
+  gameTitle?: string
+): Promise<PersonaConfig | null> {
+  return cachedSetting(`persona:${contextType}:${gameTitle ?? ''}`, () =>
+    loadPersonaFromDB(supabaseAdmin, contextType, gameTitle));
+}
+
+function getModelFromDB(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  useFor: string,
+  modelOverride?: string | null
+): Promise<{ modelId: string; apiKey: string | null }> {
+  return cachedSetting(`model:${useFor}:${modelOverride ?? ''}`, () =>
+    loadModelFromDB(supabaseAdmin, useFor, modelOverride));
+}
+
+async function loadPersonaFromDB(
   supabaseAdmin: ReturnType<typeof createClient>,
   contextType: string,
   gameTitle?: string
@@ -81,7 +111,7 @@ async function getPersonaFromDB(
   return data || null;
 }
 
-async function getModelFromDB(
+async function loadModelFromDB(
   supabaseAdmin: ReturnType<typeof createClient>,
   useFor: string,
   modelOverride?: string | null

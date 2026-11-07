@@ -342,13 +342,32 @@ Deno.serve(async (req) => {
     results.errors.push(`Top-level error: ${String(err)}`)
   }
 
-  // Audit log
+  // Audit log — only when something happened. Quiet runs are not logged, and a
+  // repeating error is logged once per day (or when the error changes).
   try {
-    await fgnClient.from('system_audit_logs').insert({
-      action: 'breakroom_lms_poll',
-      resource_type: 'breakroom_poll',
-      details: results,
-    })
+    const hasActivity = results.synced > 0 || results.sync_errors > 0
+    const errorSignature = results.errors.length ? results.errors.join(' | ').slice(0, 500) : null
+    let shouldLog = hasActivity
+    if (!hasActivity && errorSignature) {
+      const { data: last } = await fgnClient
+        .from('system_audit_logs')
+        .select('created_at, details')
+        .eq('action', 'breakroom_lms_poll')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const lastErrors = (last?.details as { errors?: string[] } | null)?.errors ?? []
+      const lastSignature = lastErrors.length ? lastErrors.join(' | ').slice(0, 500) : null
+      const lastAt = last?.created_at ? new Date(last.created_at).getTime() : 0
+      shouldLog = lastSignature !== errorSignature || Date.now() - lastAt > 24 * 60 * 60 * 1000
+    }
+    if (shouldLog) {
+      await fgnClient.from('system_audit_logs').insert({
+        action: 'breakroom_lms_poll',
+        resource_type: 'breakroom_poll',
+        details: results,
+      })
+    }
   } catch (_) {
     // silent
   }
