@@ -40,9 +40,7 @@ const sections = [
 │  play.fgn.gg │ ─────────────▶│              │
 └──────────────┘  completions   │              │    email match    ┌─────────────────────┐
                                 │  FGN Academy │ ────────────────▶ │ broadbandworkforce   │
-┌──────────────┐   15-min poll  │   (SSOT)     │   quiz + stats   │        .com          │
-│  Breakroom   │ ─────────────▶│              │                   └─────────────────────┘
-└──────────────┘  quiz results  └──────────────┘`}
+└──────────────┘                └──────────────┘`}
         </pre>
         <p>FGN Academy is the <strong className="text-foreground">Single Source of Truth (SSOT)</strong> for all training content, user credentials, and career readiness scores.</p>
       </div>
@@ -222,6 +220,8 @@ Body:
           <li>View all Work Orders with their <code className="bg-muted px-1 rounded">source_challenge_id</code> mappings</li>
           <li>Copy UUIDs to clipboard for use in game integration scripts</li>
           <li><strong className="text-foreground">Export tools:</strong> CSV export of challenge IDs</li>
+        </ul>
+      </div>
     ),
   },
   {
@@ -277,43 +277,6 @@ Body:
       </div>
     ),
   },
-  {
-    id: 'monitoring',
-    icon: AlertTriangle,
-    title: 'Monitoring & Troubleshooting',
-    adminOnly: true,
-    content: (
-      <div className="space-y-3 text-sm text-muted-foreground">
-        <p><strong className="text-foreground">Checking Breakroom sync health:</strong></p>
-        <p className="text-xs">
-          View <strong className="text-foreground">Audit Logs</strong> in the Super Admin panel filtered by action <code className="bg-muted px-1 rounded">breakroom_lms_poll</code>.
-          A healthy poll shows <code className="bg-muted px-1 rounded">students_found &gt; 0</code> with no errors.
-        </p>
-
-        <Separator />
-
-        <p><strong className="text-foreground">Common issues:</strong></p>
-        <div className="space-y-2">
-          {[
-            { symptom: 'students_found: 0 with 401/403 errors', cause: 'Breakroom session tokens expired', fix: 'Refresh all 3 session secrets (token, cookies, JWT) from browser DevTools' },
-            { symptom: 'Students found but quizzes_found: 0', cause: 'No completed quizzes or missing breakroom_user_id', fix: 'Verify identity mapping in Challenge Registry → Breakroom Users' },
-            { symptom: 'sync_errors > 0', cause: 'breakroom-lms-sync function failures', fix: 'Check edge function logs for detailed error messages' },
-            { symptom: 'No audit log entries for polls', cause: 'Cron job not running or function not deployed', fix: 'Verify pg_cron job exists and function is deployed' },
-          ].map(issue => (
-            <div key={issue.symptom} className="p-3 rounded-lg bg-muted/30 text-xs space-y-1">
-              <div><strong className="text-foreground">Symptom:</strong> {issue.symptom}</div>
-              <div><strong className="text-foreground">Cause:</strong> {issue.cause}</div>
-              <div><strong className="text-foreground">Fix:</strong> {issue.fix}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-          <p className="text-xs"><strong className="text-destructive">⚠️ Breakroom tokens expire approximately weekly.</strong> When tokens expire, no new quiz completions will sync. Refresh tokens by logging into curator.sine.space and extracting cookies from browser DevTools.</p>
-        </div>
-      </div>
-    ),
-  },
 ];
 
 const HelpGuide = () => {
@@ -323,7 +286,7 @@ const HelpGuide = () => {
         <div>
           <h1 className="text-3xl font-bold">FGN Academy Platform Guide</h1>
           <p className="text-muted-foreground mt-2">
-            Comprehensive reference for the FGN ecosystem — how challenges, credentials, and user data flow between fgn.academy, play.fgn.gg, broadbandworkforce.com, and Breakroom.
+            Comprehensive reference for the FGN ecosystem — how challenges, credentials, and user data flow between fgn.academy, play.fgn.gg and broadbandworkforce.com.
           </p>
         </div>
 
