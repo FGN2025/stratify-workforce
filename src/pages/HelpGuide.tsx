@@ -40,7 +40,7 @@ const sections = [
 │  play.fgn.gg │ ─────────────▶│              │
 └──────────────┘  completions   │              │    email match    ┌─────────────────────┐
                                 │  FGN Academy │ ────────────────▶ │ broadbandworkforce   │
-└──────────────┘                └──────────────┘`}
+                                └──────────────┘                   └─────────────────────┘`}
         </pre>
         <p>FGN Academy is the <strong className="text-foreground">Single Source of Truth (SSOT)</strong> for all training content, user credentials, and career readiness scores.</p>
       </div>
@@ -75,7 +75,7 @@ Response:
           <li>Work orders are created with <code className="bg-muted px-1 rounded">is_active = false</code> and a null title (resolver-driven)</li>
         </ul>
         <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <p className="text-xs"><strong className="text-foreground">Tip:</strong> Use the <strong className="text-foreground">Challenge Registry</strong> at <code className="bg-muted px-1.5 py-0.5 rounded text-xs">/admin/challenge-registry</code> to view cross-platform ID mappings, export challenge IDs for game scripts, and configure Breakroom course-name links.</p>
+          <p className="text-xs"><strong className="text-foreground">Tip:</strong> Use the <strong className="text-foreground">Challenge Registry</strong> at <code className="bg-muted px-1.5 py-0.5 rounded text-xs">/admin/challenge-registry</code> to view cross-platform ID mappings and export challenge IDs.</p>
         </div>
       </div>
     ),
