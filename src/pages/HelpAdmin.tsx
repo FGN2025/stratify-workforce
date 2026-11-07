@@ -197,7 +197,7 @@ const sections = [
         <p><strong className="text-foreground">Community Review:</strong> approve, reject, or request revision on community submissions (platform only).</p>
         <p><strong className="text-foreground">Authorized Apps:</strong> manage external apps using the Credential API — CORS origins, permissions, encrypted app keys.</p>
         <p><strong className="text-foreground">Tenant Management:</strong> full CRUD with list and tree views. Parent-child hierarchy, categories, brand colors (community-level branding via <code className="bg-muted px-1 rounded">--tenant-primary</code>; FGN pillar colors stay locked).</p>
-        <p><strong className="text-foreground">Audit Logs:</strong> system-wide log filtered by action, resource type, and date range — including <code className="bg-muted px-1 rounded">breakroom_lms_poll</code> sync health.</p>
+        <p><strong className="text-foreground">Audit Logs:</strong> system-wide log filtered by action, resource type, and date range.</p>
       </div>
     ),
   },

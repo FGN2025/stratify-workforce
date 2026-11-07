@@ -57,7 +57,7 @@ const Privacy = () => {
               <ul className="list-disc pl-6 space-y-1">
                 <li><strong>Account data:</strong> name, email, username, avatar, organization, and authentication identifiers (including Discord OAuth when you choose to connect it).</li>
                 <li><strong>Profile data:</strong> address details validated for residency verification, career interests, and public Skill Passport content you choose to share.</li>
-                <li><strong>Learning &amp; performance data:</strong> course progress, lesson completions, XP, achievements, quiz attempts, SCORM session results, and telemetry from connected simulations and partner platforms (e.g., Breakroom, Play.fgn.gg).</li>
+                <li><strong>Learning &amp; performance data:</strong> course progress, lesson completions, XP, achievements, quiz attempts, SCORM session results, and telemetry from connected simulations and partner platforms (e.g., Play.fgn.gg).</li>
                 <li><strong>Operational data:</strong> work order assignments, evidence submissions, event registrations, and community memberships.</li>
                 <li><strong>Technical data:</strong> device, browser, IP address, log timestamps, and diagnostic information.</li>
               </ul>

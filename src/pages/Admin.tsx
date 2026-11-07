@@ -399,7 +399,7 @@ export default function Admin() {
           />
         );
       case 'breakroom-mapper':
-        // Retired: Breakroom links are set on the Work Order (in Studio, or Configurator quick edit).
+        // Retired route: redirects to the admin overview.
         return <Navigate to="/admin/work-orders" replace />;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : <AccessDenied />;
