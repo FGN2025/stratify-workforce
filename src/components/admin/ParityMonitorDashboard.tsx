@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Activity, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Phase 1 parity targets — Academy ↔ Play ↔ Breakroom ↔ Webhook fan-out.
+// Phase 1 parity targets — Academy ↔ Play ↔ Webhook fan-out.
 // T0 = 2026-05-12 ~16:22 UTC; green target = 2026-05-14 ~16:22 UTC.
 const PARITY_T0 = new Date('2026-05-12T16:22:00Z');
 const PARITY_TARGET_GREEN = new Date('2026-05-14T16:22:00Z');
 
 type RouteRow = {
   route: string;
-  surface: 'play' | 'breakroom' | 'webhook';
+  surface: 'play' | 'webhook';
   total24h: number;
   failed24h: number;
   errorRate: number;
@@ -46,18 +46,12 @@ function statusBadge(row: RouteRow) {
 async function fetchParityData(): Promise<{ rows: RouteRow[]; sampledAt: string }> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const [play, breakroom, webhooks] = await Promise.all([
+  const [play, webhooks] = await Promise.all([
     supabase
       .from('play_sync_attempts')
       .select('action, status, created_at')
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .limit(2000),
-    supabase
-      .from('breakroom_sync_attempts')
-      .select('sync_outcome, last_attempt_at')
-      .gte('last_attempt_at', since)
-      .order('last_attempt_at', { ascending: false })
       .limit(2000),
     supabase
       .from('webhook_delivery_log')
@@ -95,14 +89,6 @@ async function fetchParityData(): Promise<{ rows: RouteRow[]; sampledAt: string 
     if (!ok && !b.lastErrorAt) b.lastErrorAt = r.created_at;
   }
 
-  for (const r of breakroom.data ?? []) {
-    const b = ensure('breakroom:quiz_sync', 'breakroom');
-    b.total24h += 1;
-    const ok = r.sync_outcome === 'success' || r.sync_outcome === 'completed';
-    if (!ok) b.failed24h += 1;
-    if (ok && !b.lastSuccessAt) b.lastSuccessAt = r.last_attempt_at;
-    if (!ok && !b.lastErrorAt) b.lastErrorAt = r.last_attempt_at;
-  }
 
   for (const r of webhooks.data ?? []) {
     const b = ensure(`webhook:${r.event_type}`, 'webhook');

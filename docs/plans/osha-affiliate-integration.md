@@ -14,7 +14,7 @@ In:
 - New affiliate redirect Edge Function (signed deep-links)
 - New affiliate webhook receiver Edge Function (HMAC-verified postbacks)
 - New `external_providers` and `external_provider_completions` tables
-- Work-order detail UI: "Start on Partner Site" CTA replacing the current SIM/Breakroom CTA for these 4 work orders
+- Work-order detail UI: "Start on Partner Site" CTA replacing the current SIM CTA for these 4 work orders
 - Profile/credentials surface: external OSHA card displayed alongside Skill Passport entries
 - Admin tab to view affiliate completions + manual-credit override
 
@@ -67,7 +67,7 @@ New tables:
 - `external_provider_enrollments` — outbound click log (user_id, work_order_id, provider_id, user_hash, redirected_at, completed_at).
 - `external_provider_completions` — inbound postback log (enrollment_id, raw_payload jsonb, status, credential_id, received_at).
 
-Work-orders table: nullable `external_provider_course_id` FK. When set, UI renders affiliate CTA instead of SIM/Breakroom CTA.
+Work-orders table: nullable `external_provider_course_id` FK. When set, UI renders affiliate CTA instead of SIM CTA.
 
 Existing `credentials` table reused for the OSHA card; add `source: 'external_provider'` plus FK to `external_provider_completions.id`.
 
@@ -96,7 +96,7 @@ RLS:
 
 ## Frontend changes
 
-- `WorkOrderCard` / `WorkOrderDetail`: detect `external_provider_course_id`; render new `<OpenInPartnerButton>` instead of Breakroom/SIM CTA
+- `WorkOrderCard` / `WorkOrderDetail`: detect `external_provider_course_id`; render new `<OpenInPartnerButton>` instead of SIM CTA
 - New `ExternalProviderCard` on `Profile` page listing OSHA cards with provider logo + "View on Partner" link
 - Admin: new "External Provider Activity" tab — table of enrollments + completions with manual `Re-credit` action
 

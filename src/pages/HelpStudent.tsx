@@ -61,7 +61,7 @@ const sections = [
         <ol className="list-decimal pl-5 space-y-1">
           <li>Browse and filter by SIM or difficulty.</li>
           <li>Open a Work Order to see its tasks and any attached assessment.</li>
-          <li>Launch the SIM and complete the tasks. Completions sync automatically from FGN Play (webhook) and Breakroom (15-minute poll).</li>
+          <li>Launch the SIM and complete the tasks. Completions sync automatically from FGN Play.</li>
           <li>Upload evidence if the work order requires it — review states are <em>Pending</em>, <em>Approved</em>, <em>Rejected</em>, or <em>Revision Requested</em>.</li>
           <li>Pass (score ≥ 70%) to earn XP and a Skill Credential on your passport.</li>
         </ol>
@@ -183,7 +183,7 @@ const sections = [
         <p><strong className="text-foreground">Common issues:</strong></p>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong className="text-foreground">Can't log in</strong> — check email verification, try the Google or Discord button, or reset your password</li>
-          <li><strong className="text-foreground">Completion not showing</strong> — FGN Play webhooks are near-instant; Breakroom polls every 15 minutes</li>
+          <li><strong className="text-foreground">Completion not showing</strong> — FGN Play completions usually arrive within a minute</li>
           <li><strong className="text-foreground">Evidence upload failing</strong> — check file size and allowed types</li>
           <li><strong className="text-foreground">Missing from Leaderboard</strong> — complete at least one Work Order</li>
           <li><strong className="text-foreground">Community join pending</strong> — some require admin approval</li>

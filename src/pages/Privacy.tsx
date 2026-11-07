@@ -57,7 +57,7 @@ const Privacy = () => {
               <ul className="list-disc pl-6 space-y-1">
                 <li><strong>Account data:</strong> name, email, username, avatar, organization, and authentication identifiers (including Discord OAuth when you choose to connect it).</li>
                 <li><strong>Profile data:</strong> address details validated for residency verification, career interests, and public Skill Passport content you choose to share.</li>
-                <li><strong>Learning &amp; performance data:</strong> course progress, lesson completions, XP, achievements, quiz attempts, SCORM session results, and telemetry from connected simulations and partner platforms (e.g., Breakroom, Play.fgn.gg).</li>
+                <li><strong>Learning &amp; performance data:</strong> course progress, lesson completions, XP, achievements, quiz attempts, SCORM session results, and telemetry from connected simulations and partner platforms (e.g., Play.fgn.gg).</li>
                 <li><strong>Operational data:</strong> work order assignments, evidence submissions, event registrations, and community memberships.</li>
                 <li><strong>Technical data:</strong> device, browser, IP address, log timestamps, and diagnostic information.</li>
               </ul>
@@ -80,7 +80,7 @@ const Privacy = () => {
               <p>We do not sell your personal information. We share data only as needed:</p>
               <ul className="list-disc pl-6 space-y-1">
                 <li><strong>With your organization (tenant):</strong> administrators of the tenant you belong to can view your learning progress and work order activity.</li>
-                <li><strong>With integrated platforms you connect</strong> (such as Discord, Breakroom, and Play.fgn.gg) to enable cross-platform features.</li>
+                <li><strong>With integrated platforms you connect</strong> (such as Discord and Play.fgn.gg) to enable cross-platform features.</li>
                 <li><strong>With service providers</strong> that host infrastructure, deliver email, validate addresses, or process content on our behalf, subject to confidentiality obligations.</li>
                 <li><strong>For legal reasons</strong> when required by law, regulation, or valid legal process.</li>
                 <li><strong>Public Skill Passport:</strong> data on a passport you publish is intentionally accessible to anyone with the link.</li>

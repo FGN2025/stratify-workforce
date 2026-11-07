@@ -127,8 +127,7 @@ const sections = [
     content: (
       <div className="space-y-3 text-sm text-muted-foreground">
         <p><code className="bg-muted px-1.5 py-0.5 rounded text-xs">/admin/challenge-registry</code> manages cross-platform ID mappings for work orders.</p>
-        <p><strong className="text-foreground">Challenges tab:</strong> view all work orders with <code className="bg-muted px-1 rounded">fgn_origin_challenge_id</code> (primary) and legacy <code className="bg-muted px-1 rounded">source_challenge_id</code>; copy UUIDs; edit Breakroom course-name links inline; export Lua/CSV for game scripts.</p>
-        <p><strong className="text-foreground">Breakroom Users tab:</strong> add, edit, or delete identity mappings between Breakroom usernames/IDs and FGN user IDs.</p>
+        <p><strong className="text-foreground">Challenges tab:</strong> view all work orders with <code className="bg-muted px-1 rounded">fgn_origin_challenge_id</code> (primary) and legacy <code className="bg-muted px-1 rounded">source_challenge_id</code>; copy UUIDs; export CSV.</p>
         <p>Use this hub together with the <code className="bg-muted px-1 rounded">import-challenge-as-workorder</code> edge function (see the Platform Guide) to bring play.fgn.gg challenges into Academy as work orders.</p>
       </div>
     ),
@@ -198,7 +197,7 @@ const sections = [
         <p><strong className="text-foreground">Community Review:</strong> approve, reject, or request revision on community submissions (platform only).</p>
         <p><strong className="text-foreground">Authorized Apps:</strong> manage external apps using the Credential API — CORS origins, permissions, encrypted app keys.</p>
         <p><strong className="text-foreground">Tenant Management:</strong> full CRUD with list and tree views. Parent-child hierarchy, categories, brand colors (community-level branding via <code className="bg-muted px-1 rounded">--tenant-primary</code>; FGN pillar colors stay locked).</p>
-        <p><strong className="text-foreground">Audit Logs:</strong> system-wide log filtered by action, resource type, and date range — including <code className="bg-muted px-1 rounded">breakroom_lms_poll</code> sync health.</p>
+        <p><strong className="text-foreground">Audit Logs:</strong> system-wide log filtered by action, resource type, and date range.</p>
       </div>
     ),
   },

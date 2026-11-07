@@ -3,7 +3,6 @@ import { ArrowRight, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { GameIcon, getGameLabel } from './GameIcon';
-import { SpatialTaskBadge } from '@/components/work-orders/SpatialTaskBadge';
 import { getWorkOrderDisplayName } from '@/lib/work-order-display';
 import type { WorkOrder } from '@/types/tenant';
 import { cn } from '@/lib/utils';
@@ -40,7 +39,6 @@ export function WorkOrderCard({ workOrder, tenantColor }: WorkOrderCardProps) {
             </div>
             
             <div className="flex items-center gap-1.5 shrink-0">
-              <SpatialTaskBadge metadata={(workOrder as unknown as { metadata?: Record<string, unknown> | null }).metadata} />
               {workOrder.is_active && (
                 <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary text-[10px]">
                   ACTIVE
