@@ -2,8 +2,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Globe, Upload, Zap, Award, Gamepad2, Users, Radio, FileCheck,
-  Code, GraduationCap, AlertTriangle, ArrowRight, Wand2,
+  Globe, Upload, Zap, Award, Users, FileCheck,
+  Code, GraduationCap, ArrowRight, Wand2,
 } from 'lucide-react';
 
 const AdminBadge = () => (
