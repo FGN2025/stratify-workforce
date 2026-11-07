@@ -155,7 +155,7 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 - [x] Submissions carry app + destinations (contract 2026-10-10.2)
 - [x] Admin menu merged: Simulations, Challenges, Integrations; Breakroom Mapper retired
 - [ ] Course Builder retirement — blocked on first real Studio package passing joint test (Darcy)
-- [ ] Studio side: destination selection, app launch values, Edit in Studio, Breakroom link editing — Darcy (FGN Creative Hub)
+- [ ] Studio side: destination selection, app launch values, Edit in Studio — Darcy (FGN Creative Hub)
 - [ ] Remove FGN.GG import button once Studio distribution to FGN.GG is live
 - [ ] Hierarchy optimizations: curation by app, app-scoped admin filters, community landing per app, reporting by app
 - [x] Simplified role-aware sidebar: Academy Operations hubs, community operations, legacy mappings nested, duplicate Configurator/Students/Guide links retired
@@ -167,6 +167,5 @@ implementation of the Evidence + Skills model awaits an explicit build instructi
 
 - [x] Daily cleanup keeps 7 days of job history; old history removed and compacted
 - [x] Retry list starts on add instead of every-2-minute checks (daily safety net only)
-- [x] Breakroom check logs only on activity or a changed/daily repeated error
 - [x] AI tutor settings kept for 5 minutes; admin badges refresh every 5 minutes
-- [ ] Breakroom sign-in token expired (401 since 2026-10-21) — needs a new Breakroom session token from the owner
+- [x] Breakroom integration retired: check stopped, functions and keys removed, all Breakroom screens and help text removed (past records kept)
