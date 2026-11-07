@@ -75,6 +75,10 @@ export function ChallengesTab() {
     });
   }, [workOrders, gameFilter, activeFilter, search]);
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
 
   const exportCSV = () => {
     const headers = ['Title', 'Game Title', 'Source Challenge ID', 'Is Active', 'XP Reward'];
