@@ -1,7 +1,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Globe, Upload, Zap, Award, Gamepad2, Users, Radio, FileCheck,
   Code, GraduationCap, AlertTriangle, ArrowRight, Wand2,
