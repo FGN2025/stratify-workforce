@@ -127,7 +127,7 @@ const sections = [
     content: (
       <div className="space-y-3 text-sm text-muted-foreground">
         <p><code className="bg-muted px-1.5 py-0.5 rounded text-xs">/admin/challenge-registry</code> manages cross-platform ID mappings for work orders.</p>
-        <p><strong className="text-foreground">Challenges tab:</strong> view all work orders with <code className="bg-muted px-1 rounded">fgn_origin_challenge_id</code> (primary) and legacy <code className="bg-muted px-1 rounded">source_challenge_id</code>; copy UUIDs; edit Breakroom course-name links inline; export Lua/CSV for game scripts.</p>
+        <p><strong className="text-foreground">Challenges tab:</strong> view all work orders with <code className="bg-muted px-1 rounded">fgn_origin_challenge_id</code> (primary) and legacy <code className="bg-muted px-1 rounded">source_challenge_id</code>; copy UUIDs; export CSV.</p>
         <p>Use this hub together with the <code className="bg-muted px-1 rounded">import-challenge-as-workorder</code> edge function (see the Platform Guide) to bring play.fgn.gg challenges into Academy as work orders.</p>
       </div>
     ),

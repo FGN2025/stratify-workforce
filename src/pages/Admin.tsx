@@ -212,7 +212,6 @@ export default function Admin() {
     'games',
     'sim-categories',
     'sim-resources',
-    'breakroom-mapper',
     'play-sync',
     'community-review',
     'authorized-apps',
@@ -398,9 +397,6 @@ export default function Admin() {
             ]}
           />
         );
-      case 'breakroom-mapper':
-        // Retired route: redirects to the admin overview.
-        return <Navigate to="/admin/work-orders" replace />;
       case 'super-admin':
         return isSuperAdmin ? <SuperAdminPanel /> : <AccessDenied />;
       default:
