@@ -61,7 +61,7 @@ const sections = [
         <ol className="list-decimal pl-5 space-y-1">
           <li>Browse and filter by SIM or difficulty.</li>
           <li>Open a Work Order to see its tasks and any attached assessment.</li>
-          <li>Launch the SIM and complete the tasks. Completions sync automatically from FGN Play (webhook) and Breakroom (15-minute poll).</li>
+          <li>Launch the SIM and complete the tasks. Completions sync automatically from FGN Play.</li>
           <li>Upload evidence if the work order requires it — review states are <em>Pending</em>, <em>Approved</em>, <em>Rejected</em>, or <em>Revision Requested</em>.</li>
           <li>Pass (score ≥ 70%) to earn XP and a Skill Credential on your passport.</li>
         </ol>

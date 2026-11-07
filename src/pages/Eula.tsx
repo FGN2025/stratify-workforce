@@ -109,7 +109,7 @@ const Eula = () => {
             <section>
               <h2 className="text-xl font-semibold mb-2">6. Third-Party Integrations</h2>
               <p>
-                The Service integrates with third-party platforms (including Discord, Breakroom, and
+                The Service integrates with third-party platforms (including Discord and
                 Play.fgn.gg). Your use of those services is governed by their own terms. FGN is not
                 responsible for the availability, content, or practices of third-party platforms.
               </p>

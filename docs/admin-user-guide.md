@@ -78,7 +78,7 @@ Evidence remains open while any piece is pending or claimed. A reviewer can appr
 
 - SIM Games, Categories and Resources remain internal registries; they are not learner navigation.
 - Challenge Registry, Mappings, Tracks and Activity Mapping support existing FGN.GG links and manual overrides.
-- Automatic Breakroom sync remains active. Breakroom Mapper is retired.
+- The Breakroom integration is retired.
 - Course Builder remains direct-link only until the first real Studio package passes joint acceptance, then its old address will redirect.
 - Old admin bookmarks continue to resolve to the matching hub or tab.
 
